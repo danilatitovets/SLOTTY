@@ -4,6 +4,9 @@ import {
   BECOME_MASTER_PATH,
   BOOKING_PATH,
   HUB_PATH,
+  LEGAL_PD_CONSENT_PATH,
+  LEGAL_PRIVACY_PATH,
+  LEGAL_TERMS_PATH,
   PROFILE_PATH,
   SERVICES_PATH,
 } from './paths';
@@ -14,6 +17,9 @@ import { BecomeMasterPage } from '../pages/master-onboarding/BecomeMasterPage';
 import { MasterProfilePage } from '../pages/master/MasterProfilePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { ServicesPage } from '../pages/services/ServicesPage';
+import { PersonalDataConsentPage } from '../pages/legal/PersonalDataConsentPage';
+import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
+import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
 
 export {
@@ -29,6 +35,9 @@ export {
   getMasterPath,
   getProfilePath,
   HUB_PATH,
+  LEGAL_PD_CONSENT_PATH,
+  LEGAL_PRIVACY_PATH,
+  LEGAL_TERMS_PATH,
   MASTER_PATH,
   PROFILE_PATH,
   SERVICES_PATH,
@@ -47,6 +56,9 @@ export function AppRouter() {
         <Route path={`${ADMIN_PATH}/*`} element={<AdminPage />} />
         <Route path={BECOME_MASTER_PATH} element={<BecomeMasterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path={LEGAL_PRIVACY_PATH} element={<PrivacyPolicyPage />} />
+        <Route path={LEGAL_PD_CONSENT_PATH} element={<PersonalDataConsentPage />} />
+        <Route path={LEGAL_TERMS_PATH} element={<UserAgreementPage />} />
         <Route path="*" element={<Navigate to={HUB_PATH} replace />} />
       </Routes>
     </BrowserRouter>

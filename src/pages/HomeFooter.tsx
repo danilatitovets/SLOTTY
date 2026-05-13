@@ -1,6 +1,13 @@
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
-import { BOOKING_PATH, HUB_PATH } from '../app/paths';
+import {
+  BOOKING_PATH,
+  HUB_PATH,
+  LEGAL_PD_CONSENT_PATH,
+  LEGAL_PRIVACY_PATH,
+  LEGAL_TERMS_PATH,
+} from '../app/paths';
+import { TIVONIX_SITE_URL } from './legal/legalSiteInfo';
 
 const FOOTER_IMAGE = '/photos/FOOTER.png';
 const FOOTER_LOGO_SRC = '/photos/logo.png';
@@ -15,6 +22,12 @@ const FOOTER_LINKS = [
   { key: 'faq', label: 'FAQ', to: `${HUB_PATH}#faq` },
   { key: 'telegram', label: 'Telegram', to: `${HUB_PATH}#telegram-showcase` },
   { key: 'settings', label: 'Настройки', to: '/settings' },
+] as const;
+
+const LEGAL_LINKS = [
+  { key: 'privacy', label: 'Политика ПД', to: LEGAL_PRIVACY_PATH },
+  { key: 'consent', label: 'Согласие на обработку ПД', to: LEGAL_PD_CONSENT_PATH },
+  { key: 'terms', label: 'Пользовательское соглашение', to: LEGAL_TERMS_PATH },
 ] as const;
 
 export const HomeFooter: FC = () => {
@@ -117,6 +130,33 @@ export const HomeFooter: FC = () => {
                   </Link>
                 ))}
               </nav>
+
+              <div className="mt-6 border-t border-neutral-200/80 pt-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Документы</p>
+                <nav aria-label="Юридические документы" className="mt-2 flex flex-col gap-2">
+                  {LEGAL_LINKS.map((item) => (
+                    <Link
+                      key={item.key}
+                      to={item.to}
+                      className="text-[14px] font-semibold text-neutral-700 underline-offset-2 transition hover:text-neutral-950 hover:underline active:scale-[0.99]"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+
+              <p className="mt-6 text-center text-[13px] font-medium leading-snug text-neutral-500">
+                Разработка и сопровождение —{' '}
+                <a
+                  href={TIVONIX_SITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#E29595] underline decoration-[#E29595]/35 underline-offset-2 transition hover:decoration-[#E29595]"
+                >
+                  tivonix.tech
+                </a>
+              </p>
             </div>
 
             <div className="mt-[calc(1.5rem+15px)] sm:mt-[calc(2rem+15px)]">

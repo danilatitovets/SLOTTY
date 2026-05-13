@@ -1,0 +1,86 @@
+import type { FC } from 'react';
+import {
+  PD_POLICY_PDF_HREF,
+  SITE_OPERATOR_LEGAL,
+  SITE_SUPPORT_EMAIL,
+} from './legalSiteInfo';
+import { LegalPageShell } from './LegalPageShell';
+
+export const PrivacyPolicyPage: FC = () => {
+  return (
+    <LegalPageShell title="Политика в отношении обработки персональных данных">
+      <p className="text-[13px] font-medium text-neutral-500">
+        Настоящая политика действует в отношении сервиса <strong className="text-neutral-800">SLOTTY</strong> (онлайн-запись к
+        мастерам). Текст на сайте — рабочая версия под продукт; юридически значимый архив можно вести в PDF.
+      </p>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">1. Общие положения</h2>
+        <p>
+          {SITE_OPERATOR_LEGAL} Обработка персональных данных осуществляется в соответствии с законодательством о
+          персональных данных (в т.ч. Закон РБ от 07.05.2021 № 99-З «О защите персональных данных») и настоящей
+          Политикой.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">2. Какие данные могут обрабатываться</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>идентификатор и данные учётной записи в Telegram при входе через Telegram Mini App;</li>
+          <li>имя (или отображаемое имя), контактные данные, указанные вами в профиле;</li>
+          <li>сведения о записях на услуги, избранных мастерах, уведомлениях;</li>
+          <li>технические данные (IP, cookie, сведения об устройстве и браузере) — в объёме, необходимом для работы и
+            защиты сервиса.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">3. Цели обработки</h2>
+        <p>Обработка направлена на: предоставление функций записи и личного кабинета; исполнение договоров с пользователем; информирование о статусе записи; улучшение качества сервиса и безопасности; соблюдение требований закона.</p>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">4. Правовые основания</h2>
+        <p>Согласие субъекта персональных данных, договор (оферта / пользовательское соглашение), иные основания, предусмотренные законом.</p>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">5. Передача и хранение</h2>
+        <p>
+          Данные обрабатываются на серверах и в инфраструктуре, выбранных Оператором (в т.ч. облачные сервисы). Передача
+          третьим лицам осуществляется только при наличии законных оснований, в объёме, необходимом для целей обработки,
+          либо с отдельного согласия субъекта, если это требуется законом.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">6. Права субъекта ПД</h2>
+        <p>
+          Вы вправе запросить уточнение, блокирование или удаление персональных данных (с учётом требований закона и
+          необходимости хранения для исполнения обязательств), отозвать согласие на обработку — через обращение на{' '}
+          <a className="font-semibold text-[#E29595] underline underline-offset-2" href={`mailto:${SITE_SUPPORT_EMAIL}`}>
+            {SITE_SUPPORT_EMAIL}
+          </a>
+          .
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-[17px] font-semibold text-neutral-950">7. PDF-версия</h2>
+        <p>
+          Скачать политику (файл на основе шаблона Tivonix, адаптируйте под свои реквизиты):{' '}
+          <a
+            className="font-semibold text-[#E29595] underline underline-offset-2"
+            href={PD_POLICY_PDF_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Политика обработки ПД (PDF)
+          </a>
+          .
+        </p>
+      </section>
+    </LegalPageShell>
+  );
+};

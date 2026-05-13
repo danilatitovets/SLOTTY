@@ -23,6 +23,15 @@ export const ADMIN_APPOINTMENTS_PATH = '/admin/appointments';
 export const ADMIN_OVERVIEW_PATH = '/admin/overview';
 export const ADMIN_BILLING_PATH = '/admin/billing';
 
+/** Политика обработки персональных данных (страница). */
+export const LEGAL_PRIVACY_PATH = '/legal/privacy';
+
+/** Согласие на обработку персональных данных (страница). */
+export const LEGAL_PD_CONSENT_PATH = '/legal/consent-pd';
+
+/** Пользовательское соглашение (страница). */
+export const LEGAL_TERMS_PATH = '/legal/terms';
+
 /** Шаблон маршрута профиля мастера (для документации / Route). */
 export const MASTER_PATH = '/master/:id';
 
