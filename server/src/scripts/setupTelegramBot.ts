@@ -33,9 +33,9 @@ async function main(): Promise<void> {
 
   const webhookUrl = process.env.TELEGRAM_WEBHOOK_URL?.trim();
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
-  if ((webhookUrl && !webhookSecret) || (!webhookUrl && webhookSecret)) {
+  if (webhookUrl && !webhookSecret) {
     console.warn(
-      'TELEGRAM_WEBHOOK_URL и TELEGRAM_WEBHOOK_SECRET задайте вместе — иначе setWebhook пропущен.',
+      'TELEGRAM_WEBHOOK_SECRET не задан — вебхук будет без secret_token (для продакшена лучше задать секрет).',
     );
   }
 

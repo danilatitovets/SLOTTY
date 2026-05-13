@@ -1,3 +1,5 @@
+import { env } from '../../config/env.js';
+
 const TG_API_BASE = 'https://api.telegram.org';
 
 function getBotToken(): string | undefined {
@@ -123,13 +125,42 @@ export async function setupTelegramBot(params: {
   const wurl = params.webhookUrl?.trim();
   const wsec = params.webhookSecret?.trim();
   let webhook: StepResult | undefined;
-  if (wurl && wsec) {
-    webhook = await callBotMethod(token, 'setWebhook', {
+  if (wurl) {
+    const body: Record<string, unknown> = {
       url: wurl,
-      secret_token: wsec,
       allowed_updates: ['message'],
-    });
+    };
+    if (wsec) {
+      body.secret_token = wsec;
+    }
+    webhook = await callBotMethod(token, 'setWebhook', body);
   }
 
   return { commands, menuButton, shortDescription, description, webhook };
+}
+
+/**
+ * При старте бэкенда: если в env заданы токен и TELEGRAM_WEBHOOK_URL — вызывает setWebhook,
+ * чтобы не забывали после деплоя (достаточно переменных на Railway).
+ */
+export async function ensureTelegramWebhookFromEnv(): Promise<void> {
+  const token = getBotToken();
+  const url = env.TELEGRAM_WEBHOOK_URL?.trim();
+  if (!token || !url) {
+    return;
+  }
+  const wsec = env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  const body: Record<string, unknown> = {
+    url,
+    allowed_updates: ['message'],
+  };
+  if (wsec) {
+    body.secret_token = wsec;
+  }
+  const r = await callBotMethod(token, 'setWebhook', body);
+  if (r.ok) {
+    console.log('[telegram] setWebhook on startup OK');
+  } else {
+    console.warn('[telegram] setWebhook on startup failed:', r.error);
+  }
 }

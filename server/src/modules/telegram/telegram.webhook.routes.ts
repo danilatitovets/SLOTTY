@@ -9,15 +9,16 @@ telegramWebhookRouter.post(
   '/',
   asyncHandler(async (req, res) => {
     const secret = env.TELEGRAM_WEBHOOK_SECRET?.trim();
-    if (!secret) {
-      res.status(503).type('text').send('webhook disabled: set TELEGRAM_WEBHOOK_SECRET');
-      return;
-    }
-
-    const header = req.get('X-Telegram-Bot-Api-Secret-Token');
-    if (header !== secret) {
-      res.status(403).type('text').send('forbidden');
-      return;
+    if (secret) {
+      const header = req.get('X-Telegram-Bot-Api-Secret-Token');
+      if (header !== secret) {
+        res.status(403).type('text').send('forbidden');
+        return;
+      }
+    } else if (env.NODE_ENV === 'production') {
+      console.warn(
+        '[telegram webhook] TELEGRAM_WEBHOOK_SECRET не задан — запросы без проверки заголовка (рекомендуется задать секрет).',
+      );
     }
 
     const update = req.body as { message?: { text?: string; chat?: { id: number } } };
@@ -30,10 +31,14 @@ telegramWebhookRouter.post(
     const text = (msg.text ?? '').trim();
     const chatId = msg.chat.id;
 
-    if (text.startsWith('/start')) {
-      await sendTelegramStartReply(chatId);
-    } else if (text.startsWith('/help')) {
-      await sendTelegramHelpReply(chatId);
+    try {
+      if (text.startsWith('/start')) {
+        await sendTelegramStartReply(chatId);
+      } else if (text.startsWith('/help')) {
+        await sendTelegramHelpReply(chatId);
+      }
+    } catch (e) {
+      console.warn('[telegram webhook] handler error:', e instanceof Error ? e.message : e);
     }
 
     res.sendStatus(200);
