@@ -15,7 +15,7 @@ import type { MasterVisitType } from '../../../features/profile/model/masterLoca
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
 import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
-import { OnboardingAddressMap } from '../../master-onboarding/OnboardingAddressMap';
+import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from '../../master-onboarding/OnboardingAddressMap';
 
 const CATEGORIES = [
   'Маникюр',
@@ -350,10 +350,20 @@ export function SheetAddress({
       <div className="space-y-2">
         <p className="text-[13px] font-semibold text-neutral-500">Карта</p>
         <OnboardingAddressMap
-          key={`${visitType}-${city}`}
-          addressLine={street.trim()}
+          key={`${visitType}-${city.trim()}`}
+          city={city}
+          visitType={visitType}
+          addressLine={
+            street.trim()
+              ? building.trim() && building.trim() !== 'б/н'
+                ? `${street.trim()}, ${building.trim()}`
+                : street.trim()
+              : ''
+          }
           onPick={(res) => {
-            setStreet(res.addressLine);
+            const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
+            setStreet(s);
+            setBuilding(b);
             setLat(res.lat);
             setLng(res.lng);
           }}

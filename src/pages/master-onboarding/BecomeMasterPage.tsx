@@ -15,7 +15,7 @@ import {
   formatPublicAddress,
   masterVisitTypeLabel,
 } from '../../features/profile/model/masterLocation';
-import { OnboardingAddressMap } from './OnboardingAddressMap';
+import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from './OnboardingAddressMap';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
@@ -25,7 +25,6 @@ import {
   submitMasterOnboarding,
   type ServiceCategoryDto,
 } from '../../features/master-onboarding/api/becomeMasterApi';
-import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 
 const TOTAL_STEPS = 7;
 const LOGO_SRC = '/photos/logo.png';
@@ -311,17 +310,21 @@ function MiniInfoCard({
   icon: ReactNode;
 }) {
   return (
-    <div className="rounded-[26px] bg-[#F1EFEF] px-4 py-4">
-      <div className="flex gap-3">
+    <div className="rounded-[26px] bg-[#F1EFEF] px-3.5 py-3.5 sm:px-4 sm:py-4">
+      <div className="flex gap-3 sm:gap-3.5">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-white text-[#c47878] shadow-[0_4px_14px_rgba(17,17,17,0.06)]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-white text-[#c47878] shadow-[0_4px_14px_rgba(17,17,17,0.06)] sm:h-11 sm:w-11 sm:rounded-[18px]"
           aria-hidden
         >
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[16px] font-semibold tracking-[-0.04em] text-neutral-950">{title}</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-neutral-500">{text}</p>
+          <p className="text-[15px] font-semibold leading-snug tracking-[-0.03em] text-neutral-950 sm:text-[16px] sm:tracking-[-0.04em]">
+            {title}
+          </p>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-neutral-500 text-pretty sm:mt-1 sm:text-[13px]">
+            {text}
+          </p>
         </div>
       </div>
     </div>
@@ -502,14 +505,19 @@ export function BecomeMasterPage() {
       return n.length >= 2 && n.length <= 200;
     }
     if (step === 4) {
-      return city.trim().length > 0 && street.trim().length > 0 && building.trim().length > 0;
+      const base = city.trim().length > 0 && street.trim().length > 0 && building.trim().length > 0;
+      if (!base) return false;
+      if (visitType === 'studio') {
+        return lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
+      }
+      return true;
     }
     if (step === 5) return services.length > 0;
 
     if (step === 6) return true;
 
     return true;
-  }, [building, city, name, selectedCategoryId, services.length, step, street]);
+  }, [building, city, lat, lng, name, selectedCategoryId, services.length, step, street, visitType]);
 
   const addService = useCallback(() => {
     const title = svcTitle.trim();
@@ -689,6 +697,15 @@ export function BecomeMasterPage() {
     if (directions.trim().length > 2000) errs.directions = 'Не длиннее 2000 символов.';
     if (clientNote.trim().length > 2000) errs.clientNote = 'Не длиннее 2000 символов.';
 
+    if (visitType === 'studio') {
+      const hasCoords =
+        lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
+      if (!hasCoords) {
+        errs.coords =
+          'Выберите адрес из справочника выше — так на карте будет точная метка для клиентов.';
+      }
+    }
+
     setAddressFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }, [
@@ -700,8 +717,11 @@ export function BecomeMasterPage() {
     floor,
     intercom,
     landmark,
+    lat,
+    lng,
     room,
     street,
+    visitType,
   ]);
 
   const goNext = useCallback(() => {
@@ -736,6 +756,10 @@ export function BecomeMasterPage() {
 
   const publish = useCallback(async () => {
     if (!selectedCategoryId || !name.trim() || services.length === 0) return;
+    if (!isAuthenticated) {
+      setPublishError('Войдите через Telegram, чтобы опубликовать профиль.');
+      return;
+    }
     if (!getApiBaseUrl()) {
       setPublishError('Не настроен адрес API (VITE_API_URL).');
       return;
@@ -850,6 +874,7 @@ export function BecomeMasterPage() {
     validateProfileStep,
     visitType,
     building,
+    isAuthenticated,
   ]);
 
   if (success) {
@@ -894,91 +919,76 @@ export function BecomeMasterPage() {
     );
   }
 
-  if (!authLoading && step >= 2 && !isAuthenticated) {
-    return (
-      <div className="min-h-dvh bg-white px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(0.75rem+env(safe-area-inset-top,0px))]">
-        <div className="mx-auto max-w-lg pt-6">
-          <NothingFoundCard
-            title="Нужен вход"
-            text="Войдите через Telegram, чтобы сохранить анкету мастера на сервере SLOTTY."
-            action={
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="mx-auto flex min-h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#E29595] px-5 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-              >
-                К описанию
-              </button>
-            }
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (step >= 2 && !backendConfigured) {
-    return (
-      <div className="min-h-dvh bg-white px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(0.75rem+env(safe-area-inset-top,0px))]">
-        <div className="mx-auto max-w-lg pt-6">
-          <NothingFoundCard
-            title="Нет подключения к API"
-            text="Укажите VITE_API_URL в .env и перезапустите приложение, затем откройте анкету снова."
-            action={
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="mx-auto flex min-h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#E29595] px-5 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-              >
-                К описанию
-              </button>
-            }
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`min-h-dvh bg-white pt-[calc(0.75rem+env(safe-area-inset-top,0px))] text-neutral-900 ${
+      className={`min-h-dvh bg-white text-neutral-900 ${
         step === 1
           ? 'pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]'
-          : 'pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))]'
+          : 'pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]'
       }`}
     >
-      <div className="mx-auto max-w-lg px-4">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            to={HUB_PATH}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 shadow-[0_8px_24px_rgba(17,17,17,0.06)] transition active:scale-[0.99]"
-          >
-            ← На главную
-          </Link>
+      <header className="sticky top-0 z-40 border-b border-neutral-200/80 bg-white pt-[calc(0.75rem+env(safe-area-inset-top,0px))] shadow-none">
+        <div className="mx-auto max-w-lg px-4 pb-3">
+          <div className="flex items-center justify-between gap-3">
+            {step === 1 ? (
+              <Link
+                to={HUB_PATH}
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[14px] font-semibold text-neutral-900 transition active:opacity-80"
+              >
+                ← На главную
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={goBack}
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[14px] font-semibold text-neutral-900 transition active:opacity-80"
+              >
+                Назад
+              </button>
+            )}
 
-          <span className="rounded-full bg-[#F1EFEF] px-3 py-2 text-[13px] font-semibold text-neutral-500">
-            {step} / {TOTAL_STEPS}
-          </span>
+            <span className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-1.5 text-[13px] font-semibold tabular-nums text-neutral-600">
+              {step} / {TOTAL_STEPS}
+            </span>
+          </div>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#F1EFEF]">
+            <div
+              className="h-full rounded-full bg-[#E29595] transition-[width] duration-300 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
+      </header>
 
-        <div className="mt-5 h-2 overflow-hidden rounded-full bg-[#F1EFEF]">
-          <div
-            className="h-full rounded-full bg-[#E29595] transition-[width] duration-300 ease-out"
-            style={{ width: `${progressPct}%` }}
-          />
+      {step >= 2 && (!backendConfigured || (!authLoading && !isAuthenticated)) ? (
+        <div className="mx-auto max-w-lg space-y-2 px-4 pt-3">
+          {!backendConfigured ? (
+            <p className="rounded-[18px] bg-[#FFF4E8] px-4 py-3 text-[13px] font-semibold leading-snug text-[#B66A24]">
+              Не задан <span className="font-mono text-[12px]">VITE_API_URL</span> — категории и публикация профиля не заработают, пока не подключите бэкенд.
+            </p>
+          ) : null}
+          {!authLoading && !isAuthenticated ? (
+            <p className="rounded-[18px] bg-[#FFF4E8] px-4 py-3 text-[13px] font-semibold leading-snug text-[#B66A24]">
+              Войдите через Telegram, чтобы сохранить анкету на сервере. Пока можно просмотреть шаги анкеты.
+            </p>
+          ) : null}
         </div>
+      ) : null}
 
-        <div className="mt-6 rounded-[42px] bg-[#F1EFEF] p-3 shadow-[0_24px_70px_rgba(17,17,17,0.06)]">
-          <div className="rounded-[34px] bg-white px-5 py-6 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
+      <div className="mx-auto max-w-lg px-4 pt-4">
+        <div className="rounded-[42px] bg-[#F1EFEF] p-3 shadow-[0_24px_70px_rgba(17,17,17,0.06)]">
+          <div className="relative z-10 rounded-[34px] bg-white px-5 py-6 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
             {step === 1 ? (
               <div className="text-center">
                 <img
                   src={LOGO_SRC}
                   alt="SLOTTY"
-                  className="mx-auto h-auto max-h-48 w-auto max-w-[min(100%,28rem)] object-contain"
+                  className="relative z-0 mx-auto h-auto max-h-48 w-auto max-w-[min(100%,28rem)] object-contain"
                   draggable={false}
                 />
 
-                <div className="-translate-y-10 text-center">
+                <div className="relative z-10 -mt-6 text-center sm:-mt-8">
                   <h1 className="mt-3 text-[34px] font-semibold leading-[1.02] tracking-[-0.07em] text-neutral-950">
                     Анкета мастера
                   </h1>
@@ -987,7 +997,7 @@ export function BecomeMasterPage() {
                     Заполните профиль, добавьте услуги и начните принимать записи в SLOTTY.
                   </p>
 
-                  <div className="mt-7 grid grid-cols-2 gap-2 text-left">
+                  <div className="mt-7 grid grid-cols-1 gap-2.5 text-left sm:grid-cols-2 sm:gap-2">
                     <MiniInfoCard title="Профиль" text="Имя, описание и контакты." icon={<IconOnboardingProfile className="h-5 w-5" />} />
                     <MiniInfoCard title="Адрес" text="Куда клиенту ехать и как пройти." icon={<IconOnboardingMap className="h-5 w-5" />} />
                     <MiniInfoCard title="Услуги" text="Цена, длительность и описание." icon={<IconOnboardingServices className="h-5 w-5" />} />
@@ -1001,7 +1011,7 @@ export function BecomeMasterPage() {
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="mt-7 flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
+                    className="relative z-20 mt-7 flex min-h-[3.25rem] w-full cursor-pointer items-center justify-center rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
                   >
                     Начать
                   </button>
@@ -1237,17 +1247,29 @@ export function BecomeMasterPage() {
                   />
                 </div>
 
-                <div className="mt-5 overflow-hidden rounded-[30px] bg-[#F1EFEF] p-3">
+                <div className="mt-5 overflow-visible rounded-[30px] bg-[#F1EFEF] p-3">
                   <OnboardingAddressMap
-                    key={visitType}
-                    addressLine={street}
+                    key={`${visitType}-${city.trim()}`}
+                    city={city}
+                    visitType={visitType}
+                    addressLine={
+                      street.trim()
+                        ? building.trim() && building.trim() !== 'б/н'
+                          ? `${street.trim()}, ${building.trim()}`
+                          : street.trim()
+                        : ''
+                    }
+                    coordsError={addressFieldErrors.coords}
                     onPick={(result) => {
-                      setStreet(result.addressLine);
+                      const { street: s, building: b } = splitReferenceLabelToStreetBuilding(result.addressLine);
+                      setStreet(s);
+                      setBuilding(b);
                       setLat(result.lat);
                       setLng(result.lng);
                       setAddressFieldErrors((prev) => {
                         const next = { ...prev };
                         delete next.street;
+                        delete next.coords;
                         return next;
                       });
                     }}
@@ -1311,7 +1333,7 @@ export function BecomeMasterPage() {
                     />
 
                     <Field
-                      label={visitType === 'at_home' ? 'Квартира' : 'Квартира / кабинет'}
+                      label={visitType === 'at_home' ? 'Квартира' : 'Кабинет'}
                       value={room}
                       onChange={setRoom}
                       placeholder={visitType === 'at_home' ? '45' : '312'}
@@ -1932,22 +1954,14 @@ export function BecomeMasterPage() {
       </div>
 
       {step > 1 ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/80 bg-white/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg gap-2">
-            <button
-              type="button"
-              onClick={goBack}
-              className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-            >
-              Назад
-            </button>
-
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3">
+          <div className="mx-auto max-w-lg">
             {step < TOTAL_STEPS ? (
               <button
                 type="button"
                 onClick={goNext}
                 disabled={!canGoNext}
-                className="flex min-h-12 flex-[1.15] items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {step === 6 && certificates.length === 0 ? 'Пропустить' : 'Дальше'}
               </button>
@@ -1962,7 +1976,7 @@ export function BecomeMasterPage() {
                   services.length === 0 ||
                   !publicAddressForApi.trim()
                 }
-                className="flex min-h-12 flex-[1.15] items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {saving ? 'Сохранение…' : 'Опубликовать'}
               </button>

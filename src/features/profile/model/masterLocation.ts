@@ -36,7 +36,7 @@ export type MasterLocation = {
 };
 
 const VISIT_LABEL: Record<MasterVisitType, string> = {
-  studio: 'В салоне / кабинете',
+  studio: 'Салон',
   at_home: 'На дому',
 };
 
