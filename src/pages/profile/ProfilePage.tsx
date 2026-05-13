@@ -893,7 +893,7 @@ export function ProfilePage() {
       <HomeHeader isDemoMaster={isMasterCabinet} onProfileTab={onProfileTab} />
 
       <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
-        <div className="rounded-b-[44px] bg-[#F1EFEF] pb-5 pt-[calc(5.5rem+env(safe-area-inset-top,0px))] shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+        <div className="bg-white pb-5 pt-[calc(5.5rem+env(safe-area-inset-top,0px))]">
           <h1 className="text-[38px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
             Мой профиль
           </h1>
@@ -904,7 +904,7 @@ export function ProfilePage() {
             </p>
           ) : null}
 
-          <section className="mt-7 rounded-[36px] bg-white/55 p-3 backdrop-blur-xl">
+          <section className="mt-7 rounded-[36px] border border-neutral-100 bg-white p-3 shadow-[0_8px_28px_rgba(17,17,17,0.04)]">
             <div className="rounded-[30px] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
               {authLoading ? (
                 <div className="flex items-center gap-4">
@@ -1009,7 +1009,7 @@ export function ProfilePage() {
               )}
             </div>
 
-            <div className="mt-3 grid w-full grid-cols-3 gap-1.5 rounded-[28px] bg-white/65 p-1.5 backdrop-blur-xl">
+            <div className="mt-3 grid w-full grid-cols-3 gap-1.5 rounded-[28px] border border-neutral-100 bg-white p-1.5 shadow-[0_4px_16px_rgba(17,17,17,0.04)]">
               {(
                 [
                   { id: 'appointments' as const, label: 'Мои записи' },
@@ -1061,7 +1061,7 @@ export function ProfilePage() {
                 Мои записи
               </h2>
 
-              <div className="flex w-full shrink-0 rounded-full bg-[#F1EFEF] p-1 sm:w-auto">
+              <div className="flex w-full shrink-0 rounded-full border border-neutral-200/70 bg-white p-1 shadow-[0_1px_3px_rgba(0,0,0,0.04)] sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setApptSubTab('upcoming')}
@@ -1122,7 +1122,7 @@ export function ProfilePage() {
             ) : apptError ? (
               <p className="rounded-2xl bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800">{apptError}</p>
             ) : apptListLoading ? (
-              <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+              <ul className="flex flex-col gap-3">
                 {[0, 1, 2].map((i) => (
                   <li key={i} className="rounded-[30px] bg-white p-4 shadow-[0_12px_34px_rgba(17,17,17,0.045)]">
                     <div className="flex items-start justify-between gap-3">
@@ -1154,7 +1154,7 @@ export function ProfilePage() {
                 buttonText="Найти услуги"
               />
             ) : (
-              <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+              <ul className="flex flex-col gap-3">
                 {apptRows.map((row) => (
                   <li key={row.id}>
                     <AppointmentCard
@@ -1186,7 +1186,7 @@ export function ProfilePage() {
             ) : favoritesError ? (
               <p className="rounded-2xl bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800">{favoritesError}</p>
             ) : favoritesLoading ? (
-              <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+              <ul className="flex flex-col gap-3">
                 {[0, 1].map((i) => (
                   <li key={i} className="rounded-[30px] bg-white p-4 shadow-[0_12px_34px_rgba(17,17,17,0.045)]">
                     <div className="flex items-center gap-3">
@@ -1206,7 +1206,7 @@ export function ProfilePage() {
                 buttonText="Найти услуги"
               />
             ) : (
-              <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+              <ul className="flex flex-col gap-3">
                 {favorites.map((row, i) => (
                   <FavoriteMasterRow
                     key={row.masterId}
@@ -1222,9 +1222,8 @@ export function ProfilePage() {
 
         {mainTab === 'profile' ? (
           <section className="mt-7">
-            <div className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-              <div className="flex flex-col gap-2">
-                <div className="rounded-[28px] bg-white px-5 py-4">
+            <div className="flex flex-col gap-2">
+                <div className="rounded-[28px] border border-neutral-100 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
                   <p className="text-[13px] font-medium text-neutral-400">
                     Имя
                   </p>
@@ -1234,7 +1233,7 @@ export function ProfilePage() {
                   </p>
                 </div>
 
-                <div className="rounded-[28px] bg-white px-5 py-4">
+                <div className="rounded-[28px] border border-neutral-100 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
                   <p className="text-[13px] font-medium text-neutral-400">
                     Telegram
                   </p>
@@ -1250,7 +1249,7 @@ export function ProfilePage() {
                   </p>
                 </div>
 
-                <div className="rounded-[28px] bg-white px-5 py-4">
+                <div className="rounded-[28px] border border-neutral-100 bg-white px-5 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
                   <p className="text-[13px] font-medium text-neutral-400">
                     Роль
                   </p>
@@ -1268,7 +1267,6 @@ export function ProfilePage() {
                   <IconChevronRight className="h-4 w-4" />
                 </Link>
               </div>
-            </div>
           </section>
         ) : null}
         </div>
@@ -1283,7 +1281,7 @@ export function ProfilePage() {
             Детали записи
           </h2>
 
-          <div className="mt-4 rounded-[28px] bg-[#F1EFEF] px-4 py-3">
+          <div className="mt-4 rounded-[28px] border border-neutral-200/70 bg-white px-4 py-3 shadow-[0_4px_20px_rgba(17,17,17,0.04)]">
             <DetailSheetRow label="Мастер" value={selectedAppointment.masterName} />
             <DetailSheetRow label="Услуга" value={selectedAppointment.serviceTitle} />
             <DetailSheetRow label="Дата" value={selectedAppointment.dateLabel} />
@@ -1295,7 +1293,7 @@ export function ProfilePage() {
             <DetailSheetRow label="Статус" value={statusDetailsRu(selectedAppointment.status)} />
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-[28px] bg-[#F1EFEF] p-2">
+          <div className="mt-4 overflow-hidden rounded-[28px] border border-neutral-200/70 bg-white p-2 shadow-[0_4px_20px_rgba(17,17,17,0.04)]">
             <p className="px-2 pb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
               Яндекс.Карты
             </p>
@@ -1504,14 +1502,14 @@ export function ProfilePage() {
               {notificationsError ? (
                 <p className="rounded-2xl bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800">{notificationsError}</p>
               ) : notificationsLoading ? (
-                <div className="space-y-2 rounded-[30px] bg-[#F1EFEF] p-3">
-                  <div className="h-20 animate-pulse rounded-[26px] bg-white/80" />
-                  <div className="h-20 animate-pulse rounded-[26px] bg-white/80" />
+                <div className="space-y-2">
+                  <div className="h-20 animate-pulse rounded-[26px] bg-neutral-100" />
+                  <div className="h-20 animate-pulse rounded-[26px] bg-neutral-100" />
                 </div>
               ) : notifications.length === 0 ? (
                 <NothingFoundCard title="Пока тихо" text="Когда появятся новости о записях, они окажутся здесь." />
               ) : (
-                <ul className="flex flex-col gap-2.5 rounded-[30px] bg-[#F1EFEF] p-2.5 sm:p-3 [-webkit-overflow-scrolling:touch]">
+                <ul className="flex flex-col gap-2.5 [-webkit-overflow-scrolling:touch] sm:gap-3">
                   {notifications.map((item, index) => (
                     <li key={item.id}>
                       <NotificationCard
