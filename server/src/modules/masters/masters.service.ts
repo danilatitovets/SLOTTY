@@ -4,9 +4,11 @@ import { listMyServices } from '../services/services.service.js';
 import { listMyScheduleRules } from './masterOnboarding.service.js';
 import { decodePaymentNote } from './masterTrustProfile.service.js';
 
-function num(v: string | null): number | null {
-  if (v == null) return null;
-  return Number(v);
+function num(v: string | number | null | undefined): number | null {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function listPublishedMasters(filters: { category?: string; search?: string; limit: number }) {
@@ -37,6 +39,8 @@ export async function listPublishedMasters(filters: { category?: string; search?
       sc.name as category_name,
       ml.public_address,
       ml.city,
+      ml.lat::double precision as location_lat,
+      ml.lng::double precision as location_lng,
       ps.id as primary_service_id,
       ps.title as primary_service_title,
       ps.price_amount::text as primary_service_price,
@@ -73,36 +77,47 @@ export async function listPublishedMasters(filters: { category?: string; search?
     category_name: string | null;
     public_address: string | null;
     city: string | null;
+    location_lat: number | string | null;
+    location_lng: number | string | null;
     primary_service_id: string | null;
     primary_service_title: string | null;
     primary_service_price: string | null;
     next_slot_starts_at: Date | string | null;
   }>(sql, params);
 
-  return r.rows.map((row) => ({
-    masterId: row.master_id,
-    displayName: row.display_name,
-    bio: row.bio,
-    photoUrl: row.photo_url,
-    slug: row.slug,
-    rating: num(row.rating_avg) ?? 0,
-    reviewsCount: row.reviews_count,
-    category: row.category_code
-      ? { code: row.category_code, name: row.category_name ?? row.category_code }
-      : null,
-    location: row.public_address
-      ? { publicAddress: row.public_address, city: row.city }
-      : row.city
-        ? { publicAddress: row.city, city: row.city }
+  return r.rows.map((row) => {
+    const lat = num(row.location_lat);
+    const lng = num(row.location_lng);
+    const hasCoords = lat != null && lng != null;
+    const location =
+      row.public_address
+        ? { publicAddress: row.public_address, city: row.city, lat, lng }
+        : row.city
+          ? { publicAddress: row.city, city: row.city, lat, lng }
+          : hasCoords
+            ? { publicAddress: 'Точка на карте', city: row.city, lat, lng }
+            : null;
+    return {
+      masterId: row.master_id,
+      displayName: row.display_name,
+      bio: row.bio,
+      photoUrl: row.photo_url,
+      slug: row.slug,
+      rating: num(row.rating_avg) ?? 0,
+      reviewsCount: row.reviews_count,
+      category: row.category_code
+        ? { code: row.category_code, name: row.category_name ?? row.category_code }
         : null,
-    minServicePrice: num(row.primary_service_price),
-    primaryServiceId: row.primary_service_id,
-    primaryServiceName: row.primary_service_title,
-    nextSlotStartsAt:
-      row.next_slot_starts_at != null
-        ? new Date(row.next_slot_starts_at as Date).toISOString()
-        : null,
-  }));
+      location,
+      minServicePrice: num(row.primary_service_price),
+      primaryServiceId: row.primary_service_id,
+      primaryServiceName: row.primary_service_title,
+      nextSlotStartsAt:
+        row.next_slot_starts_at != null
+          ? new Date(row.next_slot_starts_at as Date).toISOString()
+          : null,
+    };
+  });
 }
 
 type ServiceRow = {

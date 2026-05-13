@@ -1,28 +1,60 @@
+import { useMemo } from 'react';
 import type { FC } from 'react';
-import { buildYandexMapWidgetUrl } from '../features/appointments/model/demoAppointments';
-import type { MasterLocation } from '../features/profile/model/masterLocation';
+import { useQuery } from '@tanstack/react-query';
+import { buildYandexMapWidgetUrlForPoints, MAX_WIDGET_PLACEMARKS } from '../features/appointments/model/demoAppointments';
+import { fetchPublishedMasters } from '../features/services/api/publishedMastersApi';
+import { getApiBaseUrl } from '../shared/api/backendClient';
 
-const HUB_MAP_LOCATION: MasterLocation = {
-  visitType: 'studio',
-  street: 'Минск',
-  building: '',
-};
-
-/** Демо-центр карты на главной; тот же `map-widget`, что в деталях записи в профиле. */
-const HUB_MAP_WIDGET_SRC = buildYandexMapWidgetUrl({
-  addressShort: 'Минск',
-  yandexMap: { lon: 27.5615, lat: 53.9045, zoom: 11 },
-  location: HUB_MAP_LOCATION,
-});
+const MAP_FETCH_LIMIT = 300;
 
 export const HomeMapSection: FC = () => {
+  const { data: masters, isLoading } = useQuery({
+    queryKey: ['masters-feed', 'map-pins', MAP_FETCH_LIMIT],
+    queryFn: async () => {
+      if (!getApiBaseUrl()) return [];
+      return fetchPublishedMasters({ limit: MAP_FETCH_LIMIT });
+    },
+  });
+
+  const { mapSrc, pinCount, mapShown, publishedCount } = useMemo(() => {
+    const list = masters ?? [];
+    const ptsAll = list
+      .map((m) => {
+        const lat = m.location?.lat;
+        const lng = m.location?.lng;
+        if (lat == null || lng == null) return null;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lon: lng, lat };
+      })
+      .filter(Boolean) as { lon: number; lat: number }[];
+    const mapShown = Math.min(ptsAll.length, MAX_WIDGET_PLACEMARKS);
+    return {
+      mapSrc: buildYandexMapWidgetUrlForPoints(ptsAll),
+      pinCount: ptsAll.length,
+      mapShown,
+      publishedCount: list.length,
+    };
+  }, [masters]);
+
   return (
     <section className="mt-14 animate-fade-enter scroll-mt-28 sm:mt-16" style={{ animationDelay: '100ms' }}>
       <div className="mb-4 px-1 text-center sm:text-left">
-        
         <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-neutral-950 sm:text-[32px]">
           Мастера на карте
         </h2>
+        {!isLoading && pinCount > 0 ? (
+          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-neutral-500">
+            {pinCount > mapShown
+              ? `На карте — первые ${mapShown} из ${pinCount} точек приёма (ограничение виджета Яндекса).`
+              : `На карте — ${mapShown} точек приёма мастеров с сохранёнными координатами.`}
+            {publishedCount > pinCount ? ` В каталоге ещё ${publishedCount - pinCount} без координат на карте.` : ''}
+          </p>
+        ) : !isLoading && publishedCount > 0 && pinCount === 0 ? (
+          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-neutral-500">
+            Пока ни у кого из мастеров не указаны координаты на карте — отображается Минск. После сохранения точки в
+            профиле метка появится здесь.
+          </p>
+        ) : null}
       </div>
 
       <div className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_24px_70px_rgba(17,17,17,0.05)]">
@@ -32,8 +64,8 @@ export const HomeMapSection: FC = () => {
           </p>
           <div className="overflow-hidden rounded-[22px] bg-neutral-200 shadow-[inset_0_0_0_1px_rgba(17,17,17,0.04)]">
             <iframe
-              title="Карта — Минск"
-              src={HUB_MAP_WIDGET_SRC}
+              title="Карта — мастера"
+              src={mapSrc}
               className="block h-[min(280px,50dvh)] w-full min-h-[220px] border-0 sm:h-[min(320px,45dvh)]"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

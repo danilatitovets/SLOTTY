@@ -18,7 +18,7 @@ export type PublishedMasterDto = {
   rating: number;
   reviewsCount: number;
   category: { code: string; name: string } | null;
-  location: { publicAddress: string; city: string | null } | null;
+  location: { publicAddress: string; city: string | null; lat: number | null; lng: number | null } | null;
   minServicePrice: number | null;
   primaryServiceId: string | null;
   primaryServiceName: string | null;
@@ -49,6 +49,12 @@ export function publishedMasterToListingRecord(m: PublishedMasterDto): ServiceLi
         city: m.location.city?.trim() || undefined,
         street: (m.location.publicAddress || '').trim() || '—',
         building: '',
+        ...(m.location.lat != null &&
+        m.location.lng != null &&
+        Number.isFinite(m.location.lat) &&
+        Number.isFinite(m.location.lng)
+          ? { lat: m.location.lat, lng: m.location.lng }
+          : {}),
       }
     : { visitType: 'studio', street: '—', building: '' };
 

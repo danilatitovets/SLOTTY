@@ -42,7 +42,7 @@ export const mastersRouter = Router();
 const listQuery = z.object({
   category: z.string().min(1).optional(),
   search: z.string().max(200).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(30),
+  limit: z.coerce.number().int().min(1).max(300).optional().default(30),
 });
 
 function minutesSinceMidnight(t: string): number {
