@@ -13,6 +13,7 @@ import { fetchPublishedMasters, type PublishedMasterDto } from '../features/serv
 import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
+import { ImageReveal } from '../shared/ui/ImageReveal';
 
 function IconStar({ className }: { className?: string }) {
   return (
@@ -184,7 +185,7 @@ export const HomeQuickSlots: FC = () => {
           <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto pb-1 pl-1 pr-1 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {rows.map((row, index) => {
               const slot = row.slot;
-              const eager = index < 3;
+              const eager = index < 6;
               return (
                 <article
                   key={row.key}
@@ -204,14 +205,13 @@ export const HomeQuickSlots: FC = () => {
                   <div className="rounded-[28px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
                     <div className="flex gap-3">
                       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[22px] bg-[#F1EFEF]">
-                        <img
+                        <ImageReveal
                           src={row.photoUrl}
                           alt=""
                           width={64}
                           height={64}
                           className="h-full w-full object-cover"
                           loading={eager ? 'eager' : 'lazy'}
-                          decoding="async"
                           fetchPriority={eager ? 'high' : 'low'}
                         />
                       </div>

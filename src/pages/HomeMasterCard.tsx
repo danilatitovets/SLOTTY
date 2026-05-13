@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { MasterFeedItem } from '../features/booking/api/useMastersFeed';
+import { ImageReveal } from '../shared/ui/ImageReveal';
 
 function IconStar({ className }: { className?: string }) {
   return (
@@ -75,14 +76,13 @@ export function MasterCard({
         />
 
         <div className="relative overflow-hidden rounded-[30px]">
-          <img
+          <ImageReveal
             src={
               item.avatar_url ??
               'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&q=80'
             }
             alt={item.full_name}
             loading={priorityImage ? 'eager' : 'lazy'}
-            decoding="async"
             fetchPriority={priorityImage ? 'high' : 'low'}
             className="
               aspect-[4/4.5]

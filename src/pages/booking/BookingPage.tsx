@@ -20,6 +20,7 @@ import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
+import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import {
   buildBookingSlotDays,
@@ -611,14 +612,13 @@ export function BookingPage() {
         <div className="overflow-hidden rounded-[30px] bg-[#F1EFEF] p-5 shadow-[0_12px_40px_rgba(17,17,17,0.06)]">
           <div className="flex gap-4">
             <div className="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[22px] bg-white shadow-sm">
-              <img
+              <ImageReveal
                 src={optimizeAvatarUrl(master.photoUrl, 256)}
                 alt=""
                 width={176}
                 height={176}
                 className="h-full w-full object-cover"
                 loading="eager"
-                decoding="async"
                 fetchPriority="high"
               />
             </div>

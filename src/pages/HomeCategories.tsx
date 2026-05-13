@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { ImageReveal } from '../shared/ui/ImageReveal';
 
 const CATEGORIES = [
   {
@@ -72,11 +73,10 @@ export const HomeCategories: FC<HomeCategoriesProps> = ({ onCategory }) => {
               "
             >
               <span className="flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center overflow-visible rounded-[22px] bg-[#F8F5F5] sm:h-[6rem] sm:w-[6rem]">
-                <img
+                <ImageReveal
                   src={category.image}
                   alt={category.label}
                   loading={index < 2 ? 'eager' : 'lazy'}
-                  decoding="async"
                   fetchPriority={index < 2 ? 'high' : 'low'}
                   draggable={false}
                   className="h-[4.5rem] w-[4.5rem] origin-center scale-[1.32] select-none object-contain sm:h-[5rem] sm:w-[5rem] sm:scale-[1.26]"

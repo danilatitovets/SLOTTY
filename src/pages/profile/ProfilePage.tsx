@@ -43,6 +43,7 @@ import { useTelegram } from '../../shared/hooks/useTelegram';
 import { formatTelegramUserDisplayName } from '../../shared/lib/telegramWebApp';
 import { apiFetch, getApiBaseUrl } from '../../shared/api/backendClient';
 import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
+import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { HomeHeader } from '../HomeHeader';
 
 function IconChevronRight({ className }: { className?: string }) {
@@ -459,13 +460,12 @@ function FavoriteMasterRow({
         >
           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[20px] bg-[#F1EFEF]">
             {row.photoUrl ? (
-              <img
+              <ImageReveal
                 src={optimizeAvatarUrl(row.photoUrl, 128)}
                 alt=""
                 width={56}
                 height={56}
                 className="h-full w-full object-cover"
-                decoding="async"
                 loading={imagePriority ? 'eager' : 'lazy'}
                 fetchPriority={imagePriority ? 'high' : 'low'}
               />
@@ -935,15 +935,16 @@ export function ProfilePage() {
                   aria-label="Загрузить фото профиля с устройства"
                 >
                   {avatarPreviewUrl ? (
-                    <img src={avatarPreviewUrl} alt="" className="h-full w-full object-cover" decoding="async" />
+                    <ImageReveal src={avatarPreviewUrl} alt="" className="h-full w-full object-cover" loading="eager" />
                   ) : profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" decoding="async" />
+                    <ImageReveal src={profile.avatar_url} alt="" className="h-full w-full object-cover" loading="eager" />
                   ) : telegramUserPreview?.photoUrl ? (
-                    <img
+                    <ImageReveal
                       src={telegramUserPreview.photoUrl}
                       alt=""
                       className="h-full w-full object-cover"
-                      decoding="async"
+                      loading="eager"
+                      fetchPriority="high"
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center" aria-hidden>

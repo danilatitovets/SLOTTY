@@ -7,6 +7,7 @@ import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { fetchPublishedMasters, type PublishedMasterDto } from '../features/services/api/publishedMastersApi';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
+import { ImageReveal } from '../shared/ui/ImageReveal';
 import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
 
 function IconStar({ className }: { className?: string }) {
@@ -91,7 +92,7 @@ export const HomeWeeklyTopMasters: FC = () => {
               const name = m.displayName.trim() || 'Мастер';
               const photoUrl = optimizeAvatarUrl((m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name), 220);
               const category = m.category?.name?.trim() || m.category?.code || 'Мастер';
-              const eager = index < 3;
+              const eager = index < 6;
               return (
                 <article
                   key={m.masterId}
@@ -111,14 +112,13 @@ export const HomeWeeklyTopMasters: FC = () => {
                   <div className="rounded-[28px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
                     <div className="flex gap-3">
                       <div className="h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-[22px] bg-[#F1EFEF]">
-                        <img
+                        <ImageReveal
                           src={photoUrl}
                           alt=""
                           width={72}
                           height={72}
                           className="h-full w-full object-cover"
                           loading={eager ? 'eager' : 'lazy'}
-                          decoding="async"
                           fetchPriority={eager ? 'high' : 'low'}
                         />
                       </div>

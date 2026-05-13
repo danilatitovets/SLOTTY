@@ -18,6 +18,7 @@ import {
 import { isDemoMaster } from '../../features/profile/lib/demoMasterStorage';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import { HomeHeader } from '../HomeHeader';
 import { ServicesNearQuickSlots } from './ServicesNearQuickSlots';
@@ -415,14 +416,13 @@ function ServiceCard({ item, imagePriority }: { item: ServiceListingRecord; imag
       <div className="rounded-[30px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
         <div className="flex gap-4">
           <div className="h-[7.25rem] w-[7.25rem] shrink-0 overflow-hidden rounded-[26px] bg-[#F1EFEF] shadow-sm">
-            <img
+            <ImageReveal
               src={item.photoUrl}
               alt=""
               width={160}
               height={160}
               className="h-full w-full object-cover"
               loading={imagePriority ? 'eager' : 'lazy'}
-              decoding="async"
               fetchPriority={imagePriority ? 'high' : 'low'}
             />
           </div>

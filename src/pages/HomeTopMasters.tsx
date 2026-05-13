@@ -177,7 +177,7 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({
                 <MasterCard
                   item={item}
                   style={{ animationDelay: `${160 + index * 50}ms` }}
-                  priorityImage={index < 4}
+                  priorityImage={index < 8}
                   onPick={onPick}
                 />
               </div>

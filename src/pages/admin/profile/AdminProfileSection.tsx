@@ -32,6 +32,7 @@ import {
   SheetPortfolio,
   SheetRules,
 } from './AdminProfileEditSheets';
+import { ImageReveal } from '../../../shared/ui/ImageReveal';
 
 type ProfileSection = 'main' | 'address' | 'trust' | 'rules';
 
@@ -330,13 +331,12 @@ function AdminProfileHero({ draft }: { draft: MasterDraft }) {
       <div className="rounded-[32px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
         <div className="flex gap-4">
           <div className="h-[6.5rem] w-[6.5rem] shrink-0 overflow-hidden rounded-[28px] bg-[#F1EFEF] shadow-[0_10px_28px_rgba(17,17,17,0.08)]">
-            <img
+            <ImageReveal
               src={photoSrc}
               alt=""
               width={160}
               height={160}
               className="h-full w-full object-cover"
-              decoding="async"
               onError={(event) => {
                 (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
               }}
@@ -770,7 +770,7 @@ function TrustSection({
 
         {certificates.length > 0 ? (
           <ul className="mt-4 flex flex-col gap-3">
-            {certificates.map((certificate) => (
+            {certificates.map((certificate, i) => (
               <li key={certificate.id} className="relative rounded-[26px] bg-[#F1EFEF] p-3 pr-14">
                 <div className="absolute right-2 top-2 flex gap-1">
                   <button
@@ -792,7 +792,13 @@ function TrustSection({
                 </div>
                 {certificate.imageUrl ? (
                   <div className="mb-3 overflow-hidden rounded-[22px] bg-white">
-                    <img src={certificate.imageUrl} alt="" className="h-36 w-full object-cover" decoding="async" />
+                    <ImageReveal
+                      src={certificate.imageUrl}
+                      alt=""
+                      className="h-36 w-full object-cover"
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      fetchPriority={i === 0 ? 'high' : 'low'}
+                    />
                   </div>
                 ) : null}
                 <p className="text-[16px] font-semibold tracking-[-0.04em] text-neutral-950">{certificate.title}</p>
@@ -828,7 +834,7 @@ function TrustSection({
 
         {portfolio.length > 0 ? (
           <div className="mt-4 grid grid-cols-2 gap-3">
-            {portfolio.map((item) => (
+            {portfolio.map((item, i) => (
               <article key={item.id} className="relative overflow-hidden rounded-[24px] bg-[#F1EFEF]">
                 <div className="absolute right-1 top-1 z-10 flex gap-1">
                   <button
@@ -849,7 +855,13 @@ function TrustSection({
                   </button>
                 </div>
                 {item.imageUrl ? (
-                  <img src={item.imageUrl} alt="" className="aspect-square w-full object-cover" decoding="async" />
+                  <ImageReveal
+                    src={item.imageUrl}
+                    alt=""
+                    className="aspect-square w-full object-cover"
+                    loading={i < 4 ? 'eager' : 'lazy'}
+                    fetchPriority={i < 2 ? 'high' : 'low'}
+                  />
                 ) : (
                   <div className="aspect-square w-full bg-white" />
                 )}
