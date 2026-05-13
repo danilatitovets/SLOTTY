@@ -11,6 +11,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..', 'dist');
 const port = Number.parseInt(process.env.PORT ?? '3000', 10);
 
+const indexPath = path.join(root, 'index.html');
+if (!fs.existsSync(indexPath)) {
+  console.error('[static-serve] FATAL: dist not found. Expected:', indexPath);
+  console.error('[static-serve] cwd:', process.cwd());
+  process.exit(1);
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -39,7 +46,18 @@ function safeJoin(base, requestPath) {
 function sendFile(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream');
-  fs.createReadStream(filePath).pipe(res);
+  const stream = fs.createReadStream(filePath);
+  stream.on('error', (err) => {
+    console.error('[static-serve] read error', filePath, err.message);
+    if (!res.headersSent) {
+      res.writeHead(500);
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('file read error');
+    } else {
+      res.destroy();
+    }
+  });
+  stream.pipe(res);
 }
 
 const server = http.createServer((req, res) => {
@@ -50,6 +68,13 @@ const server = http.createServer((req, res) => {
   }
 
   const pathname = new URL(req.url, 'http://local').pathname;
+
+  if (req.method === 'GET' && pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('ok');
+    return;
+  }
+
   if (pathname.startsWith('/api')) {
     res.writeHead(404);
     res.end();
@@ -69,19 +94,18 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    const indexHtml = path.join(root, 'index.html');
-    fs.stat(indexHtml, (e2, st2) => {
+    fs.stat(indexPath, (e2, st2) => {
       if (e2 || !st2.isFile()) {
         res.writeHead(503);
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('dist/index.html missing — run npm run build first');
         return;
       }
-      sendFile(res, indexHtml);
+      sendFile(res, indexPath);
     });
   });
 });
 
 server.listen(port, '0.0.0.0', () => {
-  console.log(`static-serve: dist from ${root} on 0.0.0.0:${port}`);
+  console.log(`[static-serve] dist=${root} listen=0.0.0.0:${port} cwd=${process.cwd()}`);
 });
