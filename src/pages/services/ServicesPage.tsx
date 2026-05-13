@@ -384,7 +384,7 @@ function FilterButton({
   );
 }
 
-function ServiceCard({ item }: { item: ServiceListingRecord }) {
+function ServiceCard({ item, imagePriority }: { item: ServiceListingRecord; imagePriority?: boolean }) {
   const navigate = useNavigate();
   const masterPath = getMasterPath(item.masterId);
   const bookingPath = getBookingPath(
@@ -421,8 +421,9 @@ function ServiceCard({ item }: { item: ServiceListingRecord }) {
               width={160}
               height={160}
               className="h-full w-full object-cover"
-              loading="lazy"
+              loading={imagePriority ? 'eager' : 'lazy'}
               decoding="async"
+              fetchPriority={imagePriority ? 'high' : 'low'}
             />
           </div>
 
@@ -860,7 +861,9 @@ export function ServicesPage() {
                 }
               />
             ) : (
-              filtered.map((item) => <ServiceCard key={item.id} item={item} />)
+              filtered.map((item, index) => (
+                <ServiceCard key={item.id} item={item} imagePriority={index < 10} />
+              ))
             )}
           </div>
         </div>

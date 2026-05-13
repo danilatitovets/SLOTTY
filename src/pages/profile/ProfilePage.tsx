@@ -42,6 +42,7 @@ import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { formatTelegramUserDisplayName } from '../../shared/lib/telegramWebApp';
 import { apiFetch, getApiBaseUrl } from '../../shared/api/backendClient';
+import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
 import { HomeHeader } from '../HomeHeader';
 
 function IconChevronRight({ className }: { className?: string }) {
@@ -432,7 +433,15 @@ function NotificationCard({
   );
 }
 
-function FavoriteMasterRow({ row, onRemove }: { row: FavoriteMasterDto; onRemove: (id: string) => void }) {
+function FavoriteMasterRow({
+  row,
+  onRemove,
+  imagePriority,
+}: {
+  row: FavoriteMasterDto;
+  onRemove: (id: string) => void;
+  imagePriority?: boolean;
+}) {
   const masterPath = getMasterPath(row.masterId);
   const ratingLabel =
     Number.isFinite(row.rating) && row.reviewsCount > 0
@@ -451,12 +460,14 @@ function FavoriteMasterRow({ row, onRemove }: { row: FavoriteMasterDto; onRemove
           <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[20px] bg-[#F1EFEF]">
             {row.photoUrl ? (
               <img
-                src={row.photoUrl}
+                src={optimizeAvatarUrl(row.photoUrl, 128)}
                 alt=""
                 width={56}
                 height={56}
                 className="h-full w-full object-cover"
                 decoding="async"
+                loading={imagePriority ? 'eager' : 'lazy'}
+                fetchPriority={imagePriority ? 'high' : 'low'}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-neutral-400">
@@ -1197,8 +1208,13 @@ export function ProfilePage() {
               />
             ) : (
               <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-                {favorites.map((row) => (
-                  <FavoriteMasterRow key={row.masterId} row={row} onRemove={handleRemoveFavorite} />
+                {favorites.map((row, i) => (
+                  <FavoriteMasterRow
+                    key={row.masterId}
+                    row={row}
+                    onRemove={handleRemoveFavorite}
+                    imagePriority={i < 8}
+                  />
                 ))}
               </ul>
             )}

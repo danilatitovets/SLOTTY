@@ -27,6 +27,7 @@ import {
 import type { MasterDraftCareerItem } from '../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../features/profile/lib/demoMasterStorage';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
+import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
 
 type MasterProfile = NonNullable<ReturnType<typeof getDemoMasterProfile>>;
 
@@ -535,7 +536,7 @@ function DetailsSheet({
               <SheetSection title="Сертификаты" text="Курсы, дипломы и документы мастера.">
                 {certificates.length > 0 ? (
                   <ul className="flex flex-col gap-3">
-                    {certificates.map((certificate) => (
+                    {certificates.map((certificate, cIdx) => (
                       <li key={certificate.id} className="rounded-[26px] bg-[#F1EFEF] p-3">
                         {certificate.imageUrl ? (
                           <div className="mb-3 overflow-hidden rounded-[22px] bg-white">
@@ -544,6 +545,8 @@ function DetailsSheet({
                               alt=""
                               className="h-36 w-full object-cover"
                               decoding="async"
+                              loading={cIdx === 0 ? 'eager' : 'lazy'}
+                              fetchPriority={cIdx === 0 ? 'high' : 'low'}
                             />
                           </div>
                         ) : null}
@@ -570,7 +573,7 @@ function DetailsSheet({
               <SheetSection title="Портфолио" text="Примеры работ мастера.">
                 {portfolio.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3">
-                    {portfolio.map((item) => (
+                    {portfolio.map((item, pIdx) => (
                       <article key={item.id} className="overflow-hidden rounded-[24px] bg-[#F1EFEF]">
                         {item.imageUrl ? (
                           <img
@@ -578,6 +581,8 @@ function DetailsSheet({
                             alt=""
                             className="aspect-square w-full object-cover"
                             decoding="async"
+                            loading={pIdx < 4 ? 'eager' : 'lazy'}
+                            fetchPriority={pIdx < 2 ? 'high' : 'low'}
                           />
                         ) : (
                           <div className="aspect-square bg-white" />
@@ -924,12 +929,14 @@ export function MasterProfilePage() {
               <div className="flex gap-4">
                 <div className="h-[7.25rem] w-[7.25rem] shrink-0 overflow-hidden rounded-[28px] bg-[#F1EFEF] shadow-[0_10px_28px_rgba(17,17,17,0.08)]">
                   <img
-                    src={master.photoUrl}
+                    src={optimizeAvatarUrl(master.photoUrl, 400)}
                     alt=""
                     width={180}
                     height={180}
                     className="h-full w-full object-cover"
+                    loading="eager"
                     decoding="async"
+                    fetchPriority="high"
                   />
                 </div>
 

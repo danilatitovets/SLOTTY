@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getApiBaseUrl } from '../../../shared/api/backendClient';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { formatPublicAddress } from '../../profile/model/masterLocation';
 import { fetchPublishedMasters, type PublishedMasterDto } from '../../services/api/publishedMastersApi';
@@ -35,7 +36,7 @@ function publishedToFeedItem(m: PublishedMasterDto): MasterFeedItem {
   return {
     id: m.masterId,
     full_name: name,
-    avatar_url: (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name),
+    avatar_url: optimizeAvatarUrl((m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name), 320),
     rating: m.rating,
     addressLine,
     priceFrom: price,

@@ -1,5 +1,6 @@
 import { apiFetch } from '../../../shared/api/backendClient';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import type { ServiceListingRecord } from '../../services/model/demoMasters';
 
@@ -64,7 +65,10 @@ export function publishedMasterToListingRecord(m: PublishedMasterDto): ServiceLi
     reviewsCount: m.reviewsCount,
     location: loc,
     priceFrom: price,
-    photoUrl: (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(m.displayName),
+    photoUrl: optimizeAvatarUrl(
+      (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(m.displayName),
+      256,
+    ),
     primaryServiceId: m.primaryServiceId ?? undefined,
     nextSlotStartsAt: m.nextSlotStartsAt,
   };

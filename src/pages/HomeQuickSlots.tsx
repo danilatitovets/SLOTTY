@@ -10,6 +10,7 @@ import type { MasterLocation } from '../features/profile/model/masterLocation';
 import { formatPublicAddress } from '../features/profile/model/masterLocation';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { fetchPublishedMasters, type PublishedMasterDto } from '../features/services/api/publishedMastersApi';
+import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
 
@@ -64,12 +65,12 @@ function buildRows(slots: PublicSlotDto[], masters: PublishedMasterDto[]): Quick
         addressLabel = formatPublicAddress(loc);
       }
       const name = m.displayName.trim() || 'Мастер';
-      photoUrl = (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name);
+      photoUrl = optimizeAvatarUrl((m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name), 220);
       rating = m.rating;
       reviewsCount = m.reviewsCount;
     } else {
       const name = slot.masterDisplayName.trim() || 'Мастер';
-      photoUrl = defaultMasterAvatarUrl(name);
+      photoUrl = optimizeAvatarUrl(defaultMasterAvatarUrl(name), 220);
     }
 
     return {

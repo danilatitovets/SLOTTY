@@ -91,6 +91,7 @@ export function HomeHeader({
                   src={HEADER_LOGO_SRC}
                   alt=""
                   decoding="async"
+                  loading="eager"
                   fetchPriority="high"
                   className="h-9 w-auto origin-center object-contain [transform:translateY(0.25rem)_scale(1.56)] sm:h-10 sm:[transform:translateY(0.35rem)_scale(1.5)]"
                 />

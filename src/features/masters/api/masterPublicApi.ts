@@ -5,6 +5,7 @@ import type { DemoMasterProfile, DemoMasterService, DemoReview } from '../../ser
 import { normalizeMasterCareerItemType } from '../../profile/lib/demoMasterStorage';
 import type { MasterDraftCareerItem } from '../../profile/lib/demoMasterStorage';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 
 async function readApiError(res: Response): Promise<string> {
   const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -184,7 +185,10 @@ export function mapMasterDetailToDemoProfile(detail: MasterPublicDetailDto): Dem
     rating: master.rating,
     reviewsCount: master.reviewsCount,
     location,
-    photoUrl: (master.photoUrl && master.photoUrl.trim()) || defaultMasterAvatarUrl(master.displayName),
+    photoUrl: optimizeAvatarUrl(
+      (master.photoUrl && master.photoUrl.trim()) || defaultMasterAvatarUrl(master.displayName),
+      400,
+    ),
     bio: master.bio?.trim() ?? '',
     phone: master.phone?.trim() || undefined,
     contact: master.contact?.trim() || undefined,

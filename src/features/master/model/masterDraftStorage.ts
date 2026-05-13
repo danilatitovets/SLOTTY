@@ -102,10 +102,12 @@ export function persistMasterDraft(draft: MasterDraft): void {
   saveMasterDraft(normalizeMasterDraft(draft));
 }
 
-/** Аватар по имени, если своё фото не задано. */
-export function defaultMasterAvatarUrl(name: string): string {
+/** Аватар по имени, если своё фото не задано. По умолчанию 192px — достаточно для карточек, меньше трафика чем 512. */
+export function defaultMasterAvatarUrl(name: string, opts?: { size?: number }): string {
   const nameParam = encodeURIComponent((name || 'Мастер').trim() || 'Master');
-  return `https://ui-avatars.com/api/?name=${nameParam}&background=F1EFEF&color=525252&size=512`;
+  const size = opts?.size != null && Number.isFinite(opts.size) ? Math.round(opts.size) : 192;
+  const clamped = Math.max(64, Math.min(512, size));
+  return `https://ui-avatars.com/api/?name=${nameParam}&background=F1EFEF&color=525252&size=${clamped}`;
 }
 
 export { saveMasterDraft } from '../../profile/lib/demoMasterStorage';

@@ -7,6 +7,7 @@ import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { fetchPublishedMasters, type PublishedMasterDto } from '../features/services/api/publishedMastersApi';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
+import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
 
 function IconStar({ className }: { className?: string }) {
   return (
@@ -88,7 +89,7 @@ export const HomeWeeklyTopMasters: FC = () => {
           <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto pb-1 pl-1 pr-1 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {masters.map((m, index) => {
               const name = m.displayName.trim() || 'Мастер';
-              const photoUrl = (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name);
+              const photoUrl = optimizeAvatarUrl((m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name), 220);
               const category = m.category?.name?.trim() || m.category?.code || 'Мастер';
               const eager = index < 3;
               return (

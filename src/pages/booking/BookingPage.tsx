@@ -19,6 +19,7 @@ import { formatBookingHowToFind, formatPublicAddress } from '../../features/prof
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import {
   buildBookingSlotDays,
@@ -611,12 +612,14 @@ export function BookingPage() {
           <div className="flex gap-4">
             <div className="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[22px] bg-white shadow-sm">
               <img
-                src={master.photoUrl}
+                src={optimizeAvatarUrl(master.photoUrl, 256)}
                 alt=""
                 width={176}
                 height={176}
                 className="h-full w-full object-cover"
+                loading="eager"
                 decoding="async"
+                fetchPriority="high"
               />
             </div>
 
