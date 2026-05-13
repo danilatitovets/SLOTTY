@@ -40,11 +40,16 @@ masterSlotsRouter.get(
   }),
 );
 
-const createSlotBody = z.object({
-  startsAt: z.coerce.date(),
-  endsAt: z.coerce.date(),
-  serviceId: z.string().uuid().nullable().optional(),
-});
+const createSlotBody = z
+  .object({
+    startsAt: z.coerce.date(),
+    endsAt: z.coerce.date(),
+    serviceId: z.string().uuid().nullable().optional(),
+  })
+  .refine((b) => b.endsAt.getTime() > b.startsAt.getTime(), {
+    message: 'Время окончания должно быть позже начала',
+    path: ['endsAt'],
+  });
 
 masterSlotsRouter.post(
   '/',

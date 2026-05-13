@@ -41,9 +41,61 @@ export const mastersRouter = Router();
 
 const listQuery = z.object({
   category: z.string().min(1).optional(),
-  search: z.string().optional(),
+  search: z.string().max(200).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(30),
 });
+
+function minutesSinceMidnight(t: string): number {
+  const [hs, ms] = t.split(':');
+  const h = Number.parseInt(hs ?? '0', 10);
+  const m = Number.parseInt(ms ?? '0', 10);
+  return h * 60 + m;
+}
+
+const timeHHMM = z
+  .string()
+  .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, { message: 'Время: формат ЧЧ:ММ (00:00–23:59)' });
+
+const scheduleItemSchema = z
+  .object({
+    weekday: z.number().int().min(0).max(6),
+    startTime: timeHHMM,
+    endTime: timeHHMM,
+  })
+  .refine((r) => minutesSinceMidnight(r.endTime) > minutesSinceMidnight(r.startTime), {
+    message: 'Время окончания должно быть позже начала',
+  });
+
+const onboardingScheduleItemSchema = z
+  .object({
+    weekday: z.number().int().min(0).max(6),
+    startTime: timeHHMM,
+    endTime: timeHHMM,
+    isActive: z.boolean().optional().default(true),
+  })
+  .refine((r) => minutesSinceMidnight(r.endTime) > minutesSinceMidnight(r.startTime), {
+    message: 'Время окончания должно быть позже начала',
+  });
+
+const photoUrlNullable = z.union([z.literal(''), z.string().url()]).nullable().optional();
+
+const slugNullable = z
+  .string()
+  .max(120)
+  .nullable()
+  .optional()
+  .refine(
+    (s) => s == null || s === '' || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s),
+    { message: 'Slug: только латиница в нижнем регистре, цифры и дефисы' },
+  );
+
+const httpsImageUrl = z
+  .string()
+  .url()
+  .max(2000)
+  .refine((u) => u.startsWith('https://'), { message: 'Разрешены только https-ссылки на изображения' });
+
+const MAX_SERVICE_PRICE_AMOUNT = 10_000_000;
 
 mastersRouter.get(
   '/',
@@ -59,91 +111,137 @@ mastersRouter.get(
 );
 
 const postMe = z.object({
-  displayName: z.string().min(1).max(200),
+  displayName: z
+    .string()
+    .max(200)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message: 'Имя не может быть пустым' }),
   bio: z.string().max(10_000).optional(),
   phone: z
     .string()
     .max(50)
     .nullable()
     .optional()
-    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v), {
+    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v.trim()), {
       message: 'Телефон: только цифры, пробелы и + ( ) -, от 5 символов',
     }),
   contact: z.string().max(500).nullable().optional(),
-  photoUrl: z.string().url().nullable().optional(),
-  slug: z.string().max(120).nullable().optional(),
-  primaryCategoryCode: z.string().min(1).max(80).nullable().optional(),
+  photoUrl: photoUrlNullable,
+  slug: slugNullable,
+  primaryCategoryCode: z
+    .string()
+    .max(80)
+    .nullable()
+    .optional()
+    .transform((v) => (typeof v === 'string' ? v.trim() : v))
+    .refine((v) => v == null || v.length >= 1, {
+      message: 'Код категории не может быть пустым',
+    }),
 });
 
 const patchMe = z.object({
-  displayName: z.string().min(1).max(200).optional(),
+  displayName: z
+    .string()
+    .max(200)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message: 'Имя не может быть пустым' })
+    .optional(),
   bio: z.string().max(10_000).optional(),
   phone: z
     .string()
     .max(50)
     .nullable()
     .optional()
-    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v), {
+    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v.trim()), {
       message: 'Телефон: только цифры, пробелы и + ( ) -, от 5 символов',
     }),
   contact: z.string().max(500).nullable().optional(),
-  photoUrl: z.string().url().nullable().optional(),
-  slug: z.string().max(120).nullable().optional(),
-  primaryCategoryCode: z.string().min(1).max(80).nullable().optional(),
+  photoUrl: photoUrlNullable,
+  slug: slugNullable,
+  primaryCategoryCode: z
+    .string()
+    .max(80)
+    .nullable()
+    .optional()
+    .transform((v) => (typeof v === 'string' ? v.trim() : v))
+    .refine((v) => v == null || v.length >= 1, {
+      message: 'Код категории не может быть пустым',
+    }),
   publicationStatus: z.enum(['draft', 'published', 'hidden', 'blocked']).optional(),
-  globalBufferMinutes: z.coerce.number().int().min(0).max(240).optional(),
+  globalBufferMinutes: z.coerce.number().int().finite().min(0).max(240).optional(),
 });
 
-const primaryLocationBody = z.object({
-  visitType: z.enum(['studio', 'at_home']),
-  city: z.string().min(1).max(120),
-  street: z.string().min(1).max(200),
-  building: z.string().min(1).max(80),
-  buildingDetail: z.string().max(120).nullable().optional(),
-  entrance: z.string().max(120).nullable().optional(),
-  floor: z.string().max(40).nullable().optional(),
-  room: z.string().max(80).nullable().optional(),
-  intercom: z.string().max(80).nullable().optional(),
-  landmark: z.string().max(240).nullable().optional(),
-  directions: z.string().max(2000).nullable().optional(),
-  clientNote: z.string().max(2000).nullable().optional(),
-  publicAddress: z.string().min(1).max(600),
-  lat: z.number().finite().nullable().optional(),
-  lng: z.number().finite().nullable().optional(),
-});
+const primaryLocationBody = z
+  .object({
+    visitType: z.enum(['studio', 'at_home']),
+    city: z
+      .string()
+      .max(120)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите город' }),
+    street: z
+      .string()
+      .max(200)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите улицу' }),
+    building: z
+      .string()
+      .max(80)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите номер дома' }),
+    buildingDetail: z.string().max(120).nullable().optional(),
+    entrance: z.string().max(120).nullable().optional(),
+    floor: z.string().max(40).nullable().optional(),
+    room: z.string().max(80).nullable().optional(),
+    intercom: z.string().max(80).nullable().optional(),
+    landmark: z.string().max(240).nullable().optional(),
+    directions: z.string().max(2000).nullable().optional(),
+    clientNote: z.string().max(2000).nullable().optional(),
+    publicAddress: z
+      .string()
+      .max(600)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите адрес для клиентов' }),
+    lat: z.number().finite().nullable().optional(),
+    lng: z.number().finite().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasLat = data.lat != null && Number.isFinite(data.lat);
+    const hasLng = data.lng != null && Number.isFinite(data.lng);
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Укажите и широту, и долготу, либо обе координаты оставьте пустыми',
+        path: ['lat'],
+      });
+    }
+  });
 
 const scheduleRulesBody = z.object({
-  rules: z
-    .array(
-      z.object({
-        weekday: z.number().int().min(0).max(6),
-        startTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-        endTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-      }),
-    )
-    .min(1)
-    .max(56),
+  rules: z.array(scheduleItemSchema).min(1).max(56),
 });
 
 const certificatesBatchBody = z.object({
   items: z
     .array(
       z.object({
-        title: z.string().min(1).max(300),
-        issuer: z.string().min(1).max(300),
+        title: z
+          .string()
+          .max(300)
+          .transform((s) => s.trim())
+          .refine((s) => s.length >= 1, { message: 'Укажите название сертификата' }),
+        issuer: z
+          .string()
+          .max(300)
+          .transform((s) => s.trim())
+          .refine((s) => s.length >= 1, { message: 'Укажите организацию' }),
         year: z.number().int().min(1950).max(2100).nullable().optional(),
         description: z.string().max(5000).nullable().optional(),
-        imageUrl: z.string().url().nullable().optional(),
+        imageUrl: z.union([z.literal(''), httpsImageUrl]).nullable().optional(),
       }),
     )
     .max(50),
 });
-
-const httpsImageUrl = z
-  .string()
-  .url()
-  .max(2000)
-  .refine((u) => u.startsWith('https://'), { message: 'Разрешены только https-ссылки на изображения' });
 
 const bookingRulesPatchBody = z.object({
   bookingRules: z.string().max(20000).nullable().optional(),
@@ -206,38 +304,63 @@ const portfolioPatchBody = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
 });
 
-const onboardingLocationSchema = z.object({
-  visitType: z.enum(['studio', 'at_home']),
-  city: z.string().min(1).max(120),
-  street: z.string().min(1).max(200),
-  building: z.string().min(1).max(80),
-  buildingDetail: z.string().max(120).nullable().optional(),
-  entrance: z.string().max(120).nullable().optional(),
-  floor: z.string().max(40).nullable().optional(),
-  room: z.string().max(80).nullable().optional(),
-  intercom: z.string().max(80).nullable().optional(),
-  landmark: z.string().max(240).nullable().optional(),
-  directions: z.string().max(2000).nullable().optional(),
-  clientNote: z.string().max(2000).nullable().optional(),
-  publicAddress: z.string().min(1).max(600),
-  lat: z.number().finite().nullable().optional(),
-  lng: z.number().finite().nullable().optional(),
-});
-
-const onboardingScheduleRuleSchema = z.object({
-  weekday: z.number().int().min(0).max(6),
-  startTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  isActive: z.boolean().optional().default(true),
-});
+const onboardingLocationSchema = z
+  .object({
+    visitType: z.enum(['studio', 'at_home']),
+    city: z
+      .string()
+      .max(120)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите город' }),
+    street: z
+      .string()
+      .max(200)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите улицу' }),
+    building: z
+      .string()
+      .max(80)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите номер дома' }),
+    buildingDetail: z.string().max(120).nullable().optional(),
+    entrance: z.string().max(120).nullable().optional(),
+    floor: z.string().max(40).nullable().optional(),
+    room: z.string().max(80).nullable().optional(),
+    intercom: z.string().max(80).nullable().optional(),
+    landmark: z.string().max(240).nullable().optional(),
+    directions: z.string().max(2000).nullable().optional(),
+    clientNote: z.string().max(2000).nullable().optional(),
+    publicAddress: z
+      .string()
+      .max(600)
+      .transform((s) => s.trim())
+      .refine((s) => s.length >= 1, { message: 'Укажите адрес для клиентов' }),
+    lat: z.number().finite().nullable().optional(),
+    lng: z.number().finite().nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasLat = data.lat != null && Number.isFinite(data.lat);
+    const hasLng = data.lng != null && Number.isFinite(data.lng);
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Укажите и широту, и долготу, либо обе координаты оставьте пустыми',
+        path: ['lat'],
+      });
+    }
+  });
 
 const onboardingServiceSchema = z.object({
-  title: z.string().min(1).max(300),
-  description: z.string().max(20_000).optional().default(''),
-  durationMinutes: z.coerce.number().int().min(1).max(24 * 60),
-  priceAmount: z.coerce.number().min(0),
+  title: z
+    .string()
+    .max(300)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message: 'Название услуги не может быть пустым' }),
+  description: z.string().max(20_000).optional().default('').transform((s) => s.trim()),
+  durationMinutes: z.coerce.number().int().finite().min(1).max(24 * 60),
+  priceAmount: z.coerce.number().finite().min(0).max(MAX_SERVICE_PRICE_AMOUNT),
   priceType: z.enum(['fixed', 'from']).optional(),
-  sortOrder: z.coerce.number().int().min(0).optional(),
+  sortOrder: z.coerce.number().int().finite().min(0).optional(),
 });
 
 const onboardingCertificateSchema = z.object({
@@ -245,26 +368,34 @@ const onboardingCertificateSchema = z.object({
   issuer: z.string().min(1).max(300),
   year: z.number().int().min(1950).max(2100).nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
-  imageUrl: z.string().url().nullable().optional(),
+  imageUrl: z.union([z.literal(''), httpsImageUrl]).nullable().optional(),
   sortOrder: z.coerce.number().int().min(0).optional(),
 });
 
 const onboardingBody = z.object({
-  categoryCode: z.string().min(1).max(80),
-  name: z.string().min(2).max(200),
+  categoryCode: z
+    .string()
+    .max(80)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message: 'Укажите категорию' }),
+  name: z
+    .string()
+    .max(200)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 2, { message: 'Имя минимум 2 символа' }),
   description: z.string().max(10_000).optional(),
   phone: z
     .string()
     .max(50)
     .nullable()
     .optional()
-    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v), {
+    .refine((v) => v == null || v === '' || /^[\d\s+()\-]{5,50}$/.test(v.trim()), {
       message: 'Телефон: только цифры, пробелы и + ( ) -, от 5 символов',
     }),
   contact: z.string().max(500).nullable().optional(),
-  photoUrl: z.string().url().nullable().optional(),
+  photoUrl: photoUrlNullable,
   location: onboardingLocationSchema,
-  scheduleRules: z.array(onboardingScheduleRuleSchema).min(1).max(56),
+  scheduleRules: z.array(onboardingScheduleItemSchema).min(1).max(56),
   services: z.array(onboardingServiceSchema).min(1).max(100),
   certificates: z.array(onboardingCertificateSchema).max(50).default([]),
 });
@@ -277,11 +408,14 @@ mastersRouter.post(
     const out = await upsertMyMasterProfile(req.user!.id, {
       displayName: body.displayName,
       bio: body.bio,
-      phone: body.phone === '' ? null : body.phone,
+      phone: body.phone === '' || body.phone == null ? null : body.phone.trim(),
       contact: body.contact === '' ? null : body.contact,
-      photoUrl: body.photoUrl,
-      slug: body.slug,
-      primaryCategoryCode: body.primaryCategoryCode,
+      photoUrl: body.photoUrl === '' || body.photoUrl == null ? null : body.photoUrl,
+      slug: body.slug === '' || body.slug == null ? null : body.slug,
+      primaryCategoryCode:
+        body.primaryCategoryCode === '' || body.primaryCategoryCode == null
+          ? null
+          : body.primaryCategoryCode,
     });
     res.status(201).json(out);
   }),
@@ -296,9 +430,9 @@ mastersRouter.post(
       categoryCode: body.categoryCode.trim(),
       name: body.name.trim(),
       description: body.description?.trim(),
-      phone: body.phone === '' ? null : body.phone,
+      phone: body.phone === '' || body.phone == null ? null : body.phone.trim(),
       contact: body.contact === '' ? null : body.contact?.trim() ?? null,
-      photoUrl: body.photoUrl?.trim() || null,
+      photoUrl: body.photoUrl === '' || body.photoUrl == null ? null : body.photoUrl,
       location: {
         visitType: body.location.visitType,
         city: body.location.city.trim(),
@@ -335,7 +469,7 @@ mastersRouter.post(
         issuer: c.issuer,
         year: c.year ?? null,
         description: c.description?.trim() ?? null,
-        imageUrl: c.imageUrl ?? null,
+        imageUrl: c.imageUrl === '' || c.imageUrl == null ? null : c.imageUrl,
         sortOrder: c.sortOrder,
       })),
     });
@@ -352,11 +486,14 @@ mastersRouter.patch(
     const out = await patchMyMasterProfile(req.user!.id, {
       displayName: body.displayName,
       bio: body.bio,
-      phone: body.phone === '' ? null : body.phone,
+      phone: body.phone === '' || body.phone == null ? null : body.phone.trim(),
       contact: body.contact === '' ? null : body.contact,
-      photoUrl: body.photoUrl,
-      slug: body.slug,
-      primaryCategoryCode: body.primaryCategoryCode,
+      photoUrl: body.photoUrl === '' || body.photoUrl == null ? null : body.photoUrl,
+      slug: body.slug === '' || body.slug == null ? null : body.slug,
+      primaryCategoryCode:
+        body.primaryCategoryCode === '' || body.primaryCategoryCode == null
+          ? null
+          : body.primaryCategoryCode,
       publicationStatus: body.publicationStatus,
       globalBufferMinutes: body.globalBufferMinutes,
     });

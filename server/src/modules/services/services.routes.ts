@@ -3,6 +3,32 @@ import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { createMyService, listMyServices, patchMyService, softDeleteMyService } from './services.service.js';
 
+const MAX_PRICE_AMOUNT = 10_000_000;
+
+const trimmedNonEmpty = (max: number, message: string) =>
+  z
+    .string()
+    .max(max)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message });
+
+const trimmedNonEmptyOptional = (max: number, message: string) =>
+  z
+    .string()
+    .max(max)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message })
+    .optional();
+
+const optionalTrimmedDescription = z
+  .string()
+  .max(20_000)
+  .transform((s) => s.trim())
+  .optional();
+
+const priceAmount = z.coerce.number().finite().min(0).max(MAX_PRICE_AMOUNT);
+const priceAmountOptional = z.coerce.number().finite().min(0).max(MAX_PRICE_AMOUNT).optional();
+
 export const masterServicesRouter = Router();
 
 masterServicesRouter.get(
@@ -16,12 +42,12 @@ masterServicesRouter.get(
 
 const createBody = z.object({
   categoryId: z.string().uuid(),
-  title: z.string().min(1).max(300),
-  description: z.string().max(20_000).optional(),
-  durationMinutes: z.coerce.number().int().min(1).max(24 * 60),
-  priceAmount: z.coerce.number().min(0),
+  title: trimmedNonEmpty(300, 'Название не может быть пустым'),
+  description: optionalTrimmedDescription,
+  durationMinutes: z.coerce.number().int().finite().min(1).max(24 * 60),
+  priceAmount,
   priceType: z.enum(['fixed', 'from']).optional(),
-  sortOrder: z.coerce.number().int().optional(),
+  sortOrder: z.coerce.number().int().finite().optional(),
 });
 
 masterServicesRouter.post(
@@ -43,12 +69,12 @@ masterServicesRouter.post(
 
 const patchBody = z.object({
   categoryId: z.string().uuid().optional(),
-  title: z.string().min(1).max(300).optional(),
-  description: z.string().max(20_000).optional(),
-  durationMinutes: z.coerce.number().int().min(1).max(24 * 60).optional(),
-  priceAmount: z.coerce.number().min(0).optional(),
+  title: trimmedNonEmptyOptional(300, 'Название не может быть пустым'),
+  description: optionalTrimmedDescription,
+  durationMinutes: z.coerce.number().int().finite().min(1).max(24 * 60).optional(),
+  priceAmount: priceAmountOptional,
   priceType: z.enum(['fixed', 'from']).optional(),
-  sortOrder: z.coerce.number().int().optional(),
+  sortOrder: z.coerce.number().int().finite().optional(),
   isActive: z.boolean().optional(),
 });
 
