@@ -97,3 +97,18 @@ export function formatTelegramUserDisplayName(u: TelegramUserPreview): string {
   if (u.username && u.username.trim()) return u.username.trim();
   return `Пользователь ${u.id}`;
 }
+
+type TelegramWebAppWithViewport = {
+  onEvent?: (eventType: string, callback: () => void) => void;
+  offEvent?: (eventType: string, callback: () => void) => void;
+};
+
+/** Пересчёт позиции выпадающих списков при смене высоты/положения Mini App. */
+export function subscribeTelegramViewportLayout(cb: () => void): () => void {
+  const tg = (window as unknown as { Telegram?: { WebApp?: TelegramWebAppWithViewport } }).Telegram?.WebApp;
+  if (!tg?.onEvent) return () => {};
+  tg.onEvent('viewportChanged', cb);
+  return () => {
+    tg.offEvent?.('viewportChanged', cb);
+  };
+}

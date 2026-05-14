@@ -1288,7 +1288,7 @@ export function ServicesPage() {
               Район или адрес
             </p>
             <label htmlFor="services-filter-address-modal" className="sr-only">
-              Район или адрес, подсказки из каталога
+              Район или адрес для фильтра
             </label>
 
             <div className="mt-2">

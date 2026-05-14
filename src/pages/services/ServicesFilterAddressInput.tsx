@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import {
   nominatimLineForForm,
   nominatimSearchMinsk,
   type NominatimMinskHit,
 } from '../../shared/lib/nominatimMinsk';
+import { subscribeTelegramViewportLayout } from '../../shared/lib/telegramWebApp';
 import {
   computeViewportListPlacement,
   type ViewportListPlacement,
@@ -48,7 +49,7 @@ export function ServicesFilterAddressInput({
   const [items, setItems] = useState<NominatimMinskHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [dropPlacement, setDropPlacement] = useState<ViewportListPlacement | null>(null);
+  const [layoutTick, setLayoutTick] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortSearchRef = useRef<AbortController | null>(null);
@@ -72,13 +73,13 @@ export function ServicesFilterAddressInput({
       setItems(list);
       setOpen(list.length > 0);
       if (list.length === 0) {
-        setHint('Ничего не нашли — уточните улицу, район или ориентир в Минске.');
+        setHint('Пока ничего не найдено — уточните улицу, район или ориентир в Минске.');
       }
     } catch (err: unknown) {
       if ((err as { name?: string }).name === 'AbortError') return;
       console.warn('[SLOTTY] services filter nominatim', err);
       setItems([]);
-      setHint('Поиск адреса временно недоступен. Можно ввести район вручную.');
+      setHint('Не удалось проверить адрес по карте. Можно ввести вручную или повторить попытку.');
     } finally {
       setLoading(false);
     }
@@ -86,46 +87,51 @@ export function ServicesFilterAddressInput({
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.trim().length < 1) {
+    const t = value.trim();
+    if (t.length < 1) {
       setItems([]);
       setOpen(false);
       setHint(null);
       return;
     }
+    if (t.length === 1) {
+      void runSearch(value);
+      return;
+    }
     debounceRef.current = setTimeout(() => {
       void runSearch(value);
-    }, 450);
+    }, 280);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [value, runSearch]);
 
-  useLayoutEffect(() => {
-    if (!viewportDropdown || !open || items.length === 0) {
-      setDropPlacement(null);
-      return;
-    }
+  const dropPlacement = useMemo((): ViewportListPlacement | null => {
+    if (!viewportDropdown || !open || items.length === 0) return null;
     const input = wrapRef.current?.querySelector('input');
-    if (!input) {
-      setDropPlacement(null);
-      return;
-    }
-    const measure = () => {
-      setDropPlacement(computeViewportListPlacement(input));
-    };
-    measure();
-    window.addEventListener('scroll', measure, true);
-    window.addEventListener('resize', measure);
+    return input instanceof HTMLElement ? computeViewportListPlacement(input) : null;
+  }, [viewportDropdown, open, items, value, layoutTick]);
+
+  useLayoutEffect(() => {
+    if (!viewportDropdown || !open || items.length === 0) return;
+    const input = wrapRef.current?.querySelector('input');
+    if (!input) return;
+    const bump = () => setLayoutTick((n) => n + 1);
+    bump();
+    const unsubTg = subscribeTelegramViewportLayout(bump);
+    window.addEventListener('scroll', bump, true);
+    window.addEventListener('resize', bump);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', measure);
-      window.visualViewport.addEventListener('scroll', measure);
+      window.visualViewport.addEventListener('resize', bump);
+      window.visualViewport.addEventListener('scroll', bump);
     }
     return () => {
-      window.removeEventListener('scroll', measure, true);
-      window.removeEventListener('resize', measure);
+      unsubTg();
+      window.removeEventListener('scroll', bump, true);
+      window.removeEventListener('resize', bump);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', measure);
-        window.visualViewport.removeEventListener('scroll', measure);
+        window.visualViewport.removeEventListener('resize', bump);
+        window.visualViewport.removeEventListener('scroll', bump);
       }
     };
   }, [viewportDropdown, open, items]);

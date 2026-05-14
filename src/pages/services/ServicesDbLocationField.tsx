@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchLocationSuggestions, type LocationSuggestionDto } from '../../features/services/api/catalogListingsApi';
 import {
@@ -6,6 +6,7 @@ import {
   nominatimSearchMinsk,
   type NominatimMinskHit,
 } from '../../shared/lib/nominatimMinsk';
+import { subscribeTelegramViewportLayout } from '../../shared/lib/telegramWebApp';
 import {
   computeViewportListPlacement,
   type ViewportListPlacement,
@@ -45,7 +46,7 @@ function dedupeByTitle(items: LocationSuggestionDto[]): LocationSuggestionDto[] 
   return out;
 }
 
-/** Подсказки: каталог мастеров, при пустом ответе или ошибке — Nominatim по Минску. */
+/** Подсказки: сначала адреса из каталога мастеров; если совпадений нет — OpenStreetMap по Минску. */
 export function ServicesDbLocationField({ locationId, addressLine, onChange, id, viewportDropdown = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -53,7 +54,7 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
   const [items, setItems] = useState<LocationSuggestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [dropPlacement, setDropPlacement] = useState<ViewportListPlacement | null>(null);
+  const [layoutTick, setLayoutTick] = useState(0);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -95,13 +96,17 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
       const list = dedupeByTitle(nominatimToSuggestions(nom));
       setItems(list);
       setOpen(list.length > 0);
-      setHint(list.length === 0 ? 'Ничего не нашли. Уточните улицу, дом или район в Минске.' : null);
+      setHint(
+        list.length === 0
+          ? 'Пока ничего не найдено — попробуйте другую формулировку (улица, район Минска).'
+          : null,
+      );
     } catch (err: unknown) {
       if ((err as { name?: string }).name === 'AbortError') return;
       console.warn('[SLOTTY] location suggest / nominatim', err);
       setItems([]);
       setOpen(false);
-      setHint('Не удалось загрузить подсказки');
+      setHint('Пока не удалось загрузить подсказки. Повторите ввод или попробуйте чуть позже.');
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
@@ -129,9 +134,13 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
       setHint(null);
       return;
     }
+    if (addressLine.trim().length === 1) {
+      void runSuggest(addressLine);
+      return;
+    }
     debounceRef.current = setTimeout(() => {
       void runSuggest(addressLine);
-    }, 400);
+    }, 280);
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
@@ -144,32 +153,32 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
     };
   }, [addressLine, locationId, runSuggest]);
 
-  useLayoutEffect(() => {
-    if (!viewportDropdown || !open || items.length === 0) {
-      setDropPlacement(null);
-      return;
-    }
+  const dropPlacement = useMemo((): ViewportListPlacement | null => {
+    if (!viewportDropdown || !open || items.length === 0) return null;
     const input = wrapRef.current?.querySelector('input');
-    if (!input) {
-      setDropPlacement(null);
-      return;
-    }
-    const measure = () => {
-      setDropPlacement(computeViewportListPlacement(input));
-    };
-    measure();
-    window.addEventListener('scroll', measure, true);
-    window.addEventListener('resize', measure);
+    return input instanceof HTMLElement ? computeViewportListPlacement(input) : null;
+  }, [viewportDropdown, open, items, addressLine, layoutTick]);
+
+  useLayoutEffect(() => {
+    if (!viewportDropdown || !open || items.length === 0) return;
+    const input = wrapRef.current?.querySelector('input');
+    if (!input) return;
+    const bump = () => setLayoutTick((n) => n + 1);
+    bump();
+    const unsubTg = subscribeTelegramViewportLayout(bump);
+    window.addEventListener('scroll', bump, true);
+    window.addEventListener('resize', bump);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', measure);
-      window.visualViewport.addEventListener('scroll', measure);
+      window.visualViewport.addEventListener('resize', bump);
+      window.visualViewport.addEventListener('scroll', bump);
     }
     return () => {
-      window.removeEventListener('scroll', measure, true);
-      window.removeEventListener('resize', measure);
+      unsubTg();
+      window.removeEventListener('scroll', bump, true);
+      window.removeEventListener('resize', bump);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', measure);
-        window.visualViewport.removeEventListener('scroll', measure);
+        window.visualViewport.removeEventListener('resize', bump);
+        window.visualViewport.removeEventListener('scroll', bump);
       }
     };
   }, [viewportDropdown, open, items]);

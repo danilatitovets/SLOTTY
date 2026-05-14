@@ -204,13 +204,13 @@ export function OnboardingAddressMap({ city, addressLine, onPick, visitType = 's
         setItems(list);
         setOpen(list.length > 0);
         if (list.length === 0) {
-          setHint('Ничего не нашли — уточните запрос, кликните по карте или перетащите метку.');
+          setHint('Пока ничего не найдено — уточните запрос, кликните по карте или перетащите метку.');
         }
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'AbortError') return;
         console.warn('[SLOTTY] nominatim search', err);
         setItems([]);
-        setHint('Поиск временно недоступен. Укажите адрес вручную ниже или поставьте метку на карте.');
+        setHint('Не удалось загрузить подсказки по карте. Укажите адрес вручную или поставьте метку на карте.');
       } finally {
         setLoading(false);
       }
