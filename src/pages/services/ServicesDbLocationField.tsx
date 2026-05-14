@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchLocationSuggestions, type LocationSuggestionDto } from '../../features/services/api/catalogListingsApi';
 import {
@@ -6,6 +6,10 @@ import {
   nominatimSearchMinsk,
   type NominatimMinskHit,
 } from '../../shared/lib/nominatimMinsk';
+import {
+  computeViewportListPlacement,
+  type ViewportListPlacement,
+} from '../../shared/lib/viewportListPlacement';
 
 type Props = {
   locationId: string | null;
@@ -28,7 +32,20 @@ function nominatimToSuggestions(hits: NominatimMinskHit[]): LocationSuggestionDt
   }));
 }
 
-/** Подсказки адреса из каталога (БД), при ошибке API — fallback Nominatim по Минску. */
+/** Убираем дубли с одинаковой короткой строкой (разные POI на одном доме). */
+function dedupeByTitle(items: LocationSuggestionDto[]): LocationSuggestionDto[] {
+  const seen = new Set<string>();
+  const out: LocationSuggestionDto[] = [];
+  for (const it of items) {
+    const k = it.title.trim().toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(it);
+  }
+  return out;
+}
+
+/** Подсказки: каталог мастеров, при пустом ответе или ошибке — Nominatim по Минску. */
 export function ServicesDbLocationField({ locationId, addressLine, onChange, id, viewportDropdown = false }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -36,15 +53,16 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
   const [items, setItems] = useState<LocationSuggestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [dropRect, setDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropPlacement, setDropPlacement] = useState<ViewportListPlacement | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const runSuggest = useCallback(async (raw: string) => {
     const q = raw.trim();
-    if (q.length < 2) {
+    if (q.length < 1) {
       setItems([]);
+      setOpen(false);
       setHint(null);
       return;
     }
@@ -55,46 +73,57 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
 
     setLoading(true);
     setHint(null);
+
     try {
-      const list = await fetchLocationSuggestions(q, 12);
+      let catalogList: LocationSuggestionDto[] = [];
+      try {
+        catalogList = await fetchLocationSuggestions(q, 12);
+      } catch {
+        catalogList = [];
+      }
       if (ac.signal.aborted) return;
+
+      if (catalogList.length > 0) {
+        setItems(catalogList);
+        setOpen(true);
+        setHint(null);
+        return;
+      }
+
+      const nom = await nominatimSearchMinsk('Минск', q, ac.signal);
+      if (ac.signal.aborted) return;
+      const list = dedupeByTitle(nominatimToSuggestions(nom));
       setItems(list);
       setOpen(list.length > 0);
-      if (list.length === 0) setHint('По этому адресу пока нет мастеров');
+      setHint(list.length === 0 ? 'Ничего не нашли. Уточните улицу, дом или район в Минске.' : null);
     } catch (err: unknown) {
       if ((err as { name?: string }).name === 'AbortError') return;
-      console.warn('[SLOTTY] location suggest', err);
-      try {
-        const nom = await nominatimSearchMinsk('Минск', q, ac.signal);
-        if (ac.signal.aborted) return;
-        const list = nominatimToSuggestions(nom);
-        setItems(list);
-        setOpen(list.length > 0);
-        setHint(
-          list.length === 0
-            ? 'Ничего не нашли — уточните улицу или район в Минске.'
-            : 'Каталог временно недоступен — показаны подсказки по карте.',
-        );
-      } catch (nomErr: unknown) {
-        if ((nomErr as { name?: string }).name === 'AbortError') return;
-        console.warn('[SLOTTY] location nominatim fallback', nomErr);
-        setItems([]);
-        setHint('Не удалось загрузить подсказки');
-      }
+      console.warn('[SLOTTY] location suggest / nominatim', err);
+      setItems([]);
+      setOpen(false);
+      setHint('Не удалось загрузить подсказки');
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+
     if (locationId) {
       setItems([]);
       setOpen(false);
       setHint(null);
       return;
     }
-    if (addressLine.trim().length < 2) {
+    if (addressLine.trim().length < 1) {
       setItems([]);
       setOpen(false);
       setHint(null);
@@ -104,30 +133,44 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
       void runSuggest(addressLine);
     }, 400);
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
+        abortRef.current = null;
+      }
     };
   }, [addressLine, locationId, runSuggest]);
 
   useLayoutEffect(() => {
     if (!viewportDropdown || !open || items.length === 0) {
-      setDropRect(null);
+      setDropPlacement(null);
       return;
     }
     const input = wrapRef.current?.querySelector('input');
     if (!input) {
-      setDropRect(null);
+      setDropPlacement(null);
       return;
     }
     const measure = () => {
-      const r = input.getBoundingClientRect();
-      setDropRect({ top: r.bottom + 6, left: r.left, width: r.width });
+      setDropPlacement(computeViewportListPlacement(input));
     };
     measure();
     window.addEventListener('scroll', measure, true);
     window.addEventListener('resize', measure);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', measure);
+      window.visualViewport.addEventListener('scroll', measure);
+    }
     return () => {
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', measure);
+        window.visualViewport.removeEventListener('scroll', measure);
+      }
     };
   }, [viewportDropdown, open, items]);
 
@@ -144,6 +187,14 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
   }, []);
 
   const clear = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     onChange({ locationId: null, addressLine: '' });
     setItems([]);
     setOpen(false);
@@ -157,7 +208,8 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
     setItems([]);
   };
 
-  const listClass =
+  const listClassPortal = 'scrollbar-hidden overflow-y-auto rounded-[18px] bg-white py-1 shadow-[0_12px_40px_rgba(17,17,17,0.12)]';
+  const listClassInline =
     'scrollbar-hidden max-h-[min(220px,38dvh)] overflow-auto rounded-[18px] bg-white py-1 shadow-[0_12px_40px_rgba(17,17,17,0.12)]';
 
   const listBody = items.map((hit) => (
@@ -174,6 +226,27 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
     </li>
   ));
 
+  const portalListStyle: CSSProperties | null =
+    dropPlacement && viewportDropdown && open && items.length > 0
+      ? dropPlacement.mode === 'down'
+        ? {
+            position: 'fixed',
+            top: dropPlacement.top,
+            left: dropPlacement.left,
+            width: dropPlacement.width,
+            maxHeight: dropPlacement.maxHeight,
+            zIndex: 10000,
+          }
+        : {
+            position: 'fixed',
+            bottom: dropPlacement.bottom,
+            left: dropPlacement.left,
+            width: dropPlacement.width,
+            maxHeight: dropPlacement.maxHeight,
+            zIndex: 10000,
+          }
+      : null;
+
   return (
     <div ref={wrapRef} className="relative">
       <div className="flex items-stretch gap-2">
@@ -184,9 +257,9 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
           onChange={(e) => onChange({ locationId: null, addressLine: e.target.value })}
           onFocus={() => {
             if (items.length > 0) setOpen(true);
-            else if (!locationId && addressLine.trim().length >= 2) void runSuggest(addressLine);
+            else if (!locationId && addressLine.trim().length >= 1) void runSuggest(addressLine);
           }}
-          placeholder="Например, Немига или центр"
+          placeholder="Достаточно одной буквы — например, Немига"
           autoComplete="off"
           className="min-w-0 flex-1 rounded-[24px] bg-[#F1EFEF] px-4 py-3.5 text-[16px] font-semibold text-neutral-950 outline-none ring-0 placeholder:font-medium placeholder:text-neutral-400"
         />
@@ -206,20 +279,9 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
       ) : null}
 
       {open && items.length > 0 ? (
-        viewportDropdown && dropRect ? (
+        viewportDropdown && portalListStyle ? (
           createPortal(
-            <ul
-              ref={listRef}
-              role="listbox"
-              className={listClass}
-              style={{
-                position: 'fixed',
-                top: dropRect.top,
-                left: dropRect.left,
-                width: dropRect.width,
-                zIndex: 10000,
-              }}
-            >
+            <ul ref={listRef} role="listbox" className={listClassPortal} style={portalListStyle}>
               {listBody}
             </ul>,
             document.body,
@@ -227,7 +289,7 @@ export function ServicesDbLocationField({ locationId, addressLine, onChange, id,
         ) : !viewportDropdown ? (
           <ul
             ref={listRef}
-            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-10 ${listClass}`}
+            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-10 ${listClassInline}`}
             role="listbox"
           >
             {listBody}

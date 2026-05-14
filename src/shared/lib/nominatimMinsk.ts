@@ -49,7 +49,7 @@ export async function nominatimSearchMinsk(
   signal: AbortSignal,
 ): Promise<NominatimMinskHit[]> {
   const q = streetPart.trim();
-  if (q.length < 2) return [];
+  if (q.length < 1) return [];
 
   const cityPart = city.trim() || 'Минск';
   const fullQ = `${cityPart}, ${q}`;

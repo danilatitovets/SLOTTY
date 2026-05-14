@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import {
   nominatimLineForForm,
   nominatimSearchMinsk,
   type NominatimMinskHit,
 } from '../../shared/lib/nominatimMinsk';
+import {
+  computeViewportListPlacement,
+  type ViewportListPlacement,
+} from '../../shared/lib/viewportListPlacement';
 
 const FILTER_CITY = 'Минск';
 
@@ -44,14 +48,14 @@ export function ServicesFilterAddressInput({
   const [items, setItems] = useState<NominatimMinskHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [dropRect, setDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropPlacement, setDropPlacement] = useState<ViewportListPlacement | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortSearchRef = useRef<AbortController | null>(null);
 
   const runSearch = useCallback(async (raw: string) => {
     const q = raw.trim();
-    if (q.length < 2) {
+    if (q.length < 1) {
       setItems([]);
       setHint(null);
       return;
@@ -82,7 +86,7 @@ export function ServicesFilterAddressInput({
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.trim().length < 2) {
+    if (value.trim().length < 1) {
       setItems([]);
       setOpen(false);
       setHint(null);
@@ -98,24 +102,31 @@ export function ServicesFilterAddressInput({
 
   useLayoutEffect(() => {
     if (!viewportDropdown || !open || items.length === 0) {
-      setDropRect(null);
+      setDropPlacement(null);
       return;
     }
     const input = wrapRef.current?.querySelector('input');
     if (!input) {
-      setDropRect(null);
+      setDropPlacement(null);
       return;
     }
     const measure = () => {
-      const r = input.getBoundingClientRect();
-      setDropRect({ top: r.bottom + 6, left: r.left, width: r.width });
+      setDropPlacement(computeViewportListPlacement(input));
     };
     measure();
     window.addEventListener('scroll', measure, true);
     window.addEventListener('resize', measure);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', measure);
+      window.visualViewport.addEventListener('scroll', measure);
+    }
     return () => {
       window.removeEventListener('scroll', measure, true);
       window.removeEventListener('resize', measure);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', measure);
+        window.visualViewport.removeEventListener('scroll', measure);
+      }
     };
   }, [viewportDropdown, open, items]);
 
@@ -139,7 +150,7 @@ export function ServicesFilterAddressInput({
   };
 
   const listClass =
-    'scrollbar-hidden max-h-[min(220px,38dvh)] overflow-auto rounded-[18px] bg-white py-1 shadow-[0_12px_40px_rgba(17,17,17,0.12)]';
+    'scrollbar-hidden overflow-y-auto rounded-[18px] bg-white py-1 shadow-[0_12px_40px_rgba(17,17,17,0.12)]';
 
   const listContent = items.map((hit) => (
     <li key={hit.place_id}>
@@ -159,8 +170,29 @@ export function ServicesFilterAddressInput({
       ? `${inputClassName.trim()} w-full outline-none ring-0`
       : `${INPUT_BASE} rounded-[24px] py-3.5 text-[16px] font-semibold text-neutral-950`;
 
+  const portalListStyle: CSSProperties | null =
+    dropPlacement && viewportDropdown && open && items.length > 0
+      ? dropPlacement.mode === 'down'
+        ? {
+            position: 'fixed',
+            top: dropPlacement.top,
+            left: dropPlacement.left,
+            width: dropPlacement.width,
+            maxHeight: dropPlacement.maxHeight,
+            zIndex: 10000,
+          }
+        : {
+            position: 'fixed',
+            bottom: dropPlacement.bottom,
+            left: dropPlacement.left,
+            width: dropPlacement.width,
+            maxHeight: dropPlacement.maxHeight,
+            zIndex: 10000,
+          }
+      : null;
+
   return (
-    <div ref={wrapRef} className="relative z-[70]">
+    <div ref={wrapRef} className="relative">
       <input
         id={id}
         type="text"
@@ -171,7 +203,7 @@ export function ServicesFilterAddressInput({
             setOpen(true);
             return;
           }
-          if (value.trim().length >= 2) void runSearch(value);
+          if (value.trim().length >= 1) void runSearch(value);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') setOpen(false);
@@ -187,20 +219,9 @@ export function ServicesFilterAddressInput({
       />
 
       {open && items.length > 0 ? (
-        viewportDropdown && dropRect ? (
+        viewportDropdown && portalListStyle ? (
           createPortal(
-            <ul
-              ref={listRef}
-              role="listbox"
-              className={listClass}
-              style={{
-                position: 'fixed',
-                top: dropRect.top,
-                left: dropRect.left,
-                width: dropRect.width,
-                zIndex: 10000,
-              }}
-            >
+            <ul ref={listRef} role="listbox" className={listClass} style={portalListStyle}>
               {listContent}
             </ul>,
             document.body,
@@ -208,7 +229,7 @@ export function ServicesFilterAddressInput({
         ) : !viewportDropdown ? (
           <ul
             ref={listRef}
-            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-[80] ${listClass}`}
+            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-10 max-h-[min(220px,38dvh)] ${listClass}`}
             role="listbox"
           >
             {listContent}
