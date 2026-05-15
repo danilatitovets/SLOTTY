@@ -21,6 +21,7 @@ import {
   masterVisitTypeLabel,
 } from '../../features/profile/model/masterLocation';
 import { OnboardingAddressMap } from './OnboardingAddressMap';
+import { OnboardingStep1Intro } from './OnboardingStep1Intro';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
@@ -462,81 +463,6 @@ function Field({
   );
 }
 
-function IconOnboardingProfile({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path d="M20 21a8 8 0 1 0-16 0" strokeLinecap="round" />
-      <circle cx="12" cy="8" r="4" />
-    </svg>
-  );
-}
-
-function IconOnboardingMap({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path d="M12 21s7-4.35 7-10a7 7 0 1 0-14 0c0 5.65 7 10 7 10Z" strokeLinejoin="round" />
-      <circle cx="12" cy="11" r="2.25" />
-    </svg>
-  );
-}
-
-function IconOnboardingServices({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round" />
-      <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" strokeLinecap="round" strokeWidth="2.5" />
-    </svg>
-  );
-}
-
-function IconOnboardingTrust({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <path d="M12 3 4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-3Z" strokeLinejoin="round" />
-      <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function MiniInfoCard({
-  title,
-  text,
-  icon,
-  emphasized,
-}: {
-  title: string;
-  text: string;
-  icon: ReactNode;
-  emphasized?: boolean;
-}) {
-  return (
-    <div
-      className={`flex h-full min-h-0 flex-col rounded-[26px] px-3.5 py-3.5 transition-colors duration-200 sm:px-4 sm:py-4 ${
-        emphasized
-          ? 'bg-[#F1EFEF] shadow-[inset_0_0_0_1px_rgba(226,149,149,0.22)]'
-          : 'bg-[#F1EFEF] hover:bg-[#E9E6E6] sm:hover:bg-[#ECE9E9]'
-      }`}
-    >
-      <div className="flex flex-1 gap-3 sm:gap-3.5">
-        <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] bg-white text-[#c47878] shadow-[0_4px_14px_rgba(17,17,17,0.06)]"
-          aria-hidden
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold leading-snug tracking-[-0.035em] text-neutral-950 sm:text-[16px] sm:tracking-[-0.04em]">
-            {title}
-          </p>
-          <p className="mt-1.5 text-[14px] leading-snug text-neutral-500 text-pretty sm:leading-relaxed">
-            {text}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function BecomeMasterPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, profile, backendConfigured, refreshProfile } = useAuth();
@@ -581,7 +507,7 @@ export function BecomeMasterPage() {
   const [floor, setFloor] = useState('');
   const [room, setRoom] = useState('');
   const [intercom, setIntercom] = useState('');
-  const [landmark, setLandmark] = useState('');
+  const [landmark] = useState('');
   const [directions, setDirections] = useState('');
   const [clientNote, setClientNote] = useState('');
   const [salonName, setSalonName] = useState('');
@@ -1624,7 +1550,7 @@ export function BecomeMasterPage() {
                 to={HUB_PATH}
                 className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-[13px] font-semibold leading-tight text-neutral-900 shadow-none transition hover:opacity-90 active:opacity-80 sm:px-3.5 sm:text-[14px]"
               >
-                ← На главную
+                На главную
               </Link>
             ) : (
               <button
@@ -1685,46 +1611,17 @@ export function BecomeMasterPage() {
                 <img
                   src={LOGO_SRC}
                   alt="SLOTTY"
-                  className="mx-auto h-auto max-h-[7.25rem] w-auto max-w-[12.5rem] object-contain sm:max-h-[8.25rem] sm:max-w-[14rem]"
+                  className="mx-auto h-auto max-h-[5.5rem] w-auto max-w-[10rem] object-contain sm:max-h-[6rem] sm:max-w-[11rem]"
                   draggable={false}
                 />
 
-                <div className="mt-5 text-center sm:mt-6">
-                  <h1 className="text-balance px-0.5 text-[28px] font-semibold leading-[1.08] tracking-[-0.065em] text-neutral-950 sm:text-[34px] sm:leading-[1.05] sm:tracking-[-0.07em]">
-                    Анкета мастера
-                  </h1>
+                <p className="mx-auto mt-3 max-w-[20rem] text-[14px] leading-snug text-neutral-500 sm:mt-4">
+                  Несколько шагов — и клиенты смогут записываться к вам онлайн.
+                </p>
 
-                  <p className="mx-auto mt-4 max-w-[22rem] text-[15px] leading-snug text-neutral-500 sm:mt-4 sm:max-w-[26rem] sm:text-[15px] sm:leading-relaxed">
-                    Несколько шагов — и клиенты смогут записываться к вам онлайн.
-                  </p>
-
-                  <div className="mt-6 grid grid-cols-1 gap-2.5 text-left sm:mt-7 sm:grid-cols-2 sm:gap-2.5">
-                    <div className="min-h-0 sm:h-full sm:min-h-[5.75rem]">
-                      <MiniInfoCard
-                        emphasized
-                        title="Профиль"
-                        text="Имя, описание и контакты"
-                        icon={<IconOnboardingProfile className="h-5 w-5" />}
-                      />
-                    </div>
-                    <div className="min-h-0 sm:h-full sm:min-h-[5.75rem]">
-                      <MiniInfoCard title="Адрес" text="Место приёма клиентов" icon={<IconOnboardingMap className="h-5 w-5" />} />
-                    </div>
-                    <div className="min-h-0 sm:h-full sm:min-h-[5.75rem]">
-                      <MiniInfoCard
-                        title="Услуги"
-                        text="Цены, длительность и описание"
-                        icon={<IconOnboardingServices className="h-5 w-5" />}
-                      />
-                    </div>
-                    <div className="min-h-0 sm:h-full sm:min-h-[5.75rem]">
-                      <MiniInfoCard
-                        title="Доверие"
-                        text="Сертификаты и подтверждения"
-                        icon={<IconOnboardingTrust className="h-5 w-5" />}
-                      />
-                    </div>
-                  </div>
+                <div className="mt-5 sm:mt-6">
+                  <OnboardingStep1Intro />
+                </div>
 
                   <button
                     type="button"
@@ -1736,7 +1633,6 @@ export function BecomeMasterPage() {
                       ›
                     </span>
                   </button>
-                </div>
               </div>
             ) : null}
 
