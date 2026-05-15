@@ -94,6 +94,7 @@ function normalizeMasterDraft(d: MasterDraft): MasterDraft {
     paymentNote: typeof d.paymentNote === 'string' ? d.paymentNote : undefined,
     careerItems: Array.isArray(d.careerItems) ? d.careerItems : undefined,
     primaryCategoryId: typeof d.primaryCategoryId === 'string' && d.primaryCategoryId.trim() ? d.primaryCategoryId.trim() : undefined,
+    profileSlug: typeof d.profileSlug === 'string' && d.profileSlug.trim() ? d.profileSlug.trim() : undefined,
   };
 }
 

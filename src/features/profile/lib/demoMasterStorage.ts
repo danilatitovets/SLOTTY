@@ -79,6 +79,8 @@ export type MasterDraft = {
   cancellationPolicy?: string;
   paymentMethods?: string[];
   paymentNote?: string;
+  /** Публичный slug мастера (из кабинета API) для deep-link в бота. */
+  profileSlug?: string | null;
 };
 
 /** Сжимает legacy `certificate` → `course`, неизвестное → `work`. */

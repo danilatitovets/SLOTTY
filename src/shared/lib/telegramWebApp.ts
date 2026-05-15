@@ -112,3 +112,45 @@ export function subscribeTelegramViewportLayout(cb: () => void): () => void {
     tg.offEvent?.('viewportChanged', cb);
   };
 }
+
+/** Открыть внешнюю ссылку: в Mini App — через Telegram API, иначе `window.open`. */
+export function openTelegramOrBrowserUrl(url: string): void {
+  if (typeof window === 'undefined') return;
+  type WebApp = {
+    openTelegramLink?: (u: string) => void;
+    openLink?: (u: string, opts?: { try_instant_view?: boolean }) => void;
+  };
+  const tg = (window as unknown as { Telegram?: { WebApp?: WebApp } }).Telegram?.WebApp;
+  try {
+    if (url.includes('t.me/') && typeof tg?.openTelegramLink === 'function') {
+      tg.openTelegramLink(url);
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    if (typeof tg?.openLink === 'function') {
+      tg.openLink(url, { try_instant_view: false });
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/** В Mini App: открыть стандартный шаринг Telegram для URL (через t.me/share/url). */
+export function openTelegramShareUrlPicker(urlToShare: string, text: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const openTelegramLink = (window as unknown as { Telegram?: { WebApp?: { openTelegramLink?: (u: string) => void } } })
+    .Telegram?.WebApp?.openTelegramLink;
+  if (typeof openTelegramLink !== 'function') return false;
+  const sharePage = `https://t.me/share/url?url=${encodeURIComponent(urlToShare)}&text=${encodeURIComponent(text)}`;
+  try {
+    openTelegramLink(sharePage);
+    return true;
+  } catch {
+    return false;
+  }
+}

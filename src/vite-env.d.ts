@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   /** 'true' — не мокать Telegram на localhost (для отладки ошибок окружения) */
   readonly VITE_DISABLE_TELEGRAM_MOCK?: string;
+  /** Имя Telegram-бота без @ (ссылки вида https://t.me/BOT?start=master_…) */
+  readonly VITE_TELEGRAM_BOT_USERNAME?: string;
 }
 
 interface ImportMeta {

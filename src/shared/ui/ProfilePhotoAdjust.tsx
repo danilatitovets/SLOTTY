@@ -1,7 +1,20 @@
-import { useCallback, useMemo, useRef, useState, type PointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from 'react';
 import { cropImageToAspect, type PhotoFrameFocus } from '../lib/cropImageToAspect';
 
 const HERO_ASPECT = 16 / 10;
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 5;
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
 
 type Props = {
   src: string;
@@ -19,41 +32,20 @@ export function ProfilePhotoAdjust({
   onCancel,
 }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const lastPtrRef = useRef<{ x: number; y: number } | null>(null);
+  const dragActiveRef = useRef(false);
+
   const [focus, setFocus] = useState<PhotoFrameFocus>(
-    () => initialFocus ?? { x: 0.5, y: 0.5, zoom: 1 },
+    () => ({
+      x: initialFocus?.x ?? 0.5,
+      y: initialFocus?.y ?? 0.5,
+      zoom: clamp(initialFocus?.zoom ?? 1, ZOOM_MIN, ZOOM_MAX),
+    }),
   );
-  const [dragging, setDragging] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const aspectPercent = useMemo(() => `${(1 / aspect) * 100}%`, [aspect]);
-
-  const onPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setDragging(true);
-  }, []);
-
-  const onPointerMove = useCallback(
-    (e: PointerEvent<HTMLDivElement>) => {
-      if (!dragging || !frameRef.current) return;
-      const rect = frameRef.current.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-      setFocus((prev) => ({
-        ...prev,
-        x: Math.min(1, Math.max(0, x)),
-        y: Math.min(1, Math.max(0, y)),
-      }));
-    },
-    [dragging],
-  );
-
-  const endDrag = useCallback((e: PointerEvent<HTMLDivElement>) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    setDragging(false);
-  }, []);
 
   const previewStyle = useMemo(() => {
     const z = focus.zoom;
@@ -63,6 +55,59 @@ export function ProfilePhotoAdjust({
       transform: `translate(${px}%, ${py}%) scale(${z})`,
     } as const;
   }, [focus]);
+
+  const onPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    lastPtrRef.current = { x: e.clientX, y: e.clientY };
+    dragActiveRef.current = true;
+    setError(null);
+  }, []);
+
+  const onPointerMove = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    const el = frameRef.current;
+    if (!el || !lastPtrRef.current || !dragActiveRef.current) return;
+    if (e.pointerType === 'touch' && e.isPrimary === false) return;
+
+    const rect = el.getBoundingClientRect();
+    const last = lastPtrRef.current;
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    lastPtrRef.current = { x: e.clientX, y: e.clientY };
+
+    setFocus((prev) => {
+      const sens = 0.42 / Math.max(0.85, prev.zoom);
+      return {
+        ...prev,
+        x: clamp(prev.x - (dx / rect.width) * sens, 0, 1),
+        y: clamp(prev.y - (dy / rect.height) * sens, 0, 1),
+      };
+    });
+  }, []);
+
+  const endDrag = useCallback((e: PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    lastPtrRef.current = null;
+    dragActiveRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const wheel = (ev: WheelEvent) => {
+      ev.preventDefault();
+      const delta = -ev.deltaY * 0.0025;
+      if (Math.abs(delta) < 0.0001) return;
+      setFocus((prev) => ({
+        ...prev,
+        zoom: clamp(prev.zoom + delta * Math.max(1, prev.zoom * 0.35), ZOOM_MIN, ZOOM_MAX),
+      }));
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, []);
 
   const apply = async () => {
     setApplying(true);
@@ -80,13 +125,12 @@ export function ProfilePhotoAdjust({
   return (
     <div className="space-y-4">
       <p className="text-[13px] leading-snug text-neutral-500">
-        Перетащите фото, чтобы выбрать кадр. Лицо и важные детали должны попадать в рамку — так их увидят
-        клиенты.
+        Сдвигайте кадр перетаскиванием, масштаб — колёсиком мыши или ползунком (как в редакторе: сдвиг + приближение).
       </p>
 
       <div
         ref={frameRef}
-        className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[22px] bg-neutral-900 shadow-[0_12px_36px_rgba(17,17,17,0.18)] touch-none"
+        className="relative mx-auto w-full max-w-[360px] cursor-grab overflow-hidden rounded-[22px] bg-neutral-900 shadow-[0_12px_36px_rgba(17,17,17,0.18)] touch-none active:cursor-grabbing"
         style={{ paddingBottom: aspectPercent }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -100,7 +144,7 @@ export function ProfilePhotoAdjust({
             src={src}
             alt=""
             draggable={false}
-            className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full min-h-full min-w-full max-w-none object-cover"
+            className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full min-h-full min-w-full max-w-none object-cover select-none"
             style={previewStyle}
           />
         </div>
@@ -114,11 +158,13 @@ export function ProfilePhotoAdjust({
         <span className="text-[13px] font-semibold text-neutral-500">Приближение</span>
         <input
           type="range"
-          min={1}
-          max={2.5}
+          min={ZOOM_MIN}
+          max={ZOOM_MAX}
           step={0.02}
           value={focus.zoom}
-          onChange={(e) => setFocus((prev) => ({ ...prev, zoom: Number(e.target.value) }))}
+          onChange={(e) =>
+            setFocus((prev) => ({ ...prev, zoom: Number(e.target.value) }))
+          }
           className="mt-2 w-full accent-[#E29595]"
         />
       </label>
@@ -143,6 +189,6 @@ export function ProfilePhotoAdjust({
           {applying ? 'Сохраняем…' : 'Применить кадр'}
         </button>
       </div>
-      </div>
+    </div>
   );
 }

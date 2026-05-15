@@ -13,14 +13,45 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Не удалось загрузить изображение'));
-    img.src = src;
-  });
+/** Загрузка для canvas: сначала CORS (чистый экспорт), иначе без crossOrigin (Telegram CDN и др. без ACAO). */
+async function loadImageForCrop(src: string): Promise<HTMLImageElement> {
+  const loadOnce = (crossOrigin: '' | 'anonymous') =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      if (crossOrigin) img.crossOrigin = crossOrigin;
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('LOAD_FAIL'));
+      img.src = src;
+    });
+
+  const s = src.trim();
+  if (s.startsWith('data:') || s.startsWith('blob:')) {
+    const img = await loadOnce('');
+    try {
+      await img.decode();
+    } catch {
+      /* ignore */
+    }
+    return img;
+  }
+
+  try {
+    const img = await loadOnce('anonymous');
+    try {
+      await img.decode();
+    } catch {
+      /* ignore */
+    }
+    return img;
+  } catch {
+    const img = await loadOnce('');
+    try {
+      await img.decode();
+    } catch {
+      /* ignore */
+    }
+    return img;
+  }
 }
 
 /** Обрезка под соотношение сторон (как object-fit: cover + object-position). */
@@ -30,12 +61,17 @@ export async function cropImageToAspect(
   focus: PhotoFrameFocus = DEFAULT_FOCUS,
   outputWidth = 1280,
 ): Promise<string> {
-  const img = await loadImage(src);
+  let img: HTMLImageElement;
+  try {
+    img = await loadImageForCrop(src);
+  } catch {
+    throw new Error('Не удалось загрузить изображение');
+  }
   const W = img.naturalWidth;
   const H = img.naturalHeight;
   if (!W || !H) throw new Error('Пустое изображение');
 
-  const z = clamp(focus.zoom, 1, 3);
+  const z = clamp(focus.zoom, 1, 5);
   const fx = clamp(focus.x, 0, 1);
   const fy = clamp(focus.y, 0, 1);
 
@@ -61,7 +97,13 @@ export async function cropImageToAspect(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas недоступен');
   ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, outputWidth, outH);
-  return canvas.toDataURL('image/jpeg', 0.9);
+  try {
+    return canvas.toDataURL('image/jpeg', 0.9);
+  } catch {
+    throw new Error(
+      'Браузер не даёт сохранить кадр с этой ссылки (политика сайта фото). Сохраните фото в галерею и загрузите файлом через «Сменить» — тогда кадр применится.',
+    );
+  }
 }
 
 export function isAdjustablePhotoSrc(src: string): boolean {

@@ -69,6 +69,35 @@ function newEntityId(): string {
 
 type SheetSaveResult = void | Promise<void>;
 
+const PORTFOLIO_TITLE_MAX = 300;
+const PORTFOLIO_DESC_MAX = 5000;
+
+function validatePortfolioFields(
+  imageUrl: string,
+  title: string,
+  description: string,
+  uploadingImage: boolean,
+): Record<string, string> {
+  const errs: Record<string, string> = {};
+  const u = imageUrl.trim();
+
+  if (uploadingImage) {
+    errs.image = 'Дождитесь окончания загрузки фото';
+  } else if (!u) {
+    errs.image = 'Загрузите фото работы';
+  } else if (u.startsWith('blob:')) {
+    errs.image = 'Выберите фото снова или дождитесь загрузки';
+  }
+
+  const t = title.trim();
+  if (t.length > PORTFOLIO_TITLE_MAX) errs.title = `Не больше ${PORTFOLIO_TITLE_MAX} символов`;
+  if (t.length > 0 && t.length < 2) errs.title = 'От 2 символов или оставьте пустым';
+
+  if (description.length > PORTFOLIO_DESC_MAX) errs.description = `Не больше ${PORTFOLIO_DESC_MAX} символов`;
+
+  return errs;
+}
+
 function SheetFooter({
   onCancel,
   onSave,
@@ -346,7 +375,6 @@ export function SheetMainInfo({
             </div>
             <p className="mt-2 text-center text-[12px] leading-snug text-neutral-500">
               Кадр как на карточке профиля. Нажмите «Настроить кадр», если обрезало лицо или голову.
-              {uploadHeroPhoto ? ' После применения кадра фото отправляется на сервер.' : ''}
             </p>
           </>
         )}
@@ -912,10 +940,6 @@ export function SheetSchedule({
 
   return (
     <div className="space-y-4">
-      <p className="text-[14px] leading-relaxed text-neutral-500">
-        Базовый график: дни и часы. Детальные окошки по дням настраиваются во вкладке «График работы».
-      </p>
-
       <div>
         <p className="text-[13px] font-semibold text-neutral-500">Рабочие дни</p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -1103,9 +1127,6 @@ export function SheetCertificate({
           {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
         </button>
         {uploadErr ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{uploadErr}</p> : null}
-        <p className="mt-2 text-center text-[11px] text-neutral-500">
-          {uploadImage ? 'Фото загружается на сервер и сохраняется как ссылка.' : 'Локально: изображение в черновике как data URL.'}
-        </p>
       </div>
 
       <SheetFooter
@@ -1139,6 +1160,7 @@ export function SheetPortfolio({
   const [imageUrl, setImageUrl] = useState(existing?.imageUrl ?? '');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const ex = itemId ? (draft.portfolio ?? []).find((p) => p.id === itemId) : undefined;
@@ -1146,6 +1168,7 @@ export function SheetPortfolio({
     setDescription(ex?.description ?? '');
     setImageUrl(ex?.imageUrl ?? '');
     setUploadErr(null);
+    setFieldErrors({});
   }, [draft, itemId]);
 
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -1153,6 +1176,11 @@ export function SheetPortfolio({
     e.target.value = '';
     if (!file || !file.type.startsWith('image/')) return;
     setUploadErr(null);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.image;
+      return next;
+    });
 
     if (uploadImage) {
       const preview = URL.createObjectURL(file);
@@ -1185,7 +1213,12 @@ export function SheetPortfolio({
   };
 
   const save = () => {
-    if (!imageUrl.trim() || uploadingImage) return;
+    const errs = validatePortfolioFields(imageUrl, title, description, uploadingImage);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     const id = itemId ?? newEntityId();
     const nextItem: MasterPortfolioItem = {
       id,
@@ -1199,7 +1232,7 @@ export function SheetPortfolio({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[26px] bg-[#F1EFEF] p-4">
+      <div className={`rounded-[26px] bg-[#F1EFEF] p-4 ${fieldErrors.image ? 'ring-2 ring-red-300/80' : ''}`}>
         <p className="text-[13px] font-semibold text-neutral-500">Фото работы *</p>
         <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={uploadingImage} />
         {imageUrl ? (
@@ -1216,19 +1249,56 @@ export function SheetPortfolio({
           {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
         </button>
         {uploadErr ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{uploadErr}</p> : null}
-        <p className="mt-2 text-center text-[11px] text-neutral-500">
-          {uploadImage ? 'Фото загружается на сервер; в профиль сохраняется https-ссылка.' : 'Локально: data URL в черновике.'}
-        </p>
+        {fieldErrors.image ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{fieldErrors.image}</p> : null}
       </div>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Название</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className={fieldClass()} />
+        <span className="flex items-baseline justify-between gap-2 text-[13px] font-semibold text-neutral-500">
+          <span>Название</span>
+          <span className="text-[11px] font-medium tabular-nums text-neutral-400">
+            {title.length}/{PORTFOLIO_TITLE_MAX}
+          </span>
+        </span>
+        <input
+          value={title}
+          maxLength={PORTFOLIO_TITLE_MAX}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.title;
+              return next;
+            });
+          }}
+          className={fieldErrors.title ? `${fieldClass()} ring-2 ring-red-300/80` : fieldClass()}
+        />
+        {fieldErrors.title ? <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.title}</p> : null}
       </label>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Описание</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={fieldClass()} />
+        <span className="flex items-baseline justify-between gap-2 text-[13px] font-semibold text-neutral-500">
+          <span>Описание</span>
+          <span className="text-[11px] font-medium tabular-nums text-neutral-400">
+            {description.length}/{PORTFOLIO_DESC_MAX}
+          </span>
+        </span>
+        <textarea
+          value={description}
+          maxLength={PORTFOLIO_DESC_MAX}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.description;
+              return next;
+            });
+          }}
+          rows={3}
+          className={fieldErrors.description ? `${fieldClass()} ring-2 ring-red-300/80` : fieldClass()}
+        />
+        {fieldErrors.description ? (
+          <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.description}</p>
+        ) : null}
       </label>
 
       <SheetFooter

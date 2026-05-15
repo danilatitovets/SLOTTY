@@ -44,6 +44,7 @@ import {
   SheetSchedule,
 } from './AdminProfileEditSheets';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { MasterBookingLinkCard } from './MasterBookingLinkCard';
 
 type ProfileSection = 'main' | 'address' | 'portfolio' | 'rules';
 
@@ -183,16 +184,16 @@ function AddressPreviewPanel({
       <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{title}</p>
       {hint ? <p className="mt-1 text-[12px] leading-snug text-neutral-500">{hint}</p> : null}
       <div className="mt-3">
-        <span className="inline-flex rounded-full bg-[#F1EFEF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-700">
-          {visitLabel}
-        </span>
         {mode === 'short' ? (
-          <p className="mt-2 text-[17px] font-semibold leading-snug tracking-[-0.02em] text-neutral-950">
+          <p className="text-[17px] font-semibold leading-snug tracking-[-0.02em] text-neutral-950">
             {mainLine || '—'}
           </p>
         ) : (
           <AddressDetailGrid rows={detailRows ?? []} />
         )}
+        <span className="mt-2 inline-flex rounded-full bg-[#F1EFEF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-700">
+          {visitLabel}
+        </span>
         {wayfinding?.length ? (
           <div className="mt-3 space-y-2 border-t border-[#F1EFEF] pt-3">
             {wayfinding.map((row) => (
@@ -504,13 +505,18 @@ function MainSection({
   draft,
   onEditMain,
   onEditSchedule,
+  cabinetLoading,
+  useCabinetApi,
 }: {
   draft: MasterDraft;
   onEditMain: () => void;
   onEditSchedule: () => void;
+  cabinetLoading?: boolean;
+  useCabinetApi?: boolean;
 }) {
   return (
     <div className="space-y-5">
+    <MasterBookingLinkCard draft={draft} cabinetLoading={cabinetLoading} useCabinetApi={useCabinetApi} />
     <SectionCard
       title="Основная информация"
       text="Имя, описание и контакты, которые видит клиент перед записью."
@@ -607,6 +613,16 @@ function AddressSection({
     <SectionCard
       title="Адрес и как пройти"
       text="Здесь должно быть понятно не только куда ехать, но и как найти кабинет."
+      headerAction={
+        <button
+          type="button"
+          onClick={onEditAddress}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1EFEF] text-neutral-800 transition active:scale-[0.96]"
+          aria-label="Редактировать адрес"
+        >
+          <IconPencil className="h-[18px] w-[18px]" />
+        </button>
+      }
     >
       <AddressPreviewPanel
         title="На карточке"
@@ -622,14 +638,6 @@ function AddressSection({
         detailRows={afterBookingRows}
         wayfinding={parts?.wayfinding}
       />
-
-      <button
-        type="button"
-        onClick={onEditAddress}
-        className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-      >
-        Редактировать адрес
-      </button>
     </SectionCard>
   );
 }
@@ -972,15 +980,6 @@ function TrustSection({
         />
         {portfolio.length > 0 ? (
           <>
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={onAddPortfolio}
-                className="inline-flex min-h-9 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[13px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-              >
-                + Добавить
-              </button>
-            </div>
             <div className="mt-3 grid grid-cols-2 gap-2.5">
               {portfolio.map((item, i) => {
                 const imageUrl = item.imageUrl?.trim() ?? '';
@@ -989,9 +988,9 @@ function TrustSection({
                 return (
                   <article
                     key={item.id}
-                    className="relative overflow-hidden rounded-[18px] bg-[#F1EFEF] ring-1 ring-[#F1EFEF]"
+                    className="relative rounded-[18px] bg-[#F1EFEF] ring-1 ring-[#F1EFEF]"
                   >
-                    <div className="absolute right-1.5 top-1.5 z-10">
+                    <div className="absolute right-1.5 top-1.5 z-20">
                       <CardOverflowMenu
                         ariaLabel="Действия с работой"
                         items={[
@@ -1020,21 +1019,27 @@ function TrustSection({
                         Обложка
                       </span>
                     ) : null}
-                    {imageUrl ? (
-                      <ImageReveal
-                        src={imageUrl}
-                        alt=""
-                        className="aspect-square w-full object-cover"
-                        loading={i < 4 ? 'eager' : 'lazy'}
-                        fetchPriority={i < 2 ? 'high' : 'low'}
-                      />
-                    ) : (
-                      <div className="flex aspect-square w-full items-center justify-center bg-white text-neutral-300">
-                        <IconImagePlaceholder className="h-8 w-8" />
-                      </div>
-                    )}
+                    <div
+                      className={`relative aspect-square w-full overflow-hidden ${
+                        item.title?.trim() ? 'rounded-t-[18px]' : 'rounded-[18px]'
+                      }`}
+                    >
+                      {imageUrl ? (
+                        <ImageReveal
+                          src={imageUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading={i < 4 ? 'eager' : 'lazy'}
+                          fetchPriority={i < 2 ? 'high' : 'low'}
+                        />
+                      ) : (
+                        <div className="flex h-full min-h-0 w-full items-center justify-center bg-white text-neutral-300">
+                          <IconImagePlaceholder className="h-8 w-8" />
+                        </div>
+                      )}
+                    </div>
                     {item.title?.trim() ? (
-                      <div className="px-2.5 py-2">
+                      <div className="rounded-b-[18px] px-2.5 py-2">
                         <p className="truncate text-[12px] font-semibold text-neutral-800">{item.title}</p>
                       </div>
                     ) : null}
@@ -1260,10 +1265,14 @@ function AdminProfileReadView({
   onEditPortfolio,
   onDeletePortfolio,
   onSetPortfolioCover,
+  cabinetLoading,
+  useCabinetApi,
 }: {
   draft: MasterDraft;
   onEditMain: () => void;
   onEditSchedule: () => void;
+  cabinetLoading?: boolean;
+  useCabinetApi?: boolean;
   onEditAddress: () => void;
   onEditRules: () => void;
   onAddCareer: () => void;
@@ -1303,9 +1312,18 @@ function AdminProfileReadView({
     if (activeSection === 'rules') {
       return <RulesSection draft={draft} onEditRules={onEditRules} />;
     }
-    return <MainSection draft={draft} onEditMain={onEditMain} onEditSchedule={onEditSchedule} />;
+    return (
+      <MainSection
+        draft={draft}
+        onEditMain={onEditMain}
+        onEditSchedule={onEditSchedule}
+        cabinetLoading={cabinetLoading}
+        useCabinetApi={useCabinetApi}
+      />
+    );
   }, [
     activeSection,
+    cabinetLoading,
     draft,
     onAddCareer,
     onAddCert,
@@ -1318,6 +1336,7 @@ function AdminProfileReadView({
     onEditCert,
     onEditMain,
     onEditSchedule,
+    useCabinetApi,
     onEditPortfolio,
     onEditRules,
     onSetPortfolioCover,
@@ -1356,7 +1375,7 @@ export function AdminProfileSection() {
     patchProfileToBackend,
     refreshDraft,
   } = useAdminMasterDraft();
-  const { useCabinetApi } = useAdminMasterCabinet();
+  const { useCabinetApi, cabinetLoading } = useAdminMasterCabinet();
   const [sheet, setSheet] = useState<ProfileSheet>(null);
   const [sheetApiError, setSheetApiError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
@@ -1809,6 +1828,8 @@ export function AdminProfileSection() {
       <section className="relative mt-5">
         <AdminProfileReadView
           draft={draft}
+          cabinetLoading={cabinetLoading}
+          useCabinetApi={useCabinetApi}
           onEditMain={() => setSheet('main')}
           onEditSchedule={() => setSheet('schedule')}
           onEditAddress={() => setSheet('address')}

@@ -275,6 +275,7 @@ export function cabinetDtoToMasterDraft(cabinet: MasterCabinetDto): MasterDraft 
     contacts: parseContactsJson(profile.contacts) ?? undefined,
     phone: profile.phone || undefined,
     photoUrl: profile.photoUrl || undefined,
+    profileSlug: profile.slug?.trim() ? profile.slug.trim() : undefined,
     services: mappedServices,
     schedule: scheduleRulesToDraftSchedule(scheduleRules),
     location: primaryLocation ? cabinetLocationToDraft(primaryLocation) : { visitType: 'studio', street: '', building: '' },
