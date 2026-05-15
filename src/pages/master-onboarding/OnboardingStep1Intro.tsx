@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
-const AUTO_MS = 4500;
+const AUTO_MS = 3800;
 
 type Slide = {
   imageSrc: string;
@@ -80,54 +80,68 @@ export function OnboardingStep1Intro() {
     setIndex(((i % SLIDES.length) + SLIDES.length) % SLIDES.length);
   }, []);
 
-  useEffect(() => {
-    if (paused) return;
-    const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % SLIDES.length);
-    }, AUTO_MS);
-    return () => window.clearInterval(id);
-  }, [paused]);
+  const next = useCallback(() => {
+    setIndex((i) => (i + 1) % SLIDES.length);
+  }, []);
 
-  const slide = SLIDES[index]!;
+  useEffect(() => {
+    const onVisibility = () => {
+      setPaused(document.hidden);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (paused) return undefined;
+    const id = window.setInterval(next, AUTO_MS);
+    return () => window.clearInterval(id);
+  }, [next, paused]);
+
+  const onDotClick = (i: number) => {
+    goTo(i);
+    setPaused(true);
+    window.setTimeout(() => setPaused(false), AUTO_MS * 2);
+  };
 
   return (
-    <div
-      className="mx-auto w-full max-w-sm"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
-    >
+    <div className="mx-auto w-full max-w-sm">
       <div
-        className="relative overflow-hidden rounded-[32px] bg-[#F8F0F0] px-3 pb-2 pt-3 shadow-[inset_0_0_0_1px_rgba(226,149,149,0.12)] sm:rounded-[36px] sm:px-4 sm:pt-4"
+        className="relative overflow-hidden rounded-[32px] bg-[#F8F0F0] shadow-[inset_0_0_0_1px_rgba(226,149,149,0.12)] sm:rounded-[36px]"
         aria-roledescription="carousel"
         aria-label="Что входит в анкету мастера"
       >
-        <div className="relative aspect-[4/4.2] w-full overflow-hidden rounded-[26px] bg-[#FDF6F6] sm:rounded-[28px]">
-          {SLIDES.map((s, i) => (
-            <img
-              key={s.imageSrc}
-              src={s.imageSrc}
-              alt=""
-              draggable={false}
-              className={`absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-700 ease-out ${
-                i === index ? 'opacity-100' : 'pointer-events-none opacity-0'
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="px-1 pb-1 pt-5 text-center sm:px-2 sm:pt-6" aria-live="polite">
-          <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.06em] text-neutral-950 sm:text-[28px]">
-            {slide.title}
-          </h2>
-          <p className="mt-2 text-[15px] leading-snug text-neutral-500 sm:text-[16px]">{slide.text}</p>
-
+        <div className="overflow-hidden">
           <div
-            className="mx-auto mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#E29595] text-white shadow-[0_10px_26px_rgba(226,149,149,0.32)]"
-            aria-hidden
+            className="flex transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ transform: `translateX(-${index * 100}%)` }}
           >
-            {slide.icon}
+            {SLIDES.map((s) => (
+              <div key={s.imageSrc} className="w-full shrink-0 px-3 pb-2 pt-3 sm:px-4 sm:pt-4">
+                <div className="relative aspect-[4/4.2] w-full overflow-hidden rounded-[26px] bg-[#FDF6F6] sm:rounded-[28px]">
+                  <img
+                    src={s.imageSrc}
+                    alt=""
+                    draggable={false}
+                    className="absolute inset-0 h-full w-full object-contain object-center"
+                  />
+                </div>
+
+                <div className="px-1 pb-1 pt-5 text-center sm:px-2 sm:pt-6">
+                  <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.06em] text-neutral-950 sm:text-[28px]">
+                    {s.title}
+                  </h2>
+                  <p className="mt-2 text-[15px] leading-snug text-neutral-500 sm:text-[16px]">{s.text}</p>
+
+                  <div
+                    className="mx-auto mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#E29595] text-white shadow-[0_10px_26px_rgba(226,149,149,0.32)]"
+                    aria-hidden
+                  >
+                    {s.icon}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -140,7 +154,7 @@ export function OnboardingStep1Intro() {
             role="tab"
             aria-selected={i === index}
             aria-label={`${s.title}: ${s.text}`}
-            onClick={() => goTo(i)}
+            onClick={() => onDotClick(i)}
             className={`h-2 rounded-full transition-all duration-300 ${
               i === index ? 'w-6 bg-[#E29595]' : 'w-2 bg-neutral-300'
             }`}

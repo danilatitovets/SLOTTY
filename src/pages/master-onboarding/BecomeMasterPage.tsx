@@ -1608,31 +1608,15 @@ export function BecomeMasterPage() {
           >
             {step === 1 ? (
               <div className="mx-auto w-full max-w-md text-center sm:max-w-xl">
-                <img
-                  src={LOGO_SRC}
-                  alt="SLOTTY"
-                  className="mx-auto h-auto max-h-[5.5rem] w-auto max-w-[10rem] object-contain sm:max-h-[6rem] sm:max-w-[11rem]"
-                  draggable={false}
-                />
+                <OnboardingStep1Intro />
 
-                <p className="mx-auto mt-3 max-w-[20rem] text-[14px] leading-snug text-neutral-500 sm:mt-4">
-                  Несколько шагов — и клиенты смогут записываться к вам онлайн.
-                </p>
-
-                <div className="mt-5 sm:mt-6">
-                  <OnboardingStep1Intro />
-                </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="relative z-20 mt-6 flex min-h-[3.15rem] w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-[#E29595] px-5 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition hover:opacity-90 active:scale-[0.98] sm:mt-7 sm:min-h-[3.25rem] sm:text-[16px]"
-                  >
-                    <span>Начать заполнение</span>
-                    <span className="select-none text-[1.125rem] font-medium leading-none opacity-95" aria-hidden>
-                      ›
-                    </span>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="relative z-20 mt-6 flex min-h-[3.15rem] w-full cursor-pointer items-center justify-center rounded-full bg-[#E29595] px-5 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition hover:opacity-90 active:scale-[0.98] sm:mt-7 sm:min-h-[3.25rem] sm:text-[16px]"
+                >
+                  Начать заполнение
+                </button>
               </div>
             ) : null}
 
@@ -1736,7 +1720,7 @@ export function BecomeMasterPage() {
                       });
                     }}
                     onBlur={() => touchProfileField('name')}
-                    placeholder="Например, Анна Смирнова"
+                    placeholder="ФИО"
                     error={showProfileFieldError('name') ? profileFieldErrors.name : undefined}
                     maxLength={200}
                   />
@@ -1968,28 +1952,65 @@ export function BecomeMasterPage() {
                       />
                     </div>
 
-                    <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-[22px] bg-[#F1EFEF] px-3.5 py-3">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-300 text-[#E29595] focus:ring-[#E29595]"
-                        checked={showExactAddressAfterBooking}
-                        onChange={(e) => setShowExactAddressAfterBooking(e.target.checked)}
-                      />
-                      <span className="text-[14px] font-semibold leading-snug text-neutral-800">
-                        Скрывать подъезд, этаж и детали до записи
-                      </span>
-                    </label>
+                    <div className="mt-4">
+                      <p className="text-[13px] font-semibold text-neutral-500">Детали адреса для клиентов</p>
+                      <p className="mt-1 text-[12px] leading-snug text-neutral-400">
+                        Улица из поля выше видна всем. Подъезд, этаж и комментарий — по вашему выбору ниже.
+                      </p>
+                      <div
+                        className="mt-2 grid grid-cols-1 gap-2 rounded-[26px] bg-[#F1EFEF] p-1.5 sm:grid-cols-2"
+                        role="radiogroup"
+                        aria-label="Когда показывать детали адреса"
+                      >
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={!showExactAddressAfterBooking}
+                          onClick={() => setShowExactAddressAfterBooking(false)}
+                          className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
+                            !showExactAddressAfterBooking
+                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
+                              : 'text-neutral-500'
+                          }`}
+                        >
+                          Видно сразу
+                        </button>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={showExactAddressAfterBooking}
+                          onClick={() => setShowExactAddressAfterBooking(true)}
+                          className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
+                            showExactAddressAfterBooking
+                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
+                              : 'text-neutral-500'
+                          }`}
+                        >
+                          После записи
+                        </button>
+                      </div>
+                    </div>
                   </>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setAddressMoreOpen((v) => !v)}
-                  className="mt-4 flex w-full items-center justify-between rounded-[22px] bg-[#F1EFEF] px-4 py-3 text-left text-[14px] font-semibold text-neutral-900 transition hover:bg-[#E9E6E6] active:scale-[0.99]"
+                  aria-expanded={addressMoreOpen}
+                  className="mt-4 flex w-full items-center gap-3 rounded-[22px] bg-[#F1EFEF] px-4 py-3.5 text-left transition hover:bg-[#E9E6E6] active:scale-[0.99]"
                 >
-                  Дополнительные детали
-                  <span className="text-neutral-400" aria-hidden>
-                    {addressMoreOpen ? '▾' : '▸'}
+                  <span className="min-w-0 flex-1 text-[14px] font-semibold leading-none tracking-[-0.02em] text-neutral-900">
+                    Дополнительные детали
+                  </span>
+                  <span
+                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-neutral-400 transition-transform duration-200 ease-out ${
+                      addressMoreOpen ? 'rotate-45' : ''
+                    }`}
+                    aria-hidden
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="block">
+                      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                    </svg>
                   </span>
                 </button>
 
