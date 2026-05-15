@@ -3,12 +3,9 @@
  * Ключ в URL: VITE_YANDEX_MAPS_API_KEY / NEXT_PUBLIC_YANDEX_MAPS_API_KEY (без ключа HTTP-геокодинг недоступен; карта JS может работать без него).
  */
 
-export type YandexGeocodeHit = {
-  /** Текст для формы / подсказки */
-  displayLine: string;
-  lat: number;
-  lon: number;
-};
+import { filterGeocodeHitsToMinskArea, type GeocodeSuggestHit } from './minskAddressSuggest';
+
+export type YandexGeocodeHit = GeocodeSuggestHit;
 
 const MINSK_BBOX = '27.35,53.75~27.72,54.05';
 
@@ -157,7 +154,7 @@ export async function yandexGeocodeMinskViaYmaps(ymaps: YmapsGeocodeApi, city: s
     res = await ymaps.geocode(request, { results: 10 });
     hits = hitsFromGeocodeResult(res);
   }
-  return hits;
+  return filterGeocodeHitsToMinskArea(hits);
 }
 
 async function yandexGeocodeMinskHttp(
@@ -189,7 +186,7 @@ async function yandexGeocodeMinskHttp(
     const h = parseGeoObject(m);
     if (h) hits.push(h);
   }
-  return hits;
+  return filterGeocodeHitsToMinskArea(hits);
 }
 
 /** Прямой геокодинг (подсказки), с debounce вызывать снаружи. */

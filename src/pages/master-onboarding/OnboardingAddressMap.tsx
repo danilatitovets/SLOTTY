@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { refineMinskGeocodeHits } from '../../shared/lib/minskAddressSuggest';
+import {
+  filterGeocodeHitsToMinskArea,
+  isMinskAreaCoords,
+  mergeGeocodeSuggestHits,
+  refineMinskGeocodeHits,
+} from '../../shared/lib/minskAddressSuggest';
 import { nominatimHitsToGeocodeSuggest, nominatimSearchMinsk } from '../../shared/lib/nominatimMinsk';
 import { subscribeTelegramViewportLayout } from '../../shared/lib/telegramWebApp';
 import {
@@ -209,6 +214,11 @@ export function OnboardingAddressMap({
     const map = mapRef.current;
     const pm = placemarkRef.current;
     if (!map || !pm || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!isMinskAreaCoords(lat, lng)) {
+      pm.geometry.setCoordinates([MINSK_CENTER[0], MINSK_CENTER[1]]);
+      map.setCenter(MINSK_CENTER, DEFAULT_ZOOM, { duration: 200 });
+      return;
+    }
     pm.geometry.setCoordinates([lat, lng]);
     map.setCenter([lat, lng], Math.max(map.getZoom(), 14), { duration: 200 });
   }, []);
@@ -366,38 +376,37 @@ export function OnboardingAddressMap({
         const ymapsRaw = getYmaps();
         const ymaps = ymapsRaw as unknown as YmapsGeocodeApi | undefined;
         const fullQuery = `${city}, ${q}`;
-        let list: YandexGeocodeHit[] = [];
 
-        if (hasYandexGeocoderKey()) {
-          try {
-            list = await yandexGeocodeMinsk(fullQuery, ac.signal);
-          } catch {
-            list = [];
+        const yandexPromise = (async (): Promise<YandexGeocodeHit[]> => {
+          let raw: YandexGeocodeHit[] = [];
+          if (hasYandexGeocoderKey()) {
+            try {
+              raw = await yandexGeocodeMinsk(fullQuery, ac.signal);
+            } catch {
+              raw = [];
+            }
           }
-        }
+          if (raw.length === 0 && ymaps && typeof ymaps.geocode === 'function') {
+            try {
+              raw = await yandexGeocodeMinskViaYmaps(ymaps, city, q);
+            } catch {
+              raw = [];
+            }
+          }
+          return filterGeocodeHitsToMinskArea(raw);
+        })();
+
+        const nominatimPromise = nominatimSearchMinsk(city, q, ac.signal).catch(() => [] as Awaited<
+          ReturnType<typeof nominatimSearchMinsk>
+        >);
+
+        const [yandexRaw, nomHits] = await Promise.all([yandexPromise, nominatimPromise]);
         if (ac.signal.aborted) return;
 
-        if (list.length === 0 && ymaps && typeof ymaps.geocode === 'function') {
-          try {
-            list = await yandexGeocodeMinskViaYmaps(ymaps, city, q);
-          } catch {
-            list = [];
-          }
-        }
-        if (ac.signal.aborted) return;
-
-        list = refineMinskGeocodeHits(list, q, city);
-
-        if (list.length === 0) {
-          try {
-            const nom = await nominatimSearchMinsk(city, q, ac.signal);
-            if (ac.signal.aborted) return;
-            list = nominatimHitsToGeocodeSuggest(nom, q, city);
-          } catch (err: unknown) {
-            if ((err as { name?: string }).name === 'AbortError') return;
-            list = [];
-          }
-        }
+        const yandexList = refineMinskGeocodeHits(yandexRaw, q, city, { softFallback: true });
+        const nominatimList = nominatimHitsToGeocodeSuggest(nomHits, q, city);
+        let list = mergeGeocodeSuggestHits(yandexList, nominatimList);
+        list = filterGeocodeHitsToMinskArea(refineMinskGeocodeHits(list, q, city, { softFallback: true }));
 
         if (ac.signal.aborted) return;
 

@@ -42,7 +42,35 @@ export function streetMatchesQuery(streetLine: string, query: string): boolean {
   const tokens = queryTokens(query);
   if (tokens.length === 0) return true;
   const hay = normalizeAddressKey(streetLine);
-  return tokens.every((tok) => hay.includes(tok));
+  const words = hay.split(/[\s,.-]+/).filter(Boolean);
+  return tokens.every((tok) => {
+    if (hay.includes(tok)) return true;
+    if (tok.length >= 3 && words.some((w) => w.startsWith(tok))) return true;
+    return false;
+  });
+}
+
+/** Границы Минска для отсечения Москвы и других городов. */
+export function isMinskAreaCoords(lat: number, lon: number): boolean {
+  return lat >= 53.78 && lat <= 53.98 && lon >= 27.32 && lon <= 27.78;
+}
+
+export function filterGeocodeHitsToMinskArea<T extends GeocodeSuggestHit>(hits: T[]): T[] {
+  return hits.filter((h) => isMinskAreaCoords(h.lat, h.lon));
+}
+
+export function mergeGeocodeSuggestHits(...lists: GeocodeSuggestHit[][]): GeocodeSuggestHit[] {
+  const seen = new Set<string>();
+  const out: GeocodeSuggestHit[] = [];
+  for (const list of lists) {
+    for (const h of list) {
+      const key = `${normalizeAddressKey(h.displayLine)}|${h.lat.toFixed(5)}|${h.lon.toFixed(5)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(h);
+    }
+  }
+  return out;
 }
 
 export function scoreStreetRelevance(streetLine: string, query: string): number {
@@ -122,7 +150,7 @@ export function refineMinskGeocodeHits<T extends GeocodeSuggestHit>(
   city: string,
   opts: RefineMinskGeocodeOpts = {},
 ): T[] {
-  const { max = 8, softFallback = false } = opts;
+  const { max = 8, softFallback = true } = opts;
   const q = query.trim();
   if (hits.length === 0) return [];
 

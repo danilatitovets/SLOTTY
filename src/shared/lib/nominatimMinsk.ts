@@ -3,6 +3,7 @@
  */
 
 import {
+  isMinskAreaCoords,
   refineMinskGeocodeHits,
   scoreStreetRelevance,
   streetMatchesQuery,
@@ -18,6 +19,7 @@ const MINSK_VIEWBOX = '27.38,53.95,27.72,53.82';
 const NOMINATIM_HEADERS: HeadersInit = {
   Accept: 'application/json',
   'Accept-Language': 'ru',
+  'User-Agent': 'SLOTTY/1.0 (https://slotty.app; master-onboarding)',
 };
 
 type NominatimAddress = {
@@ -175,6 +177,7 @@ async function nominatimFreeTextSearch(
   city: string,
   streetPart: string,
   signal: AbortSignal,
+  opts: { bounded: boolean },
 ): Promise<NominatimMinskHit[]> {
   const q = streetPart.trim();
   if (q.length < 1) return [];
@@ -182,9 +185,19 @@ async function nominatimFreeTextSearch(
   const cityPart = city.trim() || 'Минск';
   const url = new URL(NOMINATIM_SEARCH);
   applyBaseParams(url);
-  url.searchParams.set('q', `${cityPart}, ${q}`);
+  url.searchParams.set('bounded', opts.bounded ? '1' : '0');
+  url.searchParams.set('q', `${q}, ${cityPart}, Беларусь`);
 
   return nominatimFetch(url, signal);
+}
+
+function nominatimHitsInMinskArea(hits: NominatimMinskHit[]): NominatimMinskHit[] {
+  return hits.filter((hit) => {
+    const lat = Number.parseFloat(hit.lat);
+    const lon = Number.parseFloat(hit.lon);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && isMinskAreaCoords(lat, lon)) return true;
+    return isMinskHit(hit);
+  });
 }
 
 function mergeNominatimHits(...lists: NominatimMinskHit[][]): NominatimMinskHit[] {
@@ -223,14 +236,27 @@ export async function nominatimSearchMinsk(
   const q = streetPart.trim();
   if (q.length < 1) return [];
 
-  const [structured, byStreet, free] = await Promise.all([
-    nominatimStructuredSearch(city, q, signal),
-    nominatimStreetFeatureSearch(city, q, signal),
-    nominatimFreeTextSearch(city, q, signal),
-  ]);
+  const cityPart = city.trim() || 'Минск';
 
-  const merged = mergeNominatimHits(structured, byStreet, free);
-  return rankNominatimHits(merged, q);
+  // Один–два запроса за раз (лимит Nominatim), без тройного параллела.
+  let hits = nominatimHitsInMinskArea(await nominatimFreeTextSearch(cityPart, q, signal, { bounded: true }));
+  if (hits.length < 2) {
+    hits = mergeNominatimHits(
+      hits,
+      nominatimHitsInMinskArea(await nominatimFreeTextSearch(cityPart, q, signal, { bounded: false })),
+    );
+  }
+  if (hits.length < 2 && q.length >= 2) {
+    hits = mergeNominatimHits(hits, nominatimHitsInMinskArea(await nominatimStructuredSearch(cityPart, q, signal)));
+  }
+  if (hits.length < 2 && q.length >= 3) {
+    hits = mergeNominatimHits(
+      hits,
+      nominatimHitsInMinskArea(await nominatimStreetFeatureSearch(cityPart, q, signal)),
+    );
+  }
+
+  return rankNominatimHits(hits, q);
 }
 
 export async function nominatimReverseMinsk(
@@ -266,7 +292,7 @@ export function nominatimHitsToGeocodeSuggest(
     })
     .filter((h): h is GeocodeSuggestHit => h != null);
 
-  return refineMinskGeocodeHits(mapped, query, city);
+  return refineMinskGeocodeHits(mapped, query, city, { softFallback: true });
 }
 
 export { refineMinskGeocodeHits };
