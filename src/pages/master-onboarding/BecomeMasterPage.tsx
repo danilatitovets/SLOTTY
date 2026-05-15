@@ -22,6 +22,7 @@ import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from './Onb
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { getMasterDisplayNameQualityError } from '../../shared/lib/masterDisplayNamePolicy';
 import {
   DEFAULT_WEEKDAY_SCHEDULE,
   fetchServiceCategories,
@@ -35,7 +36,11 @@ import {
   type ContactType,
   type MasterContactRow,
 } from '../../features/master-onboarding/model/masterContacts';
-import { isOptionalBelarusPhoneValid, normalizeBelarusPhone } from '../../features/master-onboarding/model/belarusPhone';
+import {
+  isOptionalBelarusPhoneValid,
+  normalizeBelarusPhone,
+  sanitizeBelarusPhoneInput,
+} from '../../features/master-onboarding/model/belarusPhone';
 import { MasterProfileContactsBlock } from './MasterProfileContactsBlock';
 import {
   getServiceTemplatesForCategoryCode,
@@ -154,16 +159,24 @@ type PublishBlockingIssue = {
   fixStep?: 3 | 4 | 5;
 };
 
-/** Телефон РБ или хотя бы один заполненный и валидный контакт для клиентов. */
-function hasClientReachableContact(phone: string, clientContacts: MasterContactRow[]): boolean {
+function hasValidBelarusPhoneForOnboarding(phone: string): boolean {
   const p = phone.trim();
-  if (p.length > 0 && isOptionalBelarusPhoneValid(p)) return true;
+  return p.length > 0 && isOptionalBelarusPhoneValid(p);
+}
+
+/** Хотя бы один заполненный и валидный мессенджер / соцсеть (телефон считается отдельно). */
+function hasAtLeastOneValidMessengerContact(clientContacts: MasterContactRow[]): boolean {
   for (const row of clientContacts) {
     const v = row.value.trim();
     if (!v) continue;
     if (validateContactValue(row.type, v) == null) return true;
   }
   return false;
+}
+
+/** На шаге профиля и при публикации нужны и телефон РБ, и минимум один контакт. */
+function isProfileReachabilityComplete(phone: string, clientContacts: MasterContactRow[]): boolean {
+  return hasValidBelarusPhoneForOnboarding(phone) && hasAtLeastOneValidMessengerContact(clientContacts);
 }
 
 function collectPublishBlockingIssues(params: {
@@ -184,6 +197,11 @@ function collectPublishBlockingIssues(params: {
   const n = name.trim();
   if (n.length < 2 || n.length > 200) {
     out.push({ id: 'profile-name', message: 'Укажите имя в профиле', fixStep: 3 });
+  } else {
+    const nameQuality = getMasterDisplayNameQualityError(n);
+    if (nameQuality) {
+      out.push({ id: 'profile-name-quality', message: nameQuality, fixStep: 3 });
+    }
   }
 
   if (!publicAddressForApi.trim()) {
@@ -201,16 +219,16 @@ function collectPublishBlockingIssues(params: {
     out.push({ id: 'phone-invalid', message: 'Введите корректный номер Беларуси', fixStep: 3 });
   }
 
-  if (!hasClientReachableContact(phone, clientContacts)) {
-    const pt = phone.trim();
-    const anyEmptyRow = clientContacts.some((r) => !r.value.trim());
-    if ((pt.length === 0 || isOptionalBelarusPhoneValid(pt)) && !anyEmptyRow) {
-      out.push({
-        id: 'contact-reachability',
-        message: 'Укажите телефон для связи или добавьте хотя бы один контакт в мессенджере',
-        fixStep: 3,
-      });
+  if (!hasValidBelarusPhoneForOnboarding(phone)) {
+    if (phoneTrim.length === 0) {
+      out.push({ id: 'phone-empty', message: 'Укажите номер телефона Беларуси', fixStep: 3 });
     }
+  } else if (!hasAtLeastOneValidMessengerContact(clientContacts)) {
+    out.push({
+      id: 'contact-reachability',
+      message: 'Добавьте хотя бы один контакт в мессенджере или соцсети',
+      fixStep: 3,
+    });
   }
 
   for (const row of clientContacts) {
@@ -570,6 +588,8 @@ export function BecomeMasterPage() {
   const [showExactAddressAfterBooking, setShowExactAddressAfterBooking] = useState(true);
   const [addressMoreOpen, setAddressMoreOpen] = useState(false);
   const [mapScriptOk, setMapScriptOk] = useState<boolean | null>(null);
+  const [pickedAddressSummary, setPickedAddressSummary] = useState<string | null>(null);
+  const [addressPinnedToMap, setAddressPinnedToMap] = useState(false);
   const [addressNavigateAttempted, setAddressNavigateAttempted] = useState(false);
   const [addressTouched, setAddressTouched] = useState<Record<string, boolean>>({});
   const [addressFieldErrors, setAddressFieldErrors] = useState<Record<string, string>>({});
@@ -752,9 +772,14 @@ export function BecomeMasterPage() {
     if (step === 3) {
       const n = name.trim();
       if (n.length < 2 || n.length > 200) return false;
-      return hasClientReachableContact(phone, clientContacts);
+      if (getMasterDisplayNameQualityError(n)) return false;
+      return isProfileReachabilityComplete(phone, clientContacts);
     }
     if (step === 4) {
+      if (visitType === 'studio') {
+        const sn = salonName.trim();
+        if (!sn || sn.length < 2) return false;
+      }
       const streetOk = street.trim().length > 0;
       const buildingEff = building.trim() || (streetOk ? 'б/н' : '');
       if (!streetOk || !buildingEff) return false;
@@ -762,6 +787,7 @@ export function BecomeMasterPage() {
       if (coordsRequired) {
         const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
         if (!hasCoords) return false;
+        if (!addressPinnedToMap) return false;
       }
       return true;
     }
@@ -773,6 +799,7 @@ export function BecomeMasterPage() {
 
     return true;
   }, [
+    addressPinnedToMap,
     building,
     city,
     lat,
@@ -786,6 +813,7 @@ export function BecomeMasterPage() {
     step,
     street,
     visitType,
+    salonName,
     clientContacts,
   ]);
 
@@ -1170,7 +1198,11 @@ export function BecomeMasterPage() {
     const errs: Record<string, string> = {};
     const n = name.trim();
     if (n.length < 2) errs.name = 'Минимум 2 символа.';
-    if (n.length > 200) errs.name = 'Не длиннее 200 символов.';
+    else if (n.length > 200) errs.name = 'Не длиннее 200 символов.';
+    else {
+      const nameQuality = getMasterDisplayNameQualityError(n);
+      if (nameQuality) errs.name = nameQuality;
+    }
 
     const bio = description.trim();
     if (bio.length > 10_000) errs.description = 'Не длиннее 10 000 символов.';
@@ -1178,15 +1210,12 @@ export function BecomeMasterPage() {
     const phoneTrim = phone.trim();
     if (phoneTrim && !isOptionalBelarusPhoneValid(phoneTrim)) {
       errs.phone = 'Введите корректный номер Беларуси';
+    } else if (!phoneTrim) {
+      errs.phone = 'Укажите номер телефона Беларуси';
     }
 
-    if (!hasClientReachableContact(phone, clientContacts)) {
-      const pt = phone.trim();
-      const anyEmptyRow = clientContacts.some((r) => !r.value.trim());
-      if ((pt.length === 0 || isOptionalBelarusPhoneValid(pt)) && !anyEmptyRow) {
-        errs.contactReachability =
-          'Укажите телефон для связи или добавьте хотя бы один контакт в мессенджере';
-      }
+    if (!hasAtLeastOneValidMessengerContact(clientContacts)) {
+      errs.contactReachability = 'Добавьте хотя бы один контакт в мессенджере или соцсети';
     }
 
     for (const row of clientContacts) {
@@ -1203,6 +1232,13 @@ export function BecomeMasterPage() {
     return Object.keys(errs).length === 0;
   }, [clientContacts, description, name, phone]);
 
+  const invalidatePrimaryAddressOnMap = useCallback(() => {
+    setAddressPinnedToMap(false);
+    setPickedAddressSummary(null);
+    setLat(undefined);
+    setLng(undefined);
+  }, []);
+
   const touchAddressField = useCallback((key: string) => {
     setAddressTouched((t) => ({ ...t, [key]: true }));
   }, []);
@@ -1215,8 +1251,14 @@ export function BecomeMasterPage() {
   const validateAddressStep = useCallback((): boolean => {
     const errs: Record<string, string> = {};
 
-    if (!street.trim()) errs.street = 'Укажите адрес приёма';
+    if (!street.trim()) errs.street = visitType === 'studio' ? 'Укажите адрес салона' : 'Укажите адрес приёма';
     else if (street.trim().length > 200) errs.street = 'Не длиннее 200 символов.';
+
+    if (visitType === 'studio') {
+      const sn = salonName.trim();
+      if (!sn) errs.salonName = 'Укажите название салона или студии';
+      else if (sn.length < 2) errs.salonName = 'Минимум 2 символа.';
+    }
 
     const bEff = building.trim() || (street.trim() ? 'б/н' : '');
     if (!bEff) errs.building = 'Укажите адрес приёма';
@@ -1237,12 +1279,15 @@ export function BecomeMasterPage() {
       const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
       if (!hasCoords) {
         errs.coords = 'Уточните точку на карте';
+      } else if (!addressPinnedToMap) {
+        errs.coords = 'Подтвердите адрес: выберите вариант из подсказок или уточните метку на карте';
       }
     }
 
     setAddressFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }, [
+    addressPinnedToMap,
     building,
     clientNote,
     directions,
@@ -1257,6 +1302,7 @@ export function BecomeMasterPage() {
     room,
     salonName,
     street,
+    visitType,
   ]);
 
   const touchProfileField = useCallback((key: string) => {
@@ -1830,7 +1876,7 @@ export function BecomeMasterPage() {
                     }
                     value={phone}
                     onChange={(v) => {
-                      setPhone(v);
+                      setPhone(sanitizeBelarusPhoneInput(v));
                       setProfileFieldErrors((prev) => {
                         const next = { ...prev };
                         delete next.phone;
@@ -1842,7 +1888,7 @@ export function BecomeMasterPage() {
                     placeholder="+375 29 000-00-00"
                     inputMode="tel"
                     error={showProfileFieldError('phone') ? profileFieldErrors.phone : undefined}
-                    maxLength={24}
+                    maxLength={19}
                   />
 
                   {step3NavigateAttempted && profileFieldErrors.contactReachability ? (
@@ -1881,6 +1927,7 @@ export function BecomeMasterPage() {
                             setVisitType(type);
                             setAddressFieldErrors({});
                             setAddressNavigateAttempted(false);
+                            invalidatePrimaryAddressOnMap();
                           }}
                           className={`min-h-11 rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98] ${
                             active
@@ -1922,6 +1969,7 @@ export function BecomeMasterPage() {
                       label="Адрес салона *"
                       value={street}
                       onChange={(value) => {
+                        invalidatePrimaryAddressOnMap();
                         setStreet(value);
                         setAddressFieldErrors((prev) => {
                           const next = { ...prev };
@@ -1949,10 +1997,13 @@ export function BecomeMasterPage() {
                         }
                         initialLat={lat ?? null}
                         initialLng={lng ?? null}
+                        addressSummary={pickedAddressSummary}
                         coordsError={showAddressFieldError('coords') ? addressFieldErrors.coords : undefined}
                         onMapAvailabilityChange={(ok) => setMapScriptOk(ok)}
                         onPick={(result) => {
                           const { street: s, building: b } = splitReferenceLabelToStreetBuilding(result.addressLine);
+                          setPickedAddressSummary(result.addressLine);
+                          setAddressPinnedToMap(true);
                           setStreet(s);
                           setBuilding(b);
                           setLat(result.lat);
@@ -1994,6 +2045,7 @@ export function BecomeMasterPage() {
                       label="Адрес приёма *"
                       value={street}
                       onChange={(value) => {
+                        invalidatePrimaryAddressOnMap();
                         setStreet(value);
                         setAddressFieldErrors((prev) => {
                           const next = { ...prev };
@@ -2021,10 +2073,13 @@ export function BecomeMasterPage() {
                         }
                         initialLat={lat ?? null}
                         initialLng={lng ?? null}
+                        addressSummary={pickedAddressSummary}
                         coordsError={showAddressFieldError('coords') ? addressFieldErrors.coords : undefined}
                         onMapAvailabilityChange={(ok) => setMapScriptOk(ok)}
                         onPick={(result) => {
                           const { street: s, building: b } = splitReferenceLabelToStreetBuilding(result.addressLine);
+                          setPickedAddressSummary(result.addressLine);
+                          setAddressPinnedToMap(true);
                           setStreet(s);
                           setBuilding(b);
                           setLat(result.lat);
@@ -2070,6 +2125,7 @@ export function BecomeMasterPage() {
                       label="Уточнение адреса (дом / корпус)"
                       value={building}
                       onChange={(v) => {
+                        invalidatePrimaryAddressOnMap();
                         setBuilding(v);
                         setAddressFieldErrors((prev) => {
                           const next = { ...prev };
@@ -2715,7 +2771,7 @@ export function BecomeMasterPage() {
                             {masterVisitTypeLabel(visitType)}
                           </p>
 
-                          <p className="mt-2.5 text-[12px] font-medium text-neutral-400">
+                          <p className="mt-2.5 whitespace-nowrap text-[11px] font-medium text-neutral-400 sm:text-[12px]">
                             Новый мастер · отзывов пока нет
                           </p>
 

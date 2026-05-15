@@ -32,6 +32,7 @@ import {
   upsertPrimaryLocation,
 } from './masterOnboarding.service.js';
 import { completeMyMasterOnboarding } from './masterOnboardingComplete.service.js';
+import { masterDisplayNamePassesQuality } from '../../lib/masterDisplayNamePolicy.js';
 import { masterServicesRouter } from '../services/services.routes.js';
 import { masterSlotsRouter } from '../slots/slots.routes.js';
 import { masterAppointmentsRouter } from '../appointments/appointments.routes.js';
@@ -441,7 +442,11 @@ const onboardingBody = z
       .string()
       .max(200)
       .transform((s) => s.trim())
-      .refine((s) => s.length >= 2, { message: 'Имя минимум 2 символа' }),
+      .refine((s) => s.length >= 2, { message: 'Имя минимум 2 символа' })
+      .refine((s) => masterDisplayNamePassesQuality(s), {
+        message:
+          'Имя должно содержать буквы (не только цифры и знаки); букв должно быть больше, чем цифр; без одного символа подряд и шаблонных слов.',
+      }),
     description: z.string().max(10_000).optional(),
     phone: optionalBelarusMobile,
     contact: z.string().max(500).nullable().optional(),

@@ -57,6 +57,68 @@ export function hasYandexGeocoderKey(): boolean {
   return Boolean(apiKey());
 }
 
+/** Bias / limit area: south-west lat,lon — north-east lat,lon (Минск и окрестности). */
+const MINSK_BOUNDED_BY: [[number, number], [number, number]] = [
+  [53.75, 27.35],
+  [54.05, 27.72],
+];
+
+export type YmapsGeocodeApi = {
+  geocode: (
+    request: string,
+    options?: { results?: number; boundedBy?: [[number, number], [number, number]]; strictBounds?: boolean },
+  ) => Promise<unknown>;
+};
+
+function hitsFromGeocodeResult(res: unknown): YandexGeocodeHit[] {
+  if (!res || typeof res !== 'object') return [];
+  const geoObjects = (res as { geoObjects?: { each?: (fn: (obj: unknown) => void) => void } }).geoObjects;
+  if (!geoObjects || typeof geoObjects.each !== 'function') return [];
+
+  const hits: YandexGeocodeHit[] = [];
+  geoObjects.each((obj: unknown) => {
+    if (!obj || typeof obj !== 'object') return;
+    const o = obj as {
+      geometry?: { getCoordinates?: () => number[] };
+      getAddressLine?: () => string;
+      properties?: { get?: (k: string) => unknown };
+    };
+    const coords = o.geometry?.getCoordinates?.();
+    if (!Array.isArray(coords) || coords.length < 2) return;
+    const lat = coords[0];
+    const lon = coords[1];
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const line =
+      typeof o.getAddressLine === 'function'
+        ? o.getAddressLine()?.trim()
+        : String(o.properties?.get?.('text') ?? o.properties?.get?.('name') ?? '').trim();
+    if (!line) return;
+    hits.push({ displayLine: line, lat, lon });
+  });
+  return hits;
+}
+
+/**
+ * Геокодинг через уже загруженный JS API Яндекс.Карт (тот же сценарий, что и карта).
+ * Полезно, когда HTTP-геокодер без ключа недоступен, а скрипт карты с `apikey` уже подключён.
+ */
+export async function yandexGeocodeMinskViaYmaps(ymaps: YmapsGeocodeApi, city: string, localQuery: string): Promise<YandexGeocodeHit[]> {
+  const q = localQuery.trim();
+  if (q.length < 1) return [];
+  if (typeof ymaps.geocode !== 'function') return [];
+
+  const request = `${city}, ${q}`;
+  const opts = { results: 6, boundedBy: MINSK_BOUNDED_BY, strictBounds: true as const };
+
+  let res = await ymaps.geocode(request, opts);
+  let hits = hitsFromGeocodeResult(res);
+  if (hits.length === 0) {
+    res = await ymaps.geocode(request, { ...opts, strictBounds: false });
+    hits = hitsFromGeocodeResult(res);
+  }
+  return hits;
+}
+
 /** Прямой геокодинг (подсказки), с debounce вызывать снаружи. */
 export async function yandexGeocodeMinsk(query: string, signal: AbortSignal): Promise<YandexGeocodeHit[]> {
   const key = apiKey();
@@ -64,7 +126,7 @@ export async function yandexGeocodeMinsk(query: string, signal: AbortSignal): Pr
   const q = query.trim();
   if (q.length < 1) return [];
 
-  const geocode = `Минск, ${q}`;
+  const geocode = q;
   const url = new URL('https://geocode-maps.yandex.ru/1.x/');
   url.searchParams.set('apikey', key);
   url.searchParams.set('geocode', geocode);

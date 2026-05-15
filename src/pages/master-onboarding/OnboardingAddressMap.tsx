@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   hasYandexGeocoderKey,
   yandexGeocodeMinsk,
+  yandexGeocodeMinskViaYmaps,
   yandexReverseMinsk,
   type YandexGeocodeHit,
+  type YmapsGeocodeApi,
 } from '../../shared/lib/yandexGeocodeMinsk';
 
 const MINSK_CENTER: [number, number] = [53.9025, 27.5615];
@@ -109,6 +111,8 @@ type Props = {
   initialLat?: number | null;
   initialLng?: number | null;
   onMapAvailabilityChange?: (available: boolean) => void;
+  /** Подпись «Выбрано: …» с родителя (последний подтверждённый геокод / карта). */
+  addressSummary?: string | null;
 };
 
 export function OnboardingAddressMap({
@@ -120,6 +124,7 @@ export function OnboardingAddressMap({
   initialLat,
   initialLng,
   onMapAvailabilityChange,
+  addressSummary = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<YMap | null>(null);
@@ -287,8 +292,13 @@ export function OnboardingAddressMap({
         setHint(null);
         return;
       }
-      if (!hasYandexGeocoderKey()) {
+      const ymapsEarly = getYmaps();
+      const ymapsApi = ymapsEarly as unknown as YmapsGeocodeApi | undefined;
+      const canGeocode =
+        Boolean(ymapsApi && typeof ymapsApi.geocode === 'function') || hasYandexGeocoderKey();
+      if (!canGeocode) {
         setItems([]);
+        setOpen(false);
         setHint(null);
         return;
       }
@@ -299,16 +309,28 @@ export function OnboardingAddressMap({
       setLoading(true);
       setHint(null);
       try {
-        const list = await yandexGeocodeMinsk(`${city}, ${q}`, ac.signal);
+        const ymapsRaw = getYmaps();
+        const ymaps = ymapsRaw as unknown as YmapsGeocodeApi | undefined;
+        let list: YandexGeocodeHit[] = [];
+        if (ymaps && typeof ymaps.geocode === 'function') {
+          try {
+            list = await yandexGeocodeMinskViaYmaps(ymaps, city, q);
+          } catch {
+            list = [];
+          }
+        }
+        if (list.length === 0 && hasYandexGeocoderKey()) {
+          list = await yandexGeocodeMinsk(`${city}, ${q}`, ac.signal);
+        }
         setItems(list);
         setOpen(list.length > 0);
         if (list.length === 0) {
-          setHint('Адрес не найден');
+          setHint('Адрес не найден — уточните запрос или выберите точку на карте');
         }
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'AbortError') return;
         setItems([]);
-        setHint('Адрес не найден');
+        setHint('Не удалось выполнить поиск адреса');
       } finally {
         setLoading(false);
       }
@@ -377,7 +399,7 @@ export function OnboardingAddressMap({
           </ul>
         ) : null}
 
-        {loading && hasYandexGeocoderKey() && addressLine.trim().length >= 2 ? (
+        {loading && addressLine.trim().length >= 2 ? (
           <p className="mb-1 text-[12px] font-medium text-neutral-500">Ищем адрес…</p>
         ) : null}
 
@@ -397,9 +419,9 @@ export function OnboardingAddressMap({
         </div>
       </div>
 
-      {addressLine ? (
+      {addressSummary?.trim() ? (
         <p className="text-[13px] font-medium text-neutral-700">
-          Выбрано: <span className="text-neutral-900">{addressLine}</span>
+          Выбрано: <span className="text-neutral-900">{addressSummary.trim()}</span>
         </p>
       ) : null}
 
