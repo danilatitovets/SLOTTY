@@ -18,6 +18,7 @@ import {
   type ViewportListPlacement,
 } from '../../shared/lib/viewportListPlacement';
 
+import { yandexGeocodeMinsk } from '../../shared/lib/yandexGeocodeMinsk';
 import {
   searchMinskAddressSuggestions,
   type YandexSuggestItem,
@@ -393,16 +394,21 @@ export function OnboardingAddressMap({
 
     if (!map || !pm) return;
 
-    if (
+    const hasInitial =
       initialLat != null &&
       initialLng != null &&
       Number.isFinite(initialLat) &&
-      Number.isFinite(initialLng)
-    ) {
+      Number.isFinite(initialLng);
+
+    if (hasInitial) {
       pm.geometry.setCoordinates([initialLat, initialLng]);
       map.setCenter([initialLat, initialLng], Math.max(map.getZoom(), 15), {
         duration: 0,
       });
+
+      if (searchLocalPart) {
+        lineRef.current = searchLocalPart;
+      }
 
       setHasPoint(true);
       setPoint({
@@ -419,6 +425,40 @@ export function OnboardingAddressMap({
       setPoint(null);
     }
   }, [initialLat, initialLng, mapReady, searchLocalPart]);
+
+  /** Если координаты не сохранились, но адрес есть — один раз ставим точку по геокодеру. */
+  useEffect(() => {
+    if (!mapReady) return;
+
+    const hasInitial =
+      initialLat != null &&
+      initialLng != null &&
+      Number.isFinite(initialLat) &&
+      Number.isFinite(initialLng);
+    if (hasInitial) return;
+
+    const local = searchLocalPart.trim();
+    if (local.length < 3) return;
+
+    const ac = new AbortController();
+    const cityPart = city.trim() || 'Минск';
+    const query = local.toLowerCase().includes(cityPart.toLowerCase())
+      ? local
+      : `${cityPart}, ${local}`;
+
+    void (async () => {
+      try {
+        const hits = await yandexGeocodeMinsk(query, ac.signal);
+        const hit = hits[0];
+        if (!hit || !isMinskAreaCoords(hit.lat, hit.lon)) return;
+        applyPick(hit.lat, hit.lon, hit.displayLine);
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => ac.abort();
+  }, [mapReady, initialLat, initialLng, searchLocalPart, city, applyPick]);
 
   const runSearch = useCallback(
     async (raw: string) => {

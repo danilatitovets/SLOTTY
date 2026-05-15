@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BY } from 'country-flag-icons/react/1x1';
 import {
   CONTACT_CHANNEL_META,
@@ -11,11 +11,10 @@ import {
   defaultMasterAvatarUrl,
   formatScheduleClientPreview,
 } from '../../../features/master/model/masterDraftStorage';
-import type { MasterLocation } from '../../../features/profile/model/masterLocation';
 import {
-  formatFullAddress,
+  buildLocationDisplayParts,
+  catalogLineWithoutVisitPrefix,
   formatPublicAddress,
-  masterLocationDetailRows,
 } from '../../../features/profile/model/masterLocation';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
@@ -37,10 +36,11 @@ import {
   SheetMainInfo,
   SheetPortfolio,
   SheetRules,
+  SheetSchedule,
 } from './AdminProfileEditSheets';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 
-type ProfileSection = 'main' | 'address' | 'trust' | 'rules';
+type ProfileSection = 'main' | 'address' | 'portfolio' | 'rules';
 
 type CareerItemType = MasterCareerItemType;
 
@@ -58,6 +58,7 @@ type ProfileSheet =
   | null
   | 'main'
   | 'address'
+  | 'schedule'
   | 'rules'
   | { k: 'career'; id?: string }
   | { k: 'del-career'; id: string }
@@ -141,15 +142,66 @@ function normalizeCareerItems(draft: MasterDraft): MasterCareerItem[] {
   return [];
 }
 
-function hasLocationExtras(loc: MasterLocation): boolean {
-  return Boolean(
-    loc.entrance?.trim() ||
-      loc.floor?.trim() ||
-      loc.room?.trim() ||
-      loc.intercom?.trim() ||
-      loc.landmark?.trim() ||
-      loc.directions?.trim() ||
-      loc.clientNote?.trim(),
+function AddressDetailGrid({ rows }: { rows: Array<{ label: string; value: string }> }) {
+  if (!rows.length) return null;
+  return (
+    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
+      {rows.map((row) => (
+        <div key={row.label} className="min-w-0">
+          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">{row.label}</dt>
+          <dd className="mt-0.5 text-[15px] font-semibold leading-snug text-neutral-950">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function AddressPreviewPanel({
+  title,
+  hint,
+  visitLabel,
+  mode = 'short',
+  mainLine,
+  detailRows,
+  wayfinding,
+}: {
+  title: string;
+  hint: string;
+  visitLabel: string;
+  mode?: 'short' | 'detailed';
+  mainLine?: string;
+  detailRows?: Array<{ label: string; value: string }>;
+  wayfinding?: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="rounded-[26px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{title}</p>
+      <p className="mt-1 text-[12px] leading-snug text-neutral-500">{hint}</p>
+      <div className="mt-3">
+        <span className="inline-flex rounded-full bg-[#F1EFEF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-700">
+          {visitLabel}
+        </span>
+        {mode === 'short' ? (
+          <p className="mt-2 text-[17px] font-semibold leading-snug tracking-[-0.02em] text-neutral-950">
+            {mainLine || '—'}
+          </p>
+        ) : (
+          <AddressDetailGrid rows={detailRows ?? []} />
+        )}
+        {wayfinding?.length ? (
+          <div className="mt-3 space-y-2 border-t border-[#F1EFEF] pt-3">
+            {wayfinding.map((row) => (
+              <div key={row.label}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">{row.label}</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-[14px] font-medium leading-relaxed text-neutral-800">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -201,20 +253,47 @@ function IconMap({ className }: { className?: string }) {
   );
 }
 
-function IconSparkles({ className }: { className?: string }) {
+function IconPortfolio({ className }: { className?: string }) {
   return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3Z" strokeLinejoin="round" />
-      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z" strokeLinejoin="round" />
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconImagePlaceholder({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M3 16l5-5 3.5 3L14 11l7 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconMore({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="5" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="19" cy="12" r="1.6" />
     </svg>
   );
 }
 
 function IconRules({ className }: { className?: string }) {
   return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round" />
-      <path d="M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path
+        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="9" y="3" width="6" height="4" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12h6M9 16h4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -233,24 +312,14 @@ function IconPencil({ className }: { className?: string }) {
   );
 }
 
-function IconTrash({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function valueOrDash(value?: string | null): string {
   const trimmed = value?.trim() ?? '';
   return trimmed || '—';
 }
+
+const INFO_LEADING_ICON_WRAP =
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-[0_2px_10px_rgba(17,17,17,0.06)]';
+const INFO_LEADING_ICON_SIZE = 'h-[22px] w-[22px] shrink-0';
 
 function InfoBlock({
   label,
@@ -395,27 +464,30 @@ function SectionTabs({
   const tabs: Array<{ id: ProfileSection; label: string; icon: ReactNode }> = [
     { id: 'main', label: 'Основное', icon: <IconUser /> },
     { id: 'address', label: 'Адрес', icon: <IconMap /> },
-    { id: 'trust', label: 'Доверие', icon: <IconSparkles /> },
+    { id: 'portfolio', label: 'Портфолио', icon: <IconPortfolio /> },
     { id: 'rules', label: 'Правила', icon: <IconRules /> },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-[30px] bg-[#F1EFEF] p-2 sm:grid-cols-4">
+    <div className="flex items-center gap-1.5 rounded-[30px] bg-[#F1EFEF] p-2">
       {tabs.map((tab) => {
         const selected = active === tab.id;
         return (
           <button
             key={tab.id}
             type="button"
+            aria-label={tab.label}
+            title={tab.label}
             onClick={() => onChange(tab.id)}
-            className={`flex min-h-12 items-center justify-center gap-2 rounded-full px-3 text-[13px] font-semibold transition active:scale-[0.98] ${
+            className={`flex min-h-11 flex-1 items-center justify-center rounded-full py-2 transition active:scale-[0.98] ${
               selected
                 ? 'bg-[#E29595] text-white shadow-[0_10px_24px_rgba(226,149,149,0.24)]'
                 : 'bg-white/70 text-neutral-700'
             }`}
           >
-            <span className="h-4 w-4">{tab.icon}</span>
-            {tab.label}
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center [&_svg]:max-h-[22px] [&_svg]:max-w-[22px]">
+              {tab.icon}
+            </span>
           </button>
         );
       })}
@@ -426,11 +498,14 @@ function SectionTabs({
 function MainSection({
   draft,
   onEditMain,
+  onEditSchedule,
 }: {
   draft: MasterDraft;
   onEditMain: () => void;
+  onEditSchedule: () => void;
 }) {
   return (
+    <div className="space-y-5">
     <SectionCard
       title="Основная информация"
       text="Имя, описание и контакты, которые видит клиент перед записью."
@@ -453,10 +528,10 @@ function MainSection({
         leading={
           draft.phone?.trim() ? (
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
+              className={`${INFO_LEADING_ICON_WRAP} overflow-hidden border border-neutral-200 bg-white`}
               aria-hidden
             >
-              <BY title="Беларусь" className="h-full w-full object-cover" />
+              <BY title="Беларусь" className={`${INFO_LEADING_ICON_SIZE} rounded-full object-cover`} />
             </span>
           ) : undefined
         }
@@ -471,11 +546,8 @@ function MainSection({
               label={label}
               value={row.value}
               leading={
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
-                  aria-hidden
-                >
-                  <ContactChannelBrandIcon type={row.type} className="h-[18px] w-[18px]" />
+                <span className={`${INFO_LEADING_ICON_WRAP} bg-[#F1EFEF]`} aria-hidden>
+                  <ContactChannelBrandIcon type={row.type} className={INFO_LEADING_ICON_SIZE} />
                 </span>
               }
             />
@@ -486,6 +558,23 @@ function MainSection({
       ) : null}
       <InfoBlock label="О себе" value={draft.description} large />
     </SectionCard>
+
+    <div className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+      <div className="rounded-[30px] bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Расписание записи</p>
+        <p className="mt-2 text-[14px] font-medium leading-relaxed text-neutral-700">
+          {formatScheduleClientPreview(draft.schedule)}
+        </p>
+        <button
+          type="button"
+          onClick={onEditSchedule}
+          className="mt-5 flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+        >
+          Изменить расписание
+        </button>
+      </div>
+    </div>
+    </div>
   );
 }
 
@@ -496,36 +585,39 @@ function AddressSection({
   draft: MasterDraft;
   onEditAddress: () => void;
 }) {
-  const shortAddress = formatPublicAddress(draft.location);
-  const fullAddress = formatFullAddress(draft.location);
-  const detailRows = masterLocationDetailRows(draft.location);
-  const extras = hasLocationExtras(draft.location);
+  const parts = buildLocationDisplayParts(draft.location);
+  const visitLabel = parts?.visitLabel ?? 'Адрес';
+  const catalogMain = parts
+    ? catalogLineWithoutVisitPrefix(parts.catalogLine, visitLabel)
+    : '—';
+  const afterBookingLine = parts
+    ? catalogLineWithoutVisitPrefix(parts.addressLine, visitLabel)
+    : '—';
+  const afterBookingRows =
+    afterBookingLine && afterBookingLine !== '—'
+      ? [{ label: 'Адрес', value: afterBookingLine }, ...(parts?.access ?? [])]
+      : [...(parts?.access ?? [])];
 
   return (
     <SectionCard
       title="Адрес и как пройти"
       text="Здесь должно быть понятно не только куда ехать, но и как найти кабинет."
     >
-      <InfoBlock label="Кратко на карточке" value={shortAddress} large />
-      <InfoBlock label="Полный адрес и инструкции" value={fullAddress} large />
+      <AddressPreviewPanel
+        title="На карточке"
+        hint="Так адрес видят в каталоге до записи"
+        visitLabel={visitLabel}
+        mainLine={catalogMain}
+      />
 
-      {extras ? (
-        <ul className="flex flex-col gap-2 rounded-[28px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-          {detailRows.map((row) => (
-            <li key={row.label} className="rounded-[22px] bg-[#F1EFEF] px-4 py-3 text-[14px] leading-snug">
-              <span className="font-semibold text-neutral-500">{row.label}: </span>
-              <span className="font-semibold text-neutral-950">{row.value}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="rounded-[28px] bg-white px-5 py-6 text-center shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-          <p className="text-[18px] font-semibold tracking-[-0.045em] text-neutral-950">Детали адреса не заполнены</p>
-          <p className="mx-auto mt-2 max-w-[20rem] text-[14px] leading-relaxed text-neutral-500">
-            Добавьте вход, этаж, кабинет и ориентиры, чтобы клиент не потерялся.
-          </p>
-        </div>
-      )}
+      <AddressPreviewPanel
+        title="После записи"
+        hint="Подъезд, этаж и другие детали — только у клиента с записью"
+        visitLabel={visitLabel}
+        mode="detailed"
+        detailRows={afterBookingRows}
+        wayfinding={parts?.wayfinding}
+      />
 
       <button
         type="button"
@@ -534,11 +626,6 @@ function AddressSection({
       >
         Редактировать адрес
       </button>
-
-      <div className="rounded-[28px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Расписание</p>
-        <p className="mt-2 text-[14px] font-medium leading-relaxed text-neutral-700">{formatScheduleClientPreview(draft.schedule)}</p>
-      </div>
     </SectionCard>
   );
 }
@@ -704,6 +791,143 @@ function CareerSheet({
   );
 }
 
+function worksCountLabel(count: number): string {
+  const n = Math.abs(count);
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return `${n} работ`;
+  if (mod10 === 1) return `${n} работа`;
+  if (mod10 >= 2 && mod10 <= 4) return `${n} работы`;
+  return `${n} работ`;
+}
+
+type OverflowMenuItem = {
+  id: string;
+  label: string;
+  onClick: () => void;
+  tone?: 'default' | 'danger';
+  disabled?: boolean;
+};
+
+function CardOverflowMenu({ items, ariaLabel }: { items: OverflowMenuItem[]; ariaLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointer = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (target instanceof Node && rootRef.current && !rootRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('touchstart', onPointer);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('touchstart', onPointer);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-neutral-800 shadow-[0_4px_14px_rgba(17,17,17,0.12)] backdrop-blur-sm transition active:scale-[0.95]"
+      >
+        <IconMore className="h-[18px] w-[18px]" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[11.5rem] overflow-hidden rounded-[16px] bg-white py-1 shadow-[0_16px_40px_rgba(17,17,17,0.14)] ring-1 ring-black/[0.06]"
+        >
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              disabled={item.disabled}
+              onClick={() => {
+                if (item.disabled) return;
+                setOpen(false);
+                item.onClick();
+              }}
+              className={`flex min-h-11 w-full items-center px-4 text-left text-[14px] font-semibold transition active:bg-[#F1EFEF] disabled:opacity-40 ${
+                item.tone === 'danger' ? 'text-red-600' : 'text-neutral-900'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TrustBlockHeader({
+  title,
+  description,
+  countLabel,
+}: {
+  title: string;
+  description: string;
+  countLabel: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 pr-1">
+        <p className="text-[17px] font-semibold tracking-[-0.04em] text-neutral-950">{title}</p>
+        <p className="mt-1 text-[13px] leading-snug text-neutral-500">{description}</p>
+      </div>
+      <span className="shrink-0 rounded-full bg-[#F1EFEF] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-neutral-500">
+        {countLabel}
+      </span>
+    </div>
+  );
+}
+
+function TrustEmptyPanel({
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+  primaryAction,
+}: {
+  title: string;
+  subtitle: string;
+  actionLabel: string;
+  onAction: () => void;
+  primaryAction?: boolean;
+}) {
+  return (
+    <>
+      <div className="mt-4 rounded-[20px] border border-dashed border-[#E8E4E4] bg-[#FAFAFA] px-4 py-7 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#F1EFEF] text-neutral-400">
+          <IconImagePlaceholder className="h-7 w-7" />
+        </div>
+        <p className="mt-3 text-[15px] font-semibold text-neutral-950">{title}</p>
+        <p className="mx-auto mt-1.5 max-w-[16rem] text-[13px] leading-relaxed text-neutral-500">{subtitle}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onAction}
+        className={`mt-3 flex min-h-11 w-full items-center justify-center rounded-full px-4 text-[14px] font-semibold transition active:scale-[0.98] ${
+          primaryAction
+            ? 'bg-[#E29595] text-white shadow-[0_10px_28px_rgba(226,149,149,0.28)]'
+            : 'bg-[#F1EFEF] text-neutral-900'
+        }`}
+      >
+        {actionLabel}
+      </button>
+    </>
+  );
+}
+
 function TrustSection({
   draft,
   onAddCareer,
@@ -715,6 +939,7 @@ function TrustSection({
   onAddPortfolio,
   onEditPortfolio,
   onDeletePortfolio,
+  onSetPortfolioCover,
 }: {
   draft: MasterDraft;
   onAddCareer: () => void;
@@ -726,224 +951,242 @@ function TrustSection({
   onAddPortfolio: () => void;
   onEditPortfolio: (id: string) => void;
   onDeletePortfolio: (id: string) => void;
+  onSetPortfolioCover: (imageUrl: string) => void;
 }) {
   const careerItems = normalizeCareerItems(draft);
   const certificates = draft.certificates ?? [];
   const portfolio = draft.portfolio ?? [];
+  const coverPhoto = draft.photoUrl?.trim() ?? '';
 
   return (
-    <SectionCard title="Доверие" text="Образование, сертификаты и работы помогают клиенту быстрее принять решение.">
-      <div className="rounded-[30px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[20px] font-semibold tracking-[-0.05em] text-neutral-950">Образование и опыт</p>
-            <p className="mt-1 text-[14px] leading-relaxed text-neutral-500">
-              Колледж, курсы, практика, стажировка и работа.
-            </p>
-          </div>
-          <span className="rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-semibold text-neutral-500">
-            {careerItems.length}
-          </span>
-        </div>
+    <div className="space-y-4">
+      <p className="px-0.5 text-[13px] leading-relaxed text-neutral-500">
+        Фото работ — главное в профиле. Сертификаты и опыт дополняют доверие клиента.
+      </p>
 
+      <section className="rounded-[22px] bg-white p-4 shadow-[0_12px_36px_rgba(17,17,17,0.07)] ring-1 ring-[#F1EFEF]">
+        <TrustBlockHeader
+          title="Работы"
+          description="Добавьте фото работ, которые увидят клиенты в вашем профиле."
+          countLabel={worksCountLabel(portfolio.length)}
+        />
+        {portfolio.length > 0 ? (
+          <>
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={onAddPortfolio}
+                className="inline-flex min-h-9 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[13px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+              >
+                + Добавить
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2.5">
+              {portfolio.map((item, i) => {
+                const imageUrl = item.imageUrl?.trim() ?? '';
+                const isCover = Boolean(imageUrl && coverPhoto && imageUrl === coverPhoto);
+
+                return (
+                  <article
+                    key={item.id}
+                    className="relative overflow-hidden rounded-[18px] bg-[#F1EFEF] ring-1 ring-[#F1EFEF]"
+                  >
+                    <div className="absolute right-1.5 top-1.5 z-10">
+                      <CardOverflowMenu
+                        ariaLabel="Действия с работой"
+                        items={[
+                          {
+                            id: 'cover',
+                            label: isCover ? 'Уже обложка' : 'Сделать обложкой',
+                            onClick: () => onSetPortfolioCover(imageUrl),
+                            disabled: !imageUrl || isCover,
+                          },
+                          {
+                            id: 'edit',
+                            label: 'Редактировать',
+                            onClick: () => onEditPortfolio(item.id),
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Удалить',
+                            onClick: () => onDeletePortfolio(item.id),
+                            tone: 'danger',
+                          },
+                        ]}
+                      />
+                    </div>
+                    {isCover ? (
+                      <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-neutral-900/75 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        Обложка
+                      </span>
+                    ) : null}
+                    {imageUrl ? (
+                      <ImageReveal
+                        src={imageUrl}
+                        alt=""
+                        className="aspect-square w-full object-cover"
+                        loading={i < 4 ? 'eager' : 'lazy'}
+                        fetchPriority={i < 2 ? 'high' : 'low'}
+                      />
+                    ) : (
+                      <div className="flex aspect-square w-full items-center justify-center bg-white text-neutral-300">
+                        <IconImagePlaceholder className="h-8 w-8" />
+                      </div>
+                    )}
+                    {item.title?.trim() ? (
+                      <div className="px-2.5 py-2">
+                        <p className="truncate text-[12px] font-semibold text-neutral-800">{item.title}</p>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={onAddPortfolio}
+              className="mt-3 flex min-h-11 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+            >
+              + Добавить работу
+            </button>
+          </>
+        ) : (
+          <TrustEmptyPanel
+            title="Пока нет работ"
+            subtitle="Добавьте первые фото, чтобы клиенты могли оценить ваш стиль."
+            actionLabel="+ Добавить работу"
+            onAction={onAddPortfolio}
+            primaryAction
+          />
+        )}
+      </section>
+
+      <section className="rounded-[20px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
+        <TrustBlockHeader
+          title="Сертификаты"
+          description="Добавьте дипломы, курсы и документы, которые подтверждают ваш опыт."
+          countLabel={String(certificates.length)}
+        />
+        {certificates.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-2">
+            {certificates.map((certificate, i) => (
+              <li
+                key={certificate.id}
+                className="flex items-start gap-3 rounded-[18px] bg-[#F1EFEF] p-2.5 pr-1"
+              >
+                {certificate.imageUrl ? (
+                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-white">
+                    <ImageReveal
+                      src={certificate.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-white text-neutral-300">
+                    <IconImagePlaceholder className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 py-0.5">
+                  <p className="text-[14px] font-semibold leading-snug text-neutral-950">{certificate.title}</p>
+                  <p className="mt-0.5 text-[12px] font-medium text-neutral-500">
+                    {certificate.issuer}
+                    {certificate.year ? ` · ${certificate.year}` : ''}
+                  </p>
+                </div>
+                <CardOverflowMenu
+                  ariaLabel="Действия с сертификатом"
+                  items={[
+                    { id: 'edit', label: 'Редактировать', onClick: () => onEditCert(certificate.id) },
+                    {
+                      id: 'delete',
+                      label: 'Удалить',
+                      onClick: () => onDeleteCert(certificate.id),
+                      tone: 'danger',
+                    },
+                  ]}
+                />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <button
+          type="button"
+          onClick={onAddCert}
+          className="mt-3 flex min-h-10 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[13px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+        >
+          + Добавить сертификат
+        </button>
+      </section>
+
+      <section className="rounded-[20px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
+        <TrustBlockHeader
+          title="Опыт и образование"
+          description="Расскажите, где обучались и сколько работаете в сфере."
+          countLabel={String(careerItems.length)}
+        />
         {careerItems.length > 0 ? (
-          <ul className="mt-4 flex flex-col gap-3">
+          <ul className="mt-3 flex flex-col gap-2">
             {careerItems.map((item) => {
               const isLegacy = item.id === 'legacy-experience';
 
               return (
-                <li key={item.id} className="relative rounded-[26px] bg-[#F1EFEF] p-4">
-                  {!isLegacy ? (
-                    <div className="absolute right-2 top-2 flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onEditCareer(item.id)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-neutral-800 shadow-sm transition active:scale-[0.95]"
-                        aria-label="Редактировать запись"
-                      >
-                        <IconPencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteCareer(item.id)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition active:scale-[0.95]"
-                        aria-label="Удалить запись"
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </button>
+                <li key={item.id} className="rounded-[18px] bg-[#F1EFEF] p-3 pr-1">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-600">
+                        {careerTypeLabel(item.type)}
+                      </span>
+                      <p className="mt-2 text-[15px] font-semibold leading-snug text-neutral-950">{item.title}</p>
+                      {item.place ? (
+                        <p className="mt-0.5 text-[13px] font-medium text-neutral-600">{item.place}</p>
+                      ) : null}
+                      {item.startYear || item.endYear ? (
+                        <p className="mt-0.5 text-[12px] text-neutral-400">
+                          {item.startYear || '—'} — {item.endYear || 'сейчас'}
+                        </p>
+                      ) : null}
+                      {item.description ? (
+                        <p className="mt-2 line-clamp-3 text-[13px] leading-relaxed text-neutral-500">
+                          {item.description}
+                        </p>
+                      ) : null}
                     </div>
-                  ) : null}
-
-                  <div className={isLegacy ? '' : 'pr-20'}>
-                    <span className="inline-flex rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-neutral-600">
-                      {careerTypeLabel(item.type)}
-                    </span>
-
-                    <p className="mt-3 text-[17px] font-semibold tracking-[-0.045em] text-neutral-950">
-                      {item.title}
-                    </p>
-
-                    {item.place ? (
-                      <p className="mt-1 text-[14px] font-semibold text-neutral-600">
-                        {item.place}
-                      </p>
-                    ) : null}
-
-                    {item.startYear || item.endYear ? (
-                      <p className="mt-1 text-[13px] font-medium text-neutral-400">
-                        {item.startYear || '—'} — {item.endYear || 'сейчас'}
-                      </p>
-                    ) : null}
-
-                    {item.description ? (
-                      <p className="mt-3 whitespace-pre-wrap text-[14px] leading-relaxed text-neutral-500">
-                        {item.description}
-                      </p>
+                    {!isLegacy ? (
+                      <CardOverflowMenu
+                        ariaLabel="Действия с записью"
+                        items={[
+                          { id: 'edit', label: 'Редактировать', onClick: () => onEditCareer(item.id) },
+                          {
+                            id: 'delete',
+                            label: 'Удалить',
+                            onClick: () => onDeleteCareer(item.id),
+                            tone: 'danger',
+                          },
+                        ]}
+                      />
                     ) : null}
                   </div>
                 </li>
               );
             })}
           </ul>
-        ) : null}
-
+        ) : (
+          <p className="mt-3 text-[13px] text-neutral-500">Пока нет записей об опыте.</p>
+        )}
         <button
           type="button"
           onClick={onAddCareer}
-          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+          className="mt-3 flex min-h-10 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[13px] font-semibold text-neutral-900 transition active:scale-[0.98]"
         >
-          Добавить образование или опыт
+          + Добавить опыт
         </button>
-      </div>
-
-      <div className="rounded-[30px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[20px] font-semibold tracking-[-0.05em] text-neutral-950">Сертификаты</p>
-            <p className="mt-1 text-[14px] leading-relaxed text-neutral-500">Фото курсов, дипломов и документов.</p>
-          </div>
-          <span className="rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-semibold text-neutral-500">{certificates.length}</span>
-        </div>
-
-        {certificates.length > 0 ? (
-          <ul className="mt-4 flex flex-col gap-3">
-            {certificates.map((certificate, i) => (
-              <li key={certificate.id} className="relative rounded-[26px] bg-[#F1EFEF] p-3 pr-14">
-                <div className="absolute right-2 top-2 flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => onEditCert(certificate.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-neutral-800 shadow-sm transition active:scale-[0.95]"
-                    aria-label="Редактировать сертификат"
-                  >
-                    <IconPencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteCert(certificate.id)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition active:scale-[0.95]"
-                    aria-label="Удалить сертификат"
-                  >
-                    <IconTrash className="h-4 w-4" />
-                  </button>
-                </div>
-                {certificate.imageUrl ? (
-                  <div className="mb-3 overflow-hidden rounded-[22px] bg-white">
-                    <ImageReveal
-                      src={certificate.imageUrl}
-                      alt=""
-                      className="h-36 w-full object-cover"
-                      loading={i === 0 ? 'eager' : 'lazy'}
-                      fetchPriority={i === 0 ? 'high' : 'low'}
-                    />
-                  </div>
-                ) : null}
-                <p className="text-[16px] font-semibold tracking-[-0.04em] text-neutral-950">{certificate.title}</p>
-                <p className="mt-1 text-[13px] font-medium text-neutral-500">
-                  {certificate.issuer}
-                  {certificate.year ? ` · ${certificate.year}` : ''}
-                </p>
-                {certificate.description ? (
-                  <p className="mt-2 text-[13px] leading-relaxed text-neutral-500">{certificate.description}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={onAddCert}
-          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-        >
-          Добавить сертификат
-        </button>
-      </div>
-
-      <div className="rounded-[30px] bg-white p-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[20px] font-semibold tracking-[-0.05em] text-neutral-950">Портфолио</p>
-            <p className="mt-1 text-[14px] leading-relaxed text-neutral-500">Фото работ мастера.</p>
-          </div>
-          <span className="rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-semibold text-neutral-500">{portfolio.length}</span>
-        </div>
-
-        {portfolio.length > 0 ? (
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {portfolio.map((item, i) => (
-              <article key={item.id} className="relative overflow-hidden rounded-[24px] bg-[#F1EFEF]">
-                <div className="absolute right-1 top-1 z-10 flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => onEditPortfolio(item.id)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-neutral-800 shadow-sm backdrop-blur-sm transition active:scale-[0.95]"
-                    aria-label="Редактировать работу"
-                  >
-                    <IconPencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDeletePortfolio(item.id)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-red-600 shadow-sm backdrop-blur-sm transition active:scale-[0.95]"
-                    aria-label="Удалить работу"
-                  >
-                    <IconTrash className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {item.imageUrl ? (
-                  <ImageReveal
-                    src={item.imageUrl}
-                    alt=""
-                    className="aspect-square w-full object-cover"
-                    loading={i < 4 ? 'eager' : 'lazy'}
-                    fetchPriority={i < 2 ? 'high' : 'low'}
-                  />
-                ) : (
-                  <div className="aspect-square w-full bg-white" />
-                )}
-                <div className="px-3 py-3">
-                  <p className="truncate text-[14px] font-semibold text-neutral-950">{item.title || 'Работа'}</p>
-                  {item.description ? (
-                    <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-neutral-500">{item.description}</p>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : null}
-
-        <button
-          type="button"
-          onClick={onAddPortfolio}
-          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-        >
-          Добавить работу
-        </button>
-      </div>
-    </SectionCard>
+      </section>
+    </div>
   );
 }
+
 
 function RulesSection({
   draft,
@@ -1004,6 +1247,7 @@ function RulesSection({
 function AdminProfileReadView({
   draft,
   onEditMain,
+  onEditSchedule,
   onEditAddress,
   onEditRules,
   onAddCareer,
@@ -1015,9 +1259,11 @@ function AdminProfileReadView({
   onAddPortfolio,
   onEditPortfolio,
   onDeletePortfolio,
+  onSetPortfolioCover,
 }: {
   draft: MasterDraft;
   onEditMain: () => void;
+  onEditSchedule: () => void;
   onEditAddress: () => void;
   onEditRules: () => void;
   onAddCareer: () => void;
@@ -1029,6 +1275,7 @@ function AdminProfileReadView({
   onAddPortfolio: () => void;
   onEditPortfolio: (id: string) => void;
   onDeletePortfolio: (id: string) => void;
+  onSetPortfolioCover: (imageUrl: string) => void;
 }) {
   const [activeSection, setActiveSection] = useState<ProfileSection>('main');
 
@@ -1036,7 +1283,7 @@ function AdminProfileReadView({
     if (activeSection === 'address') {
       return <AddressSection draft={draft} onEditAddress={onEditAddress} />;
     }
-    if (activeSection === 'trust') {
+    if (activeSection === 'portfolio') {
       return (
         <TrustSection
           draft={draft}
@@ -1049,13 +1296,14 @@ function AdminProfileReadView({
           onAddPortfolio={onAddPortfolio}
           onEditPortfolio={onEditPortfolio}
           onDeletePortfolio={onDeletePortfolio}
+          onSetPortfolioCover={onSetPortfolioCover}
         />
       );
     }
     if (activeSection === 'rules') {
       return <RulesSection draft={draft} onEditRules={onEditRules} />;
     }
-    return <MainSection draft={draft} onEditMain={onEditMain} />;
+    return <MainSection draft={draft} onEditMain={onEditMain} onEditSchedule={onEditSchedule} />;
   }, [
     activeSection,
     draft,
@@ -1069,8 +1317,10 @@ function AdminProfileReadView({
     onEditCareer,
     onEditCert,
     onEditMain,
+    onEditSchedule,
     onEditPortfolio,
     onEditRules,
+    onSetPortfolioCover,
   ]);
 
   return (
@@ -1087,10 +1337,10 @@ function sheetTitle(sheet: ProfileSheet): string | undefined {
   if (sheet === 'main') return 'Основная информация';
   if (sheet === 'address') return 'Адрес';
   if (sheet === 'rules') return 'Правила записи';
-  if (typeof sheet === 'object' && sheet.k === 'career') return sheet.id ? 'Образование и опыт' : 'Новая запись';
+  if (typeof sheet === 'object' && sheet.k === 'career') return sheet.id ? 'Опыт и образование' : 'Новая запись';
+  if (typeof sheet === 'object' && sheet.k === 'portfolio') return sheet.id ? 'Работа' : 'Новая работа';
   if (typeof sheet === 'object' && sheet.k === 'del-career') return 'Удалить запись?';
   if (typeof sheet === 'object' && sheet.k === 'cert') return sheet.id ? 'Сертификат' : 'Новый сертификат';
-  if (typeof sheet === 'object' && sheet.k === 'portfolio') return sheet.id ? 'Работа в портфолио' : 'Новая работа';
   if (typeof sheet === 'object' && sheet.k === 'del-cert') return 'Удалить сертификат?';
   if (typeof sheet === 'object' && sheet.k === 'del-portfolio') return 'Удалить работу?';
   return undefined;
@@ -1117,8 +1367,8 @@ export function AdminProfileSection() {
     async (patch: Partial<MasterDraft>) => {
       if (useCabinetApi) {
         const p = patch.photoUrl?.trim();
-        if (p && !p.startsWith('https://')) {
-          setSheetApiError('Для публичного профиля укажите ссылку на фото (https://…) или удалите фото.');
+        if (p && !p.startsWith('https://') && !p.startsWith('data:image/')) {
+          setSheetApiError('Загрузите фото с устройства или укажите ссылку https://…');
           return;
         }
       }
@@ -1146,6 +1396,37 @@ export function AdminProfileSection() {
     [closeSheet, draft, patchProfileToBackend, refreshDraft, showSaved, useCabinetApi],
   );
 
+  const setPortfolioCover = useCallback(
+    async (imageUrl: string) => {
+      const photoUrl = imageUrl.trim();
+      if (!photoUrl) return;
+      setSheetApiError(null);
+      const next: MasterDraft = { ...draft, photoUrl };
+      try {
+        if (useCabinetApi) {
+          await patchProfileToBackend({
+            name: next.name,
+            description: next.description,
+            phone: next.phone,
+            contact: next.contact,
+            contacts: next.contacts,
+            photoUrl: next.photoUrl,
+            category: next.category,
+            primaryCategoryId: next.primaryCategoryId,
+            primaryCategoryCode: next.primaryCategoryCode,
+          });
+          await refreshDraft();
+        } else {
+          persistDraft(next);
+        }
+        showSaved();
+      } catch (e) {
+        setSheetApiError(e instanceof Error ? e.message : 'Ошибка сохранения');
+      }
+    },
+    [draft, patchProfileToBackend, persistDraft, refreshDraft, showSaved, useCabinetApi],
+  );
+
   const saveLocation = useCallback(
     async (location: MasterDraft['location']) => {
       setSheetApiError(null);
@@ -1157,6 +1438,27 @@ export function AdminProfileSection() {
       }
       try {
         await flushDraftToBackend({ ...draft, location });
+        closeSheet();
+        showSaved();
+      } catch (e) {
+        setSheetApiError(e instanceof Error ? e.message : 'Ошибка сохранения');
+      }
+    },
+    [closeSheet, draft, flushDraftToBackend, persistDraft, showSaved, useCabinetApi],
+  );
+
+  const saveSchedule = useCallback(
+    async (schedule: MasterDraft['schedule']) => {
+      setSheetApiError(null);
+      const next = { ...draft, schedule };
+      if (!useCabinetApi) {
+        persistDraft(next);
+        closeSheet();
+        showSaved();
+        return;
+      }
+      try {
+        await flushDraftToBackend(next);
         closeSheet();
         showSaved();
       } catch (e) {
@@ -1391,6 +1693,10 @@ export function AdminProfileSection() {
       return <SheetAddress draft={draft} onSave={saveLocation} onCancel={closeSheet} />;
     }
 
+    if (sheet === 'schedule') {
+      return <SheetSchedule draft={draft} onSave={saveSchedule} onCancel={closeSheet} />;
+    }
+
     if (sheet === 'rules') {
       return <SheetRules draft={draft} onSave={saveRules} onCancel={closeSheet} />;
     }
@@ -1433,7 +1739,7 @@ export function AdminProfileSection() {
       return (
         <SheetDeleteConfirm
           text="Запись больше не будет отображаться в блоке образования и опыта."
-          onBack={closeSheet}
+          onBack={closeSheet} 
           onDelete={confirmDeleteCareer}
         />
       );
@@ -1472,6 +1778,7 @@ export function AdminProfileSection() {
     saveMain,
     savePortfolio,
     saveRules,
+    saveSchedule,
     sheet,
   ]);
 
@@ -1485,6 +1792,7 @@ export function AdminProfileSection() {
         <AdminProfileReadView
           draft={draft}
           onEditMain={() => setSheet('main')}
+          onEditSchedule={() => setSheet('schedule')}
           onEditAddress={() => setSheet('address')}
           onEditRules={() => setSheet('rules')}
           onAddCareer={() => setSheet({ k: 'career' })}
@@ -1496,6 +1804,7 @@ export function AdminProfileSection() {
           onAddPortfolio={() => setSheet({ k: 'portfolio' })}
           onEditPortfolio={(id) => setSheet({ k: 'portfolio', id })}
           onDeletePortfolio={(id) => setSheet({ k: 'del-portfolio', id })}
+          onSetPortfolioCover={setPortfolioCover}
         />
 
         {toast ? (

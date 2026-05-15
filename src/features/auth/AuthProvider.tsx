@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { syncMasterFlagFromProfile } from '../profile/lib/demoMasterStorage';
 import { apiFetch, getApiBaseUrl, getStoredAuthToken, setStoredAuthToken } from '../../shared/api/backendClient';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import type { BackendProfile } from './types';
@@ -141,6 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [isReady, initDataRaw]);
+
+  useEffect(() => {
+    syncMasterFlagFromProfile(profile?.role);
+  }, [profile?.role]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

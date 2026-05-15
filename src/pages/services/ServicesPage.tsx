@@ -13,8 +13,7 @@ import {
   formatPublicAddress,
   masterLocationSearchHaystack,
 } from '../../features/profile/model/masterLocation';
-import { useAuth } from '../../features/auth/AuthProvider';
-import { isDemoMaster } from '../../features/profile/lib/demoMasterStorage';
+import { useIsMasterUser } from '../../features/profile/hooks/useIsMasterUser';
 import { getDemoQuickSlots } from '../../features/services/model/demoQuickSlots';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
@@ -667,9 +666,7 @@ function ServiceCard({
 
 export function ServicesPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
-  const demoMaster = isDemoMaster();
-  const showMasterCabinetCta = profile?.role === 'master';
+  const isMasterUser = useIsMasterUser();
 
   const pickClientRoleAnd = useCallback(
     async (path: string) => {
@@ -995,7 +992,7 @@ export function ServicesPage() {
 
   return (
     <div className="min-h-dvh bg-white text-neutral-900">
-      <HomeHeader isDemoMaster={demoMaster} onProfileTab={onProfileTab} />
+      <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
 
       <main className="mx-auto max-w-[1100px] px-4 pb-10 pt-[calc(5.5rem+env(safe-area-inset-top,0px))] sm:px-6">
         <div className="mx-auto max-w-lg">
@@ -1169,7 +1166,7 @@ export function ServicesPage() {
                     >
                       Обновить
                     </button>
-                    {showMasterCabinetCta ? (
+                    {isMasterUser ? (
                       <button
                         type="button"
                         onClick={() => {

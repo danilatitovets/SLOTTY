@@ -98,7 +98,14 @@ const onboardingScheduleItemSchema = z
     message: 'Время окончания должно быть позже начала',
   });
 
-const photoUrlNullable = z.union([z.literal(''), z.string().url()]).nullable().optional();
+const photoUrlNullable = z
+  .union([
+    z.literal(''),
+    z.string().url(),
+    z.string().regex(/^data:image\/(jpeg|jpg|png|webp);base64,/i),
+  ])
+  .nullable()
+  .optional();
 
 const slugNullable = z
   .string()

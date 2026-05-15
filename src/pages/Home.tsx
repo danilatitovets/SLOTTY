@@ -1,9 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { BECOME_MASTER_PATH, BOOKING_PATH, getProfilePath, SERVICES_PATH } from '../app/paths';
+import { ADMIN_PATH, BECOME_MASTER_PATH, BOOKING_PATH, getProfilePath, SERVICES_PATH } from '../app/paths';
 import { useMastersFeed } from '../features/booking/api/useMastersFeed';
+import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
-import { isDemoMaster } from '../features/profile/lib/demoMasterStorage';
 import { useTelegram } from '../shared/hooks/useTelegram';
 import { readTelegramWebAppStartParam } from '../shared/lib/telegramWebApp';
 import { HomeCategories } from './HomeCategories';
@@ -22,7 +22,7 @@ export function Home() {
   const { isReady, masterId } = useTelegram();
   const nativeStart = useMemo(() => readTelegramWebAppStartParam(), []);
   const { data: masters = [], isLoading } = useMastersFeed();
-  const demoMaster = isDemoMaster();
+  const isMasterUser = useIsMasterUser();
 
   const pickClientRoleAnd = useCallback(
     async (path: string) => {
@@ -57,8 +57,8 @@ export function Home() {
   }, [pickClientRoleAnd]);
 
   const onBecomeMaster = useCallback(() => {
-    navigate(BECOME_MASTER_PATH);
-  }, [navigate]);
+    navigate(isMasterUser ? ADMIN_PATH : BECOME_MASTER_PATH);
+  }, [navigate, isMasterUser]);
 
   const onProfileTab = useCallback(
     (tab: 'appointments' | 'favorites') => {
@@ -73,7 +73,7 @@ export function Home() {
 
   return (
     <div className="min-h-dvh bg-white text-neutral-900">
-      <HomeHeader isDemoMaster={demoMaster} onProfileTab={onProfileTab} />
+      <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
 
       <main className="relative z-10 mx-auto max-w-[1100px] px-4 pb-10 pt-[calc(5.5rem+env(safe-area-inset-top,0px))] sm:px-6">
         <section className="animate-fade-enter relative isolate mx-auto flex w-full max-w-4xl flex-col items-center overflow-x-clip pb-14 text-center sm:pb-16">
@@ -110,7 +110,7 @@ export function Home() {
               onClick={() => void onBecomeMaster()}
               className="rounded-full bg-neutral-100 px-8 py-3.5 text-[15px] font-semibold text-neutral-900 outline-none ring-0 transition hover:bg-neutral-200/90 active:scale-[0.99]"
             >
-              Стать мастером
+              {isMasterUser ? 'Кабинет мастера' : 'Стать мастером'}
             </button>
           </div>
         </section>

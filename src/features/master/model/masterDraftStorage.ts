@@ -112,7 +112,50 @@ export function defaultMasterAvatarUrl(name: string, opts?: { size?: number }): 
 
 export { saveMasterDraft } from '../../profile/lib/demoMasterStorage';
 
-const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
+export const WEEKDAY_LABELS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
+
+const WEEKDAY_SHORT = WEEKDAY_LABELS_SHORT;
+
+function padTimeHHMM(raw: string): string {
+  const t = raw.trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return '09:00';
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = padTimeHHMM(t).split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** Базовое недельное расписание без слотов по дням (для API через workDays). */
+export function buildWeeklyMasterSchedule(
+  workDays: number[],
+  startTime: string,
+  endTime: string,
+): MasterSchedule {
+  const sorted = [...new Set(workDays.filter((d) => d >= 0 && d <= 6))].sort((a, b) => a - b);
+  return {
+    workDays: sorted.length ? sorted : [0, 1, 2, 3, 4],
+    startTime: padTimeHHMM(startTime),
+    endTime: padTimeHHMM(endTime),
+    gapMinutes: 0,
+  };
+}
+
+export function validateWeeklySchedule(
+  workDays: number[],
+  startTime: string,
+  endTime: string,
+): string | null {
+  if (!workDays.length) return 'Выберите хотя бы один рабочий день';
+  if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+    return 'Время окончания должно быть позже начала';
+  }
+  return null;
+}
 
 /** Строка вида «Клиенты смогут записываться: Пн–Пт, 09:00–18:00». */
 export function formatScheduleClientPreview(schedule: MasterSchedule): string {

@@ -213,28 +213,74 @@ export function homeAfterBookingDetailLines(loc: MasterLocation | null | undefin
 
 /** Адрес в карточке записи клиента (уже после бронирования). */
 export function formatClientAppointmentAddress(loc: MasterLocation | null | undefined): string {
-  if (!loc) return '';
-  if (loc.visitType === 'at_home') {
-    const main = formatHomeAfterBookingMainLine(loc);
-    const tail = homeAfterBookingDetailLines(loc);
-    return tail.length ? `${main} · ${tail.join(' · ')}` : main;
-  }
-  return formatCityWithAddressLine(loc);
+  return formatFullAddress(loc);
 }
 
-/** Полная строка для подтверждений и «как добраться» одной строкой */
+export type LocationDetailField = { label: string; value: string };
+
+export type LocationDisplayParts = {
+  visitLabel: string;
+  /** Строка для каталога (как formatPublicAddress). */
+  catalogLine: string;
+  /** Основной адрес после записи. */
+  addressLine: string;
+  access: LocationDetailField[];
+  wayfinding: LocationDetailField[];
+};
+
+/** Структурированные части адреса для карточек и кабинета мастера. */
+export function buildLocationDisplayParts(loc: MasterLocation | null | undefined): LocationDisplayParts | null {
+  if (!loc) return null;
+
+  const visitLabel = masterVisitTypeLabel(loc.visitType);
+  const catalogLine = formatPublicAddress(loc);
+  const addressLine =
+    loc.visitType === 'at_home'
+      ? formatHomeAfterBookingMainLine(loc)
+      : baseAddressLine(loc) || formatCityWithAddressLine(loc) || '—';
+
+  const access: LocationDetailField[] = [];
+  if (loc.buildingDetail?.trim()) {
+    access.push({ label: 'Дом / корпус', value: loc.buildingDetail.trim() });
+  }
+  if (loc.entrance?.trim()) access.push({ label: 'Подъезд', value: loc.entrance.trim() });
+  if (loc.floor?.trim()) access.push({ label: 'Этаж', value: loc.floor.trim() });
+  if (loc.room?.trim()) {
+    access.push({
+      label: loc.visitType === 'at_home' ? 'Квартира' : 'Кабинет',
+      value: loc.room.trim(),
+    });
+  }
+  if (loc.intercom?.trim()) access.push({ label: 'Домофон', value: loc.intercom.trim() });
+
+  const wayfinding: LocationDetailField[] = [];
+  if (loc.salonName?.trim() && loc.visitType === 'studio') {
+    wayfinding.push({ label: 'Салон', value: loc.salonName.trim() });
+  }
+  if (loc.district?.trim()) wayfinding.push({ label: 'Район / метро', value: loc.district.trim() });
+  if (loc.landmark?.trim()) wayfinding.push({ label: 'Ориентир', value: loc.landmark.trim() });
+  if (loc.directions?.trim()) wayfinding.push({ label: 'Как пройти', value: loc.directions.trim() });
+  if (loc.clientNote?.trim()) wayfinding.push({ label: 'Комментарий', value: loc.clientNote.trim() });
+
+  return { visitLabel, catalogLine, addressLine, access, wayfinding };
+}
+
+export function catalogLineWithoutVisitPrefix(catalogLine: string, visitLabel: string): string {
+  const prefix = `${visitLabel}, `;
+  if (catalogLine.startsWith(prefix)) return catalogLine.slice(prefix.length);
+  return catalogLine;
+}
+
+/** Полная строка для подтверждений (многострочно, с подписями полей). */
 export function formatFullAddress(loc: MasterLocation | null | undefined): string {
-  if (!loc) return '';
-  const base = formatPublicAddress(loc);
-  const tail: string[] = [];
-  if (loc.entrance?.trim()) tail.push(`вход: ${loc.entrance.trim()}`);
-  if (loc.floor?.trim()) tail.push(loc.floor.trim());
-  if (loc.room?.trim()) tail.push(loc.room.trim());
-  if (loc.intercom?.trim()) tail.push(loc.intercom.trim());
-  if (loc.landmark?.trim()) tail.push(`ориентир: ${loc.landmark.trim()}`);
-  if (loc.directions?.trim()) tail.push(loc.directions.trim());
-  if (loc.clientNote?.trim()) tail.push(loc.clientNote.trim());
-  return tail.length ? `${base} · ${tail.join(' · ')}` : base;
+  const parts = buildLocationDisplayParts(loc);
+  if (!parts) return '';
+  const lines: string[] = [];
+  if (parts.addressLine && parts.addressLine !== '—') lines.push(parts.addressLine);
+  for (const row of [...parts.access, ...parts.wayfinding]) {
+    lines.push(`${row.label}: ${row.value}`);
+  }
+  return lines.join('\n');
 }
 
 /** Текст блока «Как пройти» на экране записи (компактно). */

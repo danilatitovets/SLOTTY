@@ -10,7 +10,13 @@ import type {
   MasterCertificate,
   MasterDraft,
   MasterPortfolioItem,
+  MasterSchedule,
 } from '../../../features/profile/lib/demoMasterStorage';
+import {
+  buildWeeklyMasterSchedule,
+  validateWeeklySchedule,
+  WEEKDAY_LABELS_SHORT,
+} from '../../../features/master/model/masterDraftStorage';
 import type { MasterVisitType } from '../../../features/profile/model/masterLocation';
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
 import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
@@ -29,7 +35,9 @@ import {
   sanitizeBelarusPhoneInput,
 } from '../../../features/master-onboarding/model/belarusPhone';
 import { getMasterDisplayNameQualityError } from '../../../shared/lib/masterDisplayNamePolicy';
+import { isAdjustablePhotoSrc } from '../../../shared/lib/cropImageToAspect';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
+import { ProfilePhotoAdjust } from '../../../shared/ui/ProfilePhotoAdjust';
 import { fetchServiceCategories, type ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
 import { MasterProfileContactsBlock } from '../../master-onboarding/MasterProfileContactsBlock';
 import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from '../../master-onboarding/OnboardingAddressMap';
@@ -110,7 +118,9 @@ export function SheetMainInfo({
   onCancel: () => void;
 }) {
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoOriginalRef = useRef<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState(draft.photoUrl ?? '');
+  const [photoAdjustSrc, setPhotoAdjustSrc] = useState<string | null>(null);
   const [name, setName] = useState(draft.name);
   const [catalogCategories, setCatalogCategories] = useState<ServiceCategoryDto[]>([]);
   const [categoryId, setCategoryId] = useState(() => draft.primaryCategoryId ?? '');
@@ -180,10 +190,18 @@ export function SheetMainInfo({
     const reader = new FileReader();
     reader.onload = () => {
       const r = reader.result;
-      if (typeof r === 'string') setPhotoUrl(r);
+      if (typeof r === 'string') {
+        photoOriginalRef.current = r;
+        setPhotoAdjustSrc(r);
+      }
     };
     reader.readAsDataURL(file);
   }, []);
+
+  const openPhotoAdjust = useCallback(() => {
+    const src = photoOriginalRef.current ?? photoUrl.trim();
+    if (src && isAdjustablePhotoSrc(src)) setPhotoAdjustSrc(src);
+  }, [photoUrl]);
 
   const preview = photoUrl.trim() || defaultMasterAvatarUrl(name || draft.name);
 
@@ -251,41 +269,62 @@ export function SheetMainInfo({
     <div className="space-y-4">
       <div className="rounded-[26px] bg-[#F1EFEF] p-4">
         <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Фото в профиле</p>
-        <div className="relative mt-3 flex justify-center">
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={onPhotoChange}
-          />
-          <div className="relative w-[min(200px,55vw)] max-w-[200px]">
-            <div className="overflow-hidden rounded-[26px] bg-white shadow-[0_8px_24px_rgba(17,17,17,0.06)]">
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={onPhotoChange}
+        />
+        {photoAdjustSrc ? (
+          <div className="mt-3">
+            <ProfilePhotoAdjust
+              src={photoAdjustSrc}
+              onApply={(cropped) => {
+                setPhotoUrl(cropped);
+                setPhotoAdjustSrc(null);
+              }}
+              onCancel={() => setPhotoAdjustSrc(null)}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="relative mx-auto mt-3 w-full max-w-[320px]">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-[22px] bg-white shadow-[0_8px_24px_rgba(17,17,17,0.06)]">
               <img
                 src={preview}
                 alt=""
-                width={200}
-                height={200}
-                className="aspect-square w-full object-cover"
+                className="h-full w-full object-cover"
                 decoding="async"
                 onError={(ev) => {
                   (ev.target as HTMLImageElement).src = defaultMasterAvatarUrl(name || 'Мастер');
                 }}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => photoInputRef.current?.click()}
-              className="absolute bottom-2 right-2 rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-neutral-800 shadow-md ring-2 ring-white transition active:scale-[0.97]"
-            >
-              Сменить
-            </button>
-          </div>
-        </div>
-        <p className="mt-2 text-center text-[12px] text-neutral-500">
-          {/* TODO: загрузка в Supabase Storage вместо data URL */}
-          Демо: фото хранится локально в черновике.
-        </p>
+            <div className="absolute bottom-2 right-2 flex flex-wrap justify-end gap-1.5">
+              {isAdjustablePhotoSrc(photoUrl) || photoOriginalRef.current ? (
+                <button
+                  type="button"
+                  onClick={openPhotoAdjust}
+                  className="rounded-full bg-white px-3 py-2 text-[12px] font-semibold text-neutral-800 shadow-md ring-2 ring-white transition active:scale-[0.97]"
+                >
+                  Настроить кадр
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="rounded-full bg-[#E29595] px-3 py-2 text-[12px] font-semibold text-white shadow-md ring-2 ring-white transition active:scale-[0.97]"
+              >
+                Сменить
+              </button>
+            </div>
+            </div>
+            <p className="mt-2 text-center text-[12px] leading-snug text-neutral-500">
+              Кадр как на карточке профиля. Нажмите «Настроить кадр», если обрезало лицо или голову.
+            </p>
+          </>
+        )}
       </div>
 
       <label className="block">
@@ -452,6 +491,17 @@ export function SheetAddress({
   const [lat, setLat] = useState<number | undefined>(loc.lat);
   const [lng, setLng] = useState<number | undefined>(loc.lng);
 
+  const mapAddressLine = useMemo(() => {
+    const s = street.trim();
+    if (!s) return '';
+    const b = building.trim();
+    const withBuilding = b && b !== 'б/н' ? `${s}, ${b}` : s;
+    const c = (city.trim() || 'Минск');
+    const lower = withBuilding.toLowerCase();
+    if (c && !lower.includes(c.toLowerCase())) return `${c}, ${withBuilding}`;
+    return withBuilding;
+  }, [street, building, city]);
+
   useEffect(() => {
     const l = draft.location;
     setVisitType(l.visitType);
@@ -518,16 +568,12 @@ export function SheetAddress({
       <div className="space-y-2">
         <p className="text-[13px] font-semibold text-neutral-500">Карта</p>
         <OnboardingAddressMap
-          key={`${visitType}-${city.trim()}`}
-          city={city}
+          key={`${visitType}-${draft.masterId ?? 'local'}`}
+          city={city.trim() || 'Минск'}
           visitType={visitType}
-          addressLine={
-            street.trim()
-              ? building.trim() && building.trim() !== 'б/н'
-                ? `${street.trim()}, ${building.trim()}`
-                : street.trim()
-              : ''
-          }
+          addressLine={mapAddressLine}
+          initialLat={lat ?? null}
+          initialLng={lng ?? null}
           onPick={(res) => {
             const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
             setStreet(s);
@@ -661,6 +707,108 @@ export function SheetRules({
         <span className="text-[13px] font-semibold text-neutral-500">Комментарий по оплате</span>
         <textarea value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} rows={2} className={fieldClass()} />
       </label>
+
+      <SheetFooter onCancel={onCancel} onSave={save} />
+    </div>
+  );
+}
+
+export function SheetSchedule({
+  draft,
+  onSave,
+  onCancel,
+}: {
+  draft: MasterDraft;
+  onSave: (schedule: MasterSchedule) => SheetSaveResult;
+  onCancel: () => void;
+}) {
+  const [workDays, setWorkDays] = useState<number[]>(() => [...draft.schedule.workDays]);
+  const [startTime, setStartTime] = useState(draft.schedule.startTime);
+  const [endTime, setEndTime] = useState(draft.schedule.endTime);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWorkDays([...draft.schedule.workDays]);
+    setStartTime(draft.schedule.startTime);
+    setEndTime(draft.schedule.endTime);
+    setError(null);
+  }, [draft.schedule]);
+
+  const toggleDay = (day: number) => {
+    setWorkDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b),
+    );
+    setError(null);
+  };
+
+  const save = () => {
+    const validation = validateWeeklySchedule(workDays, startTime, endTime);
+    if (validation) {
+      setError(validation);
+      return;
+    }
+    onSave(buildWeeklyMasterSchedule(workDays, startTime, endTime));
+  };
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[14px] leading-relaxed text-neutral-500">
+        Укажите дни и часы, когда клиенты могут записаться онлайн. Детальные окошки по дням настраиваются в разделе «Расписание».
+      </p>
+
+      <div>
+        <p className="text-[13px] font-semibold text-neutral-500">Рабочие дни</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {WEEKDAY_LABELS_SHORT.map((label, day) => {
+            const on = workDays.includes(day);
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => toggleDay(day)}
+                className={`min-h-11 min-w-[3rem] rounded-full px-4 text-[14px] font-semibold transition active:scale-[0.98] ${
+                  on
+                    ? 'bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.22)]'
+                    : 'bg-[#F1EFEF] text-neutral-800'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[13px] font-semibold text-neutral-500">С</span>
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => {
+              setStartTime(e.target.value);
+              setError(null);
+            }}
+            className={fieldClass()}
+          />
+        </label>
+        <label className="block">
+          <span className="text-[13px] font-semibold text-neutral-500">До</span>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => {
+              setEndTime(e.target.value);
+              setError(null);
+            }}
+            className={fieldClass()}
+          />
+        </label>
+      </div>
+
+      {error ? (
+        <p className="rounded-2xl bg-red-50 px-3 py-2 text-[14px] font-medium text-red-700">{error}</p>
+      ) : null}
 
       <SheetFooter onCancel={onCancel} onSave={save} />
     </div>

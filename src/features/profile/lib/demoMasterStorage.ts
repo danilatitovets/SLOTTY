@@ -97,6 +97,16 @@ export function isDemoMaster(): boolean {
   }
 }
 
+/** Сохраняет флаг мастера после успешного онбординга или загрузки профиля с role=master. */
+export function syncMasterFlagFromProfile(role: string | undefined): void {
+  if (role !== 'master' || typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(IS_MASTER_KEY, 'true');
+  } catch {
+    /* ignore */
+  }
+}
+
 export function getStoredMasterDraft(): MasterDraft | null {
   if (typeof window === 'undefined') return null;
   try {

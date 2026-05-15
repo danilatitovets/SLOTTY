@@ -11,7 +11,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import { ADMIN_PATH, BECOME_MASTER_PATH, getMasterPath, getProfilePath, SERVICES_PATH } from '../../app/paths';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
-import { isDemoMaster } from '../../features/profile/lib/demoMasterStorage';
+import { useIsMasterUser } from '../../features/profile/hooks/useIsMasterUser';
 import {
   type DemoAppointmentRecord,
   type DemoAppointmentStatus,
@@ -587,7 +587,7 @@ function AppointmentBottomSheet({
 export function ProfilePage() {
   const { profile, isLoading: authLoading, isAuthenticated, backendConfigured, refreshProfile } = useAuth();
   const { isTelegramWebApp, telegramUserPhotoUrl, telegramUserPreview } = useTelegram();
-  const isMasterCabinet = isDemoMaster() || profile?.role === 'master';
+  const isMasterCabinet = useIsMasterUser();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [apptSubTab, setApptSubTab] = useState<DemoAppointmentTab>('upcoming');

@@ -83,7 +83,7 @@ function detailSheetHeading(tab: DetailTab): string {
     case 'about':
       return 'О мастере';
     case 'trust':
-      return 'Доверие';
+      return 'Портфолио';
     case 'address':
       return 'Адрес';
     case 'rules':
@@ -105,8 +105,13 @@ function IconUser({ className }: { className?: string }) {
 function IconRules({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M8 6h13M8 12h13M8 18h13" strokeLinecap="round" />
-      <path d="M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
+      <path
+        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="9" y="3" width="6" height="4" rx="1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12h6M9 16h4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -165,11 +170,13 @@ function IconTelegram({ className }: { className?: string }) {
   );
 }
 
-function IconSparkles({ className }: { className?: string }) {
+function IconPortfolio({ className }: { className?: string }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M12 3l1.5 5.2L19 10l-5.5 1.8L12 17l-1.5-5.2L5 10l5.5-1.8L12 3Z" strokeLinejoin="round" />
-      <path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z" strokeLinejoin="round" />
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1066,14 +1073,14 @@ export function MasterProfilePage() {
                 onClick={() => openDetails('trust')}
                 className="rounded-[26px] bg-white px-4 py-4 text-left shadow-[0_8px_24px_rgba(17,17,17,0.035)] transition active:scale-[0.98]"
               >
-                <IconSparkles className="h-4 w-4 text-[#E29595]" />
+                <IconPortfolio className="h-4 w-4 text-[#E29595]" />
                 <p className="mt-3 text-[16px] font-semibold tracking-[-0.04em] text-neutral-950">
-                  Доверие
+                  Портфолио
                 </p>
                 <p className="mt-1 text-[13px] leading-snug text-neutral-500">
                   {careerCount + certificatesCount + portfolioCount > 0
                     ? `${careerCount + certificatesCount + portfolioCount} пунктов`
-                    : 'Пока пусто'}
+                    : 'Работы и сертификаты'}
                 </p>
               </button>
 
