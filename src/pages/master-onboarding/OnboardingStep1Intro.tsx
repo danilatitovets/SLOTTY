@@ -11,25 +11,25 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    imageSrc: '/photos/step1/profile.png',
+    imageSrc: '/photos/step1/profile.webp',
     title: 'Профиль',
     text: 'Имя, описание и контакты',
     icon: <IconProfile />,
   },
   {
-    imageSrc: '/photos/step1/adress.png',
+    imageSrc: '/photos/step1/adress.webp',
     title: 'Адрес',
     text: 'Место приёма клиентов',
     icon: <IconMap />,
   },
   {
-    imageSrc: '/photos/step1/services.png',
+    imageSrc: '/photos/step1/services.webp',
     title: 'Услуги',
     text: 'Цены, длительность и описание',
     icon: <IconServices />,
   },
   {
-    imageSrc: '/photos/step1/sertificate.png',
+    imageSrc: '/photos/step1/sertificate.webp',
     title: 'Доверие',
     text: 'Сертификаты и подтверждения',
     icon: <IconTrust />,

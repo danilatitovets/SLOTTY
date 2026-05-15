@@ -56,7 +56,7 @@ import type { MasterPlanSelection } from '../../features/master-onboarding/model
 
 const TOTAL_STEPS = 8;
 const ONBOARDING_CITY = 'Минск';
-const LOGO_SRC = '/photos/logo.png';
+const LOGO_SRC = '/photos/logo.webp';
 
 type PriceType = 'fixed' | 'from';
 

@@ -10,7 +10,7 @@ import {
 import { TIVONIX_SITE_URL } from './legal/legalSiteInfo';
 
 const FOOTER_IMAGE = '/photos/FOOTER.png';
-const FOOTER_LOGO_SRC = '/photos/logo.png';
+const FOOTER_LOGO_SRC = '/photos/logo.webp';
 
 /** Сдвиг логотипа по горизонтали; при ширине как у хедера обычно достаточно 0. */
 const FOOTER_LOGO_TRANSLATE_X = '0';
