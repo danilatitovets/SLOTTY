@@ -70,7 +70,7 @@ export function ServicesFilterAddressInput({
     setHint(null);
     try {
       const list = await nominatimSearchMinsk(FILTER_CITY, q, ac.signal);
-      setItems(list);
+      setItems(list.slice(0, 8));
       setOpen(list.length > 0);
       if (list.length === 0) {
         setHint('Пока ничего не найдено — уточните улицу, район или ориентир в Минске.');

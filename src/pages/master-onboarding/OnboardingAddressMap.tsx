@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  nominatimLineForForm,
-  nominatimSearchMinsk,
-} from '../../shared/lib/nominatimMinsk';
+import { refineMinskGeocodeHits } from '../../shared/lib/minskAddressSuggest';
+import { nominatimHitsToGeocodeSuggest, nominatimSearchMinsk } from '../../shared/lib/nominatimMinsk';
 import { subscribeTelegramViewportLayout } from '../../shared/lib/telegramWebApp';
 import {
   computeViewportListPlacement,
@@ -388,18 +386,13 @@ export function OnboardingAddressMap({
         }
         if (ac.signal.aborted) return;
 
+        list = refineMinskGeocodeHits(list, q, city);
+
         if (list.length === 0) {
           try {
             const nom = await nominatimSearchMinsk(city, q, ac.signal);
             if (ac.signal.aborted) return;
-            list = nom
-              .map((hit) => {
-                const lat = Number.parseFloat(hit.lat);
-                const lon = Number.parseFloat(hit.lon);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-                return { displayLine: nominatimLineForForm(hit), lat, lon };
-              })
-              .filter((h): h is YandexGeocodeHit => h != null);
+            list = nominatimHitsToGeocodeSuggest(nom, q, city);
           } catch (err: unknown) {
             if ((err as { name?: string }).name === 'AbortError') return;
             list = [];
@@ -518,8 +511,8 @@ export function OnboardingAddressMap({
   const listClass =
     'scrollbar-hidden max-h-[min(220px,38dvh)] overflow-y-auto rounded-[18px] bg-white py-1 shadow-[0_12px_40px_rgba(17,17,17,0.12)]';
 
-  const listContent = items.map((hit, idx) => (
-    <li key={`${hit.lon}-${hit.lat}-${idx}`}>
+  const listContent = items.map((hit) => (
+    <li key={`${hit.displayLine}|${hit.lon.toFixed(5)}|${hit.lat.toFixed(5)}`}>
       <button
         type="button"
         role="option"

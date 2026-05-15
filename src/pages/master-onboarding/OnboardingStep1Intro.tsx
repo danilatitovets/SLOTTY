@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
-const AUTO_MS = 3800;
+const AUTO_MS = 2400;
 
 type Slide = {
   imageSrc: string;
