@@ -68,12 +68,12 @@ type OnboardingService = MasterOnboardingService & {
 
 /** Пути как на главной (`HomeCategories`): `public/photos/work/`. */
 const CATEGORY_IMAGES: Record<string, string> = {
-  manicure: '/photos/work/manicure.png',
-  barbers: '/photos/work/barbers.png',
-  'brows-lashes': '/photos/work/brows_lashes.png',
-  massage: '/photos/work/massage.png',
-  fitness: '/photos/work/fitness.png',
-  tattoo: '/photos/work/tattoo.png',
+  manicure: '/photos/work/manicure.webp',
+  barbers: '/photos/work/barbers.webp',
+  'brows-lashes': '/photos/work/brows_lashes.webp',
+  massage: '/photos/work/massage.webp',
+  fitness: '/photos/work/fitness.webp',
+  tattoo: '/photos/work/tattoo.webp',
 };
 
 const CATEGORY_HINTS: Record<string, string> = {
@@ -87,7 +87,53 @@ const CATEGORY_HINTS: Record<string, string> = {
 
 const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
-/** Для «На дому»: подъезд, этаж, квартира и домофон обязательны; корпус, «как пройти» и комментарий — нет. */
+const AT_HOME_ENTRANCE_MAX = 10;
+const AT_HOME_ROOM_MAX = 20;
+const AT_HOME_INTERCOM_MAX = 20;
+
+function sanitizeAtHomeFloorInput(raw: string): string {
+  let s = raw.replace(/[^\d-]/g, '');
+  if (!s.includes('-')) return s.slice(0, 2);
+  const negative = s.startsWith('-');
+  const digits = s.replace(/-/g, '').slice(0, 2);
+  return negative ? `-${digits}` : digits.slice(0, 2);
+}
+
+function validateAtHomeEntrance(value: string): string | null {
+  const t = value.trim();
+  if (!t) return 'Укажите подъезд';
+  if (t.length > AT_HOME_ENTRANCE_MAX) return `Не длиннее ${AT_HOME_ENTRANCE_MAX} символов`;
+  if (!/^[\dа-яА-Яa-zA-Z/-]+$/u.test(t)) return 'Только цифры и буквы';
+  return null;
+}
+
+function validateAtHomeFloor(value: string): string | null {
+  const t = value.trim();
+  if (!t) return 'Укажите этаж';
+  if (!/^-?\d{1,2}$/.test(t)) return 'Укажите этаж числом, например 3';
+  const n = Number.parseInt(t, 10);
+  if (!Number.isFinite(n) || n < -3 || n > 99) return 'Этаж от −3 до 99';
+  if (t === '0' || t === '-0') return 'Укажите этаж от −3 до 99';
+  return null;
+}
+
+function validateAtHomeRoom(value: string): string | null {
+  const t = value.trim();
+  if (!t) return 'Укажите квартиру';
+  if (t.length > AT_HOME_ROOM_MAX) return `Не длиннее ${AT_HOME_ROOM_MAX} символов`;
+  if (!/^[\dа-яА-Яa-zA-Z/-]+$/u.test(t)) return 'Только цифры и буквы';
+  return null;
+}
+
+function validateAtHomeIntercom(value: string): string | null {
+  const t = value.trim();
+  if (!t) return 'Укажите код домофона';
+  if (t.length > AT_HOME_INTERCOM_MAX) return `Не длиннее ${AT_HOME_INTERCOM_MAX} символов`;
+  if (!/^[\dа-яА-Яa-zA-Z#*+\s-]+$/u.test(t)) return 'Недопустимые символы в коде';
+  return null;
+}
+
+/** Для «На дому»: подъезд, этаж, квартира и домофон обязательны и проходят проверку формата. */
 function isAtHomeAddressDetailsComplete(
   entrance: string,
   floor: string,
@@ -95,10 +141,10 @@ function isAtHomeAddressDetailsComplete(
   intercom: string,
 ): boolean {
   return (
-    entrance.trim().length > 0 &&
-    floor.trim().length > 0 &&
-    room.trim().length > 0 &&
-    intercom.trim().length > 0
+    validateAtHomeEntrance(entrance) === null &&
+    validateAtHomeFloor(floor) === null &&
+    validateAtHomeRoom(room) === null &&
+    validateAtHomeIntercom(intercom) === null
   );
 }
 
@@ -1207,6 +1253,30 @@ export function BecomeMasterPage() {
     setAddressTouched((t) => ({ ...t, [key]: true }));
   }, []);
 
+  const touchAndValidateAtHomeField = useCallback(
+    (key: 'entrance' | 'floor' | 'room' | 'intercom') => {
+      touchAddressField(key);
+      if (visitType !== 'at_home') return;
+
+      const err =
+        key === 'entrance'
+          ? validateAtHomeEntrance(entrance)
+          : key === 'floor'
+            ? validateAtHomeFloor(floor)
+            : key === 'room'
+              ? validateAtHomeRoom(room)
+              : validateAtHomeIntercom(intercom);
+
+      setAddressFieldErrors((prev) => {
+        const next = { ...prev };
+        if (err) next[key] = err;
+        else delete next[key];
+        return next;
+      });
+    },
+    [entrance, floor, intercom, room, touchAddressField, visitType],
+  );
+
   const showAddressFieldError = useCallback(
     (key: string) => Boolean(addressFieldErrors[key] && (addressTouched[key] || addressNavigateAttempted)),
     [addressFieldErrors, addressNavigateAttempted, addressTouched],
@@ -1225,20 +1295,21 @@ export function BecomeMasterPage() {
     }
 
     if (visitType === 'at_home') {
-      if (!entrance.trim()) errs.entrance = 'Укажите подъезд';
-      else if (entrance.trim().length > 120) errs.entrance = 'Не длиннее 120 символов.';
+      const entranceErr = validateAtHomeEntrance(entrance);
+      if (entranceErr) errs.entrance = entranceErr;
 
-      if (!floor.trim()) errs.floor = 'Укажите этаж';
-      else if (floor.trim().length > 40) errs.floor = 'Не длиннее 40 символов.';
+      const floorErr = validateAtHomeFloor(floor);
+      if (floorErr) errs.floor = floorErr;
 
-      if (!room.trim()) errs.room = 'Укажите квартиру';
-      else if (room.trim().length > 80) errs.room = 'Не длиннее 80 символов.';
+      const roomErr = validateAtHomeRoom(room);
+      if (roomErr) errs.room = roomErr;
 
-      if (!intercom.trim()) errs.intercom = 'Укажите код домофона';
-      else if (intercom.trim().length > 80) errs.intercom = 'Не длиннее 80 символов.';
+      const intercomErr = validateAtHomeIntercom(intercom);
+      if (intercomErr) errs.intercom = intercomErr;
     } else {
       if (entrance.trim().length > 120) errs.entrance = 'Не длиннее 120 символов.';
-      if (floor.trim().length > 40) errs.floor = 'Не длиннее 40 символов.';
+      const studioFloorErr = floor.trim() ? validateAtHomeFloor(floor) : null;
+      if (studioFloorErr) errs.floor = studioFloorErr;
       if (room.trim().length > 80) errs.room = 'Не длиннее 80 символов.';
       if (intercom.trim().length > 80) errs.intercom = 'Не длиннее 80 символов.';
     }
@@ -2091,17 +2162,17 @@ export function BecomeMasterPage() {
                         label="Подъезд *"
                         value={entrance}
                         onChange={(v) => {
-                          setEntrance(v);
+                          setEntrance(v.slice(0, AT_HOME_ENTRANCE_MAX));
                           setAddressFieldErrors((prev) => {
                             const next = { ...prev };
                             delete next.entrance;
                             return next;
                           });
                         }}
-                        onBlur={() => touchAddressField('entrance')}
+                        onBlur={() => touchAndValidateAtHomeField('entrance')}
                         placeholder="2"
                         error={showAddressFieldError('entrance') ? addressFieldErrors.entrance : undefined}
-                        maxLength={120}
+                        maxLength={AT_HOME_ENTRANCE_MAX}
                       />
                     ) : null}
 
@@ -2111,33 +2182,34 @@ export function BecomeMasterPage() {
                           label="Этаж *"
                           value={floor}
                           onChange={(v) => {
-                            setFloor(v);
+                            setFloor(sanitizeAtHomeFloorInput(v));
                             setAddressFieldErrors((prev) => {
                               const next = { ...prev };
                               delete next.floor;
                               return next;
                             });
                           }}
-                          onBlur={() => touchAddressField('floor')}
+                          onBlur={() => touchAndValidateAtHomeField('floor')}
                           placeholder="3"
+                          inputMode="numeric"
                           error={showAddressFieldError('floor') ? addressFieldErrors.floor : undefined}
-                          maxLength={40}
+                          maxLength={3}
                         />
                         <Field
                           label="Квартира *"
                           value={room}
                           onChange={(v) => {
-                            setRoom(v);
+                            setRoom(v.slice(0, AT_HOME_ROOM_MAX));
                             setAddressFieldErrors((prev) => {
                               const next = { ...prev };
                               delete next.room;
                               return next;
                             });
                           }}
-                          onBlur={() => touchAddressField('room')}
+                          onBlur={() => touchAndValidateAtHomeField('room')}
                           placeholder="45"
                           error={showAddressFieldError('room') ? addressFieldErrors.room : undefined}
-                          maxLength={80}
+                          maxLength={AT_HOME_ROOM_MAX}
                         />
                       </div>
                     ) : null}
@@ -2146,17 +2218,21 @@ export function BecomeMasterPage() {
                       label={visitType === 'at_home' ? 'Код домофона *' : 'Код домофона'}
                       value={intercom}
                       onChange={(v) => {
-                        setIntercom(v);
+                        setIntercom(v.slice(0, visitType === 'at_home' ? AT_HOME_INTERCOM_MAX : 80));
                         setAddressFieldErrors((prev) => {
                           const next = { ...prev };
                           delete next.intercom;
                           return next;
                         });
                       }}
-                      onBlur={() => touchAddressField('intercom')}
+                      onBlur={() =>
+                        visitType === 'at_home'
+                          ? touchAndValidateAtHomeField('intercom')
+                          : touchAddressField('intercom')
+                      }
                       placeholder="12В"
                       error={showAddressFieldError('intercom') ? addressFieldErrors.intercom : undefined}
-                      maxLength={80}
+                      maxLength={visitType === 'at_home' ? AT_HOME_INTERCOM_MAX : 80}
                     />
 
                     <Field
@@ -2276,10 +2352,10 @@ export function BecomeMasterPage() {
                             key={tm.id}
                             type="button"
                             onClick={() => applyServiceTemplate(tm)}
-                            className={`shrink-0 max-w-[min(100%,14rem)] rounded-full border px-3.5 py-2 text-left text-[13px] font-semibold leading-snug transition active:scale-[0.98] ${
+                            className={`shrink-0 max-w-[min(100%,14rem)] rounded-full px-3.5 py-2 text-left text-[13px] font-semibold leading-snug transition active:scale-[0.98] ${
                               svcHighlightId === tm.id
-                                ? 'border-[#E29595] bg-[#F5E0E0] text-neutral-950 shadow-[0_6px_16px_rgba(226,149,149,0.22)]'
-                                : 'border-[#E29595]/25 bg-[#F8F0F0] text-neutral-900 shadow-[0_4px_12px_rgba(226,149,149,0.08)]'
+                                ? 'bg-[#E8BCBC] text-neutral-950'
+                                : 'bg-[#F5E0E0] text-neutral-900'
                             }`}
                           >
                             {tm.title}

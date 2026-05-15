@@ -5,32 +5,32 @@ const CATEGORIES = [
   {
     key: 'manicure',
     label: 'Маникюр',
-    image: '/photos/work/manicure.png',
+    image: '/photos/work/manicure.webp',
   },
   {
     key: 'barbers',
     label: 'Барберы',
-    image: '/photos/work/barbers.png',
+    image: '/photos/work/barbers.webp',
   },
   {
     key: 'brows_lashes',
     label: 'Брови и ресницы',
-    image: '/photos/work/brows_lashes.png',
+    image: '/photos/work/brows_lashes.webp',
   },
   {
     key: 'massage',
     label: 'Массаж',
-    image: '/photos/work/massage.png',
+    image: '/photos/work/massage.webp',
   },
   {
     key: 'fitness',
     label: 'Фитнес',
-    image: '/photos/work/fitness.png',
+    image: '/photos/work/fitness.webp',
   },
   {
     key: 'tattoo',
     label: 'Тату',
-    image: '/photos/work/tattoo.png',
+    image: '/photos/work/tattoo.webp',
   },
 ];
 
