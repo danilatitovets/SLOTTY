@@ -14,6 +14,7 @@ export type MasterCabinetProfileDto = {
   bio: string;
   phone: string | null;
   contact: string | null;
+  contacts?: unknown | null;
   photoUrl: string | null;
   publicationStatus: string;
   rating: number;
@@ -41,6 +42,7 @@ export type MasterCabinetLocationDto = {
   isPrimary: boolean;
   lat: number | null;
   lng: number | null;
+  showExactAddressAfterBooking?: boolean;
 } | null;
 
 export type MasterCabinetScheduleRuleDto = {
@@ -108,11 +110,17 @@ export async function fetchMasterCabinet(): Promise<MasterCabinetDto> {
   return (await res.json()) as MasterCabinetDto;
 }
 
+export type MasterContactPatch = {
+  type: 'telegram' | 'viber' | 'vk' | 'instagram' | 'whatsapp' | 'other';
+  value: string;
+};
+
 export async function patchMasterMe(body: {
   displayName?: string;
   bio?: string;
   phone?: string | null;
   contact?: string | null;
+  contacts?: MasterContactPatch[] | null;
   photoUrl?: string | null;
 }): Promise<void> {
   const res = await apiFetch('/api/masters/me', { method: 'PATCH', body: JSON.stringify(body) });

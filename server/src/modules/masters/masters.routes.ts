@@ -153,6 +153,15 @@ const postMe = z.object({
     }),
 });
 
+const masterContactItemSchema = z.object({
+  type: z.enum(['telegram', 'viber', 'vk', 'instagram', 'whatsapp', 'other']),
+  value: z
+    .string()
+    .max(500)
+    .transform((s) => s.trim())
+    .refine((s) => s.length >= 1, { message: 'Заполните контакт' }),
+});
+
 const patchMe = z.object({
   displayName: z
     .string()
@@ -163,6 +172,7 @@ const patchMe = z.object({
   bio: z.string().max(10_000).optional(),
   phone: optionalBelarusMobile,
   contact: z.string().max(500).nullable().optional(),
+  contacts: z.array(masterContactItemSchema).max(12).optional(),
   photoUrl: photoUrlNullable,
   slug: slugNullable,
   primaryCategoryCode: z
@@ -422,15 +432,6 @@ const onboardingCertificateSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).optional(),
 });
 
-const masterContactItemSchema = z.object({
-  type: z.enum(['telegram', 'viber', 'vk', 'instagram', 'whatsapp', 'other']),
-  value: z
-    .string()
-    .max(500)
-    .transform((s) => s.trim())
-    .refine((s) => s.length >= 1, { message: 'Заполните контакт' }),
-});
-
 const onboardingBody = z
   .object({
     categoryCode: z
@@ -580,6 +581,7 @@ mastersRouter.patch(
       bio: body.bio,
       phone: body.phone ?? null,
       contact: body.contact === '' ? null : body.contact,
+      contacts: body.contacts === undefined ? undefined : body.contacts?.length ? body.contacts : null,
       photoUrl: body.photoUrl === '' || body.photoUrl == null ? null : body.photoUrl,
       slug: body.slug === '' || body.slug == null ? null : body.slug,
       primaryCategoryCode:

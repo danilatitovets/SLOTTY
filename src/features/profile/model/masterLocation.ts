@@ -78,19 +78,17 @@ export function formatPublicAddress(loc: MasterLocation | null | undefined): str
   if (!loc) return '';
   const base = baseAddressLine(loc);
   if (loc.visitType === 'at_home') {
+    const visit = masterVisitTypeLabel('at_home');
     if (loc.showExactAddressAfterBooking === true) {
-      const c = cityLabel(loc);
-      const street = loc.street.trim();
-      if (street) return `На дому · ${c}, ${street}`;
-      const d = loc.district?.trim();
-      if (d) return `На дому · ${c}, ${d}`;
-      return `На дому · ${c}`;
+      const publicLine = formatHomePublicBeforeBooking(loc);
+      return publicLine ? `${visit}, ${publicLine}` : visit;
     }
-    return base ? `На дому · ${base}` : 'На дому';
+    const line = formatHomeAfterBookingMainLine(loc);
+    return line ? `${visit}, ${line}` : visit;
   }
   if (!base) return 'Адрес пока не указан';
   const salon = loc.salonName?.trim();
-  return salon ? `${salon} · ${base}` : base;
+  return salon ? `${salon}, ${base}` : base;
 }
 
 /**

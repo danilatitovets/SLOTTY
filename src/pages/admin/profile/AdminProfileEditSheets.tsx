@@ -14,7 +14,23 @@ import type {
 import type { MasterVisitType } from '../../../features/profile/model/masterLocation';
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
 import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
+import { BY } from 'country-flag-icons/react/1x1';
+import {
+  canAddContactChannel,
+  contactRowsFromDraft,
+  contactsToLegacyContactLine,
+  validateContactValue,
+  type ContactType,
+  type MasterContactRow,
+} from '../../../features/master-onboarding/model/masterContacts';
+import {
+  isOptionalBelarusPhoneValid,
+  normalizeBelarusPhone,
+  sanitizeBelarusPhoneInput,
+} from '../../../features/master-onboarding/model/belarusPhone';
+import { getMasterDisplayNameQualityError } from '../../../shared/lib/masterDisplayNamePolicy';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
+import { MasterProfileContactsBlock } from '../../master-onboarding/MasterProfileContactsBlock';
 import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from '../../master-onboarding/OnboardingAddressMap';
 
 const CATEGORIES = [
@@ -47,31 +63,39 @@ function SheetFooter({
   onCancel,
   onSave,
   saveLabel = 'Сохранить',
+  saving = false,
 }: {
   onCancel: () => void;
   onSave: () => SheetSaveResult;
   saveLabel?: string;
+  saving?: boolean;
 }) {
   return (
     <div className="mt-8 flex gap-3 pb-1">
       <button
         type="button"
         onClick={onCancel}
-        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+        disabled={saving}
+        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98] disabled:opacity-50"
       >
         Отмена
       </button>
       <button
         type="button"
+        disabled={saving}
         onClick={() => {
           void Promise.resolve(onSave());
         }}
-        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-60"
       >
-        {saveLabel}
+        {saving ? 'Сохранение…' : saveLabel}
       </button>
     </div>
   );
+}
+
+function hasAtLeastOneValidMessengerContact(rows: MasterContactRow[]): boolean {
+  return rows.some((r) => r.value.trim() && validateContactValue(r.type, r.value) === null);
 }
 
 /** Основная информация + фото профиля (демо: data URL; TODO: Supabase Storage). */
@@ -91,16 +115,21 @@ export function SheetMainInfo({
     () => (draft.category === 'Другое' ? CATEGORIES[0] : draft.category),
   );
   const [phone, setPhone] = useState(draft.phone ?? '');
-  const [contact, setContact] = useState(draft.contact);
+  const [clientContacts, setClientContacts] = useState<MasterContactRow[]>(() => contactRowsFromDraft(draft));
   const [description, setDescription] = useState(draft.description);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   useEffect(() => {
     setPhotoUrl(draft.photoUrl ?? '');
     setName(draft.name);
     setCategory(draft.category === 'Другое' ? CATEGORIES[0] : draft.category);
     setPhone(draft.phone ?? '');
-    setContact(draft.contact);
+    setClientContacts(contactRowsFromDraft(draft));
     setDescription(draft.description);
+    setFieldErrors({});
+    setSubmitAttempted(false);
   }, [draft]);
 
   const categoryOptions = useMemo(
@@ -126,17 +155,55 @@ export function SheetMainInfo({
 
   const preview = photoUrl.trim() || defaultMasterAvatarUrl(name || draft.name);
 
-  const save = () => {
+  const save = async () => {
+    setSubmitAttempted(true);
+    const errs: Record<string, string> = {};
     const trimmedName = name.trim();
-    if (!trimmedName) return;
-    onSave({
-      name: trimmedName,
-      category: category.trim() || draft.category,
-      phone: phone.trim() || undefined,
-      contact: contact.trim(),
-      description: description.trim(),
-      photoUrl: photoUrl.trim() || undefined,
-    });
+    if (!trimmedName) errs.name = 'Укажите имя';
+    else {
+      const nameQuality = getMasterDisplayNameQualityError(trimmedName);
+      if (nameQuality) errs.name = nameQuality;
+    }
+    if (phone.trim() && !isOptionalBelarusPhoneValid(phone)) {
+      errs.phone = 'Укажите мобильный номер РБ (+375 …)';
+    }
+    const hasPhone = Boolean(normalizeBelarusPhone(phone));
+    const hasMessenger = hasAtLeastOneValidMessengerContact(clientContacts);
+    if (!hasPhone && !hasMessenger) {
+      errs.contactReachability = 'Укажите телефон или хотя бы один мессенджер';
+    } else if (!hasMessenger) {
+      errs.contactReachability = 'Добавьте хотя бы один контакт (Telegram, Instagram и т.д.)';
+    }
+    for (const row of clientContacts) {
+      if (!row.value.trim()) continue;
+      const fmt = validateContactValue(row.type, row.value);
+      if (fmt) errs[row.id] = fmt;
+    }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+
+    const contacts = clientContacts
+      .filter((r) => r.value.trim())
+      .map((r) => ({ type: r.type, value: r.value.trim() }));
+    const contactLine = contactsToLegacyContactLine(contacts) ?? '';
+
+    setSaving(true);
+    setFieldErrors({});
+    try {
+      await onSave({
+        name: trimmedName,
+        category: category.trim() || draft.category,
+        phone: normalizeBelarusPhone(phone) ?? undefined,
+        contact: contactLine,
+        contacts,
+        description: description.trim(),
+        photoUrl: photoUrl.trim() || undefined,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -182,7 +249,21 @@ export function SheetMainInfo({
 
       <label className="block">
         <span className="text-[13px] font-semibold text-neutral-500">Имя / название мастера *</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={fieldClass()} />
+        <input
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.name;
+              return next;
+            });
+          }}
+          className={fieldClass()}
+        />
+        {submitAttempted && fieldErrors.name ? (
+          <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.name}</p>
+        ) : null}
       </label>
 
       <label className="block">
@@ -199,28 +280,74 @@ export function SheetMainInfo({
       </label>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Телефон</span>
+        <span className="flex items-center gap-2 text-[13px] font-semibold text-neutral-500">
+          Телефон
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white"
+            aria-hidden
+          >
+            <BY title="Беларусь" className="h-full w-full object-cover" />
+          </span>
+        </span>
         <input
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => {
+            setPhone(sanitizeBelarusPhoneInput(e.target.value));
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.phone;
+              delete next.contactReachability;
+              return next;
+            });
+          }}
           className={fieldClass()}
-          placeholder="+375 …"
+          placeholder="+375 29 000-00-00"
           inputMode="tel"
           autoComplete="tel"
+          maxLength={19}
         />
+        {submitAttempted && fieldErrors.phone ? (
+          <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.phone}</p>
+        ) : null}
       </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Telegram / контакт</span>
-        <input value={contact} onChange={(e) => setContact(e.target.value)} className={fieldClass()} placeholder="@username" />
-      </label>
+      <MasterProfileContactsBlock
+        rows={clientContacts}
+        onAdd={(type: ContactType) => {
+          if (!canAddContactChannel(clientContacts, type)) return;
+          setClientContacts((prev) => [
+            ...prev,
+            { id: newEntityId(), type, value: '' },
+          ]);
+        }}
+        onChange={(id, value) => {
+          setClientContacts((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
+          setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            delete next.contactReachability;
+            return next;
+          });
+        }}
+        onRemove={(id) => {
+          setClientContacts((prev) => prev.filter((r) => r.id !== id));
+        }}
+        onBlurRow={() => {}}
+        rowErrors={fieldErrors}
+        showRowError={(id) => submitAttempted && Boolean(fieldErrors[id])}
+      />
+      {submitAttempted && fieldErrors.contactReachability ? (
+        <p className="rounded-[18px] bg-[#FFF4E8] px-3 py-2 text-[12px] font-semibold leading-snug text-[#B66A24]">
+          {fieldErrors.contactReachability}
+        </p>
+      ) : null}
 
       <label className="block">
         <span className="text-[13px] font-semibold text-neutral-500">О себе</span>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={fieldClass()} />
       </label>
 
-      <SheetFooter onCancel={onCancel} onSave={save} />
+      <SheetFooter onCancel={onCancel} onSave={save} saving={saving} />
     </div>
   );
 }

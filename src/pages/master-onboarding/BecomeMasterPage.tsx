@@ -56,7 +56,7 @@ import type { MasterPlanSelection } from '../../features/master-onboarding/model
 
 const TOTAL_STEPS = 8;
 const ONBOARDING_CITY = 'Минск';
-const LOGO_SRC = '/photos/logo.webp';
+const FINISH_ILLUSTRATION_SRC = '/photos/finish.webp';
 
 type PriceType = 'fixed' | 'from';
 
@@ -1619,13 +1619,14 @@ export function BecomeMasterPage() {
           <div className="rounded-[42px] bg-[#F1EFEF] p-3 shadow-[0_24px_70px_rgba(17,17,17,0.06)]">
             <div className="rounded-[34px] bg-white px-6 py-8 text-center">
               <img
-                src={LOGO_SRC}
-                alt="SLOTTY"
-                className="mx-auto h-auto max-h-48 w-auto max-w-[min(100%,28rem)] object-contain"
+                src={FINISH_ILLUSTRATION_SRC}
+                alt=""
+                aria-hidden
+                className="mx-auto w-full max-w-[min(100%,17.5rem)] object-contain"
                 draggable={false}
               />
 
-              <h1 className="mt-8 text-[31px] font-semibold leading-[1.05] tracking-[-0.065em] text-neutral-950">
+              <h1 className="mt-6 text-[31px] font-semibold leading-[1.05] tracking-[-0.065em] text-neutral-950">
                 Профиль опубликован
               </h1>
 
@@ -1635,20 +1636,17 @@ export function BecomeMasterPage() {
 
               <button
                 type="button"
-                onClick={() => navigate(ADMIN_PATH)}
+                onClick={() => {
+                  if (profile?.id) {
+                    navigate(getMasterPath(profile.id));
+                    return;
+                  }
+                  navigate(ADMIN_PATH);
+                }}
                 className="mt-8 flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
               >
-                Перейти в кабинет
+                Перейти в профиль
               </button>
-
-              {profile?.id ? (
-                <Link
-                  to={getMasterPath(profile.id)}
-                  className="mt-3 flex min-h-[3.15rem] w-full items-center justify-center rounded-full bg-[#F1EFEF] px-5 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-                >
-                  Посмотреть профиль
-                </Link>
-              ) : null}
             </div>
           </div>
         </div>

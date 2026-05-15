@@ -9,6 +9,7 @@ import type {
   MasterPortfolioItem,
   MasterSchedule,
 } from '../../profile/lib/demoMasterStorage';
+import { parseContactsJson } from '../../master-onboarding/model/masterContacts';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { formatPublicAddress } from '../../profile/model/masterLocation';
 import type { MasterCabinetDto, MasterCabinetScheduleRuleDto } from '../api/masterCabinetApi';
@@ -185,6 +186,7 @@ function cabinetLocationToDraft(loc: NonNullable<MasterCabinetDto['primaryLocati
     clientNote: loc.clientNote?.trim() || undefined,
     lat: loc.lat != null ? Number(loc.lat) : undefined,
     lng: loc.lng != null ? Number(loc.lng) : undefined,
+    showExactAddressAfterBooking: loc.showExactAddressAfterBooking === true,
   };
 }
 
@@ -212,6 +214,8 @@ export function draftToPrimaryLocationBody(loc: MasterLocation): PrimaryLocation
     publicAddress,
     lat: loc.lat != null && Number.isFinite(loc.lat) ? loc.lat : null,
     lng: loc.lng != null && Number.isFinite(loc.lng) ? loc.lng : null,
+    showExactAddressAfterBooking:
+      loc.visitType === 'at_home' ? loc.showExactAddressAfterBooking === true : null,
   };
 }
 
@@ -263,6 +267,7 @@ export function cabinetDtoToMasterDraft(cabinet: MasterCabinetDto): MasterDraft 
     name: profile.displayName,
     description: profile.bio || '',
     contact: profile.contact || '',
+    contacts: parseContactsJson(profile.contacts) ?? undefined,
     phone: profile.phone || undefined,
     photoUrl: profile.photoUrl || undefined,
     services: mappedServices,

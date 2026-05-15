@@ -76,6 +76,84 @@ const PREFIX: Record<ContactType, string> = {
   other: 'Контакт',
 };
 
+const LEGACY_PREFIX_TO_TYPE: Record<string, ContactType> = {
+  telegram: 'telegram',
+  viber: 'viber',
+  vk: 'vk',
+  instagram: 'instagram',
+  whatsapp: 'whatsapp',
+  контакт: 'other',
+};
+
+/** Разбор legacy-строки `Telegram: @x · Viber: …` в список контактов. */
+export function parseLegacyContactLine(line: string): MasterContact[] {
+  const t = line.trim();
+  if (!t) return [];
+
+  const chunks = t.split(/\s*·\s*/).map((p) => p.trim()).filter(Boolean);
+  const out: MasterContact[] = [];
+
+  for (const chunk of chunks) {
+    const m = chunk.match(/^(Telegram|Viber|VK|Instagram|WhatsApp|Контакт):\s*(.+)$/i);
+    if (m) {
+      const type = LEGACY_PREFIX_TO_TYPE[m[1].toLowerCase()] ?? 'other';
+      const value = m[2].trim();
+      if (value) out.push({ type, value });
+      continue;
+    }
+    if (chunk) out.push({ type: 'other', value: chunk });
+  }
+
+  return out;
+}
+
+export function contactsToRows(contacts: MasterContact[]): MasterContactRow[] {
+  return contacts.map((c) => ({
+    ...c,
+    id:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `c-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  }));
+}
+
+export function parseContactsJson(raw: unknown): MasterContact[] | null {
+  if (raw == null) return null;
+  if (!Array.isArray(raw)) return null;
+  const out: MasterContact[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const o = item as Record<string, unknown>;
+    const t = o.type;
+    const v = o.value;
+    if (
+      t === 'telegram' ||
+      t === 'viber' ||
+      t === 'vk' ||
+      t === 'instagram' ||
+      t === 'whatsapp' ||
+      t === 'other'
+    ) {
+      if (typeof v === 'string' && v.trim()) {
+        out.push({ type: t, value: v.trim() });
+      }
+    }
+  }
+  return out.length ? out : null;
+}
+
+export function contactRowsFromDraft(draft: {
+  contact: string;
+  contacts?: MasterContact[] | null;
+}): MasterContactRow[] {
+  if (draft.contacts?.length) return contactsToRows(draft.contacts);
+  const parsed = parseLegacyContactLine(draft.contact);
+  if (parsed.length) return contactsToRows(parsed);
+  const legacy = draft.contact.trim();
+  if (legacy) return contactsToRows([{ type: 'telegram', value: legacy }]);
+  return [];
+}
+
 export function contactsToLegacyContactLine(contacts: MasterContact[]): string | null {
   if (!contacts.length) return null;
   const parts = contacts

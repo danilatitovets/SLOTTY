@@ -1,3 +1,4 @@
+import type { MasterContact } from '../../master-onboarding/model/masterContacts';
 import type { MasterLocation } from '../model/masterLocation';
 
 const DRAFT_KEY = 'slotty_master_draft';
@@ -60,6 +61,8 @@ export type MasterDraft = {
   name: string;
   description: string;
   contact: string;
+  /** Каналы связи (из онбординга / API). */
+  contacts?: MasterContact[];
   services: MasterOnboardingService[];
   schedule: MasterSchedule;
   location: MasterLocation;

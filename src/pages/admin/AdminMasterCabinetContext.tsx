@@ -37,13 +37,21 @@ import {
 } from '../../features/master/model/demoMasterAppointments';
 import { getMasterDraft, persistMasterDraft } from '../../features/master/model/masterDraftStorage';
 import { getStoredMasterDraft } from '../../features/profile/lib/demoMasterStorage';
+import { contactsToLegacyContactLine } from '../../features/master-onboarding/model/masterContacts';
 import type { MasterDraft } from '../../features/profile/lib/demoMasterStorage';
+
+export type MasterProfilePatch = Pick<
+  MasterDraft,
+  'name' | 'description' | 'phone' | 'contact' | 'photoUrl' | 'contacts' | 'category'
+>;
 
 type Ctx = {
   draft: MasterDraft;
   persistDraft: (next: MasterDraft) => void;
   /** В API-режиме: сохранить черновик на сервер и дождаться ответа (без debounce). При ошибке — откат draft с сервера, проброс исключения. */
   flushDraftToBackend: (next: MasterDraft) => Promise<void>;
+  /** Только поля профиля (без адреса, расписания и услуг) — быстрее, чем полный flush. */
+  patchProfileToBackend: (patch: MasterProfilePatch) => Promise<void>;
   refreshDraft: () => void;
   appointments: DemoMasterAppointment[];
   persistAppointments: (rows: DemoMasterAppointment[]) => void | Promise<void>;
@@ -262,6 +270,65 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     [useCabinetApi, pushDraftToBackend, reloadCabinetFromApiSilent],
   );
 
+  const patchProfileToBackend = useCallback(
+    async (patch: MasterProfilePatch) => {
+      const contacts = patch.contacts;
+      const contactLine =
+        contacts && contacts.length > 0
+          ? contactsToLegacyContactLine(contacts) ?? ''
+          : patch.contact.trim();
+
+      const next: MasterDraft = {
+        ...draft,
+        ...patch,
+        contact: contactLine,
+        contacts: contacts ?? patch.contacts,
+      };
+
+      if (!useCabinetApi) {
+        persistMasterDraft(next);
+        setDraft(getMasterDraft());
+        return;
+      }
+
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current);
+        syncTimer.current = null;
+      }
+
+      setDraft(next);
+      try {
+        await patchMasterMe({
+          displayName: next.name.trim() || 'Мастер',
+          bio: next.description,
+          phone: next.phone?.trim() ? next.phone.trim() : null,
+          contacts: contacts?.length ? contacts : null,
+          contact: contactLine.trim() ? contactLine.trim() : null,
+          photoUrl: next.photoUrl?.trim() ? next.photoUrl.trim() : null,
+        });
+        if (lastSyncedSnapshotRef.current) {
+          lastSyncedSnapshotRef.current = cloneDraft({
+            ...lastSyncedSnapshotRef.current,
+            name: next.name,
+            description: next.description,
+            phone: next.phone,
+            contact: next.contact,
+            photoUrl: next.photoUrl,
+            contacts: next.contacts,
+            category: next.category,
+          });
+        }
+        setCabinetError(null);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Ошибка сохранения';
+        setCabinetError(msg);
+        await reloadCabinetFromApiSilent();
+        throw e;
+      }
+    },
+    [draft, reloadCabinetFromApiSilent, useCabinetApi],
+  );
+
   const scheduleSync = useCallback(
     (syncDraft: MasterDraft) => {
       if (!useCabinetApi) return;
@@ -356,6 +423,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       draft,
       persistDraft,
       flushDraftToBackend,
+      patchProfileToBackend,
       refreshDraft,
       appointments,
       persistAppointments,
@@ -367,6 +435,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       draft,
       persistDraft,
       flushDraftToBackend,
+      patchProfileToBackend,
       refreshDraft,
       appointments,
       persistAppointments,

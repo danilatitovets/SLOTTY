@@ -1,4 +1,8 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import {
+  CONTACT_CHANNEL_META,
+  contactRowsFromDraft,
+} from '../../../features/master-onboarding/model/masterContacts';
 import type { MasterCareerItemType, MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
 import {
@@ -328,33 +332,33 @@ function AdminProfileHero({ draft }: { draft: MasterDraft }) {
 
   return (
     <section className="rounded-[38px] bg-[#F1EFEF] p-3 shadow-[0_20px_60px_rgba(17,17,17,0.05)]">
-      <div className="rounded-[32px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
-        <div className="flex gap-4">
-          <div className="h-[6.5rem] w-[6.5rem] shrink-0 overflow-hidden rounded-[28px] bg-[#F1EFEF] shadow-[0_10px_28px_rgba(17,17,17,0.08)]">
-            <ImageReveal
-              src={photoSrc}
-              alt=""
-              width={160}
-              height={160}
-              className="h-full w-full object-cover"
-              onError={(event) => {
-                (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-              }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Профиль мастера</p>
-            <h1 className="mt-1 break-words text-[27px] font-semibold leading-[1.02] tracking-[-0.065em] text-neutral-950">
-              {draft.name.trim() || 'Мастер'}
-            </h1>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-semibold text-neutral-700">
-                {draft.category || 'Категория'}
-              </span>
-            </div>
+      <div className="overflow-hidden rounded-[32px] bg-white shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
+        <div className="relative aspect-[16/10] w-full bg-[#F1EFEF]">
+          <ImageReveal
+            src={photoSrc}
+            alt=""
+            width={640}
+            height={400}
+            className="h-full w-full object-cover"
+            onError={(event) => {
+              (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
+            }}
+          />
+        </div>
+
+        <div className="px-5 py-5 text-center">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Профиль мастера</p>
+          <h1 className="mt-1 truncate text-[27px] font-semibold leading-[1.05] tracking-[-0.065em] text-neutral-950">
+            {draft.name.trim() || 'Мастер'}
+          </h1>
+          <div className="mt-3 flex justify-center">
+            <span className="rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-semibold text-neutral-700">
+              {draft.category || 'Категория'}
+            </span>
           </div>
         </div>
-        <div className="mt-4 rounded-[26px] bg-[#F1EFEF] px-4 py-3">
+
+        <div className="mx-4 mb-4 rounded-[26px] bg-[#F1EFEF] px-4 py-3 text-center">
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">На карточке клиента</p>
           <p className="mt-1 text-[15px] font-semibold leading-snug text-neutral-950">{shortAddress || 'Адрес не указан'}</p>
         </div>
@@ -426,7 +430,13 @@ function MainSection({
       <InfoBlock label="Имя / название" value={draft.name} large />
       <InfoBlock label="Категория" value={draft.category} />
       <InfoBlock label="Телефон" value={draft.phone} />
-      <InfoBlock label="Telegram / контакт" value={draft.contact} />
+      {contactRowsFromDraft(draft).map((row) => {
+        const label = CONTACT_CHANNEL_META.find((m) => m.type === row.type)?.label ?? 'Контакт';
+        return <InfoBlock key={row.id} label={label} value={row.value} />;
+      })}
+      {contactRowsFromDraft(draft).length === 0 && draft.contact.trim() ? (
+        <InfoBlock label="Контакты" value={draft.contact} />
+      ) : null}
       <InfoBlock label="О себе" value={draft.description} large />
     </SectionCard>
   );
@@ -1040,7 +1050,7 @@ function sheetTitle(sheet: ProfileSheet): string | undefined {
 }
 
 export function AdminProfileSection() {
-  const { draft, persistDraft, flushDraftToBackend, refreshDraft } = useAdminMasterDraft();
+  const { draft, persistDraft, flushDraftToBackend, patchProfileToBackend, refreshDraft } = useAdminMasterDraft();
   const { useCabinetApi } = useAdminMasterCabinet();
   const [sheet, setSheet] = useState<ProfileSheet>(null);
   const [sheetApiError, setSheetApiError] = useState<string | null>(null);
@@ -1066,21 +1076,24 @@ export function AdminProfileSection() {
         }
       }
       setSheetApiError(null);
-      if (!useCabinetApi) {
-        persistDraft({ ...draft, ...patch });
-        closeSheet();
-        showSaved();
-        return;
-      }
+      const next: MasterDraft = { ...draft, ...patch };
       try {
-        await flushDraftToBackend({ ...draft, ...patch });
+        await patchProfileToBackend({
+          name: next.name,
+          description: next.description,
+          phone: next.phone,
+          contact: next.contact,
+          contacts: next.contacts,
+          photoUrl: next.photoUrl,
+          category: next.category,
+        });
         closeSheet();
         showSaved();
       } catch (e) {
         setSheetApiError(e instanceof Error ? e.message : 'Ошибка сохранения');
       }
     },
-    [closeSheet, draft, flushDraftToBackend, persistDraft, showSaved, useCabinetApi],
+    [closeSheet, draft, patchProfileToBackend, showSaved, useCabinetApi],
   );
 
   const saveLocation = useCallback(

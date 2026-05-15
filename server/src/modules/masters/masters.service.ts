@@ -2,6 +2,7 @@ import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { listMyServices } from '../services/services.service.js';
 import { listMyScheduleRules } from './masterOnboarding.service.js';
+import { contactsToLegacyContactLine, type MasterContactPayload } from './masterContactsCodec.js';
 import { decodePaymentNote } from './masterTrustProfile.service.js';
 
 function num(v: string | number | null | undefined): number | null {
@@ -438,7 +439,7 @@ export async function upsertMyMasterProfile(
 
 export async function getMyMasterProfile(profileId: string) {
   const r = await query(
-    `select master_id, display_name, slug, primary_category_id, bio, phone, contact, photo_url,
+    `select master_id, display_name, slug, primary_category_id, bio, phone, contact, contacts, photo_url,
             publication_status::text, rating_avg::text, reviews_count, global_buffer_minutes
        from public.master_profiles
       where master_id = $1`,
@@ -453,6 +454,7 @@ export async function getMyMasterProfile(profileId: string) {
         bio: string;
         phone: string | null;
         contact: string | null;
+        contacts: unknown | null;
         photo_url: string | null;
         publication_status: string;
         rating_avg: string;
@@ -471,6 +473,7 @@ export async function getMyMasterProfile(profileId: string) {
     bio: row.bio,
     phone: row.phone,
     contact: row.contact,
+    contacts: row.contacts ?? null,
     photoUrl: row.photo_url,
     publicationStatus: row.publication_status,
     rating: num(row.rating_avg) ?? 0,
@@ -486,6 +489,7 @@ export async function patchMyMasterProfile(
     bio?: string;
     phone?: string | null;
     contact?: string | null;
+    contacts?: MasterContactPayload[] | null;
     photoUrl?: string | null;
     slug?: string | null;
     primaryCategoryCode?: string | null;
@@ -521,7 +525,13 @@ export async function patchMyMasterProfile(
   if (patch.displayName !== undefined) push('display_name', patch.displayName);
   if (patch.bio !== undefined) push('bio', patch.bio);
   if (patch.phone !== undefined) push('phone', patch.phone);
-  if (patch.contact !== undefined) push('contact', patch.contact);
+  if (patch.contacts !== undefined) {
+    const json = patch.contacts?.length ? JSON.stringify(patch.contacts) : null;
+    push('contacts', json);
+    push('contact', contactsToLegacyContactLine(patch.contacts));
+  } else if (patch.contact !== undefined) {
+    push('contact', patch.contact);
+  }
   if (patch.photoUrl !== undefined) push('photo_url', patch.photoUrl);
   if (patch.slug !== undefined) push('slug', patch.slug);
   if (primaryCategoryId !== undefined) push('primary_category_id', primaryCategoryId);
@@ -557,6 +567,7 @@ type PrimaryLocationRow = {
   is_primary: boolean;
   lat: number | null;
   lng: number | null;
+  show_exact_address_after_booking: boolean;
 };
 
 /** Полный снимок кабинета мастера (без фильтра по publication). */
@@ -583,7 +594,8 @@ export async function getMyMasterCabinet(masterId: string) {
     categoryPromise,
     query<PrimaryLocationRow>(
       `select id, visit_type::text, city, street, building, building_detail, entrance, floor, room,
-              intercom, landmark, directions, client_note, public_address, is_primary, lat, lng
+              intercom, landmark, directions, client_note, public_address, is_primary, lat, lng,
+              show_exact_address_after_booking
          from public.master_locations
         where master_id = $1 and is_primary = true
         limit 1`,
@@ -646,6 +658,7 @@ export async function getMyMasterCabinet(masterId: string) {
           isPrimary: loc.is_primary,
           lat: loc.lat,
           lng: loc.lng,
+          showExactAddressAfterBooking: loc.show_exact_address_after_booking,
         }
       : null,
     scheduleRules,
