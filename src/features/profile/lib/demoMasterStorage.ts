@@ -57,6 +57,8 @@ export type MasterDraft = {
   masterId?: string;
   /** UUID категории из каталога (для API услуг). */
   primaryCategoryId?: string;
+  /** Код категории (`manicure`, `barbers`, …) для PATCH профиля. */
+  primaryCategoryCode?: string;
   category: string;
   name: string;
   description: string;

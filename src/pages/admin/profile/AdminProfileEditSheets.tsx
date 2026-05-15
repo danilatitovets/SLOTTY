@@ -30,10 +30,11 @@ import {
 } from '../../../features/master-onboarding/model/belarusPhone';
 import { getMasterDisplayNameQualityError } from '../../../shared/lib/masterDisplayNamePolicy';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
+import { fetchServiceCategories, type ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
 import { MasterProfileContactsBlock } from '../../master-onboarding/MasterProfileContactsBlock';
 import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from '../../master-onboarding/OnboardingAddressMap';
 
-const CATEGORIES = [
+const FALLBACK_CATEGORIES = [
   'Маникюр',
   'Барберы',
   'Брови и ресницы',
@@ -111,9 +112,8 @@ export function SheetMainInfo({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [photoUrl, setPhotoUrl] = useState(draft.photoUrl ?? '');
   const [name, setName] = useState(draft.name);
-  const [category, setCategory] = useState(
-    () => (draft.category === 'Другое' ? CATEGORIES[0] : draft.category),
-  );
+  const [catalogCategories, setCatalogCategories] = useState<ServiceCategoryDto[]>([]);
+  const [categoryId, setCategoryId] = useState(() => draft.primaryCategoryId ?? '');
   const [phone, setPhone] = useState(draft.phone ?? '');
   const [clientContacts, setClientContacts] = useState<MasterContactRow[]>(() => contactRowsFromDraft(draft));
   const [description, setDescription] = useState(draft.description);
@@ -122,24 +122,56 @@ export function SheetMainInfo({
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchServiceCategories()
+      .then((list) => {
+        if (!cancelled) setCatalogCategories(list);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const resolveCategoryId = useCallback(
+    (d: MasterDraft, list: ServiceCategoryDto[]) => {
+      if (d.primaryCategoryId && list.some((c) => c.id === d.primaryCategoryId)) {
+        return d.primaryCategoryId;
+      }
+      const byCode = d.primaryCategoryCode
+        ? list.find((c) => c.code === d.primaryCategoryCode)?.id
+        : undefined;
+      if (byCode) return byCode;
+      const byName = list.find((c) => c.name === d.category)?.id;
+      if (byName) return byName;
+      return list[0]?.id ?? '';
+    },
+    [],
+  );
+
+  useEffect(() => {
     setPhotoUrl(draft.photoUrl ?? '');
     setName(draft.name);
-    setCategory(draft.category === 'Другое' ? CATEGORIES[0] : draft.category);
+    setCategoryId(resolveCategoryId(draft, catalogCategories));
     setPhone(draft.phone ?? '');
     setClientContacts(contactRowsFromDraft(draft));
     setDescription(draft.description);
     setFieldErrors({});
     setSubmitAttempted(false);
-  }, [draft]);
+  }, [draft, catalogCategories, resolveCategoryId]);
 
-  const categoryOptions = useMemo(
-    () =>
-      Array.from(new Set([category, ...CATEGORIES])).map((c) => ({
-        value: c,
-        label: c,
-      })),
-    [category],
-  );
+  const categoryOptions = useMemo(() => {
+    if (catalogCategories.length) {
+      return catalogCategories.map((c) => ({ value: c.id, label: c.name }));
+    }
+    const legacy = draft.category === 'Другое' ? FALLBACK_CATEGORIES[0] : draft.category;
+    return Array.from(new Set([legacy, ...FALLBACK_CATEGORIES])).map((c) => ({
+      value: c,
+      label: c,
+    }));
+  }, [catalogCategories, draft.category]);
 
   const onPhotoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,6 +211,13 @@ export function SheetMainInfo({
       const fmt = validateContactValue(row.type, row.value);
       if (fmt) errs[row.id] = fmt;
     }
+    const picked =
+      catalogCategories.find((c) => c.id === categoryId) ??
+      catalogCategories.find((c) => c.name === categoryId);
+    if (catalogCategories.length && !picked) {
+      errs.category = 'Выберите категорию';
+    }
+
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       return;
@@ -194,7 +233,9 @@ export function SheetMainInfo({
     try {
       await onSave({
         name: trimmedName,
-        category: category.trim() || draft.category,
+        category: picked?.name ?? (typeof categoryId === 'string' ? categoryId : draft.category),
+        primaryCategoryId: picked?.id,
+        primaryCategoryCode: picked?.code,
         phone: normalizeBelarusPhone(phone) ?? undefined,
         contact: contactLine,
         contacts,
@@ -272,8 +313,8 @@ export function SheetMainInfo({
         </span>
         <SlottySelect
           className="mt-1.5 w-full"
-          value={category}
-          onChange={setCategory}
+          value={categoryId || categoryOptions[0]?.value || ''}
+          onChange={setCategoryId}
           options={categoryOptions}
           aria-labelledby="sheet-main-cat"
         />

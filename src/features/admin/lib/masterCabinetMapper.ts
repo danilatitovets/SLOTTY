@@ -11,7 +11,7 @@ import type {
 } from '../../profile/lib/demoMasterStorage';
 import { parseContactsJson } from '../../master-onboarding/model/masterContacts';
 import type { MasterLocation } from '../../profile/model/masterLocation';
-import { formatPublicAddress } from '../../profile/model/masterLocation';
+import { formatStoredPublicAddress } from '../../profile/model/masterLocation';
 import type { MasterCabinetDto, MasterCabinetScheduleRuleDto } from '../api/masterCabinetApi';
 import type { PrimaryLocationBody, ScheduleRuleDto } from '../../master-onboarding/api/becomeMasterApi';
 
@@ -194,9 +194,7 @@ export function draftToPrimaryLocationBody(loc: MasterLocation): PrimaryLocation
   const city = (loc.city && loc.city.trim()) || 'Минск';
   const street = (loc.street || '').trim() || '—';
   const building = (loc.building || '').trim() || '—';
-  const base = formatPublicAddress(loc);
-  const combined = city && base ? `${city}, ${base}` : city || base;
-  const publicAddress = combined.slice(0, 600) || street;
+  const publicAddress = formatStoredPublicAddress(loc).slice(0, 600) || street;
 
   return {
     visitType: loc.visitType === 'at_home' ? 'at_home' : 'studio',
@@ -262,8 +260,9 @@ export function cabinetDtoToMasterDraft(cabinet: MasterCabinetDto): MasterDraft 
 
   return {
     masterId: profile.masterId,
-    category: primaryCategory?.name || primaryCategory?.code || 'Услуги',
+    category: primaryCategory?.name || primaryCategory?.code || 'Не указана',
     primaryCategoryId: profile.primaryCategoryId ?? undefined,
+    primaryCategoryCode: primaryCategory?.code,
     name: profile.displayName,
     description: profile.bio || '',
     contact: profile.contact || '',

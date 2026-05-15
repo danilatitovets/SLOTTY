@@ -18,6 +18,7 @@ import {
   formatHomeAfterBookingMainLine,
   homeAfterBookingDetailLines,
   formatCityWithAddressLine,
+  formatStoredPublicAddress,
   masterVisitTypeLabel,
 } from '../../features/profile/model/masterLocation';
 import { OnboardingAddressMap } from './OnboardingAddressMap';
@@ -403,27 +404,14 @@ function computeOnboardingPublicAddress(params: {
   landmark?: string;
   showExactAddressAfterBooking?: boolean;
 }): string {
-  const c = params.city.trim() || 'Минск';
-  const s = params.street.trim();
-  const b = params.building.trim();
-  const line = s && b && b !== 'б/н' ? `${s}, ${b}` : s || b;
-
-  if (params.visitType === 'studio') {
-    const salon = params.salonName?.trim();
-    const core = line ? `${c}, ${line}` : c;
-    return (salon ? `${salon} · ${core}` : core).slice(0, 600);
-  }
-
-  if (params.visitType === 'at_home') {
-    if (params.showExactAddressAfterBooking === true) {
-      if (s) return `${c}, ${s}`.slice(0, 600);
-      return c.slice(0, 600);
-    }
-    const core = line ? `${c}, ${line}` : c;
-    return core.slice(0, 600);
-  }
-
-  return c.slice(0, 600);
+  return formatStoredPublicAddress({
+    visitType: params.visitType,
+    city: params.city.trim() || 'Минск',
+    street: params.street.trim(),
+    building: params.building.trim() || 'б/н',
+    salonName: params.salonName,
+    showExactAddressAfterBooking: params.showExactAddressAfterBooking,
+  }).slice(0, 600);
 }
 
 function StepTitle({

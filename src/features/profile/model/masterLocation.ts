@@ -61,6 +61,82 @@ function cityLabel(loc: MasterLocation): string {
   return (loc.city ?? '').trim() || 'Минск';
 }
 
+function normalizeAddrPart(s: string): string {
+  return s.trim().toLowerCase().replace(/ё/g, 'е');
+}
+
+/** Минск по умолчанию — в карточках не дублируем название города. */
+function isDefaultMinskCity(city: string): boolean {
+  const c = normalizeAddrPart(city);
+  return !c || c === 'минск' || c === 'minsk';
+}
+
+function isCityAddressPart(part: string, city: string): boolean {
+  const pl = normalizeAddrPart(part);
+  const cityKey = normalizeAddrPart(city);
+  if (pl === cityKey || pl === 'минск' || pl === 'minsk') return true;
+  if (pl === 'город минск') return true;
+  if (pl.startsWith('город ') && cityKey && pl.includes(cityKey)) return true;
+  return false;
+}
+
+/** Убирает «Минск», «город Минск» и повторы города из строки геокодера. */
+export function stripCityFromAddressLine(line: string, city: string): string {
+  const parts = line
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (!parts.length) return line.trim();
+  const filtered = parts.filter((p) => !isCityAddressPart(p, city));
+  if (filtered.length) return filtered.join(', ');
+  const withoutLead = parts.filter((p, i) => !(i === 0 && isCityAddressPart(p, city)));
+  return withoutLead.join(', ') || line.trim();
+}
+
+function withCityPrefixIfNeeded(city: string, line: string): string {
+  const cleaned = line.trim();
+  const c = (city ?? '').trim() || 'Минск';
+  if (!cleaned) return isDefaultMinskCity(c) ? '' : c;
+  if (isDefaultMinskCity(c)) return cleaned;
+  const cityNorm = normalizeAddrPart(c);
+  if (normalizeAddrPart(cleaned).includes(cityNorm)) return cleaned;
+  return `${c}, ${cleaned}`;
+}
+
+function streetBuildingLine(loc: MasterLocation, streetRaw: string): string {
+  const street = stripCityFromAddressLine(streetRaw, cityLabel(loc));
+  const building = loc.building.trim();
+  if (street && building && building !== 'б/н' && !buildingRedundantWithStreet(street, building)) {
+    return `${street}, ${building}`;
+  }
+  return street || (building !== 'б/н' ? building : '');
+}
+
+function buildAtHomeAddressLine(loc: MasterLocation, includeBuilding: boolean): string {
+  const c = cityLabel(loc);
+  const line = includeBuilding
+    ? streetBuildingLine(loc, loc.street.trim())
+    : stripCityFromAddressLine(loc.street.trim(), c);
+  return withCityPrefixIfNeeded(c, line);
+}
+
+/** Адрес для API / БД без префикса «На дому». */
+export function formatStoredPublicAddress(loc: MasterLocation | null | undefined): string {
+  if (!loc) return '';
+  if (loc.visitType === 'at_home') {
+    if (loc.showExactAddressAfterBooking === true) {
+      return buildAtHomeAddressLine(loc, false);
+    }
+    return buildAtHomeAddressLine(loc, true);
+  }
+  const c = cityLabel(loc);
+  const line = streetBuildingLine(loc, loc.street.trim());
+  const core = withCityPrefixIfNeeded(c, line);
+  const salon = loc.salonName?.trim();
+  if (salon && core) return `${salon}, ${core}`;
+  return salon || core;
+}
+
 /** Дом/корпус уже есть в строке улицы (часто после геокодера). */
 function buildingRedundantWithStreet(street: string, building: string): boolean {
   const b = building.trim();
@@ -87,8 +163,12 @@ export function formatPublicAddress(loc: MasterLocation | null | undefined): str
     return line ? `${visit}, ${line}` : visit;
   }
   if (!base) return 'Адрес пока не указан';
+  const c = cityLabel(loc);
+  const street = stripCityFromAddressLine(loc.street.trim(), c);
+  const line = baseAddressLine({ ...loc, street });
+  const core = line || base;
   const salon = loc.salonName?.trim();
-  return salon ? `${salon}, ${base}` : base;
+  return salon ? `${salon}, ${core}` : core;
 }
 
 /**
@@ -97,34 +177,24 @@ export function formatPublicAddress(loc: MasterLocation | null | undefined): str
  */
 export function formatHomePublicBeforeBooking(loc: MasterLocation | null | undefined): string {
   if (!loc || loc.visitType !== 'at_home') return '';
-  const c = cityLabel(loc);
-  const street = loc.street.trim();
-  if (street) return `${c}, ${street}`;
+  const line = buildAtHomeAddressLine(loc, false);
+  if (line) return line;
   const d = loc.district?.trim();
-  return d ? `${c}, ${d}` : c;
+  if (!d) return isDefaultMinskCity(cityLabel(loc)) ? '' : cityLabel(loc);
+  return withCityPrefixIfNeeded(cityLabel(loc), d);
 }
 
 /** Основная строка адреса с городом (салон или полный адрес без режима скрытия). */
 export function formatCityWithAddressLine(loc: MasterLocation | null | undefined): string {
   if (!loc) return '';
-  const c = cityLabel(loc);
-  const line = baseAddressLine(loc);
-  return line ? `${c}, ${line}` : c;
+  if (loc.visitType === 'at_home') return buildAtHomeAddressLine(loc, true);
+  return formatStoredPublicAddress(loc);
 }
 
-/** Полная строка «после записи» для at_home: город, улица, дом (если не дублируется). */
+/** Полная строка «после записи» для at_home: улица и дом без дубля города. */
 export function formatHomeAfterBookingMainLine(loc: MasterLocation | null | undefined): string {
   if (!loc || loc.visitType !== 'at_home') return formatCityWithAddressLine(loc);
-  const c = cityLabel(loc);
-  const street = loc.street.trim();
-  const building = loc.building.trim();
-  const parts: string[] = [];
-  if (street) parts.push(street);
-  if (building && building !== 'б/н' && !buildingRedundantWithStreet(street, building)) {
-    parts.push(building);
-  }
-  const line = parts.join(', ');
-  return line ? `${c}, ${line}` : c;
+  return buildAtHomeAddressLine(loc, true);
 }
 
 /** Детали приёма на дому — только из «Дополнительно», после записи. */
@@ -216,7 +286,7 @@ export function masterLocationDetailRows(
   if (loc.salonName?.trim()) rows.push({ label: 'Салон', value: loc.salonName.trim() });
   const addressValue =
     loc.visitType === 'at_home' && loc.showExactAddressAfterBooking === true && !revealed
-      ? loc.street.trim() || '—'
+      ? stripCityFromAddressLine(loc.street.trim(), cityLabel(loc)) || '—'
       : loc.visitType === 'at_home'
         ? formatHomeAfterBookingMainLine(loc)
         : baseAddressLine(loc) || '—';

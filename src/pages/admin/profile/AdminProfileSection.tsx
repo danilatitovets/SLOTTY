@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { BY } from 'country-flag-icons/react/1x1';
 import {
   CONTACT_CHANNEL_META,
   contactRowsFromDraft,
 } from '../../../features/master-onboarding/model/masterContacts';
+import { ContactChannelBrandIcon } from '../../master-onboarding/MasterProfileContactsBlock';
 import type { MasterCareerItemType, MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
 import {
@@ -254,21 +256,37 @@ function InfoBlock({
   label,
   value,
   large,
+  leading,
 }: {
   label: string;
   value?: string | null;
   large?: boolean;
+  leading?: ReactNode;
 }) {
+  const text = valueOrDash(value);
   return (
     <div className="rounded-[26px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
       <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{label}</p>
-      <p
-        className={`mt-2 whitespace-pre-wrap leading-relaxed text-neutral-950 ${
-          large ? 'text-[16px] font-semibold' : 'text-[15px] font-medium'
-        }`}
-      >
-        {valueOrDash(value)}
-      </p>
+      {leading ? (
+        <div className="mt-2 flex items-center gap-2.5">
+          {leading}
+          <p
+            className={`min-w-0 flex-1 whitespace-pre-wrap leading-relaxed text-neutral-950 ${
+              large ? 'text-[16px] font-semibold' : 'text-[15px] font-medium'
+            }`}
+          >
+            {text}
+          </p>
+        </div>
+      ) : (
+        <p
+          className={`mt-2 whitespace-pre-wrap leading-relaxed text-neutral-950 ${
+            large ? 'text-[16px] font-semibold' : 'text-[15px] font-medium'
+          }`}
+        >
+          {text}
+        </p>
+      )}
     </div>
   );
 }
@@ -348,7 +366,7 @@ function AdminProfileHero({ draft }: { draft: MasterDraft }) {
 
         <div className="px-5 py-5 text-center">
           <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Профиль мастера</p>
-          <h1 className="mt-1 truncate text-[27px] font-semibold leading-[1.05] tracking-[-0.065em] text-neutral-950">
+          <h1 className="mt-1 px-0.5 text-[clamp(17px,4.8vw,24px)] font-semibold leading-[1.2] tracking-[-0.04em] text-balance text-neutral-950">
             {draft.name.trim() || 'Мастер'}
           </h1>
           <div className="mt-3 flex justify-center">
@@ -429,11 +447,40 @@ function MainSection({
     >
       <InfoBlock label="Имя / название" value={draft.name} large />
       <InfoBlock label="Категория" value={draft.category} />
-      <InfoBlock label="Телефон" value={draft.phone} />
-      {contactRowsFromDraft(draft).map((row) => {
-        const label = CONTACT_CHANNEL_META.find((m) => m.type === row.type)?.label ?? 'Контакт';
-        return <InfoBlock key={row.id} label={label} value={row.value} />;
-      })}
+      <InfoBlock
+        label="Телефон"
+        value={draft.phone}
+        leading={
+          draft.phone?.trim() ? (
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
+              aria-hidden
+            >
+              <BY title="Беларусь" className="h-full w-full object-cover" />
+            </span>
+          ) : undefined
+        }
+      />
+      {contactRowsFromDraft(draft)
+        .filter((row) => row.value.trim())
+        .map((row) => {
+          const label = CONTACT_CHANNEL_META.find((m) => m.type === row.type)?.label ?? 'Контакт';
+          return (
+            <InfoBlock
+              key={row.id}
+              label={label}
+              value={row.value}
+              leading={
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
+                  aria-hidden
+                >
+                  <ContactChannelBrandIcon type={row.type} className="h-[18px] w-[18px]" />
+                </span>
+              }
+            />
+          );
+        })}
       {contactRowsFromDraft(draft).length === 0 && draft.contact.trim() ? (
         <InfoBlock label="Контакты" value={draft.contact} />
       ) : null}
@@ -1086,14 +1133,17 @@ export function AdminProfileSection() {
           contacts: next.contacts,
           photoUrl: next.photoUrl,
           category: next.category,
+          primaryCategoryId: next.primaryCategoryId,
+          primaryCategoryCode: next.primaryCategoryCode,
         });
+        if (useCabinetApi) await refreshDraft();
         closeSheet();
         showSaved();
       } catch (e) {
         setSheetApiError(e instanceof Error ? e.message : 'Ошибка сохранения');
       }
     },
-    [closeSheet, draft, patchProfileToBackend, showSaved, useCabinetApi],
+    [closeSheet, draft, patchProfileToBackend, refreshDraft, showSaved, useCabinetApi],
   );
 
   const saveLocation = useCallback(
@@ -1428,7 +1478,6 @@ export function AdminProfileSection() {
   return (
     <div className="px-4 pb-10">
       <header className="pt-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">SLOTTY</p>
         <h1 className="mt-2 text-[32px] font-semibold leading-tight tracking-[-0.065em] text-neutral-950">Кабинет мастера</h1>
       </header>
 

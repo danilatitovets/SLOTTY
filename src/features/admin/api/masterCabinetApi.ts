@@ -122,6 +122,7 @@ export async function patchMasterMe(body: {
   contact?: string | null;
   contacts?: MasterContactPatch[] | null;
   photoUrl?: string | null;
+  primaryCategoryCode?: string | null;
 }): Promise<void> {
   const res = await apiFetch('/api/masters/me', { method: 'PATCH', body: JSON.stringify(body) });
   if (!res.ok) throw new Error(await readApiError(res));

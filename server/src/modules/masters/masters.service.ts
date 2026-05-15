@@ -636,9 +636,35 @@ export async function getMyMasterCabinet(masterId: string) {
   const br = bookingRules.rows[0] as BookingRulesRow | undefined;
   const paymentDecoded = br ? decodePaymentNote(br.payment_note) : { paymentNote: '', paymentMethods: [] as string[] };
 
+  let primaryCategory = category.rows[0] ?? null;
+  let profileOut = profile;
+
+  if (!primaryCategory && services.length > 0) {
+    const serviceCategoryId = services.find((s) => s.categoryId)?.categoryId;
+    if (serviceCategoryId) {
+      const catFromService = await query<{ id: string; code: string; name: string }>(
+        `select id, code, name from public.service_categories where id = $1 and is_active = true`,
+        [serviceCategoryId],
+      );
+      const row = catFromService.rows[0];
+      if (row) {
+        primaryCategory = { code: row.code, name: row.name };
+        if (!profile.primaryCategoryId) {
+          await query(
+            `update public.master_profiles
+                set primary_category_id = $2, updated_at = now()
+              where master_id = $1`,
+            [masterId, row.id],
+          );
+          profileOut = { ...profile, primaryCategoryId: row.id };
+        }
+      }
+    }
+  }
+
   return {
-    profile,
-    primaryCategory: category.rows[0] ?? null,
+    profile: profileOut,
+    primaryCategory,
     primaryLocation: loc
       ? {
           id: loc.id,

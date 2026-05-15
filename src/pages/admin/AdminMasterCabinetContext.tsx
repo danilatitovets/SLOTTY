@@ -42,7 +42,15 @@ import type { MasterDraft } from '../../features/profile/lib/demoMasterStorage';
 
 export type MasterProfilePatch = Pick<
   MasterDraft,
-  'name' | 'description' | 'phone' | 'contact' | 'photoUrl' | 'contacts' | 'category'
+  | 'name'
+  | 'description'
+  | 'phone'
+  | 'contact'
+  | 'photoUrl'
+  | 'contacts'
+  | 'category'
+  | 'primaryCategoryId'
+  | 'primaryCategoryCode'
 >;
 
 type Ctx = {
@@ -305,6 +313,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
           contacts: contacts?.length ? contacts : null,
           contact: contactLine.trim() ? contactLine.trim() : null,
           photoUrl: next.photoUrl?.trim() ? next.photoUrl.trim() : null,
+          primaryCategoryCode: patch.primaryCategoryCode ?? next.primaryCategoryCode ?? null,
         });
         if (lastSyncedSnapshotRef.current) {
           lastSyncedSnapshotRef.current = cloneDraft({
@@ -316,6 +325,8 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
             photoUrl: next.photoUrl,
             contacts: next.contacts,
             category: next.category,
+            primaryCategoryId: next.primaryCategoryId,
+            primaryCategoryCode: next.primaryCategoryCode,
           });
         }
         setCabinetError(null);

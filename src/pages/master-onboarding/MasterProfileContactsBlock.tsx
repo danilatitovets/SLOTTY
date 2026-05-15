@@ -22,7 +22,7 @@ const contactInputClass = `
   focus:shadow-[0_8px_22px_rgba(17,17,17,0.06)]
 `;
 
-function ContactChannelBrandIcon({
+export function ContactChannelBrandIcon({
   type,
   className,
   tone = 'brand',
