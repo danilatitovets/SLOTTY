@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { HiArrowTopRightOnSquare, HiCheck, HiClipboardDocument, HiShare } from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { resolveMasterBookingLink } from '../../../shared/lib/masterBookingLink';
 import { openTelegramOrBrowserUrl, openTelegramShareUrlPicker } from '../../../shared/lib/telegramWebApp';
@@ -12,9 +13,11 @@ type Props = {
 
 function LinkFieldSkeleton() {
   return (
-    <div className="mt-3 animate-pulse space-y-2 rounded-[18px] bg-[#F1EFEF] p-4">
-      <div className="h-3 w-3/4 max-w-[14rem] rounded bg-neutral-200/90" />
-      <div className="h-4 w-full rounded bg-neutral-200/80" />
+    <div className="mt-2.5 flex animate-pulse items-center gap-2">
+      <div className="h-9 min-w-0 flex-1 rounded-2xl bg-[#F1EFEF]" />
+      <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-200/80" />
+      <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-200/80" />
+      <div className="h-9 w-9 shrink-0 rounded-full bg-neutral-200/80" />
     </div>
   );
 }
@@ -92,47 +95,58 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
 
   const showSkeleton = Boolean(useCabinetApi && cabinetLoading);
 
-  const btnBase =
-    'flex min-h-11 flex-1 items-center justify-center rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98]';
+  const iconBtn =
+    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-800 transition active:scale-[0.94] disabled:opacity-40';
+
+  const statusLine = copied ? 'Скопировано' : shareHint;
 
   return (
-    <div className="rounded-[26px] bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.05)] ring-1 ring-[#F1EFEF]">
-      <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-neutral-950">Ссылка для записи</h2>
-      <p className="mt-1.5 text-[13px] leading-snug text-neutral-500">
-        Отправьте эту ссылку клиентам или добавьте её в Instagram, Telegram, TikTok или Viber
+    <div className="rounded-[22px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(17,17,17,0.04)] ring-1 ring-[#F1EFEF]">
+      <h2 className="text-[15px] font-semibold tracking-[-0.03em] text-neutral-950">Ссылка для записи</h2>
+      <p className="mt-0.5 text-[11px] leading-snug text-neutral-500 line-clamp-2">
+        Отправьте клиентам или добавьте в соцсети
       </p>
 
       {showSkeleton ? (
         <LinkFieldSkeleton />
       ) : resolved ? (
         <>
-          <div className="mt-3 rounded-[18px] bg-[#F1EFEF] px-4 py-3 ring-1 ring-black/[0.04]">
-            <p className="break-all text-[13px] font-medium leading-relaxed text-neutral-800">{resolved.href}</p>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="min-w-0 flex-1 rounded-2xl bg-[#F1EFEF] px-3 py-2 ring-1 ring-black/[0.04]">
+              <p className="truncate text-[12px] font-medium text-neutral-800" title={resolved.href}>
+                {resolved.href}
+              </p>
+            </div>
             <button
               type="button"
               onClick={onCopy}
-              className={`${btnBase} bg-[#E29595] text-white shadow-[0_10px_24px_rgba(226,149,149,0.28)]`}
+              aria-label={copied ? 'Скопировано' : 'Скопировать ссылку'}
+              className={`${iconBtn} ${
+                copied ? 'bg-emerald-500/15 text-emerald-700' : 'bg-[#E29595] text-white shadow-[0_6px_16px_rgba(226,149,149,0.28)]'
+              }`}
             >
-              {copied ? 'Скопировано' : 'Скопировать'}
+              {copied ? <HiCheck className="h-[19px] w-[19px]" strokeWidth={2.25} /> : <HiClipboardDocument className="h-[19px] w-[19px]" />}
             </button>
-            <button type="button" onClick={() => void onShare()} className={`${btnBase} bg-[#F1EFEF] text-neutral-900`}>
-              Поделиться
+            <button
+              type="button"
+              onClick={() => void onShare()}
+              aria-label="Поделиться ссылкой"
+              className={`${iconBtn} bg-[#F1EFEF]`}
+            >
+              <HiShare className="h-[19px] w-[19px]" />
             </button>
-            <button type="button" onClick={onOpen} className={`${btnBase} bg-[#F1EFEF] text-neutral-900`}>
-              Открыть
+            <button type="button" onClick={onOpen} aria-label="Открыть ссылку" className={`${iconBtn} bg-[#F1EFEF]`}>
+              <HiArrowTopRightOnSquare className="h-[19px] w-[19px]" />
             </button>
           </div>
-          {shareHint ? (
-            <p className="mt-2 text-center text-[12px] font-medium text-neutral-600" role="status">
-              {shareHint}
+          {statusLine ? (
+            <p className="mt-1.5 text-center text-[11px] font-medium text-neutral-600" role="status">
+              {statusLine}
             </p>
           ) : null}
         </>
       ) : (
-        <p className="mt-3 text-[13px] leading-relaxed text-neutral-500">
+        <p className="mt-2 text-[12px] leading-snug text-neutral-500">
           Не удалось сформировать ссылку: укажите <code className="rounded bg-[#F1EFEF] px-1">VITE_TELEGRAM_BOT_USERNAME</code> в
           окружении или откройте приложение по HTTPS с сохранённым профилем мастера.
         </p>

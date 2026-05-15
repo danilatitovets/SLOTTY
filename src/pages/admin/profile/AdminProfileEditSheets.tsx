@@ -520,6 +520,9 @@ export function SheetExperience({
   );
 }
 
+/** В кабинете город зафиксирован (MVP по Беларуси). */
+const MASTER_CABINET_CITY = 'Минск';
+
 export function SheetAddress({
   draft,
   onSave,
@@ -536,12 +539,10 @@ export function SheetAddress({
     const l = draft.location;
     return [
       l.visitType,
-      l.city ?? '',
       l.street,
       l.building,
       l.buildingDetail ?? '',
       l.salonName ?? '',
-      l.district ?? '',
       l.entrance ?? '',
       l.floor ?? '',
       l.room ?? '',
@@ -556,12 +557,10 @@ export function SheetAddress({
   }, [draft.location]);
 
   const [visitType, setVisitType] = useState<MasterVisitType>(loc.visitType);
-  const [city, setCity] = useState(loc.city?.trim() ?? '');
   const [street, setStreet] = useState(loc.street);
   const [building, setBuilding] = useState(loc.building);
   const [salonName, setSalonName] = useState(loc.salonName?.trim() ?? '');
   const [buildingDetail, setBuildingDetail] = useState(loc.buildingDetail?.trim() ?? '');
-  const [district, setDistrict] = useState(loc.district?.trim() ?? '');
   const [showExactAddressAfterBooking, setShowExactAddressAfterBooking] = useState(
     loc.showExactAddressAfterBooking === true,
   );
@@ -575,26 +574,13 @@ export function SheetAddress({
   const [lat, setLat] = useState<number | undefined>(loc.lat);
   const [lng, setLng] = useState<number | undefined>(loc.lng);
 
-  const mapAddressLine = useMemo(() => {
-    const s = street.trim();
-    if (!s) return '';
-    const b = building.trim();
-    const withBuilding = b && b !== 'б/н' ? `${s}, ${b}` : s;
-    const c = city.trim() || 'Минск';
-    const lower = withBuilding.toLowerCase();
-    if (c && !lower.includes(c.toLowerCase())) return `${c}, ${withBuilding}`;
-    return withBuilding;
-  }, [street, building, city]);
-
   useEffect(() => {
     const l = draft.location;
     setVisitType(l.visitType);
-    setCity(l.city?.trim() ?? '');
     setStreet(l.street);
     setBuilding(l.building);
     setSalonName(l.salonName?.trim() ?? '');
     setBuildingDetail(l.buildingDetail?.trim() ?? '');
-    setDistrict(l.district?.trim() ?? '');
     setShowExactAddressAfterBooking(l.showExactAddressAfterBooking === true);
     setEntrance(l.entrance ?? '');
     setFloor(l.floor ?? '');
@@ -607,17 +593,29 @@ export function SheetAddress({
     setLng(l.lng);
   }, [locationSyncFingerprint]);
 
+  const onStreetLineChange = useCallback((value: string) => {
+    const t = value.trim();
+    if (!t) {
+      setStreet('');
+      setBuilding('б/н');
+      return;
+    }
+    const { street: s, building: b } = splitReferenceLabelToStreetBuilding(t);
+    setStreet(s);
+    setBuilding(b);
+  }, []);
+
   const save = () => {
     const isHome = visitType === 'at_home';
     onSave({
       ...draft.location,
       visitType,
-      city: city.trim() || undefined,
+      city: MASTER_CABINET_CITY,
       street: street.trim(),
-      building: building.trim(),
+      building: building.trim() || 'б/н',
       salonName: !isHome ? salonName.trim() || undefined : undefined,
       buildingDetail: isHome ? buildingDetail.trim() || undefined : undefined,
-      district: isHome ? district.trim() || undefined : undefined,
+      district: undefined,
       showExactAddressAfterBooking: isHome ? showExactAddressAfterBooking : undefined,
       entrance: entrance.trim() || undefined,
       floor: floor.trim() || undefined,
@@ -655,16 +653,16 @@ export function SheetAddress({
         ))}
       </div>
 
-      <p className="text-[12px] leading-snug text-neutral-500">
-        {visitType === 'at_home'
-          ? 'Выезд к клиенту: ниже — адрес приёма и как показывать его в каталоге до записи.'
-          : 'Приём в салоне или студии: укажите название точки и адрес для клиентов.'}
-      </p>
+      {visitType === 'studio' ? (
+        <p className="text-[12px] leading-snug text-neutral-500">
+          Приём в салоне или студии: укажите название точки и адрес для клиентов.
+        </p>
+      ) : null}
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Город</span>
-        <input value={city} onChange={(e) => setCity(e.target.value)} className={fieldClass()} placeholder="Минск" />
-      </label>
+      <div className="rounded-[22px] bg-[#F1EFEF] px-4 py-3 ring-1 ring-black/[0.04]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Город</p>
+        <p className="mt-1 text-[15px] font-semibold text-neutral-900">{MASTER_CABINET_CITY}</p>
+      </div>
 
       {visitType === 'studio' ? (
         <label className="block">
@@ -687,9 +685,13 @@ export function SheetAddress({
         </p>
         <OnboardingAddressMap
           key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
-          city={city.trim() || 'Минск'}
+          city={MASTER_CABINET_CITY}
           visitType={visitType}
-          addressLine={mapAddressLine}
+          street={street}
+          onStreetChange={onStreetLineChange}
+          inputLabel={visitType === 'at_home' ? 'Адрес приёма (улица / как в подъезде)' : 'Улица'}
+          inputPlaceholder={visitType === 'at_home' ? 'Начните вводить адрес — подсказки и карта обновятся' : 'Улица для поиска на карте'}
+          viewportDropdown
           initialLat={lat ?? null}
           initialLng={lng ?? null}
           onPick={(res) => {
@@ -702,20 +704,6 @@ export function SheetAddress({
         />
       </div>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">
-          {visitType === 'at_home' ? 'Адрес приёма (улица / как в подъезде)' : 'Улица'}
-        </span>
-        <input value={street} onChange={(e) => setStreet(e.target.value)} className={fieldClass()} />
-      </label>
-
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">
-          {visitType === 'at_home' ? 'Дом, корпус' : 'Дом, корпус (если не в строке выше)'}
-        </span>
-        <input value={building} onChange={(e) => setBuilding(e.target.value)} className={fieldClass()} />
-      </label>
-
       {visitType === 'at_home' ? (
         <>
           <label className="block">
@@ -725,15 +713,6 @@ export function SheetAddress({
               onChange={(e) => setBuildingDetail(e.target.value)}
               className={fieldClass()}
               placeholder="При необходимости"
-            />
-          </label>
-          <label className="block">
-            <span className="text-[13px] font-semibold text-neutral-500">Район или ориентир для каталога</span>
-            <input
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              className={fieldClass()}
-              placeholder="Например, Московский район"
             />
           </label>
           <div className="rounded-[26px] bg-[#F1EFEF] p-4">
