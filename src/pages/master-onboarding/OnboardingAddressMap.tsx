@@ -57,6 +57,22 @@ export function splitReferenceLabelToStreetBuilding(label: string): {
   };
 }
 
+/**
+ * Как {@link splitReferenceLabelToStreetBuilding}, но если строка ещё не в формате «…, дом»,
+ * возвращает исходную строку без обрезки концов — чтобы в поле ввода сохранялись пробелы при наборе.
+ */
+export function splitReferenceLabelToStreetBuildingLenient(label: string): {
+  street: string;
+  building: string;
+} {
+  const trimmed = label.trim();
+  const m = trimmed.match(/^(.+?),\s*([^,]{1,40})\s*$/);
+  if (m && m[1].trim() && m[2].trim()) {
+    return { street: m[1].trim(), building: m[2].trim() };
+  }
+  return { street: label, building: 'б/н' };
+}
+
 function localGeocodePart(street: string): string {
   return street.trim();
 }
@@ -198,6 +214,11 @@ type Props = {
   onInputBlur?: () => void;
   inputMaxLength?: number;
   viewportDropdown?: boolean;
+  /**
+   * Не дергать suggest/геокодер по сохранённому адресу при открытии — только после фокуса в поле
+   * (удобно в кабинете: не всплывает список, пока пользователь не начал правку).
+   */
+  suppressSuggestUntilFocus?: boolean;
 
   /** Без поля ввода — только строка адреса. */
   addressLine?: string;
@@ -220,10 +241,13 @@ export function OnboardingAddressMap({
   onInputBlur,
   inputMaxLength = 200,
   viewportDropdown = false,
+  suppressSuggestUntilFocus = false,
   addressLine: addressLineLegacy = '',
 }: Props) {
   const hasIntegratedInput = onStreetChange != null;
   const streetValue = hasIntegratedInput ? street ?? '' : addressLineLegacy;
+
+  const [suggestArmed, setSuggestArmed] = useState(!suppressSuggestUntilFocus);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputWrapRef = useRef<HTMLDivElement>(null);
@@ -429,6 +453,7 @@ export function OnboardingAddressMap({
   /** Если координаты не сохранились, но адрес есть — один раз ставим точку по геокодеру. */
   useEffect(() => {
     if (!mapReady) return;
+    if (suppressSuggestUntilFocus && !suggestArmed) return;
 
     const hasInitial =
       initialLat != null &&
@@ -458,7 +483,7 @@ export function OnboardingAddressMap({
     })();
 
     return () => ac.abort();
-  }, [mapReady, initialLat, initialLng, searchLocalPart, city, applyPick]);
+  }, [mapReady, initialLat, initialLng, searchLocalPart, city, applyPick, suppressSuggestUntilFocus, suggestArmed]);
 
   const runSearch = useCallback(
     async (raw: string) => {
@@ -538,6 +563,21 @@ export function OnboardingAddressMap({
   );
 
   useEffect(() => {
+    if (suppressSuggestUntilFocus && !suggestArmed) {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      if (abortSearchRef.current) {
+        abortSearchRef.current.abort();
+      }
+      setItems([]);
+      setOpen(false);
+      setHint(null);
+      setLoading(false);
+      return undefined;
+    }
+
     scheduleSearch(searchLocalPart);
 
     return () => {
@@ -545,7 +585,7 @@ export function OnboardingAddressMap({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [searchLocalPart, scheduleSearch]);
+  }, [searchLocalPart, scheduleSearch, suppressSuggestUntilFocus, suggestArmed]);
 
   const dropPlacement = useMemo((): ViewportListPlacement | null => {
     if (!viewportDropdown || !open || items.length === 0) return null;
@@ -703,8 +743,19 @@ export function OnboardingAddressMap({
             type="text"
             value={streetValue}
             onChange={(e) => onStreetChange?.(e.target.value)}
-            onBlur={onInputBlur}
+            onBlur={() => {
+              onInputBlur?.();
+              if (suppressSuggestUntilFocus) {
+                setSuggestArmed(false);
+                setOpen(false);
+                setItems([]);
+                setHint(null);
+              }
+            }}
             onFocus={() => {
+              if (suppressSuggestUntilFocus) {
+                setSuggestArmed(true);
+              }
               if (items.length > 0) {
                 setOpen(true);
                 return;

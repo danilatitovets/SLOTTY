@@ -62,7 +62,8 @@ type Ctx = {
   flushScheduleToBackend: (next: MasterDraft) => Promise<void>;
   /** Только поля профиля (без адреса, расписания и услуг) — быстрее, чем полный flush. */
   patchProfileToBackend: (patch: MasterProfilePatch) => Promise<void>;
-  refreshDraft: () => void;
+  /** Перечитать черновик с сервера без «полной загрузки» (без блокирующего cabinetLoading). */
+  refreshDraft: () => Promise<void>;
   appointments: DemoMasterAppointment[];
   persistAppointments: (rows: DemoMasterAppointment[]) => void | Promise<void>;
   cabinetLoading: boolean;
@@ -405,10 +406,13 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     [scheduleSync, useCabinetApi],
   );
 
-  const refreshDraft = useCallback(() => {
-    if (useCabinetApi) void loadFromApi();
-    else setDraft(getMasterDraft());
-  }, [useCabinetApi, loadFromApi]);
+  const refreshDraft = useCallback(async () => {
+    if (useCabinetApi) {
+      await reloadCabinetFromApiSilent();
+      return;
+    }
+    setDraft(getMasterDraft());
+  }, [useCabinetApi, reloadCabinetFromApiSilent]);
 
   useEffect(() => {
     if (useCabinetApi) return undefined;

@@ -41,7 +41,11 @@ import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { ProfilePhotoAdjust } from '../../../shared/ui/ProfilePhotoAdjust';
 import { fetchServiceCategories, type ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
 import { MasterProfileContactsBlock } from '../../master-onboarding/MasterProfileContactsBlock';
-import { OnboardingAddressMap, splitReferenceLabelToStreetBuilding } from '../../master-onboarding/OnboardingAddressMap';
+import {
+  OnboardingAddressMap,
+  splitReferenceLabelToStreetBuilding,
+  splitReferenceLabelToStreetBuildingLenient,
+} from '../../master-onboarding/OnboardingAddressMap';
 
 const FALLBACK_CATEGORIES = [
   'Маникюр',
@@ -594,13 +598,12 @@ export function SheetAddress({
   }, [locationSyncFingerprint]);
 
   const onStreetLineChange = useCallback((value: string) => {
-    const t = value.trim();
-    if (!t) {
+    if (value === '') {
       setStreet('');
       setBuilding('б/н');
       return;
     }
-    const { street: s, building: b } = splitReferenceLabelToStreetBuilding(t);
+    const { street: s, building: b } = splitReferenceLabelToStreetBuildingLenient(value);
     setStreet(s);
     setBuilding(b);
   }, []);
@@ -676,7 +679,7 @@ export function SheetAddress({
         </label>
       ) : null}
 
-      <div className="space-y-2">
+      <div className="space-y-2 overflow-visible">
         <p className="text-[13px] font-semibold text-neutral-500">Карта</p>
         <p className="text-[12px] leading-snug text-neutral-500">
           {visitType === 'at_home'
@@ -689,9 +692,9 @@ export function SheetAddress({
           visitType={visitType}
           street={street}
           onStreetChange={onStreetLineChange}
-          inputLabel={visitType === 'at_home' ? 'Адрес приёма (улица / как в подъезде)' : 'Улица'}
-          inputPlaceholder={visitType === 'at_home' ? 'Начните вводить адрес — подсказки и карта обновятся' : 'Улица для поиска на карте'}
-          viewportDropdown
+          inputLabel="Адрес"
+          inputPlaceholder="Начните вводить — подсказки под полем. Точку можно уточнить на карте."
+          suppressSuggestUntilFocus
           initialLat={lat ?? null}
           initialLng={lng ?? null}
           onPick={(res) => {
@@ -705,20 +708,10 @@ export function SheetAddress({
       </div>
 
       {visitType === 'at_home' ? (
-        <>
-          <label className="block">
-            <span className="text-[13px] font-semibold text-neutral-500">Корпус / строение</span>
-            <input
-              value={buildingDetail}
-              onChange={(e) => setBuildingDetail(e.target.value)}
-              className={fieldClass()}
-              placeholder="При необходимости"
-            />
-          </label>
-          <div className="rounded-[26px] bg-[#F1EFEF] p-4">
+        <div className="rounded-[26px] bg-[#F1EFEF] p-4">
             <p className="text-[13px] font-semibold text-neutral-500">Адрес в каталоге до записи</p>
             <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-              Улица из поля выше видна всем. Подъезд, этаж и квартира — только в деталях ниже.
+              Улица из поля выше видна всем. Корпус, подъезд, этаж и квартира — только в деталях ниже.
             </p>
             <div
               className="mt-3 grid grid-cols-1 gap-2 rounded-[22px] bg-white/80 p-1.5 sm:grid-cols-2"
@@ -753,7 +746,18 @@ export function SheetAddress({
               </button>
             </div>
           </div>
-        </>
+      ) : null}
+
+      {visitType === 'at_home' ? (
+        <label className="block">
+          <span className="text-[13px] font-semibold text-neutral-500">Корпус / строение</span>
+          <input
+            value={buildingDetail}
+            onChange={(e) => setBuildingDetail(e.target.value)}
+            className={fieldClass()}
+            placeholder="При необходимости"
+          />
+        </label>
       ) : null}
 
       <label className="block">

@@ -58,6 +58,16 @@ function IconEyeOff({ className }: { className?: string }) {
   );
 }
 
+/** Карточка / экран — предпросмотр для клиента (не путать с видимостью услуги). */
+function IconClientPreview({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <rect x="3" y="5" width="18" height="14" rx="2" strokeLinejoin="round" />
+      <path d="M7 9h10M7 13h6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function IconCopy({ className }: { className?: string }) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -432,12 +442,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       setListError(null);
       try {
         const prevById = new Map(services.map((s) => [s.id, s]));
+        const patches: Promise<unknown>[] = [];
         for (const s of reindexed) {
           if (!isUuid(s.id)) continue;
           const old = prevById.get(s.id);
           if (!old || (old.sortOrder ?? 0) === (s.sortOrder ?? 0)) continue;
-          await patchMasterService(s.id, { sortOrder: s.sortOrder ?? 0 });
+          patches.push(patchMasterService(s.id, { sortOrder: s.sortOrder ?? 0 }));
         }
+        await Promise.all(patches);
         await refreshDraft();
         showSuccessToast('Порядок обновлен');
       } catch (e) {
@@ -464,13 +476,15 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     try {
       if (isUuid(deleteTarget.id)) {
         await deleteMasterService(deleteTarget.id);
-        await refreshDraft();
+        setDeleteTarget(null);
+        setDeleteError(null);
         showSuccessToast('Услуга удалена');
+        await refreshDraft();
       } else {
         persistServices(services.filter((service) => service.id !== deleteTarget.id), 'Услуга удалена');
+        setDeleteTarget(null);
+        setDeleteError(null);
       }
-      setDeleteTarget(null);
-      setDeleteError(null);
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : 'Не удалось удалить');
     }
@@ -480,32 +494,20 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     <div className="space-y-4">
       <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
         <div className="rounded-[30px] bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
-          <div className="flex items-start justify-between gap-5">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-                Каталог
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
+              Каталог
+            </p>
+
+            <h2 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
+              Услуги
+            </h2>
+
+            {listError ? (
+              <p className="mt-3 rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
+                {listError}
               </p>
-
-              <h2 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
-                Услуги
-              </h2>
-
-              {listError ? (
-                <p className="mt-3 rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
-                  {listError}
-                </p>
-              ) : null}
-
-            </div>
-
-            <div className="flex h-[4.5rem] w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-[26px] bg-[#F1EFEF] text-center">
-              <p className="text-[26px] font-semibold leading-none tracking-[-0.06em] text-neutral-950">
-                {services.length}
-              </p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                всего
-              </p>
-            </div>
+            ) : null}
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
@@ -672,15 +674,18 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
                   type="button"
                   onClick={() => setPreviewTarget(service)}
                   className={iconButtonClass()}
-                  aria-label="Предпросмотр услуги"
+                  aria-label="Как услуга выглядит для клиента"
                   title="Предпросмотр"
                 >
-                  <IconEye />
+                  <IconClientPreview />
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPreviewTarget(null);
                     setDeleteError(null);
                     setDeleteTarget(service);
                   }}

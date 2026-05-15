@@ -7,6 +7,7 @@ import {
   getCurrentMasterPlan,
   getPlanLimits,
   isFreeAppointmentLimitAlmostReached,
+  planBadgeLabel,
 } from '../../../features/billing/model/masterPlans';
 import {
   appointmentStatusLabel,
@@ -96,11 +97,12 @@ function formatMoney(value: number): string {
   return `${value} BYN`;
 }
 
-function tabEmptyText(tab: SubTab): { title: string; text: string } {
+function tabEmptyText(tab: SubTab): { title: string; text: string; hint?: string } {
   if (tab === 'new') {
     return {
-      title: 'Новых заявок нет',
+      title: 'Новых заявок пока нет',
       text: 'Когда клиент отправит заявку на запись, она появится здесь.',
+      hint: 'Заявки можно будет подтвердить или отклонить.',
     };
   }
 
@@ -125,13 +127,11 @@ function StatCard({
   label: string;
 }) {
   return (
-    <div className="rounded-[24px] bg-[#F1EFEF] px-4 py-3.5">
-      <p className="text-[22px] font-semibold leading-none tracking-[-0.055em] text-neutral-950">
+    <div className="flex min-h-[4.25rem] flex-col items-center justify-center rounded-[18px] bg-[#FAFAFA] px-2 py-2.5 text-center">
+      <p className="text-[20px] font-semibold tabular-nums leading-none tracking-[-0.04em] text-[#E29595]">
         {value}
       </p>
-      <p className="mt-1.5 text-[12px] font-medium leading-snug text-neutral-500">
-        {label}
-      </p>
+      <p className="mt-1.5 text-center text-[12px] font-medium leading-tight text-neutral-600">{label}</p>
     </div>
   );
 }
@@ -413,22 +413,14 @@ export function AdminAppointmentsTab({
   const empty = tabEmptyText(subTab);
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-            Клиенты
-          </p>
-
-          <h2 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
-            Записи
-          </h2>
-
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <StatCard value={stats.pending} label="новые" />
-            <StatCard value={stats.confirmed} label="активные" />
-            <StatCard value={stats.history} label="история" />
-          </div>
+    <div className="space-y-3">
+      <section className="rounded-[24px] border border-neutral-100/90 bg-white p-4 shadow-[0_8px_28px_rgba(17,17,17,0.04)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Клиенты</p>
+        <h2 className="mt-1 text-[22px] font-semibold leading-tight tracking-[-0.045em] text-neutral-950">Записи</h2>
+        <div className="mt-3.5 grid grid-cols-3 gap-2">
+          <StatCard value={stats.pending} label="новые" />
+          <StatCard value={stats.confirmed} label="активные" />
+          <StatCard value={stats.history} label="история" />
         </div>
       </section>
 
@@ -440,29 +432,44 @@ export function AdminAppointmentsTab({
 
       {billingPlan.plan === 'free' ? (
         <section
-          className={`rounded-[30px] px-4 py-4 shadow-[0_10px_28px_rgba(17,17,17,0.05)] ${
-            atFreeApptLimit ? 'bg-[#FDE8E8]' : almostFreeAppt ? 'bg-[#FFF4E8]' : 'bg-white'
+          className={`rounded-[24px] border bg-white px-3.5 py-3 shadow-[0_6px_20px_rgba(17,17,17,0.035)] ${
+            atFreeApptLimit
+              ? 'border-amber-200/90'
+              : almostFreeAppt
+                ? 'border-amber-100/80'
+                : 'border-neutral-100/90'
           }`}
         >
-          <p className="text-[14px] font-semibold text-neutral-900">Записи в этом месяце (Free)</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">
-            {monthlyApptCount} / {freeApptCap}
-            {atFreeApptLimit ? ' — лимит Free исчерпан, откройте Pro.' : almostFreeAppt ? ' — почти лимит Free.' : ''}
-          </p>
-          <Link
-            to={ADMIN_BILLING_PATH}
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-[#E29595] px-4 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(226,149,149,0.22)]"
-          >
-            Мой тариф
-          </Link>
-          <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 gap-y-1">
+            <p className="min-w-0 flex-1 text-[14px] font-medium leading-snug text-neutral-700">
+              {planBadgeLabel(billingPlan.plan)} · {monthlyApptCount} / {freeApptCap} записей в этом месяце
+            </p>
+            <Link
+              to={ADMIN_BILLING_PATH}
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#E29595] px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(226,149,149,0.28)] transition active:scale-[0.97] hover:opacity-95"
+            >
+              Мой тариф
+            </Link>
+          </div>
+          {atFreeApptLimit || almostFreeAppt ? (
+            <p
+              className={`mt-1.5 text-[11px] font-medium leading-snug ${
+                atFreeApptLimit ? 'text-amber-800/90' : 'text-amber-800/75'
+              }`}
+            >
+              {atFreeApptLimit
+                ? 'Лимит Free исчерпан — откройте Pro в тарифах.'
+                : 'Почти достигнут лимит Free на этот месяц.'}
+            </p>
+          ) : null}
+          <p className="mt-1.5 text-[10px] leading-snug text-neutral-400">
             В демо-режиме лимит считается на этом устройстве.
           </p>
         </section>
       ) : null}
 
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="grid grid-cols-3 gap-1.5 rounded-[28px] bg-white/65 p-1.5 backdrop-blur-xl">
+      <section className="rounded-[24px] border border-neutral-100/80 bg-[#FAFAFA] p-1">
+        <div className="grid grid-cols-3 gap-1">
           {tabs.map((tab) => {
             const active = subTab === tab.id;
 
@@ -471,17 +478,16 @@ export function AdminAppointmentsTab({
                 key={tab.id}
                 type="button"
                 onClick={() => setSubTab(tab.id)}
-                className={`flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-[13px] font-semibold transition active:scale-[0.98] ${
+                className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[20px] px-1.5 py-2 text-[13px] font-semibold transition active:scale-[0.98] ${
                   active
-                    ? 'bg-[#E29595] text-white shadow-[0_10px_24px_rgba(226,149,149,0.24)]'
-                    : 'text-neutral-700'
+                    ? 'bg-[#E29595] text-white shadow-[0_8px_20px_rgba(226,149,149,0.28)] ring-1 ring-[#E29595]/40'
+                    : 'text-neutral-600 hover:bg-white/70'
                 }`}
               >
                 <span className="truncate">{tab.label}</span>
-
                 <span
-                  className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
-                    active ? 'bg-white/25 text-white' : 'bg-white text-neutral-500'
+                  className={`flex h-[1.375rem] min-w-[1.375rem] shrink-0 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums ${
+                    active ? 'bg-white/30 text-white' : 'bg-neutral-200/80 text-neutral-700'
                   }`}
                 >
                   {tab.count}
@@ -493,9 +499,14 @@ export function AdminAppointmentsTab({
       </section>
 
       {sortedFiltered.length === 0 ? (
-        <NothingFoundCard title={empty.title} text={empty.text} />
+        <NothingFoundCard
+          title={empty.title}
+          text={empty.text}
+          hint={empty.hint}
+          className="rounded-[28px] border border-neutral-100/90 bg-white py-8 shadow-[0_8px_28px_rgba(17,17,17,0.04)] [&_img]:mb-4 [&_img]:max-w-[14rem]"
+        />
       ) : (
-        <ul className="flex flex-col gap-3 rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
+        <ul className="flex flex-col gap-2.5 rounded-[28px] bg-[#F1EFEF] p-2.5 shadow-[0_10px_28px_rgba(17,17,17,0.04)]">
           {sortedFiltered.map((appointment) => (
             <li key={appointment.id}>
               <AppointmentCard

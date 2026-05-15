@@ -6,7 +6,10 @@ export function AdminScheduleSection() {
   const { draft, persistDraft } = useAdminMasterDraft();
 
   return (
-    <AdminSectionLayout title="График работы">
+    <AdminSectionLayout
+      title="Расписание записи"
+      subtitle="Настройте время, когда клиенты смогут записаться к вам."
+    >
       <AdminScheduleTab draft={draft} onPersist={persistDraft} />
     </AdminSectionLayout>
   );

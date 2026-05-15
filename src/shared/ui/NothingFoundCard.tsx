@@ -4,12 +4,14 @@ import { NOTHING_FOUND_ILLUSTRATION_SRC } from './nothingFoundIllustrationSrc';
 type Props = {
   title: string;
   text: string;
+  /** Дополнительная строка мелким шрифтом под основным текстом */
+  hint?: string;
   /** Кнопка или ссылка под текстом */
   action?: ReactNode;
   className?: string;
 };
 
-export function NothingFoundCard({ title, text, action, className = '' }: Props) {
+export function NothingFoundCard({ title, text, hint, action, className = '' }: Props) {
   return (
     <div
       className={`rounded-[34px] bg-[#F1EFEF] px-6 py-10 text-center shadow-[0_12px_40px_rgba(17,17,17,0.045)] ${className}`.trim()}
@@ -24,6 +26,9 @@ export function NothingFoundCard({ title, text, action, className = '' }: Props)
       />
       <h2 className="text-[22px] font-semibold tracking-[-0.05em] text-neutral-950">{title}</h2>
       <p className="mx-auto mt-3 max-w-[21rem] text-[15px] leading-relaxed text-neutral-500">{text}</p>
+      {hint ? (
+        <p className="mx-auto mt-2 max-w-[21rem] text-[13px] leading-relaxed text-neutral-400">{hint}</p>
+      ) : null}
       {action ? <div className="mt-7 flex flex-col items-stretch sm:items-center">{action}</div> : null}
     </div>
   );

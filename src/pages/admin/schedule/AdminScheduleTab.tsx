@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type {
-  MasterDraft,
-  MasterOnboardingService,
-  MasterSchedule,
-} from '../../../features/profile/lib/demoMasterStorage';
+import { Link } from 'react-router-dom';
+import type { MasterDraft, MasterSchedule } from '../../../features/profile/lib/demoMasterStorage';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
-import { NothingFoundCard } from '../../../shared/ui/NothingFoundCard';
+import { mergeScheduleTimeSelectOptions } from './scheduleTimeSelectOptions';
 import { AdminMasterRealSlotsPanel } from './AdminMasterRealSlotsPanel';
-import { SCHEDULE_TIME_SELECT_OPTIONS } from './scheduleTimeSelectOptions';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useAdminMasterDraft } from '../useAdminMasterData';
-
-const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
-const BOOKING_HORIZON_DAYS = 365;
-/** В черновике поле сохраняется для совместимости; перерыв после записи не используется. */
-const SCHEDULE_GAP_MINUTES = 0;
+import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 
 type ScheduleWindow = {
   id: string;
@@ -23,7 +15,7 @@ type ScheduleWindow = {
 };
 
 type DateSlotDay = {
-  date: string; // YYYY-MM-DD
+  date: string;
   windows: ScheduleWindow[];
 };
 
@@ -38,57 +30,28 @@ type ScheduleWithDateSlots = MasterSchedule & {
   dateSlotRules?: DateSlotRule[];
 };
 
+type ScheduleMode = 'weekly' | 'manual';
+
+type WeeklyDayConfig = {
+  uiWeekday: number;
+  enabled: boolean;
+  intervals: ScheduleWindow[];
+};
+
 type Props = {
   draft: MasterDraft;
   onPersist: (next: MasterDraft) => void;
 };
 
-function IconChevronLeft({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden
-    >
-      <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const WEEKDAY_NAMES = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'] as const;
 
-function IconChevronRight({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden
-    >
-      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const BOOKING_HORIZON_OPTIONS = [14, 30, 60, 90] as const;
+const GAP_OPTIONS = [0, 5, 10, 15, 30] as const;
+const MIN_LEAD_OPTIONS = [1, 3, 6, 12, 24] as const;
 
 function IconPlus({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M12 5v14M5 12h14" strokeLinecap="round" />
     </svg>
   );
@@ -96,16 +59,7 @@ function IconPlus({ className }: { className?: string }) {
 
 function IconClose({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden
-    >
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
     </svg>
   );
@@ -115,7 +69,6 @@ function newId(prefix = 'id'): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
-
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
@@ -127,18 +80,12 @@ function timeToMinutes(time: string): number {
   const [hoursRaw, minutesRaw] = time.split(':');
   const hours = Number(hoursRaw);
   const minutes = Number(minutesRaw);
-
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
-
   return hours * 60 + minutes;
 }
 
 function createWindow(startTime = '10:00', endTime = '18:00'): ScheduleWindow {
-  return {
-    id: newId('window'),
-    startTime,
-    endTime,
-  };
+  return { id: newId('window'), startTime, endTime };
 }
 
 function startOfDay(date: Date): Date {
@@ -147,20 +94,10 @@ function startOfDay(date: Date): Date {
   return next;
 }
 
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
-}
-
-function addMonths(date: Date, months: number): Date {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return startOfMonth(next);
 }
 
 function toIsoDate(date: Date): string {
@@ -172,6 +109,7 @@ function parseIsoDate(iso: string): Date {
   return new Date(Number(yearRaw), Number(monthRaw) - 1, Number(dayRaw));
 }
 
+/** Пн=0 … Вс=6 */
 function getWeekdayIndex(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
@@ -180,667 +118,534 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function formatMonthTitle(date: Date): string {
-  return capitalize(
-    new Intl.DateTimeFormat('ru-RU', {
-      month: 'long',
-      year: 'numeric',
-    }).format(date),
-  );
-}
-
-function formatDateLong(date: Date): string {
-  return capitalize(
-    new Intl.DateTimeFormat('ru-RU', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    }).format(date),
-  );
-}
-
-function formatDateShort(date: Date): string {
-  return new Intl.DateTimeFormat('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-  }).format(date);
-}
-
 function getScheduleRules(schedule: MasterSchedule): DateSlotRule[] {
   const nextSchedule = schedule as ScheduleWithDateSlots;
   return Array.isArray(nextSchedule.dateSlotRules) ? nextSchedule.dateSlotRules : [];
 }
 
-function getRule(schedule: MasterSchedule, serviceId: string | 'all'): DateSlotRule {
-  const rules = getScheduleRules(schedule);
-  const exact = rules.find((rule) => rule.serviceId === serviceId);
-
-  if (exact) {
-    return {
-      ...exact,
-      gapMinutes: SCHEDULE_GAP_MINUTES,
-      days: exact.days.map((day) => ({
-        ...day,
-        windows: day.windows.map((window) => ({ ...window })),
-      })),
-    };
+function anchorIsoForUiWeekday(uiWeekday: number): string {
+  const today = startOfDay(new Date());
+  for (let i = 0; i < 14; i += 1) {
+    const d = addDays(today, i);
+    if (getWeekdayIndex(d) === uiWeekday) return toIsoDate(d);
   }
-
-  const allRule = rules.find((rule) => rule.serviceId === 'all');
-
-  if (allRule && serviceId !== 'all') {
-    return {
-      serviceId,
-      gapMinutes: SCHEDULE_GAP_MINUTES,
-      bookingHorizonDays: allRule.bookingHorizonDays,
-      days: allRule.days.map((day) => ({
-        ...day,
-        windows: day.windows.map((window) => ({ ...window, id: newId('window') })),
-      })),
-    };
-  }
-
-  return {
-    serviceId,
-    days: [],
-    gapMinutes: SCHEDULE_GAP_MINUTES,
-    bookingHorizonDays: BOOKING_HORIZON_DAYS,
-  };
+  return toIsoDate(today);
 }
 
-function upsertRule(schedule: MasterSchedule, rule: DateSlotRule): MasterSchedule {
-  const rules = getScheduleRules(schedule);
-  const exists = rules.some((item) => item.serviceId === rule.serviceId);
-
-  const nextRules = exists
-    ? rules.map((item) => (item.serviceId === rule.serviceId ? rule : item))
-    : [...rules, rule];
-
-  const firstDay = rule.days.find((day) => day.windows.length > 0);
-  const firstWindow = firstDay?.windows[0];
-
-  const workDays = Array.from(
-    new Set(rule.days.filter((day) => day.windows.length > 0).map((day) => getWeekdayIndex(parseIsoDate(day.date)))),
-  ).sort((a, b) => a - b);
-
-  return {
-    ...schedule,
-    workDays: workDays.length > 0 ? workDays : schedule.workDays,
-    startTime: firstWindow?.startTime ?? schedule.startTime,
-    endTime: firstWindow?.endTime ?? schedule.endTime,
-    gapMinutes: rule.gapMinutes,
-    dateSlotRules: nextRules,
-  } as ScheduleWithDateSlots;
-}
-
-function validateWindows(windows: ScheduleWindow[]): string | null {
+function validateIntervals(windows: ScheduleWindow[]): string | null {
   const sorted = [...windows].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
-
   for (const window of sorted) {
     if (timeToMinutes(window.endTime) <= timeToMinutes(window.startTime)) {
       return 'Время окончания должно быть позже начала.';
     }
   }
-
   for (let i = 1; i < sorted.length; i += 1) {
     const previous = sorted[i - 1];
     const current = sorted[i];
-
     if (!previous || !current) continue;
-
     if (timeToMinutes(current.startTime) < timeToMinutes(previous.endTime)) {
-      return 'Окошки времени не должны пересекаться.';
+      return 'Интервалы не должны пересекаться.';
     }
   }
-
   return null;
 }
 
-function getDayWindows(rule: DateSlotRule, date: string): ScheduleWindow[] {
-  return rule.days.find((day) => day.date === date)?.windows ?? [];
-}
+function hydrateWeeklyFromSchedule(schedule: MasterSchedule): WeeklyDayConfig[] {
+  const rules = getScheduleRules(schedule);
+  const allRule = rules.find((r) => r.serviceId === 'all') ?? rules[0];
+  const picked: Record<number, ScheduleWindow[] | undefined> = {};
 
-function getServiceName(service: MasterOnboardingService | undefined): string {
-  return service?.title ?? 'Все услуги';
-}
+  if (allRule?.days.length) {
+    const sorted = [...allRule.days].sort((a, b) => parseIsoDate(a.date).getTime() - parseIsoDate(b.date).getTime());
+    for (const day of sorted) {
+      if (day.windows.length === 0) continue;
+      const wd = getWeekdayIndex(parseIsoDate(day.date));
+      if (!picked[wd]) {
+        picked[wd] = day.windows.map((w) => ({ ...w, id: w.id || newId('window') }));
+      }
+    }
+  }
 
-function serviceIsActive(service: MasterOnboardingService): boolean {
-  return (service as { isActive?: boolean }).isActive !== false;
-}
-
-function getVisibleServices(services: MasterOnboardingService[]): MasterOnboardingService[] {
-  return services.filter(serviceIsActive);
-}
-
-function getNearestSlot(rule: DateSlotRule): { date: string; time: string } | null {
-  const today = startOfDay(new Date());
-  const maxDate = addDays(today, BOOKING_HORIZON_DAYS);
-
-  const days = [...rule.days]
-    .filter((day) => day.windows.length > 0)
-    .filter((day) => {
-      const date = parseIsoDate(day.date);
-      return date >= today && date <= maxDate;
-    })
-    .sort((a, b) => parseIsoDate(a.date).getTime() - parseIsoDate(b.date).getTime());
-
-  for (const day of days) {
-    const sortedWindows = [...day.windows].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
-    const firstWindow = sortedWindows[0];
-
-    if (firstWindow) {
+  return [0, 1, 2, 3, 4, 5, 6].map((uiWeekday) => {
+    const fromRule = picked[uiWeekday];
+    if (fromRule?.length) {
+      return { uiWeekday, enabled: true, intervals: fromRule.map((w) => ({ ...w })) };
+    }
+    if (schedule.workDays.includes(uiWeekday)) {
       return {
-        date: day.date,
-        time: firstWindow.startTime,
+        uiWeekday,
+        enabled: true,
+        intervals: [createWindow(schedule.startTime, schedule.endTime)],
       };
     }
-  }
+    return { uiWeekday, enabled: false, intervals: [createWindow('10:00', '18:00')] };
+  });
+}
 
+function buildMasterScheduleFromWeekly(
+  daysConfig: WeeklyDayConfig[],
+  gapMinutes: number,
+  bookingHorizonDays: number,
+): MasterSchedule {
+  const dateSlotDays: DateSlotDay[] = daysConfig.map((d) => {
+    const windows = !d.enabled
+      ? []
+      : d.intervals
+          .map((w) => ({
+            id: w.id || newId('window'),
+            startTime: w.startTime.trim(),
+            endTime: w.endTime.trim(),
+          }))
+          .filter((w) => timeToMinutes(w.endTime) > timeToMinutes(w.startTime))
+          .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+
+    return { date: anchorIsoForUiWeekday(d.uiWeekday), windows };
+  });
+
+  dateSlotDays.sort((a, b) => parseIsoDate(a.date).getTime() - parseIsoDate(b.date).getTime());
+
+  const workingUi = daysConfig
+    .filter(
+      (d) =>
+        d.enabled &&
+        d.intervals.some((w) => timeToMinutes(w.endTime) > timeToMinutes(w.startTime)),
+    )
+    .map((d) => d.uiWeekday)
+    .sort((a, b) => a - b);
+
+  const firstWorking = daysConfig.find(
+    (d) => d.enabled && d.intervals.some((w) => timeToMinutes(w.endTime) > timeToMinutes(w.startTime)),
+  );
+  const firstWin = firstWorking?.intervals.find(
+    (w) => timeToMinutes(w.endTime) > timeToMinutes(w.startTime),
+  );
+
+  return {
+    workDays: workingUi,
+    startTime: firstWin?.startTime ?? '10:00',
+    endTime: firstWin?.endTime ?? '18:00',
+    gapMinutes,
+    dateSlotRules: [
+      {
+        serviceId: 'all',
+        days: dateSlotDays,
+        gapMinutes,
+        bookingHorizonDays,
+      },
+    ],
+  } as MasterSchedule;
+}
+
+function combineDateAndTime(day: Date, timeHm: string): Date {
+  const [h, m] = timeHm.split(':').map(Number);
+  const x = new Date(day);
+  x.setHours(h || 0, m || 0, 0, 0);
+  return x;
+}
+
+function getNearestWeeklyPreview(
+  daysConfig: WeeklyDayConfig[],
+  horizonDays: number,
+  minLeadHours: number,
+): string | null {
+  const earliestMs = Date.now() + minLeadHours * 60 * 60 * 1000;
+  const today0 = startOfDay(new Date());
+  for (let i = 0; i <= horizonDays; i += 1) {
+    const d = addDays(today0, i);
+    const wd = getWeekdayIndex(d);
+    const cfg = daysConfig.find((c) => c.uiWeekday === wd);
+    if (!cfg?.enabled) continue;
+    const sorted = [...cfg.intervals].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    for (const w of sorted) {
+      if (timeToMinutes(w.endTime) <= timeToMinutes(w.startTime)) continue;
+      const slotStart = combineDateAndTime(d, w.startTime);
+      if (slotStart.getTime() >= earliestMs) {
+        const datePart = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(slotStart);
+        const timePart = slotStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        return `${capitalize(datePart)}, ${timePart}`;
+      }
+    }
+  }
   return null;
 }
 
-function getMonthCells(monthDate: Date) {
-  const firstDate = startOfMonth(monthDate);
-  const daysInMonth = new Date(firstDate.getFullYear(), firstDate.getMonth() + 1, 0).getDate();
-  const leadingCells = (firstDate.getDay() + 6) % 7;
-  const cells: Array<Date | null> = Array.from({ length: leadingCells }, () => null);
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push(new Date(firstDate.getFullYear(), firstDate.getMonth(), day));
-  }
-
-  return cells;
-}
-
-function StatCard({
-  value,
-  label,
-}: {
-  value: string | number;
-  label: string;
-}) {
-  return (
-    <div className="rounded-[24px] bg-[#F1EFEF] px-4 py-3.5">
-      <p className="text-[22px] font-semibold leading-none tracking-[-0.055em] text-neutral-950">
-        {value}
-      </p>
-      <p className="mt-1.5 text-[12px] font-medium leading-snug text-neutral-500">
-        {label}
-      </p>
-    </div>
-  );
+function serviceIsActive(service: { isActive?: boolean }): boolean {
+  return service.isActive !== false;
 }
 
 export function AdminScheduleTab({ draft, onPersist }: Props) {
   const { useCabinetApi } = useAdminMasterCabinet();
   const { flushScheduleToBackend } = useAdminMasterDraft();
-  const services = draft.services;
-  const visibleServices = getVisibleServices(services);
 
-  const [selectedServiceId, setSelectedServiceId] = useState<string | 'all'>('all');
-  const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
-  const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
+  const visibleServices = useMemo(() => draft.services.filter(serviceIsActive), [draft.services]);
 
-  const [rule, setRule] = useState<DateSlotRule>(() => getRule(draft.schedule, 'all'));
-  const [windows, setWindows] = useState<ScheduleWindow[]>([]);
+  const [mode, setMode] = useState<ScheduleMode>('weekly');
+  const [weeklyDays, setWeeklyDays] = useState<WeeklyDayConfig[]>(() => hydrateWeeklyFromSchedule(draft.schedule));
 
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const serviceOptions = useMemo(
-    () => [
-      { value: 'all', label: 'Все услуги' },
-      ...services.map((service) => ({
-        value: service.id,
-        label: service.title,
-      })),
-    ],
-    [services],
+  const rules = getScheduleRules(draft.schedule);
+  const allRule = rules.find((r) => r.serviceId === 'all') ?? rules[0];
+  const initialHorizon = allRule?.bookingHorizonDays;
+  const [bookingHorizonDays, setBookingHorizonDays] = useState<number>(() =>
+    BOOKING_HORIZON_OPTIONS.includes(initialHorizon as (typeof BOOKING_HORIZON_OPTIONS)[number])
+      ? initialHorizon!
+      : 30,
   );
+  const [gapMinutes, setGapMinutes] = useState<number>(() => {
+    const g = allRule?.gapMinutes ?? draft.schedule.gapMinutes ?? 0;
+    return GAP_OPTIONS.includes(g as (typeof GAP_OPTIONS)[number]) ? g : 0;
+  });
+  /** TODO(api): сохранить на сервере минимальный срок до записи, когда появится поле в API. */
+  const [minLeadHours, setMinLeadHours] = useState<number>(3);
 
-  const selectedService = useMemo(
-    () => services.find((service) => service.id === selectedServiceId),
-    [selectedServiceId, services],
-  );
-
-  const today = useMemo(() => startOfDay(new Date()), []);
-  const maxDate = useMemo(() => addDays(today, BOOKING_HORIZON_DAYS), [today]);
-  const selectedDateObject = useMemo(() => parseIsoDate(selectedDate), [selectedDate]);
-
-  const monthCells = useMemo(() => getMonthCells(monthCursor), [monthCursor]);
-
-  const nearestSlot = useMemo(() => getNearestSlot(rule), [rule]);
-
-  const savedDaysCount = useMemo(
-    () => rule.days.filter((day) => day.windows.length > 0).length,
-    [rule.days],
-  );
-
-  const savedWindowsCount = useMemo(
-    () => rule.days.reduce((sum, day) => sum + day.windows.length, 0),
-    [rule.days],
-  );
+  const [weeklyError, setWeeklyError] = useState<string | null>(null);
+  const [weeklyToast, setWeeklyToast] = useState<string | null>(null);
+  const [weeklySaving, setWeeklySaving] = useState(false);
 
   useEffect(() => {
-    if (selectedServiceId !== 'all' && !services.some((service) => service.id === selectedServiceId)) {
-      setSelectedServiceId('all');
-      return;
+    setWeeklyDays(hydrateWeeklyFromSchedule(draft.schedule));
+    const nextRules = getScheduleRules(draft.schedule);
+    const nextAll = nextRules.find((r) => r.serviceId === 'all') ?? nextRules[0];
+    const h = nextAll?.bookingHorizonDays;
+    if (BOOKING_HORIZON_OPTIONS.includes(h as (typeof BOOKING_HORIZON_OPTIONS)[number])) {
+      setBookingHorizonDays(h!);
     }
+    const g = nextAll?.gapMinutes ?? draft.schedule.gapMinutes ?? 0;
+    setGapMinutes(GAP_OPTIONS.includes(g as (typeof GAP_OPTIONS)[number]) ? g : 0);
+  }, [draft.schedule]);
 
-    const nextRule = getRule(draft.schedule, selectedServiceId);
-    const nextWindows = getDayWindows(nextRule, selectedDate);
-
-    setRule(nextRule);
-    setWindows(nextWindows.map((window) => ({ ...window })));
-    setError(null);
-  }, [draft.schedule, selectedDate, selectedServiceId, services]);
-
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(null), 1800);
+  const showWeeklyToast = useCallback((message: string) => {
+    setWeeklyToast(message);
+    window.setTimeout(() => setWeeklyToast(null), 2200);
   }, []);
 
-  const loadDate = useCallback(
-    (date: string) => {
-      const nextWindows = getDayWindows(rule, date);
-
-      setSelectedDate(date);
-      setWindows(nextWindows.map((window) => ({ ...window })));
-      setError(null);
-    },
-    [rule],
+  const previewNearest = useMemo(
+    () => getNearestWeeklyPreview(weeklyDays, bookingHorizonDays, minLeadHours),
+    [weeklyDays, bookingHorizonDays, minLeadHours],
   );
 
-  const addWindow = useCallback(() => {
-    setWindows((prev) => [...prev, createWindow()]);
-    setError(null);
-  }, []);
-
-  const updateWindow = useCallback((windowId: string, patch: Partial<ScheduleWindow>) => {
-    setWindows((prev) =>
-      prev.map((window) => (window.id === windowId ? { ...window, ...patch } : window)),
+  const setDayEnabled = useCallback((uiWeekday: number, enabled: boolean) => {
+    setWeeklyDays((prev) =>
+      prev.map((d) =>
+        d.uiWeekday === uiWeekday
+          ? {
+              ...d,
+              enabled,
+              intervals: enabled && d.intervals.length === 0 ? [createWindow()] : d.intervals,
+            }
+          : d,
+      ),
     );
-    setError(null);
+    setWeeklyError(null);
   }, []);
 
-  const removeWindow = useCallback((windowId: string) => {
-    setWindows((prev) => prev.filter((window) => window.id !== windowId));
-    setError(null);
+  const updateInterval = useCallback((uiWeekday: number, windowId: string, patch: Partial<ScheduleWindow>) => {
+    setWeeklyDays((prev) =>
+      prev.map((d) =>
+        d.uiWeekday === uiWeekday
+          ? {
+              ...d,
+              intervals: d.intervals.map((w) => (w.id === windowId ? { ...w, ...patch } : w)),
+            }
+          : d,
+      ),
+    );
+    setWeeklyError(null);
   }, []);
 
-  const clearDay = useCallback(() => {
-    setWindows([]);
-    setError(null);
+  const addInterval = useCallback((uiWeekday: number) => {
+    setWeeklyDays((prev) =>
+      prev.map((d) => (d.uiWeekday === uiWeekday ? { ...d, intervals: [...d.intervals, createWindow()] } : d)),
+    );
+    setWeeklyError(null);
   }, []);
 
-  const saveSelectedDay = useCallback(async () => {
-    const validationError = validateWindows(windows);
+  const removeInterval = useCallback((uiWeekday: number, windowId: string) => {
+    setWeeklyDays((prev) =>
+      prev.map((d) => {
+        if (d.uiWeekday !== uiWeekday) return d;
+        const nextIntervals = d.intervals.filter((w) => w.id !== windowId);
+        return { ...d, intervals: nextIntervals.length ? nextIntervals : [createWindow()] };
+      }),
+    );
+    setWeeklyError(null);
+  }, []);
 
-    if (validationError) {
-      setError(validationError);
+  const saveWeekly = useCallback(async () => {
+    for (const d of weeklyDays) {
+      if (!d.enabled) continue;
+      const err = validateIntervals(d.intervals);
+      if (err) {
+        setWeeklyError(`${WEEKDAY_NAMES[d.uiWeekday]}: ${err}`);
+        return;
+      }
+    }
+
+    const hasWork = weeklyDays.some(
+      (d) =>
+        d.enabled && d.intervals.some((w) => timeToMinutes(w.endTime) > timeToMinutes(w.startTime)),
+    );
+    if (!hasWork) {
+      setWeeklyError('Включите хотя бы один рабочий день с интервалом времени.');
       return;
     }
 
-    const preparedWindows = [...windows]
-      .map((window) => ({
-        ...window,
-        id: window.id || newId('window'),
-      }))
-      .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    const nextSchedule = buildMasterScheduleFromWeekly(weeklyDays, gapMinutes, bookingHorizonDays);
+    const nextDraft: MasterDraft = { ...draft, schedule: nextSchedule };
 
-    const nextDaysWithoutCurrent = rule.days.filter((day) => day.date !== selectedDate);
-
-    const nextDays =
-      preparedWindows.length > 0
-        ? [...nextDaysWithoutCurrent, { date: selectedDate, windows: preparedWindows }]
-        : nextDaysWithoutCurrent;
-
-    const nextRule: DateSlotRule = {
-      ...rule,
-      serviceId: selectedServiceId,
-      gapMinutes: SCHEDULE_GAP_MINUTES,
-      bookingHorizonDays: BOOKING_HORIZON_DAYS,
-      days: nextDays.sort((a, b) => parseIsoDate(a.date).getTime() - parseIsoDate(b.date).getTime()),
-    };
-
-    const nextSchedule = upsertRule(draft.schedule, nextRule);
-
-    const nextDraft = {
-      ...draft,
-      schedule: nextSchedule as MasterSchedule,
-    };
-
-    if (!useCabinetApi) {
-      onPersist(nextDraft);
-      setRule(nextRule);
-      setError(null);
-      showToast(preparedWindows.length > 0 ? 'Окошки сохранены' : 'День закрыт');
-      return;
-    }
-
-    setError(null);
+    setWeeklyError(null);
+    setWeeklySaving(true);
     try {
+      if (!useCabinetApi) {
+        onPersist(nextDraft);
+        showWeeklyToast('График сохранён');
+        return;
+      }
       await flushScheduleToBackend(nextDraft);
-      setRule(nextRule);
-      showToast(preparedWindows.length > 0 ? 'Окошки сохранены' : 'День закрыт');
+      showWeeklyToast('График сохранён');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось сохранить');
+      setWeeklyError(e instanceof Error ? e.message : 'Не удалось сохранить');
+    } finally {
+      setWeeklySaving(false);
     }
   }, [
+    bookingHorizonDays,
     draft,
     flushScheduleToBackend,
+    gapMinutes,
     onPersist,
-    rule,
-    selectedDate,
-    selectedServiceId,
-    showToast,
+    showWeeklyToast,
     useCabinetApi,
-    windows,
+    weeklyDays,
   ]);
 
-  if (services.length === 0) {
-    return (
-      <NothingFoundCard
-        title="Сначала добавьте услугу"
-        text="После добавления услуги вы сможете выбрать день в календаре и проставить свободные окошки."
-      />
-    );
-  }
+  const horizonSelectOptions = useMemo(
+    () => BOOKING_HORIZON_OPTIONS.map((d) => ({ value: String(d), label: `${d} дней` })),
+    [],
+  );
+  const gapSelectOptions = useMemo(
+    () => GAP_OPTIONS.map((m) => ({ value: String(m), label: m === 0 ? '0 мин' : `${m} мин` })),
+    [],
+  );
+  const minLeadSelectOptions = useMemo(
+    () => MIN_LEAD_OPTIONS.map((h) => ({ value: String(h), label: `${h} ч` })),
+    [],
+  );
 
   return (
-    <div className="space-y-4">
-      <AdminMasterRealSlotsPanel services={services} />
-
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-            График работы
-          </p>
-
-          <h2 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
-            Шаблон по календарю
-          </h2>
-
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <StatCard value={savedDaysCount} label="дней открыто" />
-            <StatCard value={savedWindowsCount} label="окошек" />
-            <StatCard value={BOOKING_HORIZON_DAYS} label="дней вперед" />
-          </div>
-
-          <div className="mt-5 rounded-[26px] bg-[#F1EFEF] px-4 py-3">
-            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-neutral-400">
-              Ближайшее время
-            </p>
-
-            <p className="mt-1 text-[17px] font-semibold text-neutral-950">
-              {nearestSlot
-                ? `${formatDateShort(parseIsoDate(nearestSlot.date))}, ${nearestSlot.time}`
-                : 'Пока нет свободных окошек'}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {toast ? (
-        <div className="rounded-full bg-[#EAFBF2] px-5 py-3 text-center text-[14px] font-semibold text-[#2F8A5B] shadow-[0_10px_28px_rgba(17,17,17,0.04)]">
-          {toast}
-        </div>
-      ) : null}
-
+    <div className="space-y-5">
       {visibleServices.length === 0 ? (
-        <NothingFoundCard
-          title="Нет видимых услуг"
-          text="Покажите хотя бы одну услугу клиентам, чтобы настроить запись."
-        />
+        <div className="rounded-[28px] border border-amber-200/80 bg-amber-50/90 p-5 shadow-[0_10px_30px_rgba(17,17,17,0.04)]">
+          <p className="text-[17px] font-semibold text-neutral-950">Нет видимых услуг</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
+            Добавьте или включите хотя бы одну услугу, чтобы клиенты могли записываться.
+          </p>
+          <Link
+            to={ADMIN_SERVICES_PATH}
+            className="mt-4 flex min-h-[3rem] w-full items-center justify-center rounded-full bg-[#E29595] text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+          >
+            Перейти к услугам
+          </Link>
+        </div>
       ) : null}
 
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-4">
-          <label className="block">
-            <span className="text-[13px] font-semibold text-neutral-500">
-              Услуга
-            </span>
-
-            <SlottySelect
-              className="mt-2 w-full"
-              value={selectedServiceId}
-              onChange={(value) => setSelectedServiceId(value)}
-              options={serviceOptions}
-            />
-          </label>
+      <div className="rounded-[24px] bg-[#F1EFEF] p-1.5">
+        <div className="grid grid-cols-2 gap-1">
+          <button
+            type="button"
+            onClick={() => setMode('weekly')}
+            className={`min-h-[3rem] rounded-[20px] text-[15px] font-semibold transition active:scale-[0.98] ${
+              mode === 'weekly' ? 'bg-[#E29595] text-white shadow-md' : 'bg-transparent text-neutral-600'
+            }`}
+          >
+            По графику
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('manual')}
+            className={`min-h-[3rem] rounded-[20px] text-[15px] font-semibold transition active:scale-[0.98] ${
+              mode === 'manual' ? 'bg-[#E29595] text-white shadow-md' : 'bg-transparent text-neutral-600'
+            }`}
+          >
+            Ручные окна
+          </button>
         </div>
-      </section>
+      </div>
 
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setMonthCursor((prev) => addMonths(prev, -1))}
-              disabled={monthCursor <= startOfMonth(today)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1EFEF] text-neutral-800 transition active:scale-[0.96] disabled:opacity-30"
-              aria-label="Предыдущий месяц"
-            >
-              <IconChevronLeft />
-            </button>
+      {mode === 'weekly' ? (
+        <p className="text-[15px] leading-relaxed text-neutral-600">
+          Подходит, если вы работаете регулярно. Клиенты будут видеть свободное время по вашему расписанию.
+        </p>
+      ) : (
+        <p className="text-[15px] leading-relaxed text-neutral-600">
+          Подходит, если вы хотите вручную открыть конкретные времена для записи.
+        </p>
+      )}
 
-            <div className="text-center">
-              <p className="text-[18px] font-semibold tracking-[-0.04em] text-neutral-950">
-                {formatMonthTitle(monthCursor)}
-              </p>
-
-              <p className="mt-0.5 text-[12px] font-medium text-neutral-400">
-                выберите день
-              </p>
+      {mode === 'weekly' ? (
+        <>
+          {weeklyToast ? (
+            <div className="rounded-full bg-[#EAFBF2] px-5 py-3 text-center text-[14px] font-semibold text-[#2F8A5B] shadow-[0_10px_28px_rgba(17,17,17,0.04)]">
+              {weeklyToast}
             </div>
+          ) : null}
+          <div className="rounded-[28px] border border-neutral-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.04)]">
+            <h2 className="text-[20px] font-semibold tracking-[-0.04em] text-neutral-950">График работы</h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-neutral-600">
+              Клиенты смогут записываться в выбранные дни и часы. Длительность записи берётся из услуги.
+            </p>
 
-            <button
-              type="button"
-              onClick={() => setMonthCursor((prev) => addMonths(prev, 1))}
-              disabled={addMonths(monthCursor, 1) > startOfMonth(maxDate)}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F1EFEF] text-neutral-800 transition active:scale-[0.96] disabled:opacity-30"
-              aria-label="Следующий месяц"
-            >
-              <IconChevronRight />
-            </button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400">
-            {WEEKDAY_LABELS.map((day) => (
-              <span key={day}>{day}</span>
-            ))}
-          </div>
-
-          <div className="mt-2 grid grid-cols-7 gap-1.5">
-            {monthCells.map((date, index) => {
-              if (!date) {
-                return <div key={`empty-${index}`} />;
-              }
-
-              const iso = toIsoDate(date);
-              const isPast = date < today;
-              const isTooFar = date > maxDate;
-              const disabled = isPast || isTooFar;
-              const selected = iso === selectedDate;
-              const savedWindows = getDayWindows(rule, iso);
-              const hasWindows = savedWindows.length > 0;
-
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => loadDate(iso)}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-[18px] transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-25 ${
-                    selected
-                      ? 'bg-[#E29595] text-white shadow-[0_10px_28px_rgba(226,149,149,0.24)]'
-                      : hasWindows
-                        ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                        : 'bg-[#F1EFEF] text-neutral-900'
-                  }`}
-                >
-                  <span className="text-[15px] font-semibold leading-none">
-                    {date.getDate()}
-                  </span>
-
-                  <span
-                    className={`mt-1.5 h-1.5 w-1.5 rounded-full ${
-                      hasWindows ? (selected ? 'bg-white' : 'bg-[#E29595]') : 'bg-transparent'
-                    }`}
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-                Выбранный день
-              </p>
-
-              <h3 className="mt-1 text-[25px] font-semibold leading-tight tracking-[-0.06em] text-neutral-950">
-                {formatDateLong(selectedDateObject)}
-              </h3>
-
-              <p className="mt-2 text-[14px] leading-relaxed text-neutral-500">
-                {getServiceName(selectedService)}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={clearDay}
-              className="shrink-0 rounded-full bg-[#F1EFEF] px-4 py-2.5 text-[13px] font-semibold text-neutral-500 transition active:scale-[0.98]"
-            >
-              Закрыть день
-            </button>
-          </div>
-
-          {windows.length === 0 ? (
-            <NothingFoundCard
-              className="mt-5"
-              title="Окошек пока нет"
-              text="Добавьте время, когда клиент сможет записаться в этот день."
-            />
-          ) : (
-            <div className="mt-5 space-y-3">
-              {windows.map((window, index) => (
+            <div className="mt-5 space-y-4">
+              {weeklyDays.map((day) => (
                 <div
-                  key={window.id}
-                  className="rounded-[28px] bg-[#F1EFEF] p-3"
+                  key={day.uiWeekday}
+                  className="rounded-[24px] border border-neutral-100 bg-[#FAFAFA] p-4"
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[14px] font-semibold text-neutral-950">
-                      Окошко {index + 1}
-                    </p>
-
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[16px] font-semibold text-neutral-950">{WEEKDAY_NAMES[day.uiWeekday]}</p>
                     <button
                       type="button"
-                      onClick={() => removeWindow(window.id)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-500 shadow-[0_6px_18px_rgba(17,17,17,0.05)] transition active:scale-[0.96]"
-                      aria-label="Удалить окошко"
+                      onClick={() => setDayEnabled(day.uiWeekday, !day.enabled)}
+                      className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold transition active:scale-[0.97] ${
+                        day.enabled ? 'bg-[#E29595] text-white' : 'bg-neutral-200 text-neutral-600'
+                      }`}
                     >
-                      <IconClose />
+                      {day.enabled ? 'Рабочий' : 'Выходной'}
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <label>
-                      <span className="text-[12px] font-medium text-neutral-400">
-                        С
-                      </span>
-
-                      <SlottySelect
-                        className="mt-1 w-full"
-                        value={window.startTime}
-                        onChange={(value) => updateWindow(window.id, { startTime: value })}
-                        options={SCHEDULE_TIME_SELECT_OPTIONS}
-                      />
-                    </label>
-
-                    <label>
-                      <span className="text-[12px] font-medium text-neutral-400">
-                        По
-                      </span>
-
-                      <SlottySelect
-                        className="mt-1 w-full"
-                        value={window.endTime}
-                        onChange={(value) => updateWindow(window.id, { endTime: value })}
-                        options={SCHEDULE_TIME_SELECT_OPTIONS}
-                      />
-                    </label>
-                  </div>
+                  {!day.enabled ? (
+                    <p className="mt-3 text-[15px] font-medium text-neutral-500">Выходной</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {day.intervals.map((window, index) => (
+                        <div key={window.id} className="rounded-[20px] bg-white p-3 shadow-sm">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[13px] font-semibold text-neutral-400">Интервал {index + 1}</span>
+                            {day.intervals.length > 1 ? (
+                              <button
+                                type="button"
+                                onClick={() => removeInterval(day.uiWeekday, window.id)}
+                                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F1EFEF] text-neutral-500 transition active:scale-[0.96]"
+                                aria-label="Удалить интервал"
+                              >
+                                <IconClose className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label>
+                              <span className="text-[12px] font-medium text-neutral-400">С</span>
+                              <SlottySelect
+                                className="mt-1 w-full"
+                                value={window.startTime}
+                                onChange={(value) => updateInterval(day.uiWeekday, window.id, { startTime: value })}
+                                options={mergeScheduleTimeSelectOptions(window.startTime, window.endTime)}
+                              />
+                            </label>
+                            <label>
+                              <span className="text-[12px] font-medium text-neutral-400">По</span>
+                              <SlottySelect
+                                className="mt-1 w-full"
+                                value={window.endTime}
+                                onChange={(value) => updateInterval(day.uiWeekday, window.id, { endTime: value })}
+                                options={mergeScheduleTimeSelectOptions(window.startTime, window.endTime)}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addInterval(day.uiWeekday)}
+                        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-dashed border-neutral-300 bg-white text-[14px] font-semibold text-neutral-800 transition active:scale-[0.98]"
+                      >
+                        <IconPlus className="h-4 w-4" />
+                        Добавить интервал
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          )}
+          </div>
 
-          <button
-            type="button"
-            onClick={addWindow}
-            className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-          >
-            <IconPlus className="h-4 w-4" />
-            Добавить окошко
-          </button>
-
-          {error ? (
-            <p className="mt-4 rounded-[24px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
-              {error}
+          <div className="rounded-[28px] border border-neutral-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.04)]">
+            <h2 className="text-[18px] font-semibold text-neutral-950">Параметры записи</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-neutral-500">
+              {/* TODO(api): горизонт записи и мин. срок до визита — пока только в интерфейсе; перерыв хранится в черновике, но API правил по дням недели его не принимает. */}
+              Горизонт и минимальный срок до записи учитываются в предпросмотре ниже. На сервер уходит только недельный график.
             </p>
+            <div className="mt-4 space-y-4">
+              <label className="block">
+                <span className="text-[13px] font-semibold text-neutral-500">Запись доступна на</span>
+                <SlottySelect
+                  className="mt-2 w-full"
+                  value={String(bookingHorizonDays)}
+                  onChange={(v) => setBookingHorizonDays(Number(v))}
+                  options={horizonSelectOptions}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[13px] font-semibold text-neutral-500">Перерыв между записями</span>
+                <SlottySelect
+                  className="mt-2 w-full"
+                  value={String(gapMinutes)}
+                  onChange={(v) => setGapMinutes(Number(v))}
+                  options={gapSelectOptions}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[13px] font-semibold text-neutral-500">Минимальное время до записи</span>
+                <SlottySelect
+                  className="mt-2 w-full"
+                  value={String(minLeadHours)}
+                  onChange={(v) => setMinLeadHours(Number(v))}
+                  options={minLeadSelectOptions}
+                />
+              </label>
+            </div>
+          </div>
+
+          <details className="rounded-[24px] border border-neutral-200/60 bg-white px-4 py-3 shadow-sm">
+            <summary className="cursor-pointer list-none text-[15px] font-semibold text-neutral-800 [&::-webkit-details-marker]:hidden">
+              Исключения
+            </summary>
+            <p className="mt-2 pb-2 text-[14px] leading-relaxed text-neutral-500">
+              {/* TODO: закрытие отдельных дат или смена интервала на одну дату — отдельный экран / API. */}
+              Здесь можно будет закрыть конкретный день или задать другое время только на одну дату. Раздел в
+              разработке.
+            </p>
+          </details>
+
+          {weeklyError ? (
+            <p className="rounded-[24px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">{weeklyError}</p>
           ) : null}
 
           <button
             type="button"
-            onClick={() => void saveSelectedDay()}
-            className="mt-4 flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+            disabled={weeklySaving}
+            onClick={() => void saveWeekly()}
+            className="flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[#E29595] text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-50"
           >
-            Сохранить день
+            {weeklySaving ? 'Сохранение…' : 'Сохранить график'}
           </button>
-        </div>
-      </section>
 
-      <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-        <div className="rounded-[30px] bg-white p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-            Как увидит клиент
-          </p>
-
-          <h3 className="mt-2 text-[22px] font-semibold tracking-[-0.055em] text-neutral-950">
-            {getServiceName(selectedService)}
-          </h3>
-
-          <p className="mt-2 text-[14px] leading-relaxed text-neutral-500">
-            На выбранный день клиент увидит только сохраненные окошки.
-          </p>
-
-          {windows.length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {windows
-                .slice()
-                .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
-                .map((window) => (
-                  <span
-                    key={window.id}
-                    className="rounded-full bg-[#F1EFEF] px-4 py-2 text-[13px] font-semibold text-neutral-800"
-                  >
-                    {window.startTime}–{window.endTime}
-                  </span>
-                ))}
-            </div>
-          ) : (
-            <p className="mt-4 rounded-[24px] bg-[#F1EFEF] px-4 py-4 text-[14px] leading-relaxed text-neutral-500">
-              В этот день запись закрыта.
+          <div className="rounded-[28px] border border-neutral-200/80 bg-white p-5 shadow-[0_10px_30px_rgba(17,17,17,0.04)]">
+            <h3 className="text-[16px] font-semibold text-neutral-950">Как увидит клиент</h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
+              {previewNearest ? (
+                <>
+                  Ближайшее время: <span className="font-semibold text-neutral-900">{previewNearest}</span>
+                </>
+              ) : (
+                'Пока нет доступного времени для записи'
+              )}
             </p>
-          )}
-        </div>
-      </section>
+          </div>
+        </>
+      ) : (
+        <AdminMasterRealSlotsPanel visibleServices={visibleServices} loadSlots={mode === 'manual'} />
+      )}
     </div>
   );
 }

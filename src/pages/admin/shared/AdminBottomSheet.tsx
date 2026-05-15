@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 type Props = {
@@ -15,7 +15,8 @@ const BACKDROP_CLOSE_DELAY_MS = 450;
 export function AdminBottomSheet({ open, onClose, title, children }: Props) {
   const suppressBackdropCloseRef = useRef(false);
 
-  useEffect(() => {
+  /** До отрисовки backdrop: иначе touchend/mouseup от кнопки «Удалить» может сразу закрыть шторку. */
+  useLayoutEffect(() => {
     if (!open) return undefined;
     suppressBackdropCloseRef.current = true;
     const id = window.setTimeout(() => {
