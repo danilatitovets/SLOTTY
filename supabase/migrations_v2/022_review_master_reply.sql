@@ -4,6 +4,8 @@ alter table public.reviews
   add column if not exists master_reply text,
   add column if not exists master_reply_at timestamptz;
 
+drop policy if exists reviews_update_master_reply on public.reviews;
+
 create policy reviews_update_master_reply on public.reviews
 for update
   to authenticated
