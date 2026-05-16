@@ -196,8 +196,8 @@ export type ProfileSectionId = 'main' | 'address' | 'portfolio' | 'rules';
  * Нижний край шапки: pt + min-h + pb + border-b-2 (см. AdminLayout).
  * Должен совпадать точно, иначе при sticky табы «прыгают» вверх.
  */
-export const CABINET_HEADER_STICKY_TOP =
-  'var(--slotty-admin-header-h, calc(0.5rem + env(safe-area-inset-top, 0px) + 3.25rem + 0.5rem + 2px))';
+/** Совпадает с реальной высотой шапки (AdminLayout + ResizeObserver). */
+export const CABINET_HEADER_STICKY_TOP = 'var(--slotty-admin-header-h, 4.5rem)';
 
 export function SectionTabs({
   active,
@@ -214,7 +214,7 @@ export function SectionTabs({
   ];
 
   return (
-    <nav className="flex bg-white px-1 pb-0 pt-px" aria-label="Разделы профиля">
+    <nav className="flex bg-white px-1 pb-0.5 pt-1" aria-label="Разделы профиля">
       {tabs.map((tab) => {
         const selected = active === tab.id;
         return (
@@ -222,14 +222,14 @@ export function SectionTabs({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-w-0 flex-1 flex-col items-center gap-0 px-1 pb-1 pt-0 transition active:scale-[0.98] ${
+            className={`relative flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 pb-1 pt-0 transition active:scale-[0.98] ${
               selected ? 'text-[#F47C8C]' : 'text-[#6B7280] hover:text-[#111827]'
             }`}
           >
+            {tab.icon}
             <span className="max-w-full truncate text-[10px] font-semibold leading-none sm:text-[11px]">
               {tab.label}
             </span>
-            {tab.icon}
             {selected ? (
               <span
                 className="absolute bottom-0 left-1/2 h-0.5 w-7 -translate-x-1/2 rounded-full bg-[#F47C8C]"

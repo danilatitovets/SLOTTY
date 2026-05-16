@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import {
   ADMIN_APPOINTMENTS_PATH,
@@ -104,12 +104,12 @@ function navClass(active: boolean): string {
   }`;
 }
 
-function AdminCabinetStatusBanner() {
+export function AdminCabinetStatusBanner() {
   const { cabinetLoading, cabinetError, useCabinetApi } = useAdminMasterCabinet();
   if (!useCabinetApi) return null;
   if (!cabinetLoading && !cabinetError) return null;
   return (
-    <div className="px-4 pb-2">
+    <div className="px-4 pb-2 pt-2">
       {cabinetLoading ? (
         <p className="rounded-2xl bg-white px-4 py-2 text-center text-[13px] font-medium text-neutral-500 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
           Загрузка данных мастера…
@@ -126,20 +126,35 @@ function AdminCabinetStatusBanner() {
 
 export function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  const isProfileHome = pathname === ADMIN_PATH;
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const syncHeaderHeight = () => {
+      document.documentElement.style.setProperty('--slotty-admin-header-h', `${el.offsetHeight}px`);
+    };
+
+    syncHeaderHeight();
+    const ro = new ResizeObserver(syncHeaderHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div className="min-h-dvh bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827]">
       <AdminMasterCabinetProvider>
         <div
           className="mx-auto max-w-lg"
-          style={
-            {
-              '--slotty-admin-header-h':
-                'calc(0.5rem + env(safe-area-inset-top, 0px) + 3.25rem + 0.5rem + 2px)',
-            } as CSSProperties
-          }
+          style={{ '--slotty-admin-header-h': '4.5rem' } as CSSProperties}
         >
-          <div className="sticky top-0 z-30 flex min-h-[3.25rem] items-center justify-between gap-3 border-b-2 border-[#F47C8C] bg-white/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] backdrop-blur-md">
+          <div
+            ref={headerRef}
+            className="sticky top-0 z-30 flex min-h-[3.25rem] items-center justify-between gap-3 border-b-2 border-[#F47C8C] bg-white px-4 pb-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]"
+          >
             <Link
               to={HUB_PATH}
               aria-label="SLOTTY — на главную"
@@ -164,7 +179,7 @@ export function AdminLayout() {
             </button>
           </div>
 
-          <AdminCabinetStatusBanner />
+          {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
           <Outlet />
         </div>
       </AdminMasterCabinetProvider>

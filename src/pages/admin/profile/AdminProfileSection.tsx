@@ -5,6 +5,7 @@ import type { DemoMasterAppointment } from '../../../features/master/model/demoM
 import type { MasterCareerItemType, MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { AdminCabinetStatusBanner } from '../AdminLayout';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useAdminMasterDraft } from '../useAdminMasterData';
 import {
@@ -425,11 +426,12 @@ function AdminProfileReadView({
   return (
     <>
       <div
-        className="sticky z-20 -mt-px border-b border-[#EAECEF] bg-white"
+        className="sticky z-[25] -mt-px border-b border-[#EAECEF] bg-white"
         style={{ top: CABINET_HEADER_STICKY_TOP }}
       >
         <CabinetSectionTabs active={activeSection} onChange={setActiveSection} />
       </div>
+      <AdminCabinetStatusBanner />
       <CabinetProfileHero draft={draft} stats={stats} />
       <div className="space-y-4 px-4 pt-4">{section}</div>
     </>
