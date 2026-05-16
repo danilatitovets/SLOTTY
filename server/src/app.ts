@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { env } from './config/env.js';
+import { corsOptions } from './config/cors.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
 import { healthRouter } from './modules/health/health.routes.js';
@@ -18,12 +18,7 @@ import { telegramWebhookRouter } from './modules/telegram/telegram.webhook.route
 
 export function createApp() {
   const app = express();
-  app.use(
-    cors({
-      origin: env.CLIENT_URL,
-      credentials: true,
-    }),
-  );
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
 
   const api = express.Router();
