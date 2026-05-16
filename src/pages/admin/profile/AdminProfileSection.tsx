@@ -425,15 +425,13 @@ function AdminProfileReadView({
   return (
     <>
       <div
-        className="sticky z-20 border-b border-[#EAECEF] bg-white"
+        className="sticky z-20 -mt-px border-b border-[#EAECEF] bg-white"
         style={{ top: CABINET_HEADER_STICKY_TOP }}
       >
         <CabinetSectionTabs active={activeSection} onChange={setActiveSection} />
       </div>
-      <div className="space-y-4 px-4">
-        <CabinetProfileHero draft={draft} stats={stats} />
-        {section}
-      </div>
+      <CabinetProfileHero draft={draft} stats={stats} />
+      <div className="space-y-4 px-4 pt-4">{section}</div>
     </>
   );
 }

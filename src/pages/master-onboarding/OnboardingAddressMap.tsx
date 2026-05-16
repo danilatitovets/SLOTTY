@@ -220,6 +220,9 @@ type Props = {
    */
   suppressSuggestUntilFocus?: boolean;
 
+  /** Классы поля адреса (в кабинете — `sheetFieldClass`). */
+  inputClassName?: string;
+
   /** Без поля ввода — только строка адреса. */
   addressLine?: string;
 };
@@ -242,6 +245,7 @@ export function OnboardingAddressMap({
   inputMaxLength = 200,
   viewportDropdown = false,
   suppressSuggestUntilFocus = false,
+  inputClassName = INPUT_CLASS,
   addressLine: addressLineLegacy = '',
 }: Props) {
   const hasIntegratedInput = onStreetChange != null;
@@ -775,7 +779,7 @@ export function OnboardingAddressMap({
             placeholder={inputPlaceholder}
             maxLength={inputMaxLength}
             autoComplete="off"
-            className={INPUT_CLASS}
+            className={inputClassName}
           />
 
           {open && items.length > 0 ? (

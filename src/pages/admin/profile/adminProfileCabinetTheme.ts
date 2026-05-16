@@ -12,9 +12,9 @@ export const cabinetIconCircle =
 export const cabinetMutedBtn =
   'bg-[#F7F7F8] text-[#111827] hover:bg-[#F3F4F6] active:scale-[0.98]';
 
-/** Поля и кнопки в bottom sheet редактирования (кабинет мастера). */
+/** Поля в bottom sheet — белый фон и обводка, чтобы были видны и на белом листе, и в серой секции. */
 export const sheetFieldClass =
-  'mt-1.5 w-full rounded-[18px] bg-[#F7F7F8] px-4 py-3.5 text-[16px] font-medium text-[#111827] outline-none ring-0 placeholder:text-[#9CA3AF] transition focus:bg-white focus:ring-1 focus:ring-[#FDE8ED]';
+  'mt-1.5 w-full rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3.5 text-[16px] font-medium text-[#111827] shadow-[0_1px_2px_rgba(17,24,39,0.04)] outline-none placeholder:text-[#9CA3AF] transition focus:border-[#F47C8C]/50 focus:ring-2 focus:ring-[#FDE8ED]';
 
 export const sheetLabelClass = 'text-[13px] font-medium text-[#6B7280]';
 
@@ -48,7 +48,7 @@ export function sheetSegmentClass(active: boolean): string {
   return `min-h-11 rounded-[14px] px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
     active
       ? 'bg-[#F47C8C] text-white shadow-[0_8px_24px_rgba(244,124,140,0.28)]'
-      : 'bg-[#F7F7F8] text-[#6B7280]'
+      : 'bg-white text-[#6B7280] ring-1 ring-[#EAECEF]'
   }`;
 }
 

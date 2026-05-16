@@ -688,6 +688,7 @@ export function SheetAddress({
           onStreetChange={onStreetLineChange}
           inputLabel="Адрес"
           inputPlaceholder="Начните вводить — подсказки под полем. Точку можно уточнить на карте."
+          inputClassName={sheetFieldClass}
           suppressSuggestUntilFocus
           initialLat={lat ?? null}
           initialLng={lng ?? null}
@@ -754,41 +755,78 @@ export function SheetAddress({
 
           <label className="block">
             <AddressFieldLabel iconName={addressDetailIconName('подъезд', visitType)}>Вход / подъезд</AddressFieldLabel>
-            <input value={entrance} onChange={(e) => setEntrance(e.target.value)} className={sheetFieldClass} />
+            <input
+              value={entrance}
+              onChange={(e) => setEntrance(e.target.value)}
+              className={sheetFieldClass}
+              placeholder="Например, 2"
+            />
           </label>
 
           <label className="block">
             <AddressFieldLabel iconName={addressDetailIconName('этаж', visitType)}>Этаж</AddressFieldLabel>
-            <input value={floor} onChange={(e) => setFloor(e.target.value)} className={sheetFieldClass} />
+            <input
+              value={floor}
+              onChange={(e) => setFloor(e.target.value)}
+              className={sheetFieldClass}
+              placeholder="Например, 5"
+            />
           </label>
 
           <label className="block">
             <AddressFieldLabel iconName={addressDetailIconName(roomLabel, visitType)}>{roomLabel}</AddressFieldLabel>
-            <input value={room} onChange={(e) => setRoom(e.target.value)} className={sheetFieldClass} />
+            <input
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              className={sheetFieldClass}
+              placeholder={visitType === 'at_home' ? 'Например, 42' : 'Например, 3'}
+            />
           </label>
 
           <label className="block">
             <AddressFieldLabel iconName={addressDetailIconName('домофон', visitType)}>
               Домофон / ресепшен
             </AddressFieldLabel>
-            <input value={intercom} onChange={(e) => setIntercom(e.target.value)} className={sheetFieldClass} />
+            <input
+              value={intercom}
+              onChange={(e) => setIntercom(e.target.value)}
+              className={sheetFieldClass}
+              placeholder="Код или «на ресепшене»"
+            />
           </label>
 
           <label className="block sm:col-span-2">
             <AddressFieldLabel iconName={addressDetailIconName('ориентир', visitType)}>Ориентир</AddressFieldLabel>
-            <input value={landmark} onChange={(e) => setLandmark(e.target.value)} className={sheetFieldClass} />
+            <input
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              className={sheetFieldClass}
+              placeholder="Рядом с метро, ТЦ…"
+            />
           </label>
 
           <label className="block sm:col-span-2">
             <AddressFieldLabel iconName={addressDetailIconName('как пройти', visitType)}>Как пройти</AddressFieldLabel>
-            <textarea value={directions} onChange={(e) => setDirections(e.target.value)} rows={3} className={sheetFieldClass} />
+            <textarea
+              value={directions}
+              onChange={(e) => setDirections(e.target.value)}
+              rows={3}
+              className={`${sheetFieldClass} resize-none leading-relaxed`}
+              placeholder="От метро налево, второй подъезд…"
+            />
           </label>
 
           <label className="block sm:col-span-2">
             <AddressFieldLabel iconName={addressDetailIconName('комментарий', visitType)}>
               Комментарий для клиента
             </AddressFieldLabel>
-            <textarea value={clientNote} onChange={(e) => setClientNote(e.target.value)} rows={2} className={sheetFieldClass} />
+            <textarea
+              value={clientNote}
+              onChange={(e) => setClientNote(e.target.value)}
+              rows={2}
+              className={`${sheetFieldClass} resize-none leading-relaxed`}
+              placeholder="Необязательно"
+            />
           </label>
         </div>
       </div>
