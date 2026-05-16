@@ -1,5 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  HiBanknotes,
+  HiBell,
+  HiCalendar,
+  HiCalendarDays,
+  HiChevronDown,
+  HiCloud,
+  HiSquares2X2,
+} from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
   aggregateOverviewByDay,
@@ -12,8 +21,16 @@ import {
   type DemoMasterAppointment,
   type OverviewDayStat,
 } from '../../../features/master/model/demoMasterAppointments';
-import { NothingFoundCard } from '../../../shared/ui/NothingFoundCard';
 import { AdminCalendarSheet, formatRuDate } from '../shared/AdminCalendarSheet';
+import {
+  overviewCard,
+  overviewCardPad,
+  overviewEmptyIllustrationSrc,
+  overviewIconCircle,
+  overviewMutedSurface,
+  overviewPinkBtn,
+  overviewPinkOutline,
+} from './adminOverviewTheme';
 import {
   defaultOverviewLast30Days,
   formatAppointmentWhenRu,
@@ -21,7 +38,6 @@ import {
   formatDdMm,
   overviewAppointmentBounds,
   overviewChartWindow,
-  previousOverviewReportPeriod,
 } from './overviewFormat';
 
 type Props = {
@@ -34,33 +50,6 @@ type Props = {
 /** Заложено под Supabase: пока false — скелетон не показываем. */
 const isLoading = false;
 
-function ComparisonLine({ current, previous }: { current: number; previous: number }) {
-  if (previous === 0) {
-    return <p className="text-[11px] font-medium text-neutral-500">нет сравнения</p>;
-  }
-  const raw = ((current - previous) / previous) * 100;
-  const pct = Math.round(raw);
-  if (pct === 0) {
-    return <p className="text-[11px] font-medium text-neutral-500">без изменений</p>;
-  }
-  const pos = pct > 0;
-  return (
-    <span className={`text-[12px] font-semibold tabular-nums ${pos ? 'text-emerald-700' : 'text-rose-600'}`}>
-      {pos ? '+' : ''}
-      {pct}%
-    </span>
-  );
-}
-
-/** Больше прошлого периода — зелёный, меньше — красный; без базы — нейтральный. */
-function kpiTrendClass(current: number, previous: number): string {
-  if (previous <= 0 && current <= 0) return 'text-neutral-950';
-  if (previous <= 0 && current > 0) return 'text-emerald-700';
-  if (current > previous) return 'text-emerald-700';
-  if (current < previous) return 'text-rose-600';
-  return 'text-neutral-950';
-}
-
 function chartAxisIndices(n: number): number[] {
   if (n <= 0) return [];
   if (n === 1) return [0];
@@ -71,55 +60,101 @@ function chartAxisIndices(n: number): number[] {
 function BarBlock({
   stats,
   mode,
-  avgValue,
   emptyHint,
 }: {
   stats: OverviewDayStat[];
   mode: 'revenue' | 'visits';
-  avgValue: number;
   emptyHint: string;
 }) {
   const values = stats.map((s) => (mode === 'revenue' ? s.completedRevenue : s.activeVisits));
   const max = Math.max(1, ...values);
   const hasAny = values.some((v) => v > 0);
+  const EmptyIcon = mode === 'revenue' ? HiCloud : HiCalendarDays;
 
   return (
-    <div className="rounded-[30px] bg-[#F1EFEF] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-      <div className="relative min-h-[11rem] rounded-[22px] bg-white p-3 shadow-[0_4px_18px_rgba(17,17,17,0.04)]">
-        {!hasAny ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-[22px] bg-white/95 px-6 text-center">
-            <p className="text-[14px] font-semibold text-neutral-800">{emptyHint}</p>
-          </div>
-        ) : null}
-        <div className="flex h-44 items-end gap-px">
+    <div className={`relative min-h-[11rem] ${overviewMutedSurface} p-3`}>
+      <div className="pointer-events-none absolute inset-x-3 top-3 bottom-3 flex flex-col justify-between">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="border-t border-dashed border-[#E5E7EB]" />
+        ))}
+      </div>
+      {!hasAny ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
+          <EmptyIcon className="h-10 w-10 text-[#D1D5DB]" aria-hidden />
+          <p className="text-[13px] font-medium text-[#6B7280]">{emptyHint}</p>
+        </div>
+      ) : (
+        <div className="relative flex h-44 items-end gap-0.5 px-1">
           {stats.map((s) => {
             const v = mode === 'revenue' ? s.completedRevenue : s.activeVisits;
-            const h = Math.max((v / max) * 100, v > 0 ? 8 : 3);
-            let barClass = 'bg-neutral-200';
-            if (v > 0) {
-              const eps = 1e-6;
-              if (v > avgValue + eps) barClass = 'bg-emerald-500';
-              else if (v < avgValue - eps) barClass = 'bg-rose-500';
-              else barClass = 'bg-neutral-300';
-            }
+            const h = Math.max((v / max) * 100, v > 0 ? 10 : 4);
             return (
               <div
                 key={s.date}
-                className="flex h-full min-w-0 flex-1 flex-col justify-end pt-1"
+                className="flex h-full min-w-0 flex-1 flex-col justify-end"
                 title={`${s.date}: ${mode === 'revenue' ? `${v} BYN` : `${v} записей`}`}
               >
                 <div
-                  className={`mx-auto w-[min(100%,14px)] rounded-t-[10px] transition ${barClass}`}
-                  style={{ height: `${h}%`, minHeight: v > 0 ? 4 : 2 }}
+                  className={`mx-auto w-[min(100%,12px)] rounded-t-lg transition ${
+                    v > 0 ? 'bg-gradient-to-t from-[#F47C8C] to-[#F9A8B4]' : 'bg-[#E5E7EB]'
+                  }`}
+                  style={{ height: `${h}%`, minHeight: v > 0 ? 6 : 3 }}
                 />
               </div>
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function OverviewKpiCard({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className={`${overviewCard} flex min-w-0 items-center gap-2.5 p-3`}>
+      <span className={`${overviewIconCircle} h-9 w-9`}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-medium text-[#6B7280]">{label}</p>
+        <p className="mt-0.5 truncate text-[15px] font-semibold tabular-nums tracking-tight text-[#111827]">
+          {value}
+        </p>
+        <p className="mt-0.5 text-[10px] font-medium text-[#9CA3AF]">{sub ?? 'за период'}</p>
       </div>
     </div>
   );
 }
+
+function OverviewEmptyHero() {
+  return (
+    <div className={`${overviewCard} ${overviewCardPad} text-center`}>
+      <img
+        src={overviewEmptyIllustrationSrc}
+        alt=""
+        width={280}
+        height={240}
+        decoding="async"
+        className="mx-auto w-full max-w-[220px] object-contain"
+      />
+      <h2 className="mt-4 text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">
+        За выбранный период данных нет
+      </h2>
+      <p className="mx-auto mt-2 max-w-[18rem] text-[13px] leading-relaxed text-[#6B7280]">
+        Попробуйте выбрать другой период или дождитесь первых записей.
+      </p>
+    </div>
+  );
+}
+
 
 function OverviewSkeleton() {
   return (
@@ -202,16 +237,6 @@ export function AdminOverviewTab({ draft, appointments, appointmentsPath, onOpen
     [appointments, chartRange.chartEnd, chartRange.chartStart],
   );
 
-  const avgRevenue = useMemo(() => {
-    if (!dayStats.length) return 0;
-    return dayStats.reduce((s, d) => s + d.completedRevenue, 0) / dayStats.length;
-  }, [dayStats]);
-
-  const avgVisits = useMemo(() => {
-    if (!dayStats.length) return 0;
-    return dayStats.reduce((s, d) => s + d.activeVisits, 0) / dayStats.length;
-  }, [dayStats]);
-
   const totalRevenue = useMemo(
     () => sumCompletedRevenueBetween(appointments, reportRange.start, reportRange.end),
     [appointments, reportRange.end, reportRange.start],
@@ -219,19 +244,6 @@ export function AdminOverviewTab({ draft, appointments, appointmentsPath, onOpen
   const totalVisits = useMemo(
     () => countActiveVisitsBetween(appointments, reportRange.start, reportRange.end),
     [appointments, reportRange.end, reportRange.start],
-  );
-
-  const prev = useMemo(
-    () => previousOverviewReportPeriod(reportRange.start, reportRange.end),
-    [reportRange.end, reportRange.start],
-  );
-  const prevRevenue = useMemo(
-    () => (prev ? sumCompletedRevenueBetween(appointments, prev.start, prev.end) : 0),
-    [appointments, prev],
-  );
-  const prevVisits = useMemo(
-    () => (prev ? countActiveVisitsBetween(appointments, prev.start, prev.end) : 0),
-    [appointments, prev],
   );
 
   const nearest = useMemo(
@@ -243,141 +255,139 @@ export function AdminOverviewTab({ draft, appointments, appointmentsPath, onOpen
 
   const axisIdx = useMemo(() => chartAxisIndices(dayStats.length), [dayStats.length]);
 
-  const revenueValueClass = prev ? kpiTrendClass(totalRevenue, prevRevenue) : 'text-neutral-950';
-  const visitsValueClass = prev ? kpiTrendClass(totalVisits, prevVisits) : 'text-neutral-950';
+  const periodLabel =
+    periodMode === 'all' ? 'За всё время' : `${formatRuDate(from)} — ${formatRuDate(to)}`;
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-[30px] bg-white p-4 shadow-[0_10px_32px_rgba(17,17,17,0.06)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold text-neutral-800">Период</p>
-            <p className="mt-0.5 text-[13px] font-medium leading-snug text-neutral-600">
-              {periodMode === 'all' ? 'За всё время' : `${formatRuDate(from)} — ${formatRuDate(to)}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={togglePeriodDetails}
-            className="shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold text-[#c97f7f] ring-1 ring-[#E29595]/40 transition active:scale-[0.98] hover:bg-[#E29595]/10"
-          >
-            {showPeriodControls ? 'Скрыть' : 'Подробнее'}
-          </button>
-        </div>
-        {showPeriodControls ? (
-          <div className="mt-3 space-y-3 border-t border-neutral-100 pt-3">
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  setPeriodMode('all');
-                  setRangeCapped(false);
-                  setShowPeriodControls(false);
-                }}
-                className="text-[13px] font-semibold text-neutral-700 underline decoration-neutral-300 underline-offset-2 transition hover:text-neutral-900"
-              >
-                За всё время
-              </button>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-              <div className="block min-w-[10rem] flex-1">
-                <span className="text-[12px] font-semibold text-neutral-500">С</span>
-                <button
-                  type="button"
-                  onClick={() => setDatePicker('from')}
-                  className="mt-1.5 flex min-h-[2.75rem] w-full items-center justify-between rounded-[20px] bg-[#F1EFEF] px-4 py-2.5 text-left text-[15px] font-medium text-neutral-900 transition active:scale-[0.99]"
-                >
-                  {formatRuDate(from)}
-                  <span className="text-neutral-400" aria-hidden>
-                    ▾
-                  </span>
-                </button>
-              </div>
-              <div className="block min-w-[10rem] flex-1">
-                <span className="text-[12px] font-semibold text-neutral-500">По</span>
-                <button
-                  type="button"
-                  onClick={() => setDatePicker('to')}
-                  className="mt-1.5 flex min-h-[2.75rem] w-full items-center justify-between rounded-[20px] bg-[#F1EFEF] px-4 py-2.5 text-left text-[15px] font-medium text-neutral-900 transition active:scale-[0.99]"
-                >
-                  {formatRuDate(to)}
-                  <span className="text-neutral-400" aria-hidden>
-                    ▾
-                  </span>
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={onShowCustomRange}
-                className="flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[#E29595] px-7 text-[14px] font-semibold text-white shadow-[0_10px_26px_rgba(226,149,149,0.28)] transition active:scale-[0.98] sm:mb-0.5"
-              >
-                Показать
-              </button>
-            </div>
-          </div>
-        ) : null}
-        {rangeCapped ? (
-          <p className="mt-3 rounded-[18px] bg-[#F1EFEF] px-3 py-2 text-[12px] font-medium text-neutral-600">
-            Показан максимум за 90 дней
-          </p>
-        ) : null}
-        {chartIsTruncated ? (
-          <p className="mt-2 text-[11px] leading-snug text-neutral-500">
-            Диаграммы — последние {OVERVIEW_MAX_RANGE_DAYS} дней периода; доход и число записей — за весь выбранный интервал.
-          </p>
-        ) : null}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2 pb-1">
+        <div className="w-11 shrink-0" aria-hidden />
+        <h1 className="flex-1 text-center text-[18px] font-semibold tracking-[-0.03em] text-[#111827]">
+          Сводка
+        </h1>
+        <button
+          type="button"
+          onClick={togglePeriodDetails}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#111827] shadow-[0_4px_16px_rgba(17,24,39,0.06)] transition hover:bg-[#F7F7F8] active:scale-[0.97]"
+          aria-label="Выбрать период"
+        >
+          <HiCalendar className="h-5 w-5" aria-hidden />
+        </button>
       </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={togglePeriodDetails}
+          className={`${overviewCard} flex min-w-0 flex-1 items-center gap-3 p-4 text-left transition active:scale-[0.99]`}
+        >
+          <span className={overviewIconCircle}>
+            <HiCalendar className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12px] font-medium text-[#6B7280]">Период</span>
+            <span className="mt-0.5 block truncate text-[15px] font-semibold text-[#111827]">{periodLabel}</span>
+          </span>
+          <HiChevronDown className="h-4 w-4 shrink-0 text-[#9CA3AF]" aria-hidden />
+        </button>
+        <button type="button" onClick={togglePeriodDetails} className={overviewPinkOutline}>
+          {showPeriodControls ? 'Скрыть' : 'Подробнее'}
+        </button>
+      </div>
+
+      {showPeriodControls ? (
+        <div className={`${overviewCard} ${overviewCardPad} space-y-3`}>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setPeriodMode('all');
+                setRangeCapped(false);
+                setShowPeriodControls(false);
+              }}
+              className="text-[13px] font-semibold text-[#F47C8C] transition hover:text-[#F26D83]"
+            >
+              За всё время
+            </button>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="block min-w-[10rem] flex-1">
+              <span className="text-[12px] font-medium text-[#6B7280]">С</span>
+              <button
+                type="button"
+                onClick={() => setDatePicker('from')}
+                className={`mt-1.5 flex min-h-11 w-full items-center justify-between ${overviewMutedSurface} px-4 py-2.5 text-left text-[15px] font-medium text-[#111827] transition active:scale-[0.99]`}
+              >
+                {formatRuDate(from)}
+                <HiChevronDown className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
+              </button>
+            </div>
+            <div className="block min-w-[10rem] flex-1">
+              <span className="text-[12px] font-medium text-[#6B7280]">По</span>
+              <button
+                type="button"
+                onClick={() => setDatePicker('to')}
+                className={`mt-1.5 flex min-h-11 w-full items-center justify-between ${overviewMutedSurface} px-4 py-2.5 text-left text-[15px] font-medium text-[#111827] transition active:scale-[0.99]`}
+              >
+                {formatRuDate(to)}
+                <HiChevronDown className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={onShowCustomRange}
+              className={`flex min-h-11 shrink-0 items-center justify-center px-7 text-[14px] font-semibold ${overviewPinkBtn} sm:mb-0.5`}
+            >
+              Показать
+            </button>
+          </div>
+          {rangeCapped ? (
+            <p className={`${overviewMutedSurface} px-3 py-2 text-[12px] font-medium text-[#6B7280]`}>
+              Показан максимум за 90 дней
+            </p>
+          ) : null}
+          {chartIsTruncated ? (
+            <p className="text-[11px] leading-snug text-[#6B7280]">
+              Диаграммы — последние {OVERVIEW_MAX_RANGE_DAYS} дней периода; доход и число записей — за весь выбранный
+              интервал.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {isLoading ? (
         <OverviewSkeleton />
       ) : (
         <>
-          {!hasAnyAppointmentInRange ? (
-            <NothingFoundCard
-              title="За выбранный период данных нет"
-              text="Попробуйте выбрать другой период или дождитесь первых записей."
-            />
-          ) : null}
+          {!hasAnyAppointmentInRange ? <OverviewEmptyHero /> : null}
 
-          <div className="rounded-[30px] bg-[#F1EFEF] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-[30px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.05)]">
-                <p className="text-[12px] font-semibold text-neutral-500">Доход</p>
-                <p className={`mt-2 text-2xl font-semibold tabular-nums tracking-tight ${revenueValueClass}`}>
-                  {formatBynRu(totalRevenue)}
-                </p>
-                <div className="mt-2 min-h-[18px]">{prev ? <ComparisonLine current={totalRevenue} previous={prevRevenue} /> : null}</div>
-              </div>
-              <div className="rounded-[30px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.05)]">
-                <p className="text-[12px] font-semibold text-neutral-500">Записей</p>
-                <p className={`mt-2 text-2xl font-semibold tabular-nums tracking-tight ${visitsValueClass}`}>
-                  {totalVisits}
-                </p>
-                <div className="mt-2 min-h-[18px]">{prev ? <ComparisonLine current={totalVisits} previous={prevVisits} /> : null}</div>
-              </div>
-              <div className="rounded-[30px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.05)]">
-                <p className="text-[12px] font-semibold text-neutral-500">Услуг</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-neutral-950">{serviceCount}</p>
-                {serviceCount === 0 ? (
-                  <div className="mt-2 space-y-0.5">
-                    <p className="text-[12px] font-semibold text-neutral-700">Услуги пока не добавлены</p>
-                    <p className="text-[11px] font-medium text-neutral-500">Добавьте услуги в каталоге</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            <OverviewKpiCard
+              icon={<HiBanknotes className="h-[18px] w-[18px]" aria-hidden />}
+              label="Доход"
+              value={formatBynRu(totalRevenue)}
+            />
+            <OverviewKpiCard
+              icon={<HiCalendar className="h-[18px] w-[18px]" aria-hidden />}
+              label="Записей"
+              value={String(totalVisits)}
+            />
+            <OverviewKpiCard
+              icon={<HiSquares2X2 className="h-[18px] w-[18px]" aria-hidden />}
+              label="Услуг"
+              value={String(serviceCount)}
+              sub={serviceCount === 0 ? 'добавьте в каталоге' : 'за период'}
+            />
           </div>
 
-          <section className="rounded-[30px] bg-white p-4 shadow-[0_10px_32px_rgba(17,17,17,0.06)]">
-            <p className="text-[16px] font-semibold text-neutral-900">Доход по дням</p>
-            <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-              Зелёный — выше среднего, красный — ниже.
-            </p>
+          <section className={`${overviewCard} ${overviewCardPad}`}>
+            <h2 className="text-[16px] font-semibold text-[#111827]">Доход по дням</h2>
+            <p className="mt-1 text-[12px] text-[#6B7280]">Данные за выбранный период</p>
             <div className="mt-4">
-              <BarBlock stats={dayStats} mode="revenue" avgValue={avgRevenue} emptyHint="Дохода за период нет" />
+              <BarBlock stats={dayStats} mode="revenue" emptyHint="Дохода за период нет" />
             </div>
             {dayStats.length > 0 ? (
-              <div className="mt-3 flex justify-between px-1 text-[11px] font-medium text-neutral-400">
+              <div className="mt-3 flex justify-between px-1 text-[11px] font-medium text-[#9CA3AF]">
                 {axisIdx.map((i) => (
                   <span key={dayStats[i].date} className="tabular-nums">
                     {formatDdMm(dayStats[i].date)}
@@ -387,16 +397,14 @@ export function AdminOverviewTab({ draft, appointments, appointmentsPath, onOpen
             ) : null}
           </section>
 
-          <section className="rounded-[30px] bg-white p-4 shadow-[0_10px_32px_rgba(17,17,17,0.06)]">
-            <p className="text-[16px] font-semibold text-neutral-900">Записи по дням</p>
-            <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-              Зелёный — выше среднего, красный — ниже.
-            </p>
+          <section className={`${overviewCard} ${overviewCardPad}`}>
+            <h2 className="text-[16px] font-semibold text-[#111827]">Записи по дням</h2>
+            <p className="mt-1 text-[12px] text-[#6B7280]">Данные за выбранный период</p>
             <div className="mt-4">
-              <BarBlock stats={dayStats} mode="visits" avgValue={avgVisits} emptyHint="Записей за период нет" />
+              <BarBlock stats={dayStats} mode="visits" emptyHint="Записей за период нет" />
             </div>
             {dayStats.length > 0 ? (
-              <div className="mt-3 flex justify-between px-1 text-[11px] font-medium text-neutral-400">
+              <div className="mt-3 flex justify-between px-1 text-[11px] font-medium text-[#9CA3AF]">
                 {axisIdx.map((i) => (
                   <span key={`${dayStats[i].date}-v`} className="tabular-nums">
                     {formatDdMm(dayStats[i].date)}
@@ -406,47 +414,61 @@ export function AdminOverviewTab({ draft, appointments, appointmentsPath, onOpen
             ) : null}
           </section>
 
-          <div className="rounded-[30px] bg-[#F1EFEF] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
-            <p className="px-1 text-[13px] font-semibold text-neutral-600">Ближайшая запись</p>
+          <div className={`${overviewCard} ${overviewCardPad}`}>
             {nearest ? (
-              <div className="mt-3 rounded-[30px] bg-white p-4 shadow-[0_10px_30px_rgba(17,17,17,0.06)]">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[17px] font-semibold text-neutral-950">{nearest.clientName}</p>
-                  <span className="inline-flex rounded-full bg-[#F1EFEF] px-3 py-1 text-[11px] font-semibold text-neutral-700">
-                    {appointmentStatusLabel(nearest.status)}
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className={overviewIconCircle}>
+                    <HiBell className="h-5 w-5" aria-hidden />
                   </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-[#6B7280]">Ближайшая запись</p>
+                    <p className="mt-1 text-[17px] font-semibold text-[#111827]">{nearest.clientName}</p>
+                    <p className="mt-1 text-[14px] text-[#6B7280]">{nearest.serviceTitle}</p>
+                    <p className="mt-1 text-[13px] font-medium text-[#111827]">
+                      {formatAppointmentWhenRu(nearest.date, nearest.time)}
+                    </p>
+                    <p className="mt-1 text-[14px] font-semibold text-[#F47C8C]">{formatBynRu(nearest.priceByn)}</p>
+                    {nearest.addressShort ? (
+                      <p className="mt-1 line-clamp-2 text-[12px] text-[#6B7280]">{nearest.addressShort}</p>
+                    ) : null}
+                    <span className="mt-2 inline-flex rounded-full bg-[#F7F7F8] px-3 py-1 text-[11px] font-semibold text-[#6B7280]">
+                      {appointmentStatusLabel(nearest.status)}
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-1 text-[14px] text-neutral-600">{nearest.serviceTitle}</p>
-                <p className="mt-1 text-[13px] font-medium text-neutral-700">{formatAppointmentWhenRu(nearest.date, nearest.time)}</p>
-                <p className="mt-1 text-[14px] font-semibold text-neutral-900">{formatBynRu(nearest.priceByn)}</p>
-                {nearest.addressShort ? (
-                  <p className="mt-1 line-clamp-2 text-[12px] text-neutral-500">{nearest.addressShort}</p>
-                ) : null}
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
                     onClick={() => onOpenAppointment(nearest)}
-                    className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#E29595] text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(226,149,149,0.24)] transition active:scale-[0.98]"
+                    className={`flex min-h-11 flex-1 items-center justify-center text-[14px] font-semibold ${overviewPinkBtn}`}
                   >
                     Открыть
                   </button>
                   <Link
                     to={appointmentsPath}
-                    className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] text-[14px] font-semibold text-neutral-800 transition active:scale-[0.98]"
+                    className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#F7F7F8] text-[14px] font-semibold text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.98]"
                   >
                     Все записи
                   </Link>
                 </div>
               </div>
             ) : (
-              <div className="mt-3 rounded-[30px] bg-white px-4 py-5 text-center shadow-[0_8px_24px_rgba(17,17,17,0.05)]">
-                <p className="text-[15px] font-semibold text-neutral-900">Ближайших записей нет</p>
-                <p className="mt-2 text-[13px] text-neutral-500">Новые заявки появятся здесь.</p>
+              <div className="flex items-center gap-3">
+                <span className={overviewIconCircle}>
+                  <HiBell className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold text-[#111827]">Ближайшая запись</p>
+                  <p className="mt-1 text-[13px] text-[#6B7280]">Ближайших записей нет</p>
+                </div>
+                <HiCalendarDays className="h-10 w-10 shrink-0 text-[#FDE8ED]" aria-hidden />
               </div>
             )}
           </div>
         </>
       )}
+
 
       <AdminCalendarSheet
         open={datePicker !== null}

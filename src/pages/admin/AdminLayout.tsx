@@ -13,7 +13,7 @@ import {
 } from '../../app/paths';
 import { getCurrentMasterPlan, planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
-import { ProfileTabProvider } from './profile/profileTabContext';
+import { ProfileSectionTabsBar, ProfileTabProvider, PROFILE_TAB_BAR_HEIGHT } from './profile/profileTabContext';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 
 const iconStroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -150,12 +150,17 @@ export function AdminLayout() {
       <AdminMasterCabinetProvider>
         <ProfileTabProvider>
           <div
-            className="mx-auto max-w-lg"
-            style={{ '--slotty-admin-header-h': '4.5rem' } as CSSProperties}
+            className={`mx-auto max-w-lg ${isProfileHome ? 'pb-[calc(var(--slotty-profile-tab-bar-h)+env(safe-area-inset-bottom,0px))]' : ''}`}
+            style={
+              {
+                '--slotty-admin-header-h': '4.5rem',
+                '--slotty-profile-tab-bar-h': PROFILE_TAB_BAR_HEIGHT,
+              } as CSSProperties
+            }
           >
             <div ref={stickyShellRef} className="sticky top-0 z-40 flex flex-col gap-0 overflow-hidden bg-white">
               <div
-                className={`relative z-40 flex shrink-0 items-center justify-between gap-3 overflow-hidden bg-white px-4 pb-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${
+                className={`relative z-40 flex shrink-0 items-center justify-between gap-3 overflow-hidden bg-white px-4 pb-0.5 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${
                   isProfileHome ? 'min-h-11 border-b-2 border-[#F47C8C]' : 'min-h-[3.25rem] border-b-2 border-[#F47C8C]'
                 }`}
               >
@@ -186,6 +191,7 @@ export function AdminLayout() {
 
             {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
             <Outlet />
+            <ProfileSectionTabsBar />
           </div>
         </ProfileTabProvider>
       </AdminMasterCabinetProvider>

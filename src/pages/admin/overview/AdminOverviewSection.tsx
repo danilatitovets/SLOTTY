@@ -3,6 +3,7 @@ import { ADMIN_APPOINTMENTS_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { AdminAppointmentDetailSheet } from '../shared/AdminAppointmentDetailSheet';
 import { useAdminAppointments, useAdminMasterDraft } from '../useAdminMasterData';
+import { overviewPageBg } from './adminOverviewTheme';
 import { AdminOverviewTab } from './AdminOverviewTab';
 
 export function AdminOverviewSection() {
@@ -12,16 +13,13 @@ export function AdminOverviewSection() {
 
   return (
     <>
-      <div className="px-4 pb-10">
-        <h1 className="pt-1 text-[26px] font-semibold tracking-[-0.05em] text-neutral-950">Сводка</h1>
-        <div className="mt-6">
-          <AdminOverviewTab
-            draft={draft}
-            appointments={appointments}
-            appointmentsPath={ADMIN_APPOINTMENTS_PATH}
-            onOpenAppointment={(a) => setDetailAppt(a)}
-          />
-        </div>
+      <div className={`-mx-4 px-4 pb-10 pt-1 ${overviewPageBg}`}>
+        <AdminOverviewTab
+          draft={draft}
+          appointments={appointments}
+          appointmentsPath={ADMIN_APPOINTMENTS_PATH}
+          onOpenAppointment={(a) => setDetailAppt(a)}
+        />
       </div>
 
       <AdminAppointmentDetailSheet

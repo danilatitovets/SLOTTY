@@ -136,15 +136,7 @@ function StatMiniCard({ icon, label, value, empty }: StatMiniDisplay & { icon: R
   );
 }
 
-export function AdminProfileHero({
-  draft,
-  stats,
-  tabs,
-}: {
-  draft: MasterDraft;
-  stats: ProfileStats;
-  tabs?: ReactNode;
-}) {
+export function AdminProfileHero({ draft, stats }: { draft: MasterDraft; stats: ProfileStats }) {
   const photoSrc = (draft.photoUrl && draft.photoUrl.trim()) || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const displayName = draft.name.trim() || 'Мастер';
 
@@ -162,8 +154,6 @@ export function AdminProfileHero({
           }}
         />
       </div>
-
-      {tabs}
 
       <div className="relative px-4 pb-5 pt-0">
         <div className="-mt-11 flex justify-center">
@@ -224,7 +214,7 @@ export function SectionTabs({
   ];
 
   return (
-    <nav className="flex bg-white px-1 pb-1 pt-2 leading-none" aria-label="Разделы профиля">
+    <nav className="flex bg-white px-1 pb-2 pt-2.5 leading-none" aria-label="Разделы профиля">
       {tabs.map((tab) => {
         const selected = active === tab.id;
         return (

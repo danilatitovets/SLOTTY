@@ -1,7 +1,10 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ADMIN_PATH } from '../../../app/paths';
-import { CABINET_HEADER_STICKY_TOP, SectionTabs, type ProfileSectionId } from './AdminProfileCabinetUi';
+import { SectionTabs, type ProfileSectionId } from './AdminProfileCabinetUi';
+
+/** Высота нижней панели вкладок (для отступа контента). */
+export const PROFILE_TAB_BAR_HEIGHT = '4.25rem';
 
 type ProfileTabContextValue = {
   activeSection: ProfileSectionId;
@@ -28,7 +31,7 @@ export function useProfileTabs(): ProfileTabContextValue {
   return ctx;
 }
 
-/** Вкладки в блоке героя; при скролле липнут под шапку с логотипом. */
+/** Фиксированная нижняя панель разделов профиля. */
 export function ProfileSectionTabsBar() {
   const { pathname } = useLocation();
   const isProfileHome = pathname === ADMIN_PATH;
@@ -38,11 +41,10 @@ export function ProfileSectionTabsBar() {
   const { activeSection, setActiveSection } = useProfileTabs();
 
   return (
-    <div
-      className="sticky z-30 bg-white"
-      style={{ top: CABINET_HEADER_STICKY_TOP }}
-    >
-      <SectionTabs active={activeSection} onChange={setActiveSection} />
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center">
+      <div className="pointer-events-auto w-full max-w-lg border-t border-[#EAECEF] bg-white pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-8px_32px_rgba(17,24,39,0.08)]">
+        <SectionTabs active={activeSection} onChange={setActiveSection} />
+      </div>
     </div>
   );
 }
