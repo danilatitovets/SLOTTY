@@ -40,7 +40,7 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
     <article
       className={`relative overflow-hidden rounded-[24px] shadow-[0_12px_36px_rgba(17,24,39,0.10)] ${
         muted ? 'opacity-[0.72]' : ''
-      } ${draft ? 'ring-1 ring-[#EAECEF]' : ''} ${className}`}
+      } ${draft ? 'ring-1 ring-[#FDE8ED]' : ''} ${className}`}
     >
       <div className="relative min-h-[168px]">
         <img
@@ -51,99 +51,96 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
         />
         {draft ? (
           <div
-            className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/75 to-white/35"
+            className="absolute inset-0 bg-gradient-to-r from-[#fff5f8]/96 via-[#ffe8ee]/72 via-55% to-transparent"
             aria-hidden
           />
         ) : (
           <>
             <div
-              className="absolute inset-0 bg-gradient-to-r from-[#111827]/92 via-[#111827]/72 to-[#111827]/15"
+              className="absolute inset-0 bg-gradient-to-r from-[#6e3550]/78 via-[#c4617f]/42 via-55% to-transparent"
               aria-hidden
             />
             <div
-              className="absolute inset-0 bg-gradient-to-t from-[#111827]/75 via-transparent to-[#111827]/40"
+              className="absolute inset-0 bg-gradient-to-t from-[#5a2840]/55 via-transparent to-[#5a2840]/25"
               aria-hidden
             />
           </>
         )}
+
+        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 p-4">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ${statusBadgeClass(promo.status)}`}
+          >
+            {promotionStatusLabel(promo.status)}
+          </span>
+          {onMenu ? (
+            <button
+              type="button"
+              onClick={onMenu}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-[0.96] ${
+                draft ? 'bg-white/95 text-[#6B7280] shadow-sm' : 'bg-white/22 text-white backdrop-blur-sm'
+              }`}
+              aria-label="Меню акции"
+            >
+              <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
+            </button>
+          ) : (
+            <span className="h-9 w-9 shrink-0" aria-hidden />
+          )}
+        </div>
+
+        <div className="absolute right-4 top-1/2 z-10 -translate-y-1/2">
+          <span
+            className={`flex h-[72px] w-[72px] items-center justify-center rounded-full text-center text-[13px] font-bold leading-tight ${
+              draft
+                ? 'bg-white text-[#F47C8C] shadow-[0_8px_24px_rgba(244,124,140,0.18)] ring-2 ring-[#FDE8ED]'
+                : 'bg-white text-[#F47C8C] shadow-[0_8px_24px_rgba(0,0,0,0.18)]'
+            }`}
+          >
+            {promo.discountLabel}
+          </span>
+        </div>
+
         <div
-          className={`relative flex min-h-[168px] gap-3 p-4 ${
+          className={`relative z-10 flex min-h-[168px] flex-col justify-end p-4 pr-[5.75rem] pt-14 ${
             draft ? 'text-[#111827]' : 'text-white'
           }`}
         >
-          <div className="flex min-w-0 flex-1 flex-col justify-between">
-            <div className="flex items-start justify-between gap-2">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm ${statusBadgeClass(promo.status)}`}
-              >
-                {promotionStatusLabel(promo.status)}
-              </span>
-              {onMenu ? (
-                <button
-                  type="button"
-                  onClick={onMenu}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-[0.96] ${
-                    draft ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-white/20 text-white backdrop-blur-sm'
-                  }`}
-                  aria-label="Меню акции"
-                >
-                  <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-                </button>
-              ) : null}
-            </div>
-            <div className="min-w-0 pr-1">
-              <h3
-                className={`text-[17px] font-bold leading-snug tracking-[-0.03em] ${
-                  draft
-                    ? 'text-[#111827]'
-                    : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]'
-                }`}
-              >
-                {promo.title}
-              </h3>
-              {promo.serviceTitle ? (
-                <p
-                  className={`mt-1 truncate text-[13px] font-semibold ${
-                    draft
-                      ? 'text-[#F47C8C]'
-                      : 'text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]'
-                  }`}
-                >
-                  {promo.serviceTitle}
-                </p>
-              ) : null}
-              <p
-                className={`mt-1 line-clamp-2 text-[12px] font-medium leading-snug ${
-                  draft
-                    ? 'text-[#6B7280]'
-                    : 'text-white/95 drop-shadow-[0_1px_5px_rgba(0,0,0,0.45)]'
-                }`}
-              >
-                {promo.description}
-              </p>
-              <p
-                className={`mt-2 flex items-center gap-1 text-[11px] font-semibold ${
-                  draft
-                    ? 'text-[#9CA3AF]'
-                    : 'text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]'
-                }`}
-              >
-                <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {formatDdMmRu(promo.startsAt)} — {formatDdMmRu(promo.endsAt)}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-col items-center justify-center">
-            <span
-              className={`flex h-[72px] w-[72px] items-center justify-center rounded-full text-center text-[13px] font-bold leading-tight ${
-                draft
-                  ? 'bg-[#FFF1F4] text-[#F47C8C] ring-2 ring-[#FDE8ED]'
-                  : 'bg-white text-[#F47C8C] shadow-[0_8px_24px_rgba(0,0,0,0.18)]'
+          <h3
+            className={`text-[17px] font-bold leading-snug tracking-[-0.03em] ${
+              draft
+                ? 'text-[#111827]'
+                : 'text-white drop-shadow-[0_2px_8px_rgba(90,40,55,0.55)]'
+            }`}
+          >
+            {promo.title}
+          </h3>
+          {promo.serviceTitle ? (
+            <p
+              className={`mt-1 truncate text-[13px] font-semibold ${
+                draft ? 'text-[#F47C8C]' : 'text-white drop-shadow-[0_1px_6px_rgba(90,40,55,0.5)]'
               }`}
             >
-              {promo.discountLabel}
-            </span>
-          </div>
+              {promo.serviceTitle}
+            </p>
+          ) : null}
+          <p
+            className={`mt-1 line-clamp-2 text-[12px] font-medium leading-snug ${
+              draft
+                ? 'text-[#6B7280]'
+                : 'text-white/95 drop-shadow-[0_1px_5px_rgba(90,40,55,0.45)]'
+            }`}
+          >
+            {promo.description}
+          </p>
+          <p
+            className={`mt-2 flex items-center gap-1 text-[11px] font-semibold ${
+              draft ? 'text-[#9CA3AF]' : 'text-white/90 drop-shadow-[0_1px_4px_rgba(90,40,55,0.45)]'
+            }`}
+          >
+            <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {formatDdMmRu(promo.startsAt)} — {formatDdMmRu(promo.endsAt)}
+          </p>
         </div>
       </div>
     </article>

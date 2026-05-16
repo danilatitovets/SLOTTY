@@ -119,20 +119,6 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
         </ul>
       )}
 
-      <div className={`${servicesCard} flex gap-3.5 border-[#FDE8ED] bg-gradient-to-br from-[#FFF9FB] to-white p-4`}>
-        <span className={`${servicesIconCircle} h-11 w-11 shrink-0 rounded-[14px]`}>
-          <HiReceiptPercent className="h-5 w-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[15px] font-bold leading-snug text-[#111827]">
-            Акции помогают заполнять свободные окна
-          </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-[#6B7280]">
-            Создавайте предложения на определённый срок и продвигайте нужные услуги
-          </p>
-        </div>
-      </div>
-
       <AdminBottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Фильтр">
         <div className="space-y-2 pb-2">
           {FILTER_OPTIONS.map((option) => {

@@ -1,4 +1,11 @@
 export const SERVICES_PAGE_BG = 'bg-[#F7F7F8]';
+
+const servicesTabPhotosDir = '/photos/' + encodeURIComponent('услуги') + '/';
+
+/** Фото для шапок табов «Услуги» (`public/photos/услуги`). */
+export function servicesTabPhotoSrc(fileName: string): string {
+  return servicesTabPhotosDir + encodeURIComponent(fileName);
+}
 /** Высота плавающего таббара (72px + нижний отступ контейнера). */
 export const SERVICES_TAB_BAR_HEIGHT = '5.75rem';
 /** Отступ контента, чтобы список доскролливался выше фиксированного таббара. */

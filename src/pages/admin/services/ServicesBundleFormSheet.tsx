@@ -3,7 +3,6 @@ import {
   HiCheck,
   HiMagnifyingGlass,
   HiPhoto,
-  HiScissors,
 } from 'react-icons/hi2';
 import { uploadMasterPortfolioImageFile } from '../../../features/admin/api/masterCabinetApi';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
@@ -20,7 +19,7 @@ import { servicesInput, servicesPinkBtn } from './adminServicesTheme';
 import { ServicesBundleCard } from './ServicesBundleCard';
 import { BUNDLE_FORM_STEPS, ServicesBundleStepper } from './ServicesBundleStepper';
 import type { ManagedService } from './servicesFormat';
-import { formatDurationRu, formatServicePrice, serviceImageUrl } from './servicesFormat';
+import { formatDurationRu, formatServicePrice } from './servicesFormat';
 import { newBundleId } from './servicesStorage';
 import type { ServiceBundle, ServiceBundleImageSource, ServiceBundleStatus } from './servicesTypes';
 
@@ -305,35 +304,19 @@ export function ServicesBundleFormSheet({
               ) : null}
 
               <ul className="space-y-2">
-                {filteredServices.map((service, serviceIndex) => {
+                {filteredServices.map((service) => {
                   const selected = selectedIds.includes(service.id);
-                  const thumb = serviceImageUrl(service, draft, serviceIndex);
                   return (
                     <li key={service.id}>
                       <button
                         type="button"
                         onClick={() => toggleService(service.id)}
-                        className={`flex w-full touch-pan-y gap-3 rounded-[18px] border p-3 text-left transition active:scale-[0.99] ${
+                        className={`flex w-full touch-pan-y items-center gap-3 rounded-[18px] border p-3 text-left transition active:scale-[0.99] ${
                           selected
                             ? 'border-[#FDE8ED] bg-[#FFF1F4] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]'
                             : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED]'
                         }`}
                       >
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-[#FFF1F4]">
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                            />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center">
-                              <HiScissors className="h-6 w-6 text-[#F47C8C]" aria-hidden />
-                            </span>
-                          )}
-                        </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[15px] font-bold text-[#111827]">{service.title}</p>
                           <p className="mt-0.5 text-[13px] text-[#6B7280]">
@@ -341,7 +324,7 @@ export function ServicesBundleFormSheet({
                           </p>
                         </div>
                         <span
-                          className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                             selected
                               ? 'border-[#F47C8C] bg-[#F47C8C] text-white'
                               : 'border-[#EAECEF] bg-white'

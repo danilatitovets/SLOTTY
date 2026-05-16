@@ -10,28 +10,28 @@ const OVERVIEW_TAB_INTRO: Record<
     description: 'Ключевые показатели, ближайшая запись и динамика записей за выбранный период.',
     imageSrc: overviewSvodkaPhotoSrc('обзор.webp'),
     overlayClass:
-      'bg-gradient-to-r from-[#111827]/90 via-[#111827]/72 to-[#111827]/35',
+      'bg-gradient-to-r from-[#7a3d52]/72 via-[#c4617f]/38 via-55% to-transparent',
   },
   revenue: {
     title: 'Доход',
     description: 'Сумма заработка, график по дням, средний чек и оплаченные записи.',
     imageSrc: overviewSvodkaPhotoSrc('доход.webp'),
     overlayClass:
-      'bg-gradient-to-r from-[#111827]/90 via-[#0f2922]/75 to-[#111827]/30',
+      'bg-gradient-to-r from-[#6b3d4a]/70 via-[#b86a7a]/36 via-55% to-transparent',
   },
   clients: {
     title: 'Клиенты',
     description: 'Новые и повторные визиты, динамика аудитории и доля постоянных клиентов.',
     imageSrc: overviewSvodkaPhotoSrc('клиенты.webp'),
     overlayClass:
-      'bg-gradient-to-r from-[#111827]/90 via-[#1e1b4b]/72 to-[#111827]/30',
+      'bg-gradient-to-r from-[#6e3550]/72 via-[#c4617f]/40 via-55% to-transparent',
   },
   reputation: {
     title: 'Репутация',
     description: 'Средний рейтинг, отзывы клиентов и ответы — всё, что влияет на доверие.',
     imageSrc: overviewSvodkaPhotoSrc('репутация.webp'),
     overlayClass:
-      'bg-gradient-to-r from-[#111827]/90 via-[#292524]/72 to-[#111827]/30',
+      'bg-gradient-to-r from-[#6f3a42]/70 via-[#c96b72]/38 via-55% to-transparent',
   },
 };
 

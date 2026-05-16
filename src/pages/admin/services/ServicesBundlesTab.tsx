@@ -77,14 +77,16 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
 
   return (
     <div className="space-y-4 pb-2">
-      <button
-        type="button"
-        onClick={openCreate}
-        disabled={!canCreate}
-        className={servicesPinkBtn}
-      >
-        + Создать набор
-      </button>
+      {sortedBundles.length > 0 ? (
+        <button
+          type="button"
+          onClick={openCreate}
+          disabled={!canCreate}
+          className={servicesPinkBtn}
+        >
+          + Создать набор
+        </button>
+      ) : null}
 
       {!canCreate ? (
         <p className="text-[13px] font-medium text-[#9CA3AF]">
@@ -109,7 +111,7 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
             disabled={!canCreate}
             className={`${servicesPinkBtn} mt-5`}
           >
-            Создать набор
+            + Создать набор
           </button>
         </div>
       ) : (
