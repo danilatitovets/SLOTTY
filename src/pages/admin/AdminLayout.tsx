@@ -131,7 +131,7 @@ export function AdminLayout() {
     <div className="min-h-dvh bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827]">
       <AdminMasterCabinetProvider>
         <div className="mx-auto max-w-lg">
-          <div className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-white/95 px-4 pb-3 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] backdrop-blur-md">
+          <div className="sticky top-0 z-30 flex min-h-[3.25rem] items-center justify-between gap-3 border-b-2 border-[#F47C8C] bg-white/95 px-4 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] backdrop-blur-md">
             <Link
               to={HUB_PATH}
               aria-label="SLOTTY — на главную"

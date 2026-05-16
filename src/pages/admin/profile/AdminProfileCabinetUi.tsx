@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import {
   HiCalendar,
   HiChatBubbleLeft,
-  HiCheckCircle,
+  HiCheck,
   HiChevronRight,
   HiClock,
   HiFaceSmile,
@@ -29,6 +29,22 @@ import { ContactChannelBrandIcon } from '../../master-onboarding/MasterProfileCo
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { cabinetCard, cabinetCardPad, cabinetIconCircle, cabinetPinkBtn } from './adminProfileCabinetTheme';
+
+const PROFILE_COMPLETE_IMAGE_SRC = '/photos/SUCCE.webp';
+
+function CompletionStatusIcon({ done }: { done: boolean }) {
+  if (done) {
+    return (
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] ring-1 ring-[#FDE8ED]"
+        aria-hidden
+      >
+        <HiCheck className="h-3 w-3 text-[#F47C8C]" strokeWidth={2.5} />
+      </span>
+    );
+  }
+  return <span className="h-5 w-5 shrink-0 rounded-full border-2 border-[#E5E7EB] bg-white" aria-hidden />;
+}
 
 export function CabinetPageShell({ children }: { children: ReactNode }) {
   return (
@@ -141,6 +157,9 @@ export function AdminProfileHero({ draft, stats }: { draft: MasterDraft; stats: 
 
 export type ProfileSectionId = 'main' | 'address' | 'portfolio' | 'rules';
 
+/** Смещение sticky-табов — сразу под шапкой кабинета (розовая линия на шапке). */
+export const CABINET_HEADER_STICKY_TOP = 'calc(3.25rem + env(safe-area-inset-top, 0px))';
+
 export function SectionTabs({
   active,
   onChange,
@@ -156,34 +175,32 @@ export function SectionTabs({
   ];
 
   return (
-    <div className={`${cabinetCard} p-1.5`}>
-      <div className="flex">
-        {tabs.map((tab) => {
-          const selected = active === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange(tab.id)}
-              className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-[18px] px-1 py-2 transition active:scale-[0.98] ${
-                selected ? 'text-[#F47C8C]' : 'text-[#6B7280] hover:text-[#111827]'
-              }`}
-            >
-              {tab.icon}
-              <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
-                {tab.label}
-              </span>
-              {selected ? (
-                <span
-                  className="absolute bottom-1 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-[#F47C8C]"
-                  aria-hidden
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <nav className="flex bg-white" aria-label="Разделы профиля">
+      {tabs.map((tab) => {
+        const selected = active === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={`relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1.5 transition active:scale-[0.98] ${
+              selected ? 'text-[#F47C8C]' : 'text-[#6B7280] hover:text-[#111827]'
+            }`}
+          >
+            {tab.icon}
+            <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+              {tab.label}
+            </span>
+            {selected ? (
+              <span
+                className="absolute bottom-0 left-1/2 h-0.5 w-7 -translate-x-1/2 rounded-full bg-[#F47C8C]"
+                aria-hidden
+              />
+            ) : null}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -197,10 +214,14 @@ function InfoGridCell({
   icon: ReactNode;
 }) {
   return (
-    <div className="rounded-[18px] bg-[#F7F7F8] p-3.5">
-      <span className={cabinetIconCircle}>{icon}</span>
-      <p className="mt-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{label}</p>
-      <p className="mt-1 text-[15px] font-semibold leading-snug text-[#111827]">{value}</p>
+    <div className="flex items-center gap-3 rounded-[18px] bg-[#F7F7F8] p-3">
+      <span className={`${cabinetIconCircle} h-9 w-9`}>{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-medium leading-tight text-[#6B7280]">{label}</p>
+        <p className="mt-0.5 truncate text-[15px] font-semibold leading-snug text-[#111827]" title={value}>
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -307,20 +328,33 @@ export function ScheduleWorkCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-1.5">
+      <div
+        className="mt-3 grid grid-cols-7 gap-0.5 rounded-xl bg-[#F3F4F6] p-0.5"
+        role="list"
+        aria-label="Рабочие дни недели"
+      >
         {WEEKDAY_LABELS_SHORT.map((label, day) => {
           const active = workDays.has(day);
           return (
-            <span
+            <div
               key={label}
-              className={`inline-flex min-h-8 min-w-[2.25rem] items-center justify-center rounded-full px-2.5 text-[12px] font-semibold ${
-                active
-                  ? 'bg-[#FFF1F4] text-[#F47C8C]'
-                  : 'bg-[#F7F7F8] text-[#9CA3AF]'
+              role="listitem"
+              className={`flex flex-col items-center justify-center rounded-[10px] py-2 ${
+                active ? 'bg-white shadow-[0_1px_4px_rgba(17,24,39,0.06)]' : 'bg-transparent'
               }`}
             >
-              {label}
-            </span>
+              <span
+                className={`text-[11px] font-semibold leading-none ${
+                  active ? 'text-[#111827]' : 'text-[#9CA3AF]'
+                }`}
+              >
+                {label}
+              </span>
+              <span
+                className={`mt-1.5 h-0.5 w-3 rounded-full ${active ? 'bg-[#F47C8C]' : 'bg-transparent'}`}
+                aria-hidden
+              />
+            </div>
           );
         })}
       </div>
@@ -328,7 +362,7 @@ export function ScheduleWorkCard({
       <button
         type="button"
         onClick={onEditSchedule}
-        className={`mt-5 flex min-h-[52px] w-full items-center justify-center rounded-2xl text-[16px] font-semibold transition ${cabinetPinkBtn}`}
+        className={`mt-4 flex min-h-11 w-full items-center justify-center rounded-2xl text-[15px] font-semibold transition ${cabinetPinkBtn}`}
       >
         Изменить график работы
       </button>
@@ -378,48 +412,60 @@ export function ProfileCompletionCard({
   percent: number;
   items: CompletionItem[];
 }) {
+  const clamped = Math.min(100, Math.max(0, percent));
+  const isComplete = clamped >= 100;
+
   return (
     <section className={`${cabinetCard} ${cabinetCardPad}`}>
       <div className="flex items-end justify-between gap-3">
         <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">Завершение профиля</h2>
-        <span className="text-[15px] font-semibold tabular-nums text-[#F47C8C]">{percent}%</span>
+        <span className="text-[15px] font-semibold tabular-nums text-[#F47C8C]">{clamped}%</span>
       </div>
 
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F7F7F8]">
         <div
           className="h-full rounded-full bg-gradient-to-r from-[#F47C8C] to-[#F26D83] transition-[width] duration-500"
-          style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+          style={{ width: `${clamped}%` }}
         />
       </div>
 
-      <ul className="mt-4 divide-y divide-[#EAECEF]">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              onClick={item.onPress}
-              className="flex min-h-[52px] w-full items-center gap-3 py-2 text-left transition hover:bg-[#FAFAFB] active:scale-[0.995]"
-            >
-              {item.done ? (
-                <HiCheckCircle className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2} />
-              ) : (
-                <span
-                  className="h-5 w-5 shrink-0 rounded-full border-2 border-[#D1D5DB]"
-                  aria-hidden
-                />
-              )}
-              <span
-                className={`min-w-0 flex-1 text-[15px] font-medium ${
-                  item.done ? 'text-[#6B7280]' : 'text-[#111827]'
-                }`}
+      {isComplete ? (
+        <div className="mt-4 overflow-hidden rounded-[20px] bg-[#FFF1F4] ring-1 ring-[#FDE8ED]">
+          <img
+            src={PROFILE_COMPLETE_IMAGE_SRC}
+            alt=""
+            width={800}
+            height={600}
+            decoding="async"
+            className="block w-full object-cover"
+          />
+          <p className="px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-[#6B7280]">
+            Профиль полностью готов — клиенты могут записываться
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-4 divide-y divide-[#EAECEF]">
+          {items.map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={item.onPress}
+                className="flex min-h-[48px] w-full items-center gap-3 py-2 text-left transition hover:bg-[#FAFAFB] active:scale-[0.995]"
               >
-                {item.label}
-              </span>
-              <HiChevronRight className="h-5 w-5 shrink-0 text-[#9CA3AF]" strokeWidth={2} />
-            </button>
-          </li>
-        ))}
-      </ul>
+                <CompletionStatusIcon done={item.done} />
+                <span
+                  className={`min-w-0 flex-1 text-[15px] font-medium ${
+                    item.done ? 'text-[#6B7280]' : 'text-[#111827]'
+                  }`}
+                >
+                  {item.label}
+                </span>
+                <HiChevronRight className="h-4 w-4 shrink-0 text-[#9CA3AF]" strokeWidth={2} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

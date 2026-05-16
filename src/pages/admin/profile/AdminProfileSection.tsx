@@ -45,6 +45,7 @@ import {
   MainInfoCard,
   ProfileCompletionCard,
   ScheduleWorkCard,
+  CABINET_HEADER_STICKY_TOP,
   SectionTabs as CabinetSectionTabs,
   wireCompletionActions,
   type ProfileSectionId,
@@ -1174,10 +1175,13 @@ function AdminProfileReadView({
 
   return (
     <div className="space-y-4">
-      <CabinetProfileHero draft={draft} stats={stats} />
-      <div className="sticky top-[calc(4.5rem+env(safe-area-inset-top,0px))] z-20 -mx-1 bg-white/90 px-1 pb-1 pt-0.5 backdrop-blur-md">
+      <div
+        className="sticky z-20 -mx-4 border-b border-[#EAECEF] bg-white"
+        style={{ top: CABINET_HEADER_STICKY_TOP }}
+      >
         <CabinetSectionTabs active={activeSection} onChange={setActiveSection} />
       </div>
+      <CabinetProfileHero draft={draft} stats={stats} />
       {section}
     </div>
   );
@@ -1654,7 +1658,7 @@ export function AdminProfileSection() {
 
   return (
     <CabinetPageShell>
-      <section className="relative px-4 pb-10 pt-1">
+      <section className="relative px-4 pb-10 pt-0">
         <AdminProfileReadView
           draft={draft}
           appointments={appointments}

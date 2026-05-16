@@ -16,17 +16,16 @@ type Props = {
   useCabinetApi?: boolean;
 };
 
-const iconSm = 'h-3.5 w-3.5 shrink-0';
-const iconXs = 'h-3 w-3 shrink-0';
+const iconBtn =
+  'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition active:scale-[0.96] disabled:opacity-40';
 
 function LinkFieldSkeleton() {
   return (
-    <div className="mt-2.5 space-y-2 animate-pulse">
-      <div className="h-8 w-full rounded-xl bg-[#F7F7F8]" />
-      <div className="flex gap-2">
-        <div className="h-8 flex-1 rounded-xl bg-[#F3F4F6]" />
-        <div className="h-8 flex-1 rounded-xl bg-[#F3F4F6]" />
-      </div>
+    <div className="mt-2 flex animate-pulse items-center gap-1.5">
+      <div className="h-8 min-w-0 flex-1 rounded-xl bg-[#F7F7F8]" />
+      <div className="h-8 w-8 rounded-xl bg-[#F3F4F6]" />
+      <div className="h-8 w-8 rounded-xl bg-[#F3F4F6]" />
+      <div className="h-8 w-8 rounded-xl bg-[#F3F4F6]" />
     </div>
   );
 }
@@ -103,7 +102,6 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
   }, [resolved]);
 
   const showSkeleton = Boolean(useCabinetApi && cabinetLoading);
-  const statusLine = copied ? 'Скопировано' : shareHint;
 
   return (
     <section className="rounded-[18px] bg-white px-3 py-2.5 shadow-[0_4px_20px_rgba(17,24,39,0.05)]">
@@ -112,7 +110,7 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[#F47C8C]"
           aria-hidden
         >
-          <HiLink className={iconXs} strokeWidth={2.25} />
+          <HiLink className="h-3 w-3 shrink-0" strokeWidth={2.25} />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-[14px] font-semibold leading-tight tracking-[-0.02em] text-[#111827]">
@@ -128,51 +126,50 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
         <LinkFieldSkeleton />
       ) : resolved ? (
         <>
-          <div className="mt-2 rounded-xl bg-[#F7F7F8] px-2.5 py-1.5 ring-1 ring-[#EAECEF]">
-            <p className="truncate text-[12px] font-medium leading-tight text-[#111827]" title={resolved.href}>
-              {resolved.href}
-            </p>
-          </div>
-
-          <div className="mt-2 flex gap-1.5">
+          <div className="mt-2 flex items-center gap-1.5">
+            <div
+              className="flex h-8 min-w-0 flex-1 items-center rounded-xl bg-[#F7F7F8] px-2.5 ring-1 ring-[#EAECEF]"
+              title={resolved.href}
+            >
+              <p className="truncate text-[12px] font-medium leading-none text-[#111827]">{resolved.href}</p>
+            </div>
             <button
               type="button"
               onClick={onCopy}
-              className={`flex h-8 min-h-0 flex-1 items-center justify-center gap-1 rounded-xl px-2 text-[12px] font-semibold transition active:scale-[0.98] ${
+              aria-label={copied ? 'Скопировано' : 'Копировать ссылку'}
+              className={`${iconBtn} ${
                 copied
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-[#F47C8C] text-white shadow-[0_4px_14px_rgba(244,124,140,0.28)] hover:bg-[#F26D83]'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'bg-[#F47C8C] text-white shadow-[0_4px_12px_rgba(244,124,140,0.28)] hover:bg-[#F26D83]'
               }`}
             >
               {copied ? (
-                <HiCheck className={iconSm} strokeWidth={2.5} />
+                <HiCheck className="h-3.5 w-3.5" strokeWidth={2.5} />
               ) : (
-                <HiClipboardDocument className={iconSm} strokeWidth={2} />
+                <HiClipboardDocument className="h-3.5 w-3.5" strokeWidth={2} />
               )}
-              <span className="truncate">{copied ? 'Скопировано' : 'Копировать'}</span>
             </button>
             <button
               type="button"
               onClick={() => void onShare()}
-              className="flex h-8 min-h-0 flex-1 items-center justify-center gap-1 rounded-xl bg-[#F7F7F8] px-2 text-[12px] font-semibold text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.98]"
+              aria-label="Поделиться ссылкой"
+              className={`${iconBtn} bg-[#F7F7F8] text-[#111827] hover:bg-[#F3F4F6]`}
             >
-              <HiShare className={iconSm} strokeWidth={2} />
-              <span className="truncate">Поделиться</span>
+              <HiShare className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label="Открыть ссылку"
+              className={`${iconBtn} bg-[#F7F7F8] text-[#6B7280] hover:bg-[#F3F4F6]`}
+            >
+              <HiArrowTopRightOnSquare className="h-3.5 w-3.5" strokeWidth={2} />
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onOpen}
-            className="mt-1.5 flex h-7 w-full items-center justify-center gap-1 rounded-lg text-[11px] font-medium text-[#6B7280] transition hover:bg-[#F7F7F8] active:scale-[0.98]"
-          >
-            <HiArrowTopRightOnSquare className={iconXs} strokeWidth={2} />
-            Открыть ссылку
-          </button>
-
-          {statusLine && statusLine !== 'Скопировано' ? (
+          {shareHint ? (
             <p className="mt-1 text-center text-[10px] font-medium text-[#6B7280]" role="status">
-              {statusLine}
+              {shareHint}
             </p>
           ) : null}
         </>
