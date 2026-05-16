@@ -141,7 +141,7 @@ export function AdminProfileHero({ draft, stats }: { draft: MasterDraft; stats: 
   const displayName = draft.name.trim() || 'Мастер';
 
   return (
-    <section className={`${cabinetCard} overflow-hidden rounded-t-none shadow-none`}>
+    <section className={`${cabinetCard} relative z-0 overflow-hidden rounded-t-none border-t-0 shadow-none`}>
       <div className="relative aspect-[16/9] w-full bg-[#F7F7F8]">
         <ImageReveal
           src={photoSrc}
@@ -214,7 +214,7 @@ export function SectionTabs({
   ];
 
   return (
-    <nav className="flex bg-white px-1 pb-0.5 pt-1" aria-label="Разделы профиля">
+    <nav className="flex bg-white px-1 pb-0.5 pt-0 leading-none" aria-label="Разделы профиля">
       {tabs.map((tab) => {
         const selected = active === tab.id;
         return (

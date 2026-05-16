@@ -13,6 +13,7 @@ import {
 } from '../../app/paths';
 import { getCurrentMasterPlan, planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
+import { ProfileSectionTabsBar, ProfileTabProvider } from './profile/profileTabContext';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 
 const iconStroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -126,12 +127,12 @@ export function AdminCabinetStatusBanner() {
 
 export function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const headerRef = useRef<HTMLDivElement>(null);
+  const stickyShellRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
   const isProfileHome = pathname === ADMIN_PATH;
 
   useLayoutEffect(() => {
-    const el = headerRef.current;
+    const el = stickyShellRef.current;
     if (!el) return;
 
     const syncHeaderHeight = () => {
@@ -142,46 +143,58 @@ export function AdminLayout() {
     const ro = new ResizeObserver(syncHeaderHeight);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [isProfileHome]);
 
   return (
     <div className="min-h-dvh bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827]">
       <AdminMasterCabinetProvider>
-        <div
-          className="mx-auto max-w-lg"
-          style={{ '--slotty-admin-header-h': '4.5rem' } as CSSProperties}
-        >
+        <ProfileTabProvider>
           <div
-            ref={headerRef}
-            className="sticky top-0 z-30 flex min-h-[3.25rem] items-center justify-between gap-3 border-b-2 border-[#F47C8C] bg-white px-4 pb-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]"
+            className="mx-auto max-w-lg"
+            style={{ '--slotty-admin-header-h': '4.5rem' } as CSSProperties}
           >
-            <Link
-              to={HUB_PATH}
-              aria-label="SLOTTY — на главную"
-              className="inline-flex h-9 min-h-11 shrink-0 items-center overflow-visible py-1 outline-none ring-0 transition hover:opacity-60 active:scale-[0.99] sm:h-10"
-            >
-              <img
-                src={HEADER_LOGO_SRC}
-                alt=""
-                decoding="async"
-                fetchPriority="low"
-                className="h-9 w-auto origin-center object-contain [transform:translateY(0.25rem)_scale(1.56)] sm:h-10 sm:[transform:translateY(0.35rem)_scale(1.5)]"
-              />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F7F7F8] text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.97]"
-              aria-label="Меню разделов"
-              aria-expanded={menuOpen}
-            >
-              <IconBurger className="text-neutral-800" />
-            </button>
-          </div>
+            <div ref={stickyShellRef} className={`sticky top-0 z-40 flex flex-col gap-0 overflow-hidden bg-white ${
+                isProfileHome ? 'border-b-2 border-[#F47C8C]' : ''
+              }`}>
+              <div
+                className={`relative z-40 flex shrink-0 items-center justify-between gap-3 overflow-hidden bg-white px-4 pb-0 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${
+                  isProfileHome ? 'min-h-11' : 'min-h-[3.25rem] border-b-2 border-[#F47C8C]'
+                }`}
+              >
+                <Link
+                  to={HUB_PATH}
+                  aria-label="SLOTTY — на главную"
+                  className="inline-flex h-9 min-h-11 shrink-0 items-center overflow-visible py-1 outline-none ring-0 transition hover:opacity-60 active:scale-[0.99] sm:h-10"
+                >
+                  <img
+                    src={HEADER_LOGO_SRC}
+                    alt=""
+                    decoding="async"
+                    fetchPriority="low"
+                    className="h-9 w-auto origin-center object-contain [transform:translateY(0.25rem)_scale(1.56)] sm:h-10 sm:[transform:translateY(0.35rem)_scale(1.5)]"
+                  />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(true)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F7F7F8] text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.97]"
+                  aria-label="Меню разделов"
+                  aria-expanded={menuOpen}
+                >
+                  <IconBurger className="text-neutral-800" />
+                </button>
+              </div>
+              {isProfileHome ? (
+                <div className="relative z-40 -mt-px shrink-0 bg-white">
+                  <ProfileSectionTabsBar />
+                </div>
+              ) : null}
+            </div>
 
-          {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
-          <Outlet />
-        </div>
+            {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
+            <Outlet />
+          </div>
+        </ProfileTabProvider>
       </AdminMasterCabinetProvider>
 
       <AdminBottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Разделы">

@@ -50,13 +50,9 @@ import {
   MainInfoCard,
   ProfileCompletionCard,
   ScheduleWorkCard,
-  CABINET_HEADER_STICKY_TOP,
-  SectionTabs as CabinetSectionTabs,
   wireCompletionActions,
-  type ProfileSectionId,
 } from './AdminProfileCabinetUi';
-
-type ProfileSection = ProfileSectionId;
+import { useProfileTabs } from './profileTabContext';
 
 type CareerItemType = MasterCareerItemType;
 
@@ -361,7 +357,7 @@ function AdminProfileReadView({
   onSetPortfolioCover: (imageUrl: string) => void;
   actionsDisabled?: boolean;
 }) {
-  const [activeSection, setActiveSection] = useState<ProfileSection>('main');
+  const { activeSection, setActiveSection } = useProfileTabs();
   const stats = useMemo(() => buildProfileStats(appointments), [appointments]);
 
   const section = useMemo(() => {
@@ -425,14 +421,8 @@ function AdminProfileReadView({
 
   return (
     <>
-      <div
-        className="sticky z-[25] -mt-px border-b border-[#EAECEF] bg-white"
-        style={{ top: CABINET_HEADER_STICKY_TOP }}
-      >
-        <CabinetSectionTabs active={activeSection} onChange={setActiveSection} />
-      </div>
-      <AdminCabinetStatusBanner />
       <CabinetProfileHero draft={draft} stats={stats} />
+      <AdminCabinetStatusBanner />
       <div className="space-y-4 px-4 pt-4">{section}</div>
     </>
   );
