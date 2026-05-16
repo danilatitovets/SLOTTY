@@ -31,4 +31,9 @@ export const overviewMutedSurface =
 export const overviewEmptyIllustrationSrc =
   '/photos/' + encodeURIComponent('ничего не нашли.webp');
 
-export const overviewClientsBannerSrc = '/photos/KLIENT.webp';
+const overviewSvodkaDir = '/photos/' + encodeURIComponent('сводка') + '/';
+
+/** Иллюстрации для шапок табов «Сводка». */
+export function overviewSvodkaPhotoSrc(fileName: string): string {
+  return overviewSvodkaDir + encodeURIComponent(fileName);
+}

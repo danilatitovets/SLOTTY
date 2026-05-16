@@ -10,6 +10,8 @@ import {
   parseDiscountLabel,
 } from './promotionTemplates';
 import type { PromotionTemplateId } from './promotionTemplates';
+import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
+import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { servicesInput, servicesPinkBtn } from './adminServicesTheme';
 import type { ManagedService } from './servicesFormat';
 import { derivePromotionStatus, formatDurationRu, formatServicePrice, isoDateLocal } from './servicesFormat';
@@ -63,6 +65,14 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
   const template = getPromotionTemplate(templateId)!;
   const selectedService = services.find((s) => s.id === serviceId);
 
+  const serviceOptions = useMemo(
+    () => [
+      { value: '', label: 'Выберите услугу' },
+      ...services.map((s) => ({ value: s.id, label: s.title })),
+    ],
+    [services],
+  );
+
   useEffect(() => {
     if (!open) return;
 
@@ -76,7 +86,8 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
       setServiceId(initial.serviceId || services[0]?.id || '');
       setStartsAt(initial.startsAt);
       setEndsAt(initial.endsAt);
-      setDiscountType(initial.discountType ?? parsed.type);
+      const loadedType = initial.discountType ?? parsed.type;
+      setDiscountType(loadedType === 'gift' ? 'percent' : loadedType);
       setDiscountValue(
         Number.isFinite(initial.discountValue) ? initial.discountValue : parsed.value,
       );
@@ -87,7 +98,7 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
 
     const first = PROMOTION_TEMPLATES[0];
     setTemplateId(first.id);
-    setServiceId(services[0]?.id ?? '');
+    setServiceId('');
     setStartsAt(today);
     setEndsAt(defaultEnd);
     setDiscountType(first.defaultDiscountType);
@@ -263,18 +274,15 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
           <div className="space-y-3">
             <label className="block">
               <span className="text-[13px] font-semibold text-[#6B7280]">Услуга</span>
-              <select
+              <SlottySelect
+                className="mt-1.5 w-full"
+                tone="admin"
                 value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
-                className={`${servicesInput} mt-1.5`}
-              >
-                <option value="">Выберите услугу</option>
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
+                disabled={services.length === 0}
+                options={serviceOptions}
+                placeholder="Выберите услугу"
+                onChange={setServiceId}
+              />
             </label>
             {selectedService ? (
               <div className="rounded-[18px] border border-[#EAECEF] bg-[#FAFAFA] p-4">
@@ -320,20 +328,24 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-[12px] font-semibold text-[#6B7280]">Дата начала</span>
-                <input
-                  type="date"
+                <SlottyDatePicker
+                  className="mt-1 w-full"
+                  tone="admin"
+                  allowClear={false}
                   value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  className={`${servicesInput} mt-1`}
+                  min={today}
+                  onChange={setStartsAt}
                 />
               </label>
               <label className="block">
                 <span className="text-[12px] font-semibold text-[#6B7280]">Дата окончания</span>
-                <input
-                  type="date"
+                <SlottyDatePicker
+                  className="mt-1 w-full"
+                  tone="admin"
+                  allowClear={false}
                   value={endsAt}
-                  onChange={(e) => setEndsAt(e.target.value)}
-                  className={`${servicesInput} mt-1`}
+                  min={startsAt || today}
+                  onChange={setEndsAt}
                 />
               </label>
             </div>
@@ -347,22 +359,18 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
 
         {step === 3 ? (
           <div className="space-y-3">
-            <p className="text-[13px] font-semibold text-[#6B7280]">Скидка или бонус</p>
+            <p className="text-[13px] font-semibold text-[#6B7280]">Скидка</p>
             <div className="flex gap-2">
               {(
                 [
                   { id: 'percent' as const, label: '%' },
                   { id: 'money' as const, label: 'BYN' },
-                  { id: 'gift' as const, label: 'Подарок' },
                 ] as const
               ).map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => {
-                    setDiscountType(opt.id);
-                    if (opt.id === 'gift') setDiscountValue(0);
-                  }}
+                  onClick={() => setDiscountType(opt.id)}
                   className={`flex-1 rounded-[14px] py-2.5 text-[14px] font-bold transition ${
                     discountType === opt.id
                       ? 'bg-[#FFF1F4] text-[#F47C8C] ring-1 ring-[#FDE8ED]'
@@ -373,21 +381,22 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
                 </button>
               ))}
             </div>
-            {discountType !== 'gift' ? (
-              <label className="block">
-                <span className="text-[13px] font-semibold text-[#6B7280]">
-                  {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
-                </span>
-                <input
-                  value={String(discountValue)}
-                  onChange={(e) =>
-                    setDiscountValue(Number.parseFloat(e.target.value.replace(',', '.')) || 0)
-                  }
-                  inputMode="decimal"
-                  className={`${servicesInput} mt-1.5`}
-                />
-              </label>
-            ) : null}
+            <div className="block">
+              <span className="text-[13px] font-semibold text-[#6B7280]">
+                {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
+              </span>
+              <div
+                className={`${servicesInput} mt-1.5 cursor-default bg-[#FAFAFA] text-[#111827]`}
+                aria-readonly
+              >
+                {discountType === 'percent'
+                  ? `${Math.round(discountValue)}%`
+                  : `${discountValue} BYN`}
+              </div>
+              <p className="mt-1.5 text-[12px] text-[#9CA3AF]">
+                Значение из шаблона — меняется на шаге «Шаблон»
+              </p>
+            </div>
             <div className="flex items-center justify-center py-2">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1F4] text-[14px] font-bold text-[#F47C8C] ring-2 ring-[#FDE8ED]">
                 {discountLabel}
@@ -460,13 +469,6 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
               ) : null}
             </>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex min-h-11 w-full items-center justify-center text-[14px] font-semibold text-[#6B7280]"
-          >
-            Отмена
-          </button>
         </div>
       </div>
     </AdminBottomSheet>

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { HiClock, HiEllipsisHorizontal, HiWallet } from 'react-icons/hi2';
+import { HiClock, HiWallet } from 'react-icons/hi2';
 import { servicesCard, servicesIconCircle } from './adminServicesTheme';
 import type { ManagedService } from './servicesFormat';
 import { formatDurationRu, formatServicePrice } from './servicesFormat';
@@ -8,10 +8,9 @@ type Props = {
   services: ManagedService[];
   onEditPrice: (service: ManagedService) => void;
   onEditDuration: (service: ManagedService) => void;
-  onOpenMenu: (service: ManagedService) => void;
 };
 
-export function ServicesPriceTab({ services, onEditPrice, onEditDuration, onOpenMenu }: Props) {
+export function ServicesPriceTab({ services, onEditPrice, onEditDuration }: Props) {
   const stats = useMemo(() => {
     const visible = services.filter((s) => s.isActive !== false).length;
     const avg =
@@ -88,17 +87,7 @@ export function ServicesPriceTab({ services, onEditPrice, onEditDuration, onOpen
         <ul className="space-y-3">
           {services.map((service) => (
             <li key={service.id} className={`${servicesCard} p-4`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="min-w-0 truncate text-[15px] font-bold text-[#111827]">{service.title}</p>
-                <button
-                  type="button"
-                  onClick={() => onOpenMenu(service)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7F7F8] text-[#6B7280] transition active:scale-[0.96]"
-                  aria-label="Меню"
-                >
-                  <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-                </button>
-              </div>
+              <p className="min-w-0 text-[15px] font-bold leading-snug text-[#111827]">{service.title}</p>
 
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button

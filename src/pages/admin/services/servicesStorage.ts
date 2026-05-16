@@ -1,3 +1,4 @@
+import { normalizeBundle } from './bundleNormalize';
 import { normalizePromotion } from './promotionNormalize';
 import type { ServiceBundle, ServicePromotion } from './servicesTypes';
 
@@ -21,7 +22,7 @@ function writeJson<T>(key: string, rows: T[]) {
 }
 
 export function loadServiceBundles(): ServiceBundle[] {
-  return readJson<ServiceBundle>(BUNDLES_KEY);
+  return readJson<Partial<ServiceBundle> & { id: string }>(BUNDLES_KEY).map(normalizeBundle);
 }
 
 export function saveServiceBundles(rows: ServiceBundle[]) {

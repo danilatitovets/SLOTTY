@@ -38,14 +38,31 @@ export type ServicePromotion = {
   imageSource?: ServicePromotionImageSource;
 };
 
+export type ServiceBundleStatus = 'visible' | 'hidden' | 'draft';
+
+export type ServiceBundleImageSource = 'service' | 'portfolio' | 'upload' | 'placeholder';
+
 export type ServiceBundle = {
   id: string;
   title: string;
+  description: string;
   serviceIds: string[];
-  priceByn: number;
-  oldPriceByn: number;
+  originalPrice: number;
+  bundlePrice: number;
+  discountPercent: number;
+  discountAmount: number;
+  durationMinutes: number;
   imageUrl?: string;
-  isActive: boolean;
+  imageSource: ServiceBundleImageSource;
+  status: ServiceBundleStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** @deprecated */
+  priceByn?: number;
+  /** @deprecated */
+  oldPriceByn?: number;
+  /** @deprecated */
+  isActive?: boolean;
 };
 
 export const SERVICES_TAB_SUBTITLES: Record<ServicesTabId, string> = {

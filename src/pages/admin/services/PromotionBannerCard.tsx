@@ -49,14 +49,23 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
           className="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
         />
-        <div
-          className={`absolute inset-0 ${
-            draft
-              ? 'bg-gradient-to-r from-white/92 via-white/75 to-white/35'
-              : 'bg-gradient-to-t from-[#111827]/88 via-[#111827]/45 to-[#111827]/15'
-          }`}
-          aria-hidden
-        />
+        {draft ? (
+          <div
+            className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/75 to-white/35"
+            aria-hidden
+          />
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 bg-gradient-to-r from-[#111827]/92 via-[#111827]/72 to-[#111827]/15"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-[#111827]/75 via-transparent to-[#111827]/40"
+              aria-hidden
+            />
+          </>
+        )}
         <div
           className={`relative flex min-h-[168px] gap-3 p-4 ${
             draft ? 'text-[#111827]' : 'text-white'
@@ -85,7 +94,9 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
             <div className="min-w-0 pr-1">
               <h3
                 className={`text-[17px] font-bold leading-snug tracking-[-0.03em] ${
-                  draft ? 'text-[#111827]' : 'drop-shadow-sm'
+                  draft
+                    ? 'text-[#111827]'
+                    : 'text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.55)]'
                 }`}
               >
                 {promo.title}
@@ -93,7 +104,9 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
               {promo.serviceTitle ? (
                 <p
                   className={`mt-1 truncate text-[13px] font-semibold ${
-                    draft ? 'text-[#F47C8C]' : 'text-white/95'
+                    draft
+                      ? 'text-[#F47C8C]'
+                      : 'text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]'
                   }`}
                 >
                   {promo.serviceTitle}
@@ -101,14 +114,18 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
               ) : null}
               <p
                 className={`mt-1 line-clamp-2 text-[12px] font-medium leading-snug ${
-                  draft ? 'text-[#6B7280]' : 'text-white/88'
+                  draft
+                    ? 'text-[#6B7280]'
+                    : 'text-white/95 drop-shadow-[0_1px_5px_rgba(0,0,0,0.45)]'
                 }`}
               >
                 {promo.description}
               </p>
               <p
                 className={`mt-2 flex items-center gap-1 text-[11px] font-semibold ${
-                  draft ? 'text-[#9CA3AF]' : 'text-white/85'
+                  draft
+                    ? 'text-[#9CA3AF]'
+                    : 'text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]'
                 }`}
               >
                 <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />

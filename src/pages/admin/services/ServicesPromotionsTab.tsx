@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { HiReceiptPercent } from 'react-icons/hi2';
+import { HiCheck, HiFunnel, HiReceiptPercent } from 'react-icons/hi2';
+import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import {
   servicesCard,
-  servicesChip,
   servicesChipActive,
-  servicesChipIdle,
   servicesIconCircle,
   servicesPinkBtn,
 } from './adminServicesTheme';
@@ -25,16 +24,17 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-const FILTER_CHIPS: Array<{ id: PromoFilter; label: string }> = [
-  { id: 'all', label: 'Все' },
-  { id: 'active', label: 'Активные' },
-  { id: 'scheduled', label: 'Запланированные' },
-  { id: 'finished', label: 'Завершённые' },
-  { id: 'draft', label: 'Черновики' },
+const FILTER_OPTIONS: Array<{ id: PromoFilter; label: string; hint: string }> = [
+  { id: 'all', label: 'Все', hint: 'Показать все акции' },
+  { id: 'active', label: 'Активные', hint: 'Сейчас действуют' },
+  { id: 'scheduled', label: 'Запланированные', hint: 'Начнутся позже' },
+  { id: 'finished', label: 'Завершённые', hint: 'Срок акции истёк' },
+  { id: 'draft', label: 'Черновики', hint: 'Ещё не опубликованы' },
 ];
 
 export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, onDelete }: Props) {
   const [filter, setFilter] = useState<PromoFilter>('all');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [menuPromo, setMenuPromo] = useState<ServicePromotion | null>(null);
 
   const rows = useMemo(() => {
@@ -55,25 +55,40 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [filter, promotions, services]);
 
+  const activeFilterLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? 'Все';
+  const filterIsActive = filter !== 'all';
+
+  const pickFilter = (id: PromoFilter) => {
+    setFilter(id);
+    setFilterOpen(false);
+  };
+
   return (
     <div className="space-y-4 pb-2">
       <button type="button" onClick={onCreate} className={servicesPinkBtn}>
         + Создать акцию
       </button>
 
-      <div className="flex gap-2">
-        <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {FILTER_CHIPS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setFilter(c.id)}
-              className={`${servicesChip} ${filter === c.id ? servicesChipActive : servicesChipIdle}`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setFilterOpen(true)}
+          className={`relative inline-flex min-h-11 items-center gap-2 rounded-[16px] border px-4 py-2.5 text-[14px] font-bold transition active:scale-[0.98] ${
+            filterIsActive
+              ? 'border-[#FDE8ED] bg-[#FFF1F4] text-[#F47C8C] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]'
+              : 'border-[#EAECEF] bg-white text-[#374151]'
+          }`}
+          aria-label={`Фильтры: ${activeFilterLabel}`}
+          aria-expanded={filterOpen}
+        >
+          <HiFunnel className="h-5 w-5 shrink-0" aria-hidden />
+          Фильтры
+          {filterIsActive ? (
+            <span className="rounded-full bg-[#F47C8C]/15 px-2 py-0.5 text-[12px] font-bold text-[#F47C8C]">
+              {activeFilterLabel}
+            </span>
+          ) : null}
+        </button>
       </div>
 
       {rows.length === 0 ? (
@@ -118,6 +133,38 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
           </p>
         </div>
       </div>
+
+      <AdminBottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Фильтр">
+        <div className="space-y-2 pb-2">
+          {FILTER_OPTIONS.map((option) => {
+            const selected = filter === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => pickFilter(option.id)}
+                className={`flex w-full items-center gap-3 rounded-[18px] border px-4 py-3.5 text-left transition active:scale-[0.98] ${
+                  selected
+                    ? servicesChipActive
+                    : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED] hover:bg-[#FAFAFA]'
+                }`}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-bold text-[#111827]">{option.label}</span>
+                  <span className="mt-0.5 block text-[12px] font-medium text-[#9CA3AF]">{option.hint}</span>
+                </span>
+                {selected ? (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F47C8C] text-white">
+                    <HiCheck className="h-5 w-5" aria-hidden />
+                  </span>
+                ) : (
+                  <span className="h-8 w-8 shrink-0 rounded-full border border-[#EAECEF] bg-[#FAFAFA]" aria-hidden />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </AdminBottomSheet>
 
       <ServicesPromotionMenuSheet
         open={Boolean(menuPromo)}

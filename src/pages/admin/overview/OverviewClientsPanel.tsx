@@ -1,5 +1,4 @@
 import { HiCalendar, HiUsers } from 'react-icons/hi2';
-import { overviewCard, overviewClientsBannerSrc } from './adminOverviewTheme';
 import type { ClientAnalytics } from './overviewAnalytics';
 import {
   OverviewClientsDynamicsChart,
@@ -8,37 +7,6 @@ import {
   OverviewSectionCard,
   OverviewWideMetricCard,
 } from './OverviewSharedUi';
-
-function ClientsGrowthBanner() {
-  return (
-    <div
-      className={`${overviewCard} relative overflow-hidden border-[#FDE8ED] bg-gradient-to-br from-[#FFF5F8] via-white to-[#FFF1F4] p-4`}
-    >
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[14px] font-bold text-[#F47C8C] shadow-[0_6px_16px_rgba(244,124,140,0.12)]">
-            3
-          </span>
-          <p className="mt-3 text-[15px] font-bold leading-snug tracking-[-0.03em] text-[#111827]">
-            Клиенты — это основа роста
-          </p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-[#6B7280]">
-            Работайте с постоянными клиентами, чтобы увеличивать доход.
-          </p>
-        </div>
-
-        <img
-          src={overviewClientsBannerSrc}
-          alt=""
-          width={120}
-          height={96}
-          decoding="async"
-          className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain object-bottom sm:h-24 sm:w-24"
-        />
-      </div>
-    </div>
-  );
-}
 
 function ClientsDynamicsSection({
   clientsPerDay,
@@ -143,7 +111,6 @@ export function OverviewClientsPanel({ data }: { data: ClientAnalytics }) {
           chartIsTruncated={data.chartIsTruncated}
         />
 
-        <ClientsGrowthBanner />
       </div>
     );
   }
@@ -207,8 +174,6 @@ export function OverviewClientsPanel({ data }: { data: ClientAnalytics }) {
       >
         <ClientsTypeBreakdown newClients={data.newClients} repeatClients={data.repeatClients} />
       </OverviewSectionCard>
-
-      <ClientsGrowthBanner />
     </div>
   );
 }

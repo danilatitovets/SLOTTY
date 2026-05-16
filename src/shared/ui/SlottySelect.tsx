@@ -7,8 +7,11 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 export type SlottySelectOption = { value: string; label: string };
+
+export type SlottySelectTone = 'neutral' | 'admin';
 
 type Props = {
   value: string;
@@ -17,6 +20,8 @@ type Props = {
   /** Доп. классы на корневой `relative`-контейнер (часто `mt-1.5 w-full`). */
   className?: string;
   disabled?: boolean;
+  placeholder?: string;
+  tone?: SlottySelectTone;
   id?: string;
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -25,6 +30,24 @@ type Props = {
 const GAP = 6;
 const VIEW_PAD = 8;
 const MAX_PANEL = 320;
+const PANEL_Z_INDEX = 260;
+
+const TONE_TRIGGER: Record<SlottySelectTone, string> = {
+  neutral:
+    'flex w-full min-h-[3.25rem] items-center rounded-[22px] bg-[#F1EFEF] px-4 py-3.5 text-left text-[16px] text-neutral-900 outline-none ring-0 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
+  admin:
+    'flex w-full min-h-[3rem] items-center rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
+};
+
+const TONE_OPTION_ACTIVE: Record<SlottySelectTone, string> = {
+  neutral: 'bg-[#E29595] text-white shadow-[0_6px_18px_rgba(226,149,149,0.35)]',
+  admin: 'bg-[#F47C8C] text-white shadow-[0_6px_18px_rgba(244,124,140,0.35)]',
+};
+
+const TONE_OPTION_IDLE: Record<SlottySelectTone, string> = {
+  neutral: 'text-neutral-900 hover:bg-[#F1EFEF]',
+  admin: 'text-[#111827] hover:bg-[#FFF1F4]',
+};
 
 function useFixedListboxPosition(
   open: boolean,
@@ -55,7 +78,7 @@ function useFixedListboxPosition(
         left,
         width,
         maxHeight,
-        zIndex: 100,
+        zIndex: PANEL_Z_INDEX,
       });
     } else {
       const maxHeight = Math.min(MAX_PANEL, Math.max(120, spaceAbove - GAP));
@@ -65,7 +88,7 @@ function useFixedListboxPosition(
         left,
         width,
         maxHeight,
-        zIndex: 100,
+        zIndex: PANEL_Z_INDEX,
       });
     }
   }, [anchorRef, open]);
@@ -104,6 +127,8 @@ export function SlottySelect({
   options,
   className = '',
   disabled = false,
+  placeholder,
+  tone = 'neutral',
   id: idProp,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
@@ -114,11 +139,13 @@ export function SlottySelect({
 
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLUListElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelStyle = useFixedListboxPosition(open, btnRef);
 
   const selected = options.find((o) => o.value === value);
-  const label = selected?.label ?? value;
+  const isPlaceholder = !selected && Boolean(placeholder) && value === '';
+  const label = selected?.label ?? (isPlaceholder ? placeholder! : value);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -127,6 +154,7 @@ export function SlottySelect({
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node;
       if (wrapRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
       close();
     };
     const onKey = (e: KeyboardEvent) => {
@@ -139,6 +167,41 @@ export function SlottySelect({
       document.removeEventListener('keydown', onKey);
     };
   }, [open, close]);
+
+  const panel =
+    open && panelStyle ? (
+      <ul
+        ref={panelRef}
+        id={listId}
+        role="listbox"
+        tabIndex={-1}
+        style={panelStyle}
+        className="overflow-y-auto overscroll-contain rounded-[22px] border border-neutral-200/80 bg-white p-2 shadow-[0_12px_40px_rgba(17,17,17,0.12)]"
+      >
+        {options.map((opt) => {
+          const active = opt.value === value;
+          return (
+            <li key={opt.value || '__empty'} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={active}
+                className={`flex w-full rounded-[18px] px-3 py-2.5 text-left text-[15px] font-medium transition active:scale-[0.99] ${
+                  active ? TONE_OPTION_ACTIVE[tone] : TONE_OPTION_IDLE[tone]
+                }`}
+                onClick={() => {
+                  onChange(opt.value);
+                  close();
+                  btnRef.current?.focus();
+                }}
+              >
+                {opt.label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    ) : null;
 
   return (
     <div ref={wrapRef} className={`relative ${className}`.trim()}>
@@ -153,10 +216,17 @@ export function SlottySelect({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         onClick={() => !disabled && setOpen((v) => !v)}
-        className="flex w-full min-h-[3.25rem] items-center rounded-[22px] bg-[#F1EFEF] px-4 py-3.5 text-left text-[16px] text-neutral-900 outline-none ring-0 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+        className={TONE_TRIGGER[tone]}
       >
-        <span className="min-w-0 truncate">{label}</span>
-        <span className="ml-2 shrink-0 text-neutral-600" aria-hidden>
+        <span
+          className={`min-w-0 flex-1 truncate ${isPlaceholder ? 'text-[#9CA3AF] font-normal' : ''}`}
+        >
+          {label}
+        </span>
+        <span
+          className={`ml-2 shrink-0 ${tone === 'admin' ? 'text-[#9CA3AF]' : 'text-neutral-600'}`}
+          aria-hidden
+        >
           <svg
             width="18"
             height="18"
@@ -175,40 +245,7 @@ export function SlottySelect({
         </span>
       </button>
 
-      {open && panelStyle ? (
-        <ul
-          id={listId}
-          role="listbox"
-          tabIndex={-1}
-          style={panelStyle}
-          className="overflow-y-auto overscroll-contain rounded-[22px] border border-neutral-200/80 bg-white p-2 shadow-[0_12px_40px_rgba(17,17,17,0.12)]"
-        >
-          {options.map((opt) => {
-            const active = opt.value === value;
-            return (
-              <li key={opt.value} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  className={`flex w-full rounded-[18px] px-3 py-2.5 text-left text-[15px] font-medium transition active:scale-[0.99] ${
-                    active
-                      ? 'bg-[#E29595] text-white shadow-[0_6px_18px_rgba(226,149,149,0.35)]'
-                      : 'text-neutral-900 hover:bg-[#F1EFEF]'
-                  }`}
-                  onClick={() => {
-                    onChange(opt.value);
-                    close();
-                    btnRef.current?.focus();
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {typeof document !== 'undefined' && panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { postOverviewReviewReply } from '../../../features/admin/api/masterOverv
 import { OVERVIEW_TAB_BAR_HEIGHT } from './adminOverviewTheme';
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
+import { OverviewTabIntro } from './OverviewTabIntro';
 import type { OverviewAnalyticsTab, OverviewPeriodPreset } from './overviewAnalytics';
 import {
   OverviewClientsPanel,
@@ -124,8 +125,9 @@ export function AdminOverviewTab({
 
         <div
           key={`${activeTab}-${periodPreset}-${useCabinetApi ? 'api' : 'local'}`}
-          className="min-w-0 animate-[overviewPanelIn_0.22s_ease-out]"
+          className="min-w-0 space-y-4 animate-[overviewPanelIn_0.22s_ease-out]"
         >
+          {!error ? <OverviewTabIntro tab={activeTab} /> : null}
           {panel}
         </div>
       </section>

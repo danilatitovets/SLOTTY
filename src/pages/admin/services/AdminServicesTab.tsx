@@ -570,10 +570,15 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             services={services}
             onEditPrice={openEditPrice}
             onEditDuration={openEditDuration}
-            onOpenMenu={setMenuTarget}
           />
         ) : null}
-        {activeTab === 'bundles' ? <ServicesBundlesTab draft={draft} services={services} /> : null}
+        {activeTab === 'bundles' ? (
+          <ServicesBundlesTab
+            draft={draft}
+            services={services}
+            onToast={showSuccessToast}
+          />
+        ) : null}
         {activeTab === 'promotions' ? (
           <ServicesPromotionsTab
             services={services}

@@ -6,7 +6,8 @@ type Props = {
 };
 
 export function ServicesPageHeader({ activeTab }: Props) {
-  const title = activeTab === 'promotions' ? 'Акции' : 'Услуги';
+  const title =
+    activeTab === 'promotions' ? 'Акции' : activeTab === 'bundles' ? 'Наборы' : 'Услуги';
 
   return (
     <header className="pb-4">
