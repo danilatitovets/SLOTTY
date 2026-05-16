@@ -16,6 +16,7 @@ import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMaster
 import { ProfileSectionTabsBar, ProfileTabProvider, PROFILE_TAB_BAR_HEIGHT } from './profile/profileTabContext';
 import { ADMIN_CABINET_SHELL_MAX, OVERVIEW_TAB_BAR_HEIGHT } from './overview/adminOverviewTheme';
 import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_HEIGHT } from './services/adminServicesTheme';
+import { SCHEDULE_TAB_BAR_HEIGHT } from './schedule/adminScheduleTheme';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 
@@ -135,6 +136,7 @@ export function AdminLayout() {
   const isProfileHome = pathname === ADMIN_PATH;
   const isOverview = pathname === ADMIN_OVERVIEW_PATH;
   const isServices = pathname === ADMIN_SERVICES_PATH;
+  const isSchedule = pathname === ADMIN_SCHEDULE_PATH;
 
   useLayoutEffect(() => {
     const el = stickyShellRef.current;
@@ -156,7 +158,9 @@ export function AdminLayout() {
       ? `pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1rem)]`
       : isServices
         ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
-        : '';
+        : isSchedule
+          ? `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
+          : '';
 
   const pageShellBg = isOverview || isServices ? SERVICES_PAGE_BG : 'bg-white';
 

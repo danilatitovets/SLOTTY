@@ -3,11 +3,14 @@ import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorag
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useAdminAppointments } from '../useAdminMasterData';
-import { AddWindowForm } from './AddWindowForm';
+import { AddWindowSheet } from './AddWindowSheet';
 import { CreateTemplateModal } from './CreateTemplateModal';
 import { EditWindowModal } from './EditWindowModal';
+import { ScheduleBottomTabBar } from './ScheduleBottomTabBar';
 import { ScheduleCalendar } from './ScheduleCalendar';
-import { ScheduleTabs } from './ScheduleTabs';
+import { ScheduleCreateTab } from './ScheduleCreateTab';
+import { ScheduleSlotsListTab } from './ScheduleSlotsListTab';
+import { SCHEDULE_TAB_BAR_SCROLL_PAD } from './adminScheduleTheme';
 import type { PlannedSlot, RepeatKind, SchedulePageTab, ScheduleWindowView } from './scheduleTypes';
 import { MSG_SLOTS_ALL_BUSY } from './scheduleTypes';
 import {
@@ -17,6 +20,7 @@ import {
   isLocalDateIsoBeforeToday,
   localDateTimeToUtcIso,
   serviceTitleById,
+  templateDisplayLabel,
   timeToMinutes,
   windowsCountRu,
 } from './scheduleUtils';
@@ -41,6 +45,11 @@ function todayIso(): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+type OpenAddSheetOptions = {
+  templateId?: string;
+  withoutTemplate?: boolean;
+};
+
 export function AdminScheduleTab({ draft }: Props) {
   const { useCabinetApi } = useAdminMasterCabinet();
   const { appointments } = useAdminAppointments();
@@ -59,10 +68,11 @@ export function AdminScheduleTab({ draft }: Props) {
     removeSlot,
   } = useScheduleData(masterId, visibleServices, useCabinetApi, appointments);
 
-  const [pageTab, setPageTab] = useState<SchedulePageTab>('add');
+  const [pageTab, setPageTab] = useState<SchedulePageTab>('create');
   const [toast, setToast] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const addWindowsLockRef = useRef(false);
 
   const [dateIso, setDateIso] = useState(todayIso);
@@ -137,21 +147,42 @@ export function AdminScheduleTab({ draft }: Props) {
   const summaryLine = useMemo(() => {
     const name =
       selectedTemplate && !manualMode
-        ? selectedTemplate.serviceName
+        ? templateDisplayLabel(selectedTemplate)
         : serviceTitleById(visibleServices, effectiveServiceId);
     if (timeToMinutes(endTime) <= timeToMinutes(startTime)) return null;
     return `${name} · ${startTime}–${endTime}`;
   }, [effectiveServiceId, endTime, manualMode, selectedTemplate, startTime, visibleServices]);
 
-  const handleTemplateSelect = (id: string) => {
-    setSelectedTemplateId(id);
-    setManualMode(false);
-    const tpl = templates.find((t) => t.id === id);
-    if (tpl) {
-      setServiceId(tpl.serviceId);
-      setEndTime(addMinutesToTime(startTime, tpl.durationMinutes));
-    }
-  };
+  const applyTemplate = useCallback(
+    (id: string) => {
+      setSelectedTemplateId(id);
+      setManualMode(false);
+      const tpl = templates.find((t) => t.id === id);
+      if (tpl) {
+        setServiceId(tpl.serviceId);
+        setEndTime(addMinutesToTime(startTime, tpl.durationMinutes));
+      }
+    },
+    [startTime, templates],
+  );
+
+  const openAddSheet = useCallback(
+    (opts?: OpenAddSheetOptions) => {
+      setCreateError(null);
+      if (opts?.templateId) {
+        applyTemplate(opts.templateId);
+      } else if (opts?.withoutTemplate) {
+        setSelectedTemplateId(null);
+        setManualMode(true);
+        setServiceId('');
+      } else {
+        setSelectedTemplateId(null);
+        setManualMode(false);
+      }
+      setAddSheetOpen(true);
+    },
+    [applyTemplate],
+  );
 
   const validateBase = useCallback((): string | null => {
     if (!dateIso.trim()) return 'Укажите дату.';
@@ -159,9 +190,6 @@ export function AdminScheduleTab({ draft }: Props) {
     if (!startTime.trim() || !endTime.trim()) return 'Укажите время.';
     if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
       return 'Время окончания должно быть позже начала.';
-    }
-    if (!manualMode && !selectedTemplate && !effectiveServiceId) {
-      return 'Выберите шаблон или укажите услугу вручную.';
     }
     if (plannedStats.creatable === 0) {
       if (plannedStats.beyondHorizon > 0 && scheduleHorizonDays) {
@@ -177,11 +205,9 @@ export function AdminScheduleTab({ draft }: Props) {
     dateIso,
     effectiveServiceId,
     endTime,
-    manualMode,
     plannedStats.beyondHorizon,
     plannedStats.creatable,
     scheduleHorizonDays,
-    selectedTemplate,
     startTime,
     visibleServices,
   ]);
@@ -238,6 +264,7 @@ export function AdminScheduleTab({ draft }: Props) {
       } else {
         showToast('Окна добавлены');
       }
+      setAddSheetOpen(false);
       setPageTab('calendar');
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Ошибка создания');
@@ -306,47 +333,71 @@ export function AdminScheduleTab({ draft }: Props) {
   };
 
   return (
-    <div className="space-y-4 pb-6">
-      <ScheduleTabs tab={pageTab} onChange={setPageTab} />
+    <>
+      <div className="space-y-4" style={{ paddingBottom: SCHEDULE_TAB_BAR_SCROLL_PAD }}>
+        {pageTab === 'create' ? (
+          <ScheduleCreateTab
+            templates={templates}
+            selectedTemplateId={selectedTemplateId}
+            onTemplateSelect={(id) => {
+              applyTemplate(id);
+              openAddSheet({ templateId: id });
+            }}
+            onCreateTemplate={() => setTemplateSheetOpen(true)}
+            onOpenNewWindow={() => openAddSheet()}
+            onOpenWithoutTemplate={() => openAddSheet({ withoutTemplate: true })}
+          />
+        ) : null}
 
-      {pageTab === 'add' ? (
-        <AddWindowForm
-          dateIso={dateIso}
-          onDateIsoChange={setDateIso}
-          startTime={startTime}
-          onStartTimeChange={setStartTime}
-          endTime={endTime}
-          onEndTimeChange={setEndTime}
-          manualMode={manualMode}
-          onManualModeChange={setManualMode}
-          serviceId={serviceId}
-          onServiceIdChange={setServiceId}
-          selectedTemplateId={selectedTemplateId}
-          onTemplateSelect={handleTemplateSelect}
-          templates={templates}
-          onCreateTemplate={() => setTemplateSheetOpen(true)}
-          services={visibleServices}
-          serviceOptions={serviceOptions}
-          repeatKind={repeatKind}
-          onRepeatKindChange={setRepeatKind}
-          repeatCount={repeatCount}
-          onRepeatCountChange={setRepeatCount}
-          plannedSlots={plannedSlots}
-          creatableCount={plannedStats.creatable}
-          beyondHorizon={plannedStats.beyondHorizon}
-          horizonDays={scheduleHorizonDays}
-          summaryLine={summaryLine}
-          createError={createError}
-          saving={saving}
-          onSubmit={() => void onAddWindows()}
-        />
-      ) : (
-        <ScheduleCalendar
-          windows={windows}
-          loading={loading}
-          onWindowClick={(w) => setEditWindow(w)}
-        />
-      )}
+        {pageTab === 'calendar' ? (
+          <ScheduleCalendar
+            windows={windows}
+            loading={loading}
+            onWindowClick={(w) => setEditWindow(w)}
+          />
+        ) : null}
+
+        {pageTab === 'list' ? (
+          <ScheduleSlotsListTab
+            windows={windows}
+            loading={loading}
+            onWindowClick={(w) => setEditWindow(w)}
+          />
+        ) : null}
+      </div>
+
+      <ScheduleBottomTabBar active={pageTab} onChange={setPageTab} />
+
+      <AddWindowSheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        dateIso={dateIso}
+        onDateIsoChange={setDateIso}
+        startTime={startTime}
+        onStartTimeChange={setStartTime}
+        endTime={endTime}
+        onEndTimeChange={setEndTime}
+        manualMode={manualMode}
+        onManualModeChange={setManualMode}
+        serviceId={serviceId}
+        onServiceIdChange={setServiceId}
+        selectedTemplateId={selectedTemplateId}
+        templates={templates}
+        services={visibleServices}
+        serviceOptions={serviceOptions}
+        repeatKind={repeatKind}
+        onRepeatKindChange={setRepeatKind}
+        repeatCount={repeatCount}
+        onRepeatCountChange={setRepeatCount}
+        plannedSlots={plannedSlots}
+        creatableCount={plannedStats.creatable}
+        beyondHorizon={plannedStats.beyondHorizon}
+        horizonDays={scheduleHorizonDays}
+        summaryLine={summaryLine}
+        createError={createError}
+        saving={saving}
+        onSubmit={() => void onAddWindows()}
+      />
 
       <CreateTemplateModal
         open={templateSheetOpen}
@@ -368,10 +419,10 @@ export function AdminScheduleTab({ draft }: Props) {
       />
 
       {toast ? (
-        <div className="pointer-events-none fixed bottom-24 left-1/2 z-[300] w-[min(92vw,20rem)] -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-3 text-center text-[14px] font-semibold text-white shadow-lg">
+        <div className="pointer-events-none fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px)+1rem)] left-1/2 z-[300] w-[min(92vw,20rem)] -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-3 text-center text-[14px] font-semibold text-white shadow-lg">
           {toast}
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

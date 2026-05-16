@@ -1,5 +1,5 @@
 import type { MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
-import type { PlannedSlot, PlannedSlotRejectReason, RepeatKind } from './scheduleTypes';
+import type { PlannedSlot, PlannedSlotRejectReason, RepeatKind, WindowTemplate } from './scheduleTypes';
 
 export function pad2(value: number): string {
   return value < 10 ? `0${value}` : String(value);
@@ -81,6 +81,11 @@ export function formatSlotDate(d: Date): string {
 
 export function formatWeekdayShort(d: Date): string {
   return new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(d).replace('.', '');
+}
+
+export function templateDisplayLabel(template: WindowTemplate): string {
+  const title = template.title?.trim();
+  return title || template.serviceName;
 }
 
 export function formatPreviewLine(dateIso: string, startTime: string, endTime: string): string {

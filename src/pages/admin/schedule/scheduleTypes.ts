@@ -1,6 +1,9 @@
 import type { MySlotDto } from '../../../features/admin/api/adminSlotsApi';
 
-export type SchedulePageTab = 'add' | 'calendar';
+/** create — шаблоны и быстрое добавление; calendar — календарь; list — все окна */
+export type SchedulePageTab = 'create' | 'calendar' | 'list';
+
+export type ScheduleSlotsStatusFilter = 'all' | 'free' | 'booked' | 'blocked';
 
 export type RepeatKind = 'none' | 'weekly' | 'biweekly' | 'weekdays';
 
