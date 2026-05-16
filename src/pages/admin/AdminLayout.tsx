@@ -13,7 +13,7 @@ import {
 } from '../../app/paths';
 import { getCurrentMasterPlan, planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
-import { ProfileSectionTabsBar, ProfileTabProvider } from './profile/profileTabContext';
+import { ProfileTabProvider } from './profile/profileTabContext';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 
 const iconStroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -182,11 +182,6 @@ export function AdminLayout() {
                   <IconBurger className="text-neutral-800" />
                 </button>
               </div>
-              {isProfileHome ? (
-                <div className="relative z-40 shrink-0 bg-white">
-                  <ProfileSectionTabsBar />
-                </div>
-              ) : null}
             </div>
 
             {!isProfileHome ? <AdminCabinetStatusBanner /> : null}

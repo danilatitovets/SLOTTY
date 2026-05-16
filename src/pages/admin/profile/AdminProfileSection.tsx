@@ -52,7 +52,7 @@ import {
   ScheduleWorkCard,
   wireCompletionActions,
 } from './AdminProfileCabinetUi';
-import { useProfileTabs } from './profileTabContext';
+import { ProfileSectionTabsBar, useProfileTabs } from './profileTabContext';
 
 type CareerItemType = MasterCareerItemType;
 
@@ -421,7 +421,7 @@ function AdminProfileReadView({
 
   return (
     <>
-      <CabinetProfileHero draft={draft} stats={stats} />
+      <CabinetProfileHero draft={draft} stats={stats} tabs={<ProfileSectionTabsBar />} />
       <AdminCabinetStatusBanner />
       <div className="space-y-4 px-4 pt-4">{section}</div>
     </>

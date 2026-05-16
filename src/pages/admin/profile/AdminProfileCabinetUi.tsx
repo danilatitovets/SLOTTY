@@ -136,13 +136,21 @@ function StatMiniCard({ icon, label, value, empty }: StatMiniDisplay & { icon: R
   );
 }
 
-export function AdminProfileHero({ draft, stats }: { draft: MasterDraft; stats: ProfileStats }) {
+export function AdminProfileHero({
+  draft,
+  stats,
+  tabs,
+}: {
+  draft: MasterDraft;
+  stats: ProfileStats;
+  tabs?: ReactNode;
+}) {
   const photoSrc = (draft.photoUrl && draft.photoUrl.trim()) || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const displayName = draft.name.trim() || 'Мастер';
 
   return (
-    <section className={`${cabinetCard} relative z-0 overflow-hidden rounded-t-none border-t-0 shadow-none`}>
-      <div className="relative aspect-[16/9] w-full bg-[#F7F7F8]">
+    <section className={`${cabinetCard} relative z-0 rounded-t-none border-t-0 shadow-none`}>
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#F7F7F8]">
         <ImageReveal
           src={photoSrc}
           alt=""
@@ -154,6 +162,8 @@ export function AdminProfileHero({ draft, stats }: { draft: MasterDraft; stats: 
           }}
         />
       </div>
+
+      {tabs}
 
       <div className="relative px-4 pb-5 pt-0">
         <div className="-mt-11 flex justify-center">
