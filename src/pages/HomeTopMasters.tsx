@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { SERVICES_PATH } from '../app/paths';
 import type { MasterFeedItem } from '../features/booking/api/useMastersFeed';
 import { NothingFoundCard } from '../shared/ui/NothingFoundCard';
+import { LoadingVideo } from '../shared/ui/LoadingVideo';
 import { MasterCard } from './HomeMasterCard';
 
 export type HomeTopMastersProps = {
@@ -10,35 +11,6 @@ export type HomeTopMastersProps = {
   isLoading: boolean;
   onPick: (id: string) => void;
 };
-
-function LoadingCard({ delay }: { delay: number }) {
-  return (
-    <div
-      className="w-[min(19.5rem,82vw)] shrink-0 sm:w-64"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div
-        className="
-          h-[22rem]
-          animate-pulse
-          rounded-[34px]
-          bg-[#F1EFEF]
-          p-3
-          shadow-[0_18px_55px_rgba(17,17,17,0.05)]
-        "
-      >
-        <div className="h-full rounded-[30px] bg-white/70 p-4">
-          <div className="h-36 rounded-[26px] bg-[#F1EFEF]" />
-
-          <div className="mt-4 h-4 w-2/3 rounded-full bg-[#F1EFEF]" />
-          <div className="mt-2 h-3 w-1/2 rounded-full bg-[#F1EFEF]" />
-
-          <div className="mt-5 h-10 rounded-full bg-[#F1EFEF]" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export const HomeTopMasters: FC<HomeTopMastersProps> = ({
   masters,
@@ -133,9 +105,9 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({
           "
         >
           {isLoading ? (
-            [0, 1, 2, 3].map((item) => (
-              <LoadingCard key={item} delay={item * 70} />
-            ))
+            <div className="flex w-full min-w-0 shrink-0 justify-center py-6">
+              <LoadingVideo size="lg" label="Загрузка мастеров…" />
+            </div>
           ) : masters.length === 0 ? (
             <div className="w-full min-w-0 shrink-0 px-1">
               <div className="rounded-[32px] bg-white p-3 shadow-[0_12px_34px_rgba(17,17,17,0.045)]">

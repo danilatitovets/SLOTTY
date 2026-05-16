@@ -10,6 +10,7 @@ import { AdminLayout } from './AdminLayout';
 import { AdminOverviewPage } from './overview/AdminOverviewPage';
 import { AdminSchedulePage } from './schedule/AdminSchedulePage';
 import { AdminServicesPage } from './services/AdminServicesPage';
+import { LoadingScreen } from '../../shared/ui/LoadingVideo';
 
 export function AdminPage() {
   const { profile, isLoading } = useAuth();
@@ -17,11 +18,7 @@ export function AdminPage() {
   const allowed = isDemoMaster() || apiMaster;
 
   if (isLoading) {
-    return (
-      <div className="min-h-dvh bg-[#F1EFEF] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-[calc(1rem+env(safe-area-inset-top,0px))] text-neutral-900">
-        <div className="mx-auto max-w-lg px-4 py-16 text-center text-[15px] font-semibold text-neutral-500">Загрузка…</div>
-      </div>
-    );
+    return <LoadingScreen label="Загрузка…" className="bg-[#F1EFEF]" />;
   }
 
   if (!allowed) {

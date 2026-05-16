@@ -21,6 +21,7 @@ import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
 import { ImageReveal } from '../../shared/ui/ImageReveal';
+import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import {
   buildBookingSlotDays,
@@ -467,7 +468,7 @@ export function BookingPage() {
             <IconChevronLeft className="shrink-0" />
             Назад
           </Link>
-          <p className="text-center text-[16px] font-medium text-neutral-600">Загрузка…</p>
+          <LoadingVideo size="lg" label="Загрузка…" className="mx-auto" />
         </div>
       </div>
     );

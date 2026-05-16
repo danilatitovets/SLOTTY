@@ -14,6 +14,7 @@ import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { mergeScheduleTimeSelectOptions } from './scheduleTimeSelectOptions';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
+import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 
 type RepeatKind = 'none' | 'weekly' | 'biweekly' | 'weekdays' | 'pick_weekdays';
 
@@ -1305,7 +1306,7 @@ export function AdminBookingWindowsTab({ draft, onPersist: _onPersist }: Props) 
         <p className="text-[14px] leading-relaxed text-neutral-500">Эти времена видят клиенты при записи.</p>
 
         {loading ? (
-          <p className="mt-4 text-[15px] text-neutral-500">Загрузка…</p>
+          <LoadingVideo className="mt-4" label="Загрузка…" />
         ) : futureRows.length === 0 ? (
           <div className="mt-6 rounded-[22px] border border-dashed border-neutral-200 bg-[#FAFAFA] px-4 py-8 text-center">
             <p className="text-[16px] font-semibold text-neutral-800">Пока нет свободных окон</p>

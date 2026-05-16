@@ -13,6 +13,7 @@ import {
   startOfMonth,
   toIsoDate,
 } from './scheduleUtils';
+import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 
 type Props = {
   windows: ScheduleWindowView[];
@@ -116,10 +117,8 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
         </div>
 
         {loading ? (
-          <div className="mt-2 grid grid-cols-7 gap-1">
-            {Array.from({ length: 42 }, (_, i) => (
-              <div key={i} className="aspect-square animate-pulse rounded-[14px] bg-[#F1EFEF]" />
-            ))}
+          <div className="mt-4 flex justify-center py-6">
+            <LoadingVideo size="sm" />
           </div>
         ) : (
           <div className="mt-1 grid grid-cols-7 gap-1">
@@ -206,9 +205,8 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
         </p>
 
         {loading ? (
-          <div className="mt-4 space-y-2">
-            <div className="h-16 animate-pulse rounded-[18px] bg-[#F1EFEF]" />
-            <div className="h-16 animate-pulse rounded-[18px] bg-[#F1EFEF]" />
+          <div className="mt-4 flex justify-center py-4">
+            <LoadingVideo size="sm" />
           </div>
         ) : selectedWindows.length === 0 ? (
           <p className="mt-4 rounded-[20px] bg-[#F1EFEF] px-4 py-5 text-center text-[14px] font-medium leading-snug text-neutral-600">

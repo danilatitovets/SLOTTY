@@ -14,6 +14,7 @@ import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
 import { ImageReveal } from '../shared/ui/ImageReveal';
+import { LoadingVideo } from '../shared/ui/LoadingVideo';
 
 function IconStar({ className }: { className?: string }) {
   return (
@@ -145,15 +146,8 @@ export const HomeQuickSlots: FC = () => {
             </p>
           </div>
         ) : isLoading ? (
-          <div className="-mx-1 mt-4 flex gap-3 overflow-x-auto pb-1 pl-1 pr-1 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-[min(17.5rem,78vw)] shrink-0 animate-pulse rounded-[32px] bg-[#F1EFEF] p-3 sm:w-72"
-              >
-                <div className="h-[14.5rem] rounded-[28px] bg-white/80" />
-              </div>
-            ))}
+          <div className="mt-4 flex justify-center rounded-[32px] bg-white/90 px-4 py-8 shadow-[0_10px_30px_rgba(17,17,17,0.035)]">
+            <LoadingVideo label="Загрузка окон…" />
           </div>
         ) : isError ? (
           <div className="mt-4 rounded-[32px] bg-white/90 px-5 py-8 text-center shadow-[0_10px_30px_rgba(17,17,17,0.035)] sm:px-8">

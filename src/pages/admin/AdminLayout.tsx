@@ -14,9 +14,10 @@ import {
 import { getCurrentMasterPlan, planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import { ProfileSectionTabsBar, ProfileTabProvider, PROFILE_TAB_BAR_HEIGHT } from './profile/profileTabContext';
-import { ADMIN_CABINET_SHELL_MAX, overviewPageBg, OVERVIEW_TAB_BAR_HEIGHT } from './overview/adminOverviewTheme';
+import { ADMIN_CABINET_SHELL_MAX, OVERVIEW_TAB_BAR_HEIGHT } from './overview/adminOverviewTheme';
 import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_HEIGHT } from './services/adminServicesTheme';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
+import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 
 const iconStroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
@@ -114,9 +115,9 @@ export function AdminCabinetStatusBanner() {
   return (
     <div className={`mx-auto w-full min-w-0 px-4 pb-2 pt-2 ${ADMIN_CABINET_SHELL_MAX}`}>
       {cabinetLoading ? (
-        <p className="rounded-2xl bg-white px-4 py-2 text-center text-[13px] font-medium text-neutral-500 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
-          Загрузка данных мастера…
-        </p>
+        <div className="rounded-2xl bg-white px-4 py-3 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
+          <LoadingVideo size="sm" label="Загрузка данных мастера…" />
+        </div>
       ) : null}
       {cabinetError ? (
         <p className="mt-2 rounded-2xl bg-[#FFF0F0] px-4 py-2 text-center text-[13px] font-semibold text-[#9B2C2C] shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
@@ -157,7 +158,7 @@ export function AdminLayout() {
         ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
         : '';
 
-  const pageShellBg = isOverview ? overviewPageBg : isServices ? SERVICES_PAGE_BG : 'bg-white';
+  const pageShellBg = isOverview || isServices ? SERVICES_PAGE_BG : 'bg-white';
 
   return (
     <div

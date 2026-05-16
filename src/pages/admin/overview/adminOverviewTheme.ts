@@ -1,8 +1,10 @@
 /** Палитра и классы экрана «Сводка». */
-/** Единый фон страницы за белыми карточками (контрастнее #F7F7F8). */
-export const OVERVIEW_CANVAS_HEX = '#EBEDF0';
-export const overviewPageBg = 'bg-[#EBEDF0]';
-export const overviewInsetBg = 'bg-[#E4E7EC]';
+import { SERVICES_PAGE_BG } from '../services/adminServicesTheme';
+
+/** Фон страницы — как у «Услуг» и других разделов с карточками. */
+export const OVERVIEW_CANVAS_HEX = '#F7F7F8';
+export const overviewPageBg = SERVICES_PAGE_BG;
+export const overviewInsetBg = 'bg-[#F3F4F6]';
 
 /** Высота нижнего таббара аналитики. */
 export const OVERVIEW_TAB_BAR_HEIGHT = '5.75rem';
@@ -24,7 +26,7 @@ export const overviewPinkOutline =
   'shrink-0 rounded-[18px] border border-[#FDE8ED] bg-white px-4 py-2.5 text-[13px] font-bold text-[#F47C8C] transition hover:bg-[#FFF1F4] active:scale-[0.98]';
 
 export const overviewMutedSurface =
-  'rounded-[20px] border border-[#E4E7EC] bg-[#F3F4F6]';
+  'rounded-[20px] border border-[#EAECEF] bg-[#F3F4F6]';
 
 export const overviewEmptyIllustrationSrc =
   '/photos/' + encodeURIComponent('ничего не нашли.webp');

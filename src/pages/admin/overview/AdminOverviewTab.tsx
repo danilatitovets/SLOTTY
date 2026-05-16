@@ -13,6 +13,7 @@ import {
   OverviewSummaryPanel,
 } from './OverviewTabPanels';
 import { useOverviewTabData } from './useOverviewTabData';
+import { LoadingPanel } from '../../../shared/ui/LoadingVideo';
 
 type Props = {
   draft: MasterDraft;
@@ -52,11 +53,7 @@ export function AdminOverviewTab({
 
   const panel = useMemo(() => {
     if (loading) {
-      return (
-        <div className="flex min-h-[12rem] items-center justify-center rounded-[24px] border border-[#F3F4F6] bg-white p-8">
-          <p className="text-[14px] font-medium text-[#6B7280]">Загрузка…</p>
-        </div>
-      );
+      return <LoadingPanel label="Загрузка…" className="border-[#F3F4F6]" />;
     }
 
     if (error) {

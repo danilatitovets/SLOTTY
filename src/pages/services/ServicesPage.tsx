@@ -19,6 +19,7 @@ import { setProfileRole } from '../../features/profile/lib/setProfileRole';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
+import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { HomeHeader } from '../HomeHeader';
 import { ServicesNearQuickSlots } from './ServicesNearQuickSlots';
 import { ServicesDbLocationField } from './ServicesDbLocationField';
@@ -489,13 +490,8 @@ function IconClock({ className }: { className?: string }) {
 
 function ServicesListSkeleton() {
   return (
-    <div className="mt-6 flex flex-col gap-4" aria-hidden>
-      {[0, 1, 2].map((key) => (
-        <div
-          key={key}
-          className="h-52 animate-pulse rounded-[34px] bg-[#F1EFEF] p-4 shadow-[0_18px_55px_rgba(17,17,17,0.05)]"
-        />
-      ))}
+    <div className="mt-6 flex justify-center py-8" aria-busy="true">
+      <LoadingVideo size="lg" label="Загрузка услуг…" />
     </div>
   );
 }

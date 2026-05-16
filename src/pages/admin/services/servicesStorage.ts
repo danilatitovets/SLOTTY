@@ -1,3 +1,4 @@
+import { normalizePromotion } from './promotionNormalize';
 import type { ServiceBundle, ServicePromotion } from './servicesTypes';
 
 const BUNDLES_KEY = 'slotty_master_service_bundles_v1';
@@ -28,7 +29,7 @@ export function saveServiceBundles(rows: ServiceBundle[]) {
 }
 
 export function loadServicePromotions(): ServicePromotion[] {
-  return readJson<ServicePromotion>(PROMOTIONS_KEY);
+  return readJson<Partial<ServicePromotion> & { id: string }>(PROMOTIONS_KEY).map(normalizePromotion);
 }
 
 export function saveServicePromotions(rows: ServicePromotion[]) {

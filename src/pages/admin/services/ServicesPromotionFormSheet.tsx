@@ -1,363 +1,465 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HiCalendarDays } from 'react-icons/hi2';
-import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import { HiCheck } from 'react-icons/hi2';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { servicesCard, servicesInput, servicesPinkBtn } from './adminServicesTheme';
-import { isoDateLocal, resolvePromotionImage } from './servicesFormat';
+import { PromotionBannerCard } from './PromotionBannerCard';
+import {
+  PROMOTION_TEMPLATES,
+  addDaysIso,
+  buildDiscountLabel,
+  getPromotionTemplate,
+  parseDiscountLabel,
+} from './promotionTemplates';
+import type { PromotionTemplateId } from './promotionTemplates';
+import { servicesInput, servicesPinkBtn } from './adminServicesTheme';
 import type { ManagedService } from './servicesFormat';
-import { loadServiceBundles, newPromotionId } from './servicesStorage';
-import type {
-  ServicePromotion,
-  ServicePromotionImageSource,
-  ServicePromotionTemplate,
-} from './servicesTypes';
-import { PROMOTION_TEMPLATE_META } from './servicesTypes';
+import { derivePromotionStatus, formatDurationRu, formatServicePrice, isoDateLocal } from './servicesFormat';
+import { newPromotionId } from './servicesStorage';
+import type { ServicePromotion, ServicePromotionDiscountType } from './servicesTypes';
 
-const TEMPLATE_ORDER: ServicePromotionTemplate[] = [
-  'percent',
-  'first_visit',
-  'weekly_combo',
-  'seasonal',
-  'bundle',
-  'gift',
-  'happy_hours',
-];
+const STEPS = [
+  'Шаблон',
+  'Услуга',
+  'Срок',
+  'Скидка',
+  'Превью',
+] as const;
 
-type TargetKind = 'service' | 'bundle';
+const PERIOD_PRESETS = [
+  { days: 3, label: '3 дня' },
+  { days: 7, label: '7 дней' },
+  { days: 14, label: '14 дней' },
+  { days: 30, label: '30 дней' },
+] as const;
 
 type Props = {
   open: boolean;
-  draft: MasterDraft;
   services: ManagedService[];
   initial: ServicePromotion | null;
   onClose: () => void;
   onSave: (promo: ServicePromotion, publish: boolean) => void;
 };
 
-function formatDdMmRu(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+function discountedPrice(service: ManagedService, type: ServicePromotionDiscountType, value: number): number | null {
+  if (!Number.isFinite(service.priceByn)) return null;
+  if (type === 'gift') return service.priceByn;
+  if (type === 'money') return Math.max(0, service.priceByn - value);
+  return Math.max(0, Math.round(service.priceByn * (1 - value / 100)));
 }
 
-export function ServicesPromotionFormSheet({
-  open,
-  draft,
-  services,
-  initial,
-  onClose,
-  onSave,
-}: Props) {
-  const bundles = useMemo(() => loadServiceBundles(), [open]);
+export function ServicesPromotionFormSheet({ open, services, initial, onClose, onSave }: Props) {
   const today = isoDateLocal(new Date());
-  const inWeek = isoDateLocal(new Date(Date.now() + 7 * 86400000));
+  const defaultEnd = addDaysIso(today, 7);
 
-  const [template, setTemplate] = useState<ServicePromotionTemplate>('percent');
-  const [targetKind, setTargetKind] = useState<TargetKind>('service');
-  const [targetId, setTargetId] = useState('');
+  const [step, setStep] = useState(0);
+  const [templateId, setTemplateId] = useState<PromotionTemplateId>('first_visit');
+  const [serviceId, setServiceId] = useState('');
+  const [startsAt, setStartsAt] = useState(today);
+  const [endsAt, setEndsAt] = useState(defaultEnd);
+  const [discountType, setDiscountType] = useState<ServicePromotionDiscountType>('percent');
+  const [discountValue, setDiscountValue] = useState(15);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [discountLabel, setDiscountLabel] = useState('-15%');
-  const [startsAt, setStartsAt] = useState(today);
-  const [endsAt, setEndsAt] = useState(inWeek);
-  const [imageUrl, setImageUrl] = useState<string | undefined>();
-  const [imageSource, setImageSource] = useState<ServicePromotionImageSource>('service');
+
+  const template = getPromotionTemplate(templateId)!;
+  const selectedService = services.find((s) => s.id === serviceId);
 
   useEffect(() => {
     if (!open) return;
+
+    setStep(0);
     if (initial) {
-      setTemplate(initial.template);
-      setTargetKind(initial.bundleId ? 'bundle' : 'service');
-      setTargetId(initial.serviceId ?? initial.bundleId ?? '');
-      setTitle(initial.title);
-      setDescription(initial.description);
-      setDiscountLabel(initial.discountLabel);
+      const tpl = getPromotionTemplate(
+        initial.template as PromotionTemplateId,
+      )?.id ?? 'first_visit';
+      const parsed = parseDiscountLabel(initial.discountLabel);
+      setTemplateId(tpl);
+      setServiceId(initial.serviceId || services[0]?.id || '');
       setStartsAt(initial.startsAt);
       setEndsAt(initial.endsAt);
-      setImageUrl(initial.imageUrl);
-      setImageSource(initial.imageSource);
+      setDiscountType(initial.discountType ?? parsed.type);
+      setDiscountValue(
+        Number.isFinite(initial.discountValue) ? initial.discountValue : parsed.value,
+      );
+      setTitle(initial.title);
+      setDescription(initial.description);
       return;
     }
-    const meta = PROMOTION_TEMPLATE_META.percent;
-    setTemplate('percent');
-    setTargetKind('service');
-    setTargetId(services[0]?.id ?? '');
-    setTitle(meta.defaultTitle);
-    setDescription(meta.defaultDescription);
-    setDiscountLabel(meta.defaultDiscount);
+
+    const first = PROMOTION_TEMPLATES[0];
+    setTemplateId(first.id);
+    setServiceId(services[0]?.id ?? '');
     setStartsAt(today);
-    setEndsAt(inWeek);
-    setImageUrl(undefined);
-    setImageSource('service');
-  }, [open, initial, services, today, inWeek]);
+    setEndsAt(defaultEnd);
+    setDiscountType(first.defaultDiscountType);
+    setDiscountValue(first.defaultDiscountValue);
+    setTitle(first.title);
+    setDescription(first.description);
+  }, [open, initial, services, today, defaultEnd]);
 
   useEffect(() => {
     if (!open || initial) return;
-    const meta = PROMOTION_TEMPLATE_META[template];
-    setTitle(meta.defaultTitle);
-    setDescription(meta.defaultDescription);
-    setDiscountLabel(meta.defaultDiscount);
-  }, [template, open, initial]);
+    const tpl = getPromotionTemplate(templateId)!;
+    setTitle(tpl.title);
+    setDescription(tpl.description);
+    setDiscountType(tpl.defaultDiscountType);
+    setDiscountValue(tpl.defaultDiscountValue);
+  }, [templateId, open, initial]);
 
-  const previewImage = useMemo(() => {
-    if (imageSource === 'upload' && imageUrl) return imageUrl;
-    return resolvePromotionImage({
-      serviceId: targetKind === 'service' ? targetId : undefined,
-      bundleId: targetKind === 'bundle' ? targetId : undefined,
-      services,
-      bundles,
-      draft,
-      fallback: imageUrl,
-    });
-  }, [bundles, draft, imageSource, imageUrl, services, targetId, targetKind]);
+  const discountLabel = useMemo(
+    () => buildDiscountLabel(discountType, discountValue),
+    [discountType, discountValue],
+  );
 
-  const handleSave = (publish: boolean) => {
-    const promo: ServicePromotion = {
-      id: initial?.id ?? newPromotionId(),
-      title: title.trim() || PROMOTION_TEMPLATE_META[template].defaultTitle,
-      description: description.trim() || PROMOTION_TEMPLATE_META[template].defaultDescription,
-      template,
-      status: publish ? 'active' : 'draft',
-      discountLabel: discountLabel.trim() || '-10%',
-      serviceId: targetKind === 'service' ? targetId || undefined : undefined,
-      bundleId: targetKind === 'bundle' ? targetId || undefined : undefined,
-      imageUrl: previewImage ?? undefined,
-      imageSource,
+  const previewPromo = useMemo((): ServicePromotion & { status: ReturnType<typeof derivePromotionStatus> } => {
+    const draftStatus = derivePromotionStatus({
+      status: 'active',
       startsAt,
       endsAt,
+    });
+    return {
+      id: initial?.id ?? 'preview',
+      template: templateId,
+      title: title.trim() || template.title,
+      description: description.trim() || template.description,
+      serviceId,
+      serviceTitle: selectedService?.title ?? '',
+      discountType,
+      discountValue,
+      discountLabel,
+      startsAt,
+      endsAt,
+      status: draftStatus,
+      backgroundImage: template.backgroundImage,
+      createdAt: initial?.createdAt ?? new Date().toISOString(),
     };
-    onSave(promo, publish);
+  }, [
+    description,
+    discountLabel,
+    discountType,
+    discountValue,
+    endsAt,
+    initial,
+    selectedService,
+    serviceId,
+    startsAt,
+    template,
+    templateId,
+    title,
+  ]);
+
+  const applyPeriod = (days: number) => {
+    setStartsAt(today);
+    setEndsAt(addDaysIso(today, days));
   };
 
-  const portfolioUrls = (draft.portfolio ?? [])
-    .map((p) => p.imageUrl)
-    .filter((u): u is string => Boolean(u?.trim()));
+  const buildPromo = (publish: boolean): ServicePromotion => {
+    const base: ServicePromotion = {
+      id: initial?.id ?? newPromotionId(),
+      template: templateId,
+      title: title.trim() || template.title,
+      description: description.trim() || template.description,
+      serviceId,
+      serviceTitle: selectedService?.title ?? '',
+      discountType,
+      discountValue,
+      discountLabel,
+      startsAt,
+      endsAt,
+      status: publish ? 'active' : 'draft',
+      backgroundImage: template.backgroundImage,
+      createdAt: initial?.createdAt ?? new Date().toISOString(),
+    };
+    if (publish) {
+      return {
+        ...base,
+        status: derivePromotionStatus({ status: 'active', startsAt, endsAt }),
+      };
+    }
+    return { ...base, status: 'draft' };
+  };
+
+  const canNext =
+    step === 0 ||
+    (step === 1 && Boolean(serviceId)) ||
+    (step === 2 && startsAt && endsAt && startsAt <= endsAt) ||
+    step === 3 ||
+    step === 4;
+
+  const handleNext = () => {
+    if (step < STEPS.length - 1) setStep((s) => s + 1);
+  };
+
+  const handleBack = () => {
+    if (step > 0) setStep((s) => s - 1);
+  };
 
   return (
     <AdminBottomSheet
       open={open}
       onClose={onClose}
-      title={initial ? 'Редактировать акцию' : 'Новая акция'}
+      title={initial ? 'Редактирование акции' : 'Создание акции'}
     >
-      <div className="max-h-[min(72dvh,640px)] space-y-4 overflow-y-auto pb-2 [-webkit-overflow-scrolling:touch]">
-        <div>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Шаблон акции</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {TEMPLATE_ORDER.map((id) => {
-              const meta = PROMOTION_TEMPLATE_META[id];
-              const selected = template === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTemplate(id)}
-                  className={`rounded-[16px] border px-3 py-3 text-left text-[12px] font-bold transition active:scale-[0.98] ${
-                    selected
-                      ? 'border-[#F9A8B4] bg-[#FFF1F4] text-[#F47C8C]'
-                      : 'border-[#EAECEF] bg-white text-[#374151]'
-                  }`}
-                >
-                  {meta.label}
-                </button>
-              );
-            })}
-          </div>
+      <div className="max-h-[min(78dvh,680px)] overflow-y-auto overscroll-contain pb-2 [-webkit-overflow-scrolling:touch]">
+        <div className="mb-4 flex gap-1">
+          {STEPS.map((label, index) => (
+            <div
+              key={label}
+              className={`h-1 flex-1 rounded-full transition ${
+                index <= step ? 'bg-[#F47C8C]' : 'bg-[#EAECEF]'
+              }`}
+              title={label}
+            />
+          ))}
         </div>
+        <p className="mb-4 text-[12px] font-semibold text-[#9CA3AF]">
+          Шаг {step + 1} из {STEPS.length}: {STEPS[step]}
+        </p>
 
-        <div>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Услуга или набор</p>
-          <div className="mt-2 flex gap-2">
-            {(['service', 'bundle'] as const).map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => {
-                  setTargetKind(kind);
-                  setTargetId(kind === 'service' ? (services[0]?.id ?? '') : (bundles[0]?.id ?? ''));
-                  setImageSource('service');
-                }}
-                className={`flex-1 rounded-full py-2 text-[13px] font-bold ${
-                  targetKind === kind
-                    ? 'bg-[#FFF1F4] text-[#F47C8C]'
-                    : 'bg-[#F3F4F6] text-[#6B7280]'
-                }`}
-              >
-                {kind === 'service' ? 'Услуга' : 'Набор'}
-              </button>
-            ))}
+        {step === 0 ? (
+          <div className="space-y-3">
+            <p className="text-[13px] font-semibold text-[#6B7280]">Выберите шаблон акции</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {PROMOTION_TEMPLATES.map((tpl) => {
+                const selected = templateId === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setTemplateId(tpl.id)}
+                    className={`relative overflow-hidden rounded-[18px] border-2 text-left transition active:scale-[0.98] ${
+                      selected
+                        ? 'border-[#F47C8C] shadow-[0_0_0_3px_rgba(244,124,140,0.15)]'
+                        : 'border-transparent'
+                    }`}
+                  >
+                    <div className="relative aspect-[4/3] w-full">
+                      <img
+                        src={tpl.backgroundImage}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#111827]/75 to-transparent" />
+                      {selected ? (
+                        <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#F47C8C] text-white shadow-md">
+                          <HiCheck className="h-4 w-4" aria-hidden />
+                        </span>
+                      ) : null}
+                      <span className="absolute bottom-2 left-2 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-bold text-[#F47C8C]">
+                        {tpl.defaultDiscountLabel}
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5">
+                      <p className="text-[12px] font-bold leading-snug text-[#111827]">{tpl.title}</p>
+                      <p className="mt-0.5 text-[10px] font-medium text-[#9CA3AF]">{tpl.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <select
-            value={targetId}
-            onChange={(e) => {
-              setTargetId(e.target.value);
-              setImageSource('service');
-              setImageUrl(undefined);
-            }}
-            className={`${servicesInput} mt-2`}
-          >
-            {targetKind === 'service'
-              ? services.map((s) => (
+        ) : null}
+
+        {step === 1 ? (
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-[13px] font-semibold text-[#6B7280]">Услуга</span>
+              <select
+                value={serviceId}
+                onChange={(e) => setServiceId(e.target.value)}
+                className={`${servicesInput} mt-1.5`}
+              >
+                <option value="">Выберите услугу</option>
+                {services.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.title}
                   </option>
-                ))
-              : bundles.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.title}
-                  </option>
                 ))}
-          </select>
-        </div>
-
-        <label className="block">
-          <span className="text-[13px] font-semibold text-[#6B7280]">Название акции</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${servicesInput} mt-1.5`} />
-        </label>
-
-        <label className="block">
-          <span className="text-[13px] font-semibold text-[#6B7280]">Описание</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className={`${servicesInput} mt-1.5 resize-none`}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-[13px] font-semibold text-[#6B7280]">Скидка или бонус</span>
-          <input
-            value={discountLabel}
-            onChange={(e) => setDiscountLabel(e.target.value)}
-            className={`${servicesInput} mt-1.5`}
-            placeholder="-15%"
-          />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-[13px] font-semibold text-[#6B7280]">Дата начала</span>
-            <input
-              type="date"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className={`${servicesInput} mt-1.5`}
-            />
-          </label>
-          <label className="block">
-            <span className="text-[13px] font-semibold text-[#6B7280]">Дата окончания</span>
-            <input
-              type="date"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-              className={`${servicesInput} mt-1.5`}
-            />
-          </label>
-        </div>
-
-        <div>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Фото акции</p>
-          <div className="mt-2 overflow-hidden rounded-[18px] border border-[#EAECEF]">
-            {previewImage ? (
-              <img src={previewImage} alt="" className="h-36 w-full object-cover" />
-            ) : (
-              <div className="flex h-36 items-center justify-center bg-gradient-to-br from-[#FFF1F4] to-[#FFE4EA] text-[#F47C8C]">
-                Шаблонный фон
+              </select>
+            </label>
+            {selectedService ? (
+              <div className="rounded-[18px] border border-[#EAECEF] bg-[#FAFAFA] p-4">
+                <p className="text-[14px] font-bold text-[#111827]">{selectedService.title}</p>
+                <p className="mt-1 text-[13px] text-[#6B7280]">
+                  {formatDurationRu(selectedService.durationMin)}
+                </p>
+                <div className="mt-3 flex flex-wrap items-baseline gap-2">
+                  <span className="text-[13px] text-[#9CA3AF] line-through">
+                    {formatServicePrice(selectedService)}
+                  </span>
+                  {discountedPrice(selectedService, discountType, discountValue) != null ? (
+                    <span className="text-[16px] font-bold text-[#F47C8C]">
+                      {selectedService.priceType === 'from' ? 'от ' : ''}
+                      {discountedPrice(selectedService, discountType, discountValue)} BYN
+                    </span>
+                  ) : null}
+                </div>
               </div>
+            ) : (
+              <p className="rounded-[16px] bg-[#FFF1F4] px-4 py-3 text-[13px] font-medium text-[#F47C8C]">
+                Сначала добавьте услуги в каталоге
+              </p>
             )}
           </div>
-          <p className="mt-1.5 text-[11px] font-medium text-[#9CA3AF]">
-            {imageSource === 'service'
-              ? 'Фото взято из услуги'
-              : imageSource === 'portfolio'
-                ? 'Фото из портфолио'
-                : imageSource === 'upload'
-                  ? 'Загруженное фото'
-                  : 'Шаблон'}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-full border border-[#EAECEF] bg-white px-3 py-2 text-[12px] font-bold text-[#374151]"
-              onClick={() => {
-                setImageSource('service');
-                setImageUrl(undefined);
-              }}
-            >
-              Из услуги
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-[#EAECEF] bg-white px-3 py-2 text-[12px] font-bold text-[#374151]"
-              onClick={() => {
-                const url = portfolioUrls[0] ?? draft.photoUrl;
-                if (url) {
-                  setImageUrl(url);
-                  setImageSource('portfolio');
-                }
-              }}
-            >
-              Из портфолио
-            </button>
-            <label className="cursor-pointer rounded-full border border-[#EAECEF] bg-white px-3 py-2 text-[12px] font-bold text-[#374151]">
-              Загрузить
+        ) : null}
+
+        {step === 2 ? (
+          <div className="space-y-3">
+            <p className="text-[13px] font-semibold text-[#6B7280]">Срок действия</p>
+            <div className="flex flex-wrap gap-2">
+              {PERIOD_PRESETS.map((p) => (
+                <button
+                  key={p.days}
+                  type="button"
+                  onClick={() => applyPeriod(p.days)}
+                  className="rounded-full border border-[#EAECEF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#374151] transition active:scale-[0.98] hover:border-[#FDE8ED] hover:bg-[#FFF1F4]"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-[12px] font-semibold text-[#6B7280]">Дата начала</span>
+                <input
+                  type="date"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  className={`${servicesInput} mt-1`}
+                />
+              </label>
+              <label className="block">
+                <span className="text-[12px] font-semibold text-[#6B7280]">Дата окончания</span>
+                <input
+                  type="date"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                  className={`${servicesInput} mt-1`}
+                />
+              </label>
+            </div>
+            {startsAt > endsAt ? (
+              <p className="text-[13px] font-semibold text-[#EF4444]">
+                Дата окончания должна быть не раньше начала
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div className="space-y-3">
+            <p className="text-[13px] font-semibold text-[#6B7280]">Скидка или бонус</p>
+            <div className="flex gap-2">
+              {(
+                [
+                  { id: 'percent' as const, label: '%' },
+                  { id: 'money' as const, label: 'BYN' },
+                  { id: 'gift' as const, label: 'Подарок' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setDiscountType(opt.id);
+                    if (opt.id === 'gift') setDiscountValue(0);
+                  }}
+                  className={`flex-1 rounded-[14px] py-2.5 text-[14px] font-bold transition ${
+                    discountType === opt.id
+                      ? 'bg-[#FFF1F4] text-[#F47C8C] ring-1 ring-[#FDE8ED]'
+                      : 'bg-[#F3F4F6] text-[#6B7280]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {discountType !== 'gift' ? (
+              <label className="block">
+                <span className="text-[13px] font-semibold text-[#6B7280]">
+                  {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
+                </span>
+                <input
+                  value={String(discountValue)}
+                  onChange={(e) =>
+                    setDiscountValue(Number.parseFloat(e.target.value.replace(',', '.')) || 0)
+                  }
+                  inputMode="decimal"
+                  className={`${servicesInput} mt-1.5`}
+                />
+              </label>
+            ) : null}
+            <div className="flex items-center justify-center py-2">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FFF1F4] text-[14px] font-bold text-[#F47C8C] ring-2 ring-[#FDE8ED]">
+                {discountLabel}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 4 ? (
+          <div className="space-y-3">
+            <p className="text-[13px] font-semibold text-[#6B7280]">Превью для клиентов</p>
+            <PromotionBannerCard promo={previewPromo} />
+            <label className="block">
+              <span className="text-[12px] font-semibold text-[#6B7280]">Заголовок (необязательно)</span>
               <input
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    if (typeof reader.result === 'string') {
-                      setImageUrl(reader.result);
-                      setImageSource('upload');
-                    }
-                  };
-                  reader.readAsDataURL(file);
-                }}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={`${servicesInput} mt-1`}
               />
             </label>
           </div>
-        </div>
+        ) : null}
 
-        <div>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Превью для клиента</p>
-          <div className={`${servicesCard} mt-2 overflow-hidden p-0`}>
-            <div className="relative min-h-[140px]">
-              {previewImage ? (
-                <img src={previewImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-[#FFF1F4] to-[#FDE8ED]" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#F47C8C]/85 via-[#F47C8C]/40 to-transparent" />
-              <div className="relative p-4 text-white">
-                <span className="inline-flex rounded-full bg-white/95 px-2.5 py-1 text-[12px] font-bold text-[#F47C8C]">
-                  {discountLabel}
-                </span>
-                <h3 className="mt-2 text-[17px] font-bold leading-tight">{title || 'Акция'}</h3>
-                <p className="mt-1 line-clamp-2 text-[12px] text-white/90">{description}</p>
-                <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold">
-                  <HiCalendarDays className="h-3.5 w-3.5" aria-hidden />
-                  {formatDdMmRu(startsAt)} — {formatDdMmRu(endsAt)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 pt-1">
-          <button type="button" onClick={() => handleSave(false)} className={servicesPinkBtn}>
-            Сохранить черновик
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSave(true)}
-            className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-[#FDE8ED] bg-[#FFF1F4] text-[15px] font-bold text-[#F47C8C] transition active:scale-[0.98]"
-          >
-            Опубликовать
-          </button>
+        <div className="mt-5 flex flex-col gap-2 border-t border-[#F3F4F6] pt-4">
+          {step < STEPS.length - 1 ? (
+            <>
+              <button
+                type="button"
+                disabled={!canNext}
+                onClick={handleNext}
+                className={servicesPinkBtn}
+              >
+                Далее
+              </button>
+              {step > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-[#EAECEF] bg-white text-[15px] font-semibold text-[#374151]"
+                >
+                  Назад
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={!serviceId || startsAt > endsAt}
+                onClick={() => onSave(buildPromo(true), true)}
+                className={servicesPinkBtn}
+              >
+                Опубликовать
+              </button>
+              <button
+                type="button"
+                onClick={() => onSave(buildPromo(false), false)}
+                className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-[#FDE8ED] bg-[#FFF1F4] text-[15px] font-bold text-[#F47C8C] transition active:scale-[0.98]"
+              >
+                Сохранить черновик
+              </button>
+              {step > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-[#EAECEF] bg-white text-[15px] font-semibold text-[#374151]"
+                >
+                  Назад
+                </button>
+              ) : null}
+            </>
+          )}
           <button
             type="button"
             onClick={onClose}

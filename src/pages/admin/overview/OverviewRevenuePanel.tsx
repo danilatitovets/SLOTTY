@@ -118,7 +118,7 @@ function RevenueChartSection({
         <h2 className="text-[17px] font-bold tracking-[-0.04em] text-[#111827]">График дохода</h2>
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1 rounded-full border border-[#E4E7EC] bg-[#F3F4F6] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]"
+          className="flex shrink-0 items-center gap-1 rounded-full border border-[#EAECEF] bg-[#F3F4F6] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]"
         >
           Все источники
           <HiChevronDown className="h-3.5 w-3.5 opacity-50" aria-hidden />

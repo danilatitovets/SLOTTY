@@ -15,7 +15,7 @@ import {
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { SERVICES_PAGE_BG } from './adminServicesTheme';
+import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_SCROLL_PAD } from './adminServicesTheme';
 import { ServicesBundlesTab } from './ServicesBundlesTab';
 import { ServicesCatalogTab } from './ServicesCatalogTab';
 import { ServicesPageHeader } from './ServicesPageHeader';
@@ -28,6 +28,8 @@ import { loadServicePromotions, saveServicePromotions } from './servicesStorage'
 import type { ServicePromotion, ServicesTabId } from './servicesTypes';
 
 type PriceType = 'fixed' | 'from';
+
+type ServiceSheetMode = 'create' | 'full' | 'price' | 'duration';
 
 type ManagedService = MasterOnboardingService & {
   priceType?: PriceType;
@@ -79,6 +81,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const navigate = useNavigate();
   const { useCabinetApi, refreshDraft, commitDraftBaseline } = useAdminMasterCabinet();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<ServiceSheetMode>('full');
   const [freeLimitOpen, setFreeLimitOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedService | null>(null);
@@ -140,18 +143,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setFormError(null);
   }, []);
 
-  const openCreate = useCallback(() => {
-    if (isFreeServiceLimitReached(services.length)) {
-      setFreeLimitOpen(true);
-      return;
-    }
-    setListError(null);
-    resetForm();
-    setSheetOpen(true);
-  }, [resetForm, services.length]);
-
-  const openEdit = useCallback((service: ManagedService) => {
-    setListError(null);
+  const loadServiceIntoForm = useCallback((service: ManagedService) => {
     setEditingId(service.id);
     setTitle(service.title);
     setDur(String(service.durationMin));
@@ -160,8 +152,38 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setIsActive(service.isActive ?? true);
     setDesc(service.description ?? '');
     setFormError(null);
-    setSheetOpen(true);
   }, []);
+
+  const openCreate = useCallback(() => {
+    if (isFreeServiceLimitReached(services.length)) {
+      setFreeLimitOpen(true);
+      return;
+    }
+    setListError(null);
+    resetForm();
+    setSheetMode('create');
+    setSheetOpen(true);
+  }, [resetForm, services.length]);
+
+  const openEdit = useCallback(
+    (service: ManagedService, mode: ServiceSheetMode = 'full') => {
+      setListError(null);
+      loadServiceIntoForm(service);
+      setSheetMode(mode);
+      setSheetOpen(true);
+    },
+    [loadServiceIntoForm],
+  );
+
+  const openEditPrice = useCallback(
+    (service: ManagedService) => openEdit(service, 'price'),
+    [openEdit],
+  );
+
+  const openEditDuration = useCallback(
+    (service: ManagedService) => openEdit(service, 'duration'),
+    [openEdit],
+  );
 
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
@@ -169,24 +191,51 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   }, [resetForm]);
 
   const saveService = useCallback(async () => {
-    const preparedTitle = title.trim();
-    const preparedDescription = desc.trim();
-    const durationNumber = Number.parseInt(dur, 10);
-    const priceNumber = Number.parseFloat(price.replace(',', '.').trim());
+    const existing = editingId ? services.find((service) => service.id === editingId) : undefined;
+    const quickPrice = sheetMode === 'price' && Boolean(existing);
+    const quickDuration = sheetMode === 'duration' && Boolean(existing);
 
-    if (!preparedTitle) {
-      setFormError('Укажите название услуги.');
-      return;
-    }
+    let preparedTitle = title.trim();
+    let preparedDescription = desc.trim();
+    let durationNumber = Number.parseInt(dur, 10);
+    let priceNumber = Number.parseFloat(price.replace(',', '.').trim());
+    let activeFlag = isActive;
+    let priceTypeValue = priceType;
 
-    if (!Number.isInteger(durationNumber) || durationNumber <= 0) {
-      setFormError('Укажите длительность в минутах.');
-      return;
-    }
+    if (quickPrice && existing) {
+      preparedTitle = existing.title;
+      preparedDescription = existing.description ?? '';
+      durationNumber = existing.durationMin;
+      activeFlag = existing.isActive ?? true;
+      if (!Number.isFinite(priceNumber) || priceNumber < 0) {
+        setFormError('Укажите цену. Можно 0.');
+        return;
+      }
+    } else if (quickDuration && existing) {
+      preparedTitle = existing.title;
+      preparedDescription = existing.description ?? '';
+      priceNumber = existing.priceByn;
+      priceTypeValue = existing.priceType ?? 'fixed';
+      activeFlag = existing.isActive ?? true;
+      if (!Number.isInteger(durationNumber) || durationNumber <= 0) {
+        setFormError('Укажите длительность в минутах.');
+        return;
+      }
+    } else {
+      if (!preparedTitle) {
+        setFormError('Укажите название услуги.');
+        return;
+      }
 
-    if (!Number.isFinite(priceNumber) || priceNumber < 0) {
-      setFormError('Укажите цену. Можно 0.');
-      return;
+      if (!Number.isInteger(durationNumber) || durationNumber <= 0) {
+        setFormError('Укажите длительность в минутах.');
+        return;
+      }
+
+      if (!Number.isFinite(priceNumber) || priceNumber < 0) {
+        setFormError('Укажите цену. Можно 0.');
+        return;
+      }
     }
 
     if (!editingId && isFreeServiceLimitReached(services.length)) {
@@ -201,8 +250,8 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       title: preparedTitle,
       durationMin: durationNumber,
       priceByn: priceNumber,
-      priceType,
-      isActive,
+      priceType: priceTypeValue,
+      isActive: activeFlag,
       description: preparedDescription,
       sortOrder: editingId
         ? services.find((service) => service.id === editingId)?.sortOrder ?? services.length
@@ -214,7 +263,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       : [...services, nextService];
 
     if (!useCabinetApi) {
-      persistServices(nextServices, editingId ? 'Услуга обновлена' : 'Услуга добавлена');
+      const okMsg = quickPrice
+        ? 'Цена обновлена'
+        : quickDuration
+          ? 'Длительность обновлена'
+          : editingId
+            ? 'Услуга обновлена'
+            : 'Услуга добавлена';
+      persistServices(nextServices, okMsg);
       closeSheet();
       return;
     }
@@ -225,6 +281,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       return;
     }
 
+    const okMsg = quickPrice
+      ? 'Цена обновлена'
+      : quickDuration
+        ? 'Длительность обновлена'
+        : editingId
+          ? 'Услуга обновлена'
+          : 'Услуга добавлена';
+
     setFormError(null);
     try {
       if (editingId && isUuid(editingId)) {
@@ -233,8 +297,8 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           description: preparedDescription,
           durationMinutes: durationNumber,
           priceAmount: priceNumber,
-          priceType,
-          isActive,
+          priceType: priceTypeValue,
+          isActive: activeFlag,
           sortOrder: nextService.sortOrder ?? 0,
         });
       } else if (!editingId) {
@@ -244,16 +308,16 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           description: preparedDescription,
           durationMinutes: durationNumber,
           priceAmount: priceNumber,
-          priceType,
+          priceType: priceTypeValue,
           sortOrder: nextService.sortOrder ?? 0,
         });
       } else {
-        persistServices(nextServices, editingId ? 'Услуга обновлена' : 'Услуга добавлена');
+        persistServices(nextServices, okMsg);
         closeSheet();
         return;
       }
       await refreshDraft();
-      showSuccessToast(editingId ? 'Услуга обновлена' : 'Услуга добавлена');
+      showSuccessToast(okMsg);
       closeSheet();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : 'Не удалось сохранить');
@@ -272,6 +336,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     refreshDraft,
     runServiceAction,
     services,
+    sheetMode,
     showSuccessToast,
     title,
     useCabinetApi,
@@ -451,10 +516,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
   const savePromo = useCallback(
     (promo: ServicePromotion, publish: boolean) => {
-      const next: ServicePromotion = { ...promo, status: publish ? 'active' : 'draft' };
       const rows = editingPromo
-        ? promotions.map((p) => (p.id === next.id ? next : p))
-        : [next, ...promotions];
+        ? promotions.map((p) => (p.id === promo.id ? promo : p))
+        : [promo, ...promotions];
       persistPromotions(rows);
       setPromoFormOpen(false);
       setEditingPromo(null);
@@ -474,7 +538,11 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const menuIndex = menuTarget ? services.findIndex((s) => s.id === menuTarget.id) : -1;
 
   return (
-    <div className={`-mx-4 min-w-0 px-4 pb-2 ${SERVICES_PAGE_BG}`}>
+    <>
+      <div
+        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 ${SERVICES_PAGE_BG}`}
+        style={{ paddingBottom: SERVICES_TAB_BAR_SCROLL_PAD }}
+      >
       <ServicesPageHeader activeTab={activeTab} />
 
       {listError ? (
@@ -492,7 +560,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       <div key={activeTab}>
         {activeTab === 'catalog' ? (
           <ServicesCatalogTab
-            draft={draft}
             services={services}
             onAdd={openCreate}
             onOpenMenu={setMenuTarget}
@@ -500,16 +567,15 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         ) : null}
         {activeTab === 'price' ? (
           <ServicesPriceTab
-            draft={draft}
             services={services}
-            onEdit={openEdit}
+            onEditPrice={openEditPrice}
+            onEditDuration={openEditDuration}
             onOpenMenu={setMenuTarget}
           />
         ) : null}
         {activeTab === 'bundles' ? <ServicesBundlesTab draft={draft} services={services} /> : null}
         {activeTab === 'promotions' ? (
           <ServicesPromotionsTab
-            draft={draft}
             services={services}
             promotions={promotions}
             onCreate={openPromoCreate}
@@ -517,6 +583,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             onDelete={deletePromo}
           />
         ) : null}
+      </div>
       </div>
 
       <ServicesTabBar active={activeTab} onChange={setActiveTab} />
@@ -562,7 +629,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
       <ServicesPromotionFormSheet
         open={promoFormOpen}
-        draft={draft}
         services={services}
         initial={editingPromo}
         onClose={() => {
@@ -575,9 +641,26 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       <AdminBottomSheet
         open={sheetOpen}
         onClose={closeSheet}
-        title={editingId ? 'Редактировать услугу' : 'Новая услуга'}
+        title={
+          sheetMode === 'create'
+            ? 'Новая услуга'
+            : sheetMode === 'price'
+              ? 'Изменить цену'
+              : sheetMode === 'duration'
+                ? 'Изменить длительность'
+                : editingId
+                  ? 'Редактировать услугу'
+                  : 'Новая услуга'
+        }
       >
         <div className="space-y-4 pb-2">
+          {sheetMode === 'price' || sheetMode === 'duration' ? (
+            <p className="-mt-1 rounded-[16px] bg-[#F7F7F8] px-4 py-3 text-[14px] font-semibold leading-snug text-[#111827]">
+              {title}
+            </p>
+          ) : null}
+
+          {sheetMode === 'full' || sheetMode === 'create' ? (
           <label className="block">
             <span className="text-[13px] font-semibold text-neutral-500">
               Название услуги *
@@ -590,7 +673,37 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               placeholder="Маникюр с покрытием"
             />
           </label>
+          ) : null}
 
+          {sheetMode === 'duration' ? (
+            <label className="block">
+              <span className="text-[13px] font-semibold text-neutral-500">Длительность, мин *</span>
+              <input
+                value={dur}
+                onChange={(event) => setDur(event.target.value)}
+                inputMode="numeric"
+                className={fieldClass()}
+                placeholder="60"
+                autoFocus
+              />
+            </label>
+          ) : null}
+
+          {sheetMode === 'price' ? (
+            <label className="block">
+              <span className="text-[13px] font-semibold text-neutral-500">Цена, BYN *</span>
+              <input
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                inputMode="decimal"
+                className={fieldClass()}
+                placeholder="45"
+                autoFocus
+              />
+            </label>
+          ) : null}
+
+          {sheetMode === 'full' || sheetMode === 'create' ? (
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="text-[13px] font-semibold text-neutral-500">
@@ -620,7 +733,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               />
             </label>
           </div>
+          ) : null}
 
+          {sheetMode === 'full' || sheetMode === 'create' || sheetMode === 'price' ? (
           <div>
             <span className="text-[13px] font-semibold text-neutral-500">
               Тип цены
@@ -648,7 +763,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               ))}
             </div>
           </div>
+          ) : null}
 
+          {sheetMode === 'full' || sheetMode === 'create' ? (
           <div>
             <span className="text-[13px] font-semibold text-neutral-500">
               Видимость
@@ -680,11 +797,11 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               </button>
             </div>
           </div>
+          ) : null}
 
+          {sheetMode === 'full' || sheetMode === 'create' ? (
           <label className="block">
-            <span className="text-[13px] font-semibold text-neutral-500">
-              Описание
-            </span>
+            <span className="text-[13px] font-semibold text-neutral-500">Описание</span>
 
             <textarea
               value={desc}
@@ -694,6 +811,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               placeholder="Что входит в услугу"
             />
           </label>
+          ) : null}
 
           {formError ? (
             <p className="rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
@@ -707,7 +825,13 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             onClick={() => void saveService()}
             className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-50"
           >
-            {serviceActionBusy ? 'Сохранение…' : 'Сохранить'}
+            {serviceActionBusy
+              ? 'Сохранение…'
+              : sheetMode === 'price'
+                ? 'Сохранить цену'
+                : sheetMode === 'duration'
+                  ? 'Сохранить длительность'
+                  : 'Сохранить'}
           </button>
         </div>
       </AdminBottomSheet>
@@ -835,6 +959,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           </button>
         </div>
       </AdminBottomSheet>
-    </div>
+    </>
   );
 }

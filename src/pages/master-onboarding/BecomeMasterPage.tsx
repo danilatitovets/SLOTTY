@@ -26,6 +26,7 @@ import { OnboardingStep1Intro } from './OnboardingStep1Intro';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { getMasterDisplayNameQualityError } from '../../shared/lib/masterDisplayNamePolicy';
 import {
   DEFAULT_WEEKDAY_SCHEDULE,
@@ -1739,7 +1740,9 @@ export function BecomeMasterPage() {
                 ) : null}
 
                 {!categoriesReady ? (
-                  <p className="mt-6 text-center text-[15px] text-neutral-500">Загрузка категорий…</p>
+                  <div className="mt-6 flex justify-center py-4">
+                    <LoadingVideo label="Загрузка категорий…" />
+                  </div>
                 ) : categories.length === 0 ? (
                   <p className="mt-6 text-center text-[15px] text-neutral-500">
                     Категории не найдены. Обратитесь в поддержку.

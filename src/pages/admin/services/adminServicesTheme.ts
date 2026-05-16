@@ -1,5 +1,8 @@
 export const SERVICES_PAGE_BG = 'bg-[#F7F7F8]';
+/** Высота плавающего таббара (72px + нижний отступ контейнера). */
 export const SERVICES_TAB_BAR_HEIGHT = '5.75rem';
+/** Отступ контента, чтобы список доскролливался выше фиксированного таббара. */
+export const SERVICES_TAB_BAR_SCROLL_PAD = `calc(${SERVICES_TAB_BAR_HEIGHT} + 1.25rem + env(safe-area-inset-bottom, 0px))`;
 
 export const servicesCard =
   'rounded-[22px] border border-[#EAECEF] bg-white shadow-[0_8px_28px_rgba(17,24,39,0.05)]';

@@ -1,42 +1,83 @@
-import { HiEllipsisHorizontal, HiPencilSquare, HiWallet } from 'react-icons/hi2';
-import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
-import {
-  servicesCard,
-  servicesIconCircle,
-} from './adminServicesTheme';
+import { useMemo } from 'react';
+import { HiClock, HiEllipsisHorizontal, HiWallet } from 'react-icons/hi2';
+import { servicesCard, servicesIconCircle } from './adminServicesTheme';
 import type { ManagedService } from './servicesFormat';
-import { formatDurationRu, formatServicePrice, serviceImageUrl } from './servicesFormat';
+import { formatDurationRu, formatServicePrice } from './servicesFormat';
 
 type Props = {
-  draft: MasterDraft;
   services: ManagedService[];
-  onEdit: (service: ManagedService) => void;
+  onEditPrice: (service: ManagedService) => void;
+  onEditDuration: (service: ManagedService) => void;
   onOpenMenu: (service: ManagedService) => void;
 };
 
-export function ServicesPriceTab({ draft, services, onEdit, onOpenMenu }: Props) {
-  const avg =
-    services.length > 0
-      ? Math.round(services.reduce((s, r) => s + (Number.isFinite(r.priceByn) ? r.priceByn : 0), 0) / services.length)
-      : 0;
+export function ServicesPriceTab({ services, onEditPrice, onEditDuration, onOpenMenu }: Props) {
+  const stats = useMemo(() => {
+    const visible = services.filter((s) => s.isActive !== false).length;
+    const avg =
+      services.length > 0
+        ? Math.round(
+            services.reduce((sum, s) => sum + (Number.isFinite(s.priceByn) ? s.priceByn : 0), 0) /
+              services.length,
+          )
+        : 0;
+    const min =
+      services.length > 0
+        ? Math.min(...services.map((s) => (Number.isFinite(s.priceByn) ? s.priceByn : 0)))
+        : 0;
+    const max =
+      services.length > 0
+        ? Math.max(...services.map((s) => (Number.isFinite(s.priceByn) ? s.priceByn : 0)))
+        : 0;
+
+    return { visible, avg, min, max };
+  }, [services]);
 
   return (
     <div className="space-y-4">
-      <section className="relative overflow-hidden rounded-[22px] border border-[#FDE8ED] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] p-5 shadow-[0_10px_32px_rgba(244,124,140,0.12)]">
-        <span className={`${servicesIconCircle} absolute right-4 top-4 h-12 w-12`}>
-          <HiWallet className="h-6 w-6" aria-hidden />
-        </span>
-        <p className="text-[13px] font-semibold text-[#6B7280]">Сводка по прайсу</p>
-        <p className="mt-2 text-[32px] font-bold tracking-[-0.06em] text-[#111827]">{services.length}</p>
-        <p className="text-[12px] font-medium text-[#9CA3AF]">услуг в каталоге</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-white/90 px-3 py-1.5 text-[13px] font-bold text-[#111827] shadow-sm">
-            Средний чек {avg > 0 ? `${avg} BYN` : '—'}
-          </span>
-          <span className="rounded-full bg-white/70 px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]">
-            Динамика — скоро
-          </span>
+      <section className={`${servicesCard} overflow-hidden p-0`}>
+        <div className="border-b border-[#F3F4F6] px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+                Прайс-лист
+              </p>
+              <p className="mt-0.5 text-[17px] font-bold tracking-[-0.04em] text-[#111827]">
+                Сводка по услугам
+              </p>
+            </div>
+            <span className={`${servicesIconCircle} h-11 w-11 rounded-[14px]`}>
+              <HiWallet className="h-5 w-5" aria-hidden />
+            </span>
+          </div>
         </div>
+
+        <div className="grid grid-cols-3 divide-x divide-[#F3F4F6]">
+          <div className="px-3 py-4 text-center">
+            <p className="text-[22px] font-bold tabular-nums tracking-[-0.05em] text-[#111827]">
+              {services.length}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-[#9CA3AF]">всего</p>
+          </div>
+          <div className="px-3 py-4 text-center">
+            <p className="text-[22px] font-bold tabular-nums tracking-[-0.05em] text-[#F47C8C]">
+              {stats.avg > 0 ? stats.avg : '—'}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-[#9CA3AF]">средний, BYN</p>
+          </div>
+          <div className="px-3 py-4 text-center">
+            <p className="text-[22px] font-bold tabular-nums tracking-[-0.05em] text-[#111827]">
+              {stats.visible}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold text-[#9CA3AF]">видимых</p>
+          </div>
+        </div>
+
+        {services.length > 0 && stats.min !== stats.max ? (
+          <p className="border-t border-[#F3F4F6] px-4 py-2.5 text-center text-[12px] font-medium text-[#9CA3AF]">
+            Диапазон цен: {stats.min}–{stats.max} BYN
+          </p>
+        ) : null}
       </section>
 
       {services.length === 0 ? (
@@ -45,53 +86,52 @@ export function ServicesPriceTab({ draft, services, onEdit, onOpenMenu }: Props)
         </div>
       ) : (
         <ul className="space-y-3">
-          {services.map((service) => {
-            const img = serviceImageUrl(service, draft);
-            return (
-              <li key={service.id} className={`${servicesCard} p-4`}>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[14px] bg-[#FFF1F4]">
-                    {img ? (
-                      <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[11px] font-bold text-[#F47C8C]">
-                        {service.title.slice(0, 1)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-bold text-[#111827]">{service.title}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onOpenMenu(service)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7F7F8] text-[#6B7280]"
-                    aria-label="Меню"
-                  >
-                    <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-                  </button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(service)}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-[12px] bg-[#FFF1F4] px-3 py-2 text-[13px] font-bold text-[#F47C8C] transition active:scale-[0.96]"
-                  >
+          {services.map((service) => (
+            <li key={service.id} className={`${servicesCard} p-4`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-[15px] font-bold text-[#111827]">{service.title}</p>
+                <button
+                  type="button"
+                  onClick={() => onOpenMenu(service)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7F7F8] text-[#6B7280] transition active:scale-[0.96]"
+                  aria-label="Меню"
+                >
+                  <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onEditPrice(service)}
+                  className="flex min-h-[52px] flex-col items-start justify-center gap-1 rounded-[14px] border border-[#FDE8ED] bg-[#FFF1F4] px-3 py-2.5 text-left transition active:scale-[0.98]"
+                  aria-label={`Изменить цену: ${service.title}`}
+                >
+                  <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-[#F47C8C]">
+                    <HiWallet className="h-3.5 w-3.5" aria-hidden />
+                    Цена
+                  </span>
+                  <span className="text-[15px] font-bold tabular-nums text-[#111827]">
                     {formatServicePrice(service)}
-                    <HiPencilSquare className="h-4 w-4 opacity-70" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onEdit(service)}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-[12px] bg-[#F3F4F6] px-3 py-2 text-[13px] font-semibold text-[#374151] transition active:scale-[0.96]"
-                  >
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEditDuration(service)}
+                  className="flex min-h-[52px] flex-col items-start justify-center gap-1 rounded-[14px] border border-[#EAECEF] bg-[#FAFAFA] px-3 py-2.5 text-left transition active:scale-[0.98]"
+                  aria-label={`Изменить длительность: ${service.title}`}
+                >
+                  <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
+                    <HiClock className="h-3.5 w-3.5" aria-hidden />
+                    Время
+                  </span>
+                  <span className="text-[15px] font-bold text-[#111827]">
                     {formatDurationRu(service.durationMin)}
-                    <HiPencilSquare className="h-4 w-4 opacity-50" aria-hidden />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
+                  </span>
+                </button>
+              </div>
+            </li>
+          ))}
         </ul>
       )}
     </div>

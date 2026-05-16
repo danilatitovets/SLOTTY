@@ -12,6 +12,7 @@ import {
 } from '../../features/profile/model/masterLocation';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { LoadingScreen } from '../../shared/ui/LoadingVideo';
 import {
   fetchMasterPublicDetail,
   mapCareerToDraftItems,
@@ -838,11 +839,7 @@ export function MasterProfilePage() {
   }
 
   if (profileLoading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-white px-4 text-neutral-600">
-        <p className="text-[15px] font-medium">Загрузка профиля…</p>
-      </div>
-    );
+    return <LoadingScreen label="Загрузка профиля…" />;
   }
 
   if (!master) {

@@ -13,6 +13,7 @@ import { getBillingPlans, switchMySubscriptionMock, getMySubscription, type Bill
 import { getMasterDraft } from '../../../features/master/model/masterDraftStorage';
 import { ensureDemoAppointmentsSeeded } from '../../../features/master/model/demoMasterAppointments';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 
 function progressClass(ratio: number): string {
@@ -240,7 +241,7 @@ export function AdminBillingTab() {
       ) : null}
 
       {apiLoading ? (
-        <p className="text-center text-[13px] font-medium text-neutral-500">Загрузка тарифов…</p>
+        <LoadingVideo size="sm" label="Загрузка тарифов…" className="py-2" />
       ) : null}
 
       <section className="rounded-[36px] bg-[#F1EFEF] p-3 shadow-[0_18px_55px_rgba(17,17,17,0.05)]">

@@ -7,6 +7,7 @@ import { formatReviewsCountLabel } from '../../features/services/model/demoMaste
 import type { DemoQuickSlot } from '../../features/services/model/demoQuickSlots';
 import { getDemoQuickSlots } from '../../features/services/model/demoQuickSlots';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
+import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 
 function mapPublicSlotsToQuick(slots: PublicSlotDto[], max: number): DemoQuickSlot[] {
   return slots.slice(0, max).map((s) => {
@@ -85,7 +86,7 @@ export const ServicesNearQuickSlots: FC<Props> = ({ category, apiSlots }) => {
 
         {backendStatus === 'loading' ? (
           <div className="mt-3 rounded-[28px] bg-white/90 px-4 py-6 text-center shadow-[0_10px_28px_rgba(17,17,17,0.035)]">
-            <p className="text-[15px] font-medium text-neutral-600">Загрузка…</p>
+            <LoadingVideo label="Загрузка…" />
           </div>
         ) : backendStatus === 'error' ? (
           <div className="mt-3 rounded-[28px] bg-white/90 px-4 py-6 text-center shadow-[0_10px_28px_rgba(17,17,17,0.035)]">
