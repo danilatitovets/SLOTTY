@@ -261,7 +261,7 @@ export function SectionTabs({
   ];
 
   return (
-    <nav className="flex bg-white px-1 pt-2.5 pb-1" aria-label="Разделы профиля">
+    <nav className="flex bg-white px-1 pb-0.5 pt-0" aria-label="Разделы профиля">
       {tabs.map((tab) => {
         const selected = active === tab.id;
         return (
@@ -269,14 +269,14 @@ export function SectionTabs({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-h-10 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1 transition active:scale-[0.98] ${
+            className={`relative flex min-w-0 flex-1 flex-col items-center gap-0 px-1 pb-1 pt-0.5 transition active:scale-[0.98] ${
               selected ? 'text-[#F47C8C]' : 'text-[#6B7280] hover:text-[#111827]'
             }`}
           >
-            {tab.icon}
-            <span className="max-w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+            <span className="max-w-full truncate text-[10px] font-semibold leading-none sm:text-[11px]">
               {tab.label}
             </span>
+            {tab.icon}
             {selected ? (
               <span
                 className="absolute bottom-0 left-1/2 h-0.5 w-7 -translate-x-1/2 rounded-full bg-[#F47C8C]"

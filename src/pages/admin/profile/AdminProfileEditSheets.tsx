@@ -6,6 +6,7 @@ import {
   useState,
   type ChangeEvent,
 } from 'react';
+import { HiBuildingOffice2, HiHome, HiMapPin } from 'react-icons/hi2';
 import type {
   MasterCertificate,
   MasterDraft,
@@ -44,6 +45,21 @@ import {
   splitReferenceLabelToStreetBuilding,
   splitReferenceLabelToStreetBuildingLenient,
 } from '../../master-onboarding/OnboardingAddressMap';
+import {
+  sheetCancelBtnClass,
+  sheetChipClass,
+  sheetDayClass,
+  sheetFieldClass,
+  sheetHintClass,
+  sheetLabelClass,
+  sheetOutlineBtnClass,
+  sheetPinkPillBtnClass,
+  sheetPrimaryBtnClass,
+  sheetSectionClass,
+  sheetSectionTitleClass,
+  sheetSegmentClass,
+} from './adminProfileCabinetTheme';
+import { AddressFieldLabel, addressDetailIcon } from './AdminProfileAddressUi';
 
 const FALLBACK_CATEGORIES = [
   'Маникюр',
@@ -57,10 +73,6 @@ const FALLBACK_CATEGORIES = [
 const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
 const PAYMENT_OPTIONS = ['Наличные', 'Карта', 'Перевод', 'Онлайн позже'] as const;
-
-function fieldClass(): string {
-  return 'mt-1.5 w-full rounded-[22px] bg-[#F1EFEF] px-4 py-3.5 text-[16px] text-neutral-900 outline-none ring-0 placeholder:text-neutral-400';
-}
 
 function newEntityId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -115,12 +127,7 @@ function SheetFooter({
 }) {
   return (
     <div className="mt-8 flex gap-3 pb-1">
-      <button
-        type="button"
-        onClick={onCancel}
-        disabled={saving}
-        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98] disabled:opacity-50"
-      >
+      <button type="button" onClick={onCancel} disabled={saving} className={sheetCancelBtnClass}>
         Отмена
       </button>
       <button
@@ -129,7 +136,7 @@ function SheetFooter({
         onClick={() => {
           void Promise.resolve(onSave());
         }}
-        className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-60"
+        className={sheetPrimaryBtnClass}
       >
         {saving ? savingLabel : saveLabel}
       </button>
@@ -312,8 +319,8 @@ export function SheetMainInfo({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[26px] bg-[#F1EFEF] p-4">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">Фото в профиле</p>
+      <div className={sheetSectionClass}>
+        <p className={sheetSectionTitleClass}>Фото в профиле</p>
         <input
           ref={photoInputRef}
           type="file"
@@ -337,7 +344,7 @@ export function SheetMainInfo({
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="rounded-full bg-[#E29595] px-3 py-2 text-[12px] font-semibold text-white shadow-md ring-2 ring-white transition active:scale-[0.97]"
+              className={sheetPinkPillBtnClass}
             >
               Сменить
             </button>
@@ -345,14 +352,14 @@ export function SheetMainInfo({
         </div>
         <div className="mt-2 space-y-1">
           {photoUploadErr ? <p className="text-center text-[12px] font-medium text-red-600">{photoUploadErr}</p> : null}
-          <p className="text-center text-[12px] leading-snug text-neutral-500">
+          <p className={`text-center ${sheetHintClass}`}>
             JPG или PNG. Так фото будет выглядеть на карточке в каталоге.
           </p>
         </div>
       </div>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Имя / название мастера *</span>
+        <span className={sheetLabelClass}>Имя / название мастера *</span>
         <input
           value={name}
           onChange={(e) => {
@@ -363,7 +370,7 @@ export function SheetMainInfo({
               return next;
             });
           }}
-          className={fieldClass()}
+          className={sheetFieldClass}
         />
         {submitAttempted && fieldErrors.name ? (
           <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.name}</p>
@@ -371,7 +378,7 @@ export function SheetMainInfo({
       </label>
 
       <label className="block">
-        <span id="sheet-main-cat" className="text-[13px] font-semibold text-neutral-500">
+        <span id="sheet-main-cat" className={sheetLabelClass}>
           Категория
         </span>
         <SlottySelect
@@ -384,7 +391,7 @@ export function SheetMainInfo({
       </label>
 
       <label className="block">
-        <span className="flex items-center gap-2 text-[13px] font-semibold text-neutral-500">
+        <span className={`flex items-center gap-2 ${sheetLabelClass}`}>
           Телефон
           <span
             className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white"
@@ -404,7 +411,7 @@ export function SheetMainInfo({
               return next;
             });
           }}
-          className={fieldClass()}
+          className={sheetFieldClass}
           placeholder="+375 29 000-00-00"
           inputMode="tel"
           autoComplete="tel"
@@ -447,8 +454,8 @@ export function SheetMainInfo({
       ) : null}
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">О себе</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={fieldClass()} />
+        <span className={sheetLabelClass}>О себе</span>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={sheetFieldClass} />
       </label>
 
       <SheetFooter onCancel={onCancel} onSave={save} saving={saving} />
@@ -477,13 +484,13 @@ export function SheetExperience({
   return (
     <div className="space-y-4">
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Опыт работы</span>
+        <span className={sheetLabelClass}>Опыт работы</span>
         <textarea
           value={experience}
           onChange={(e) => setExperience(e.target.value)}
           rows={6}
           placeholder="Например: Работаю мастером с 2021 года, специализируюсь на аппаратном маникюре."
-          className={fieldClass()}
+          className={sheetFieldClass}
         />
       </label>
       <SheetFooter onCancel={onCancel} onSave={save} />
@@ -604,53 +611,67 @@ export function SheetAddress({
   };
 
   const roomLabel = visitType === 'at_home' ? 'Квартира / офис' : 'Кабинет';
+  const visitTypeIcon = (vt: MasterVisitType) =>
+    vt === 'at_home' ? (
+      <HiHome className="h-[16px] w-[16px]" strokeWidth={2} aria-hidden />
+    ) : (
+      <HiBuildingOffice2 className="h-[16px] w-[16px]" strokeWidth={2} aria-hidden />
+    );
 
   return (
     <div className="space-y-4">
-      <p className="text-[13px] font-semibold text-neutral-500">Тип приёма</p>
-      <div className="flex flex-col gap-2">
-        {VISIT_TYPES.map((vt) => (
-          <button
-            key={vt}
-            type="button"
-            onClick={() => setVisitType(vt)}
-            className={`min-h-11 rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98] ${
-              visitType === vt ? 'bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.25)]' : 'bg-[#F1EFEF] text-neutral-900'
-            }`}
-          >
-            {masterVisitTypeLabel(vt)}
-          </button>
-        ))}
+      <div className={sheetSectionClass}>
+        <AddressFieldLabel icon={visitTypeIcon(visitType)}>Тип приёма</AddressFieldLabel>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {VISIT_TYPES.map((vt) => (
+            <button
+              key={vt}
+              type="button"
+              onClick={() => setVisitType(vt)}
+              className={`flex min-h-11 items-center justify-center gap-1.5 ${sheetSegmentClass(visitType === vt)}`}
+            >
+              <span className={visitType === vt ? 'text-white' : 'text-[#F47C8C]'}>{visitTypeIcon(vt)}</span>
+              <span>{masterVisitTypeLabel(vt)}</span>
+            </button>
+          ))}
+        </div>
+        <p className={`mt-2 ${sheetHintClass}`}>
+          {visitType === 'studio'
+            ? 'Салон или студия: название точки и метка у входа.'
+            : 'На дому: улица в каталоге, детали — после записи.'}
+        </p>
       </div>
 
-      {visitType === 'studio' ? (
-        <p className="text-[12px] leading-snug text-neutral-500">
-          Приём в салоне или студии: укажите название точки и адрес для клиентов.
-        </p>
-      ) : null}
-
-      <div className="rounded-[22px] bg-[#F1EFEF] px-4 py-3 ring-1 ring-black/[0.04]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Город</p>
-        <p className="mt-1 text-[15px] font-semibold text-neutral-900">{MASTER_CABINET_CITY}</p>
+      <div className={`${sheetSectionClass} flex items-center gap-3`}>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF1F4] text-[#F47C8C]">
+          <HiMapPin className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className={sheetSectionTitleClass}>Город</p>
+          <p className="mt-0.5 text-[15px] font-semibold text-[#111827]">{MASTER_CABINET_CITY}</p>
+        </div>
       </div>
 
       {visitType === 'studio' ? (
         <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">Название салона или студии</span>
+          <AddressFieldLabel icon={<HiBuildingOffice2 className="h-[16px] w-[16px]" strokeWidth={2} aria-hidden />}>
+            Название салона или студии
+          </AddressFieldLabel>
           <input
             value={salonName}
             onChange={(e) => setSalonName(e.target.value)}
-            className={fieldClass()}
+            className={sheetFieldClass}
             placeholder="Например, Nail Studio"
           />
         </label>
       ) : null}
 
-      <div className="space-y-2 overflow-visible">
+      <div className={`${sheetSectionClass} space-y-2 overflow-visible`}>
+        <AddressFieldLabel icon={<HiMapPin className="h-[16px] w-[16px]" strokeWidth={2} aria-hidden />}>
+          Адрес на карте
+        </AddressFieldLabel>
         {visitType === 'studio' ? (
-          <p className="text-[12px] leading-snug text-neutral-500">
-            Поставьте метку у входа в салон — так проще найти вас на месте.
-          </p>
+          <p className={sheetHintClass}>Метка у входа в салон — так проще найти вас на месте.</p>
         ) : null}
         <OnboardingAddressMap
           key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
@@ -674,26 +695,24 @@ export function SheetAddress({
       </div>
 
       {visitType === 'at_home' ? (
-        <div className="rounded-[26px] bg-[#F1EFEF] p-4">
-            <p className="text-[13px] font-semibold text-neutral-500">Адрес в каталоге до записи</p>
-            <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-              Улица из поля выше видна всем. Корпус, подъезд, этаж и квартира — только в деталях ниже.
-            </p>
-            <div
-              className="mt-3 grid grid-cols-1 gap-2 rounded-[22px] bg-white/80 p-1.5 sm:grid-cols-2"
-              role="radiogroup"
-              aria-label="Когда показывать полный адрес"
-            >
+        <div className={sheetSectionClass}>
+          <AddressFieldLabel icon={<HiMapPin className="h-[16px] w-[16px]" strokeWidth={2} aria-hidden />}>
+            Адрес в каталоге до записи
+          </AddressFieldLabel>
+          <p className={sheetHintClass}>
+            Улица из поля выше видна всем. Корпус, подъезд, этаж и квартира — только в деталях ниже.
+          </p>
+          <div
+            className="mt-3 grid grid-cols-2 gap-2"
+            role="radiogroup"
+            aria-label="Когда показывать полный адрес"
+          >
               <button
                 type="button"
                 role="radio"
                 aria-checked={!showExactAddressAfterBooking}
                 onClick={() => setShowExactAddressAfterBooking(false)}
-                className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
-                  !showExactAddressAfterBooking
-                    ? 'bg-[#E29595] text-white shadow-[0_8px_20px_rgba(226,149,149,0.22)]'
-                    : 'text-neutral-600'
-                }`}
+                className={sheetSegmentClass(!showExactAddressAfterBooking)}
               >
                 Видно сразу
               </button>
@@ -702,11 +721,7 @@ export function SheetAddress({
                 role="radio"
                 aria-checked={showExactAddressAfterBooking}
                 onClick={() => setShowExactAddressAfterBooking(true)}
-                className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
-                  showExactAddressAfterBooking
-                    ? 'bg-[#E29595] text-white shadow-[0_8px_20px_rgba(226,149,149,0.22)]'
-                    : 'text-neutral-600'
-                }`}
+                className={sheetSegmentClass(showExactAddressAfterBooking)}
               >
                 Только после записи
               </button>
@@ -714,52 +729,58 @@ export function SheetAddress({
           </div>
       ) : null}
 
-      {visitType === 'at_home' ? (
-        <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">Корпус / строение</span>
-          <input
-            value={buildingDetail}
-            onChange={(e) => setBuildingDetail(e.target.value)}
-            className={fieldClass()}
-            placeholder="При необходимости"
-          />
-        </label>
-      ) : null}
+      <div className={sheetSectionClass}>
+        <p className="text-[13px] font-semibold text-[#111827]">Как найти вас</p>
+        <p className={`mt-0.5 ${sheetHintClass}`}>Подъезд, этаж и подсказки — у клиента с записью</p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {visitType === 'at_home' ? (
+            <label className="block sm:col-span-2">
+              <AddressFieldLabel icon={addressDetailIcon('корпус', visitType)}>Корпус / строение</AddressFieldLabel>
+              <input
+                value={buildingDetail}
+                onChange={(e) => setBuildingDetail(e.target.value)}
+                className={sheetFieldClass}
+                placeholder="При необходимости"
+              />
+            </label>
+          ) : null}
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Вход / подъезд</span>
-        <input value={entrance} onChange={(e) => setEntrance(e.target.value)} className={fieldClass()} />
-      </label>
+          <label className="block">
+            <AddressFieldLabel icon={addressDetailIcon('подъезд', visitType)}>Вход / подъезд</AddressFieldLabel>
+            <input value={entrance} onChange={(e) => setEntrance(e.target.value)} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Этаж</span>
-        <input value={floor} onChange={(e) => setFloor(e.target.value)} className={fieldClass()} />
-      </label>
+          <label className="block">
+            <AddressFieldLabel icon={addressDetailIcon('этаж', visitType)}>Этаж</AddressFieldLabel>
+            <input value={floor} onChange={(e) => setFloor(e.target.value)} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">{roomLabel}</span>
-        <input value={room} onChange={(e) => setRoom(e.target.value)} className={fieldClass()} />
-      </label>
+          <label className="block">
+            <AddressFieldLabel icon={addressDetailIcon(roomLabel, visitType)}>{roomLabel}</AddressFieldLabel>
+            <input value={room} onChange={(e) => setRoom(e.target.value)} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Домофон / ресепшен</span>
-        <input value={intercom} onChange={(e) => setIntercom(e.target.value)} className={fieldClass()} />
-      </label>
+          <label className="block">
+            <AddressFieldLabel icon={addressDetailIcon('домофон', visitType)}>Домофон / ресепшен</AddressFieldLabel>
+            <input value={intercom} onChange={(e) => setIntercom(e.target.value)} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Ориентир</span>
-        <input value={landmark} onChange={(e) => setLandmark(e.target.value)} className={fieldClass()} />
-      </label>
+          <label className="block sm:col-span-2">
+            <AddressFieldLabel icon={addressDetailIcon('ориентир', visitType)}>Ориентир</AddressFieldLabel>
+            <input value={landmark} onChange={(e) => setLandmark(e.target.value)} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Как пройти</span>
-        <textarea value={directions} onChange={(e) => setDirections(e.target.value)} rows={3} className={fieldClass()} />
-      </label>
+          <label className="block sm:col-span-2">
+            <AddressFieldLabel icon={addressDetailIcon('как пройти', visitType)}>Как пройти</AddressFieldLabel>
+            <textarea value={directions} onChange={(e) => setDirections(e.target.value)} rows={3} className={sheetFieldClass} />
+          </label>
 
-      <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Комментарий для клиента</span>
-        <textarea value={clientNote} onChange={(e) => setClientNote(e.target.value)} rows={2} className={fieldClass()} />
-      </label>
+          <label className="block sm:col-span-2">
+            <AddressFieldLabel icon={addressDetailIcon('комментарий', visitType)}>Комментарий для клиента</AddressFieldLabel>
+            <textarea value={clientNote} onChange={(e) => setClientNote(e.target.value)} rows={2} className={sheetFieldClass} />
+          </label>
+        </div>
+      </div>
 
       <SheetFooter onCancel={onCancel} onSave={save} />
     </div>
@@ -805,17 +826,17 @@ export function SheetRules({
   return (
     <div className="space-y-4">
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Правила записи</span>
-        <textarea value={bookingRules} onChange={(e) => setBookingRules(e.target.value)} rows={4} className={fieldClass()} />
+        <span className={sheetLabelClass}>Правила записи</span>
+        <textarea value={bookingRules} onChange={(e) => setBookingRules(e.target.value)} rows={4} className={sheetFieldClass} />
       </label>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Правила отмены</span>
-        <textarea value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={4} className={fieldClass()} />
+        <span className={sheetLabelClass}>Правила отмены</span>
+        <textarea value={cancellationPolicy} onChange={(e) => setCancellationPolicy(e.target.value)} rows={4} className={sheetFieldClass} />
       </label>
 
       <div>
-        <p className="text-[13px] font-semibold text-neutral-500">Способы оплаты</p>
+        <p className={sheetLabelClass}>Способы оплаты</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {PAYMENT_OPTIONS.map((opt) => {
             const on = paymentMethods.includes(opt);
@@ -824,9 +845,7 @@ export function SheetRules({
                 key={opt}
                 type="button"
                 onClick={() => togglePayment(opt)}
-                className={`rounded-full px-4 py-2.5 text-[14px] font-semibold transition active:scale-[0.98] ${
-                  on ? 'bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.22)]' : 'bg-[#F1EFEF] text-neutral-800'
-                }`}
+                className={sheetChipClass(on)}
               >
                 {opt}
               </button>
@@ -836,8 +855,8 @@ export function SheetRules({
       </div>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Комментарий по оплате</span>
-        <textarea value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} rows={2} className={fieldClass()} />
+        <span className={sheetLabelClass}>Комментарий по оплате</span>
+        <textarea value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} rows={2} className={sheetFieldClass} />
       </label>
 
       <SheetFooter onCancel={onCancel} onSave={save} />
@@ -890,7 +909,7 @@ export function SheetSchedule({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[13px] font-semibold text-neutral-500">Рабочие дни</p>
+        <p className={sheetLabelClass}>Рабочие дни</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {WEEKDAY_LABELS_SHORT.map((label, day) => {
             const on = workDays.includes(day);
@@ -899,11 +918,7 @@ export function SheetSchedule({
                 key={label}
                 type="button"
                 onClick={() => toggleDay(day)}
-                className={`min-h-11 min-w-[3rem] rounded-full px-4 text-[14px] font-semibold transition active:scale-[0.98] ${
-                  on
-                    ? 'bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.22)]'
-                    : 'bg-[#F1EFEF] text-neutral-800'
-                }`}
+                className={sheetDayClass(on)}
               >
                 {label}
               </button>
@@ -914,7 +929,7 @@ export function SheetSchedule({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">С</span>
+          <span className={sheetLabelClass}>С</span>
           <SlottySelect
             className="mt-1.5 w-full"
             value={startTime}
@@ -927,7 +942,7 @@ export function SheetSchedule({
           />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">До</span>
+          <span className={sheetLabelClass}>До</span>
           <SlottySelect
             className="mt-1.5 w-full"
             value={endTime}
@@ -1043,24 +1058,24 @@ export function SheetCertificate({
   return (
     <div className="space-y-4">
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Название сертификата *</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className={fieldClass()} />
+        <span className={sheetLabelClass}>Название сертификата *</span>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className={sheetFieldClass} />
       </label>
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Школа / организация *</span>
-        <input value={issuer} onChange={(e) => setIssuer(e.target.value)} className={fieldClass()} />
+        <span className={sheetLabelClass}>Школа / организация *</span>
+        <input value={issuer} onChange={(e) => setIssuer(e.target.value)} className={sheetFieldClass} />
       </label>
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Год</span>
-        <input value={year} onChange={(e) => setYear(e.target.value)} className={fieldClass()} placeholder="2024" />
+        <span className={sheetLabelClass}>Год</span>
+        <input value={year} onChange={(e) => setYear(e.target.value)} className={sheetFieldClass} placeholder="2024" />
       </label>
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Описание</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={fieldClass()} />
+        <span className={sheetLabelClass}>Описание</span>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={sheetFieldClass} />
       </label>
 
-      <div className="rounded-[26px] bg-[#F1EFEF] p-4">
-        <p className="text-[13px] font-semibold text-neutral-500">Фото сертификата</p>
+      <div className={sheetSectionClass}>
+        <p className={sheetLabelClass}>Фото сертификата</p>
         <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={uploadingImage} />
         {imageUrl ? (
           <div className="mt-3 overflow-hidden rounded-[22px] bg-white">
@@ -1071,7 +1086,7 @@ export function SheetCertificate({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingImage}
-          className="mt-3 w-full rounded-full bg-white py-3 text-[14px] font-semibold text-neutral-900 shadow-sm transition active:scale-[0.99] disabled:opacity-60"
+          className={`mt-3 ${sheetOutlineBtnClass}`}
         >
           {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
         </button>
@@ -1181,8 +1196,8 @@ export function SheetPortfolio({
 
   return (
     <div className="space-y-4">
-      <div className={`rounded-[26px] bg-[#F1EFEF] p-4 ${fieldErrors.image ? 'ring-2 ring-red-300/80' : ''}`}>
-        <p className="text-[13px] font-semibold text-neutral-500">Фото работы *</p>
+      <div className={`${sheetSectionClass} ${fieldErrors.image ? 'ring-2 ring-red-300/80' : ''}`}>
+        <p className={sheetLabelClass}>Фото работы *</p>
         <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={uploadingImage} />
         {imageUrl ? (
           <div className="mt-3 overflow-hidden rounded-[22px] bg-white">
@@ -1193,7 +1208,7 @@ export function SheetPortfolio({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingImage}
-          className="mt-3 w-full rounded-full bg-white py-3 text-[14px] font-semibold text-neutral-900 shadow-sm transition active:scale-[0.99] disabled:opacity-60"
+          className={`mt-3 ${sheetOutlineBtnClass}`}
         >
           {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
         </button>
@@ -1202,7 +1217,7 @@ export function SheetPortfolio({
       </div>
 
       <label className="block">
-        <span className="flex items-baseline justify-between gap-2 text-[13px] font-semibold text-neutral-500">
+        <span className={`flex items-baseline justify-between gap-2 ${sheetLabelClass}`}>
           <span>Название</span>
           <span className="text-[11px] font-medium tabular-nums text-neutral-400">
             {title.length}/{PORTFOLIO_TITLE_MAX}
@@ -1219,13 +1234,13 @@ export function SheetPortfolio({
               return next;
             });
           }}
-          className={fieldErrors.title ? `${fieldClass()} ring-2 ring-red-300/80` : fieldClass()}
+          className={fieldErrors.title ? `${sheetFieldClass} ring-2 ring-red-300/80` : sheetFieldClass}
         />
         {fieldErrors.title ? <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.title}</p> : null}
       </label>
 
       <label className="block">
-        <span className="flex items-baseline justify-between gap-2 text-[13px] font-semibold text-neutral-500">
+        <span className={`flex items-baseline justify-between gap-2 ${sheetLabelClass}`}>
           <span>Описание</span>
           <span className="text-[11px] font-medium tabular-nums text-neutral-400">
             {description.length}/{PORTFOLIO_DESC_MAX}
@@ -1243,7 +1258,7 @@ export function SheetPortfolio({
             });
           }}
           rows={3}
-          className={fieldErrors.description ? `${fieldClass()} ring-2 ring-red-300/80` : fieldClass()}
+          className={fieldErrors.description ? `${sheetFieldClass} ring-2 ring-red-300/80` : sheetFieldClass}
         />
         {fieldErrors.description ? (
           <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.description}</p>
@@ -1273,13 +1288,9 @@ export function SheetDeleteConfirm({
 }) {
   return (
     <div className="space-y-4 pb-1">
-      <p className="text-[15px] leading-relaxed text-neutral-600">{text}</p>
+      <p className="text-[15px] leading-relaxed text-[#6B7280]">{text}</p>
       <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-        >
+        <button type="button" onClick={onBack} className={sheetCancelBtnClass}>
           Назад
         </button>
         <button
@@ -1287,7 +1298,7 @@ export function SheetDeleteConfirm({
           onClick={() => {
             void Promise.resolve(onDelete());
           }}
-          className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+          className="flex min-h-12 flex-1 items-center justify-center rounded-[17px] bg-red-500 px-4 text-[15px] font-semibold text-white shadow-[0_8px_24px_rgba(239,68,68,0.28)] transition hover:bg-red-600 active:scale-[0.99]"
         >
           {deleteLabel}
         </button>

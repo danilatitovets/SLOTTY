@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { readPublicAppOrigin, resolveMasterBookingLink } from '../../../shared/lib/masterBookingLink';
-import { openTelegramOrBrowserUrl, openTelegramShareUrlPicker } from '../../../shared/lib/telegramWebApp';
+import { openTelegramShareUrlPicker } from '../../../shared/lib/telegramWebApp';
 
 type Props = {
   draft: MasterDraft;
@@ -69,14 +69,6 @@ function IconShare() {
   );
 }
 
-function IconExternal() {
-  return (
-    <SvgIcon>
-      <path d="M14 5h5v5M10 14 19 9M5 19h5a2 2 0 0 0 2-2V9" {...stroke} />
-    </SvgIcon>
-  );
-}
-
 const iconBtn =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] transition active:opacity-85 disabled:opacity-40';
 
@@ -84,7 +76,6 @@ function LinkFieldSkeleton() {
   return (
     <div className="mt-2 flex animate-pulse items-center gap-1.5">
       <div className="h-9 min-w-0 flex-1 rounded-xl bg-[#F7F7F8]" />
-      <div className="h-9 w-9 rounded-[10px] bg-[#F3F4F6]" />
       <div className="h-9 w-9 rounded-[10px] bg-[#F3F4F6]" />
       <div className="h-9 w-9 rounded-[10px] bg-[#F3F4F6]" />
     </div>
@@ -157,11 +148,6 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
     setShareHint('Ссылка скопирована');
   }, [resolved, copyHref]);
 
-  const onOpen = useCallback(() => {
-    if (!resolved) return;
-    openTelegramOrBrowserUrl(resolved.href);
-  }, [resolved]);
-
   const showSkeleton = Boolean(useCabinetApi && cabinetLoading);
 
   return (
@@ -213,14 +199,6 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
               className={`${iconBtn} bg-[#F7F7F8] text-[#111827] hover:bg-[#F3F4F6]`}
             >
               <IconShare />
-            </button>
-            <button
-              type="button"
-              onClick={onOpen}
-              aria-label="Открыть ссылку"
-              className={`${iconBtn} bg-[#F7F7F8] text-[#6B7280] hover:bg-[#F3F4F6]`}
-            >
-              <IconExternal />
             </button>
           </div>
 

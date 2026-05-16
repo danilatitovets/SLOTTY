@@ -4,10 +4,6 @@ import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import type { MasterCareerItemType, MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
-import {
-  buildLocationDisplayParts,
-  catalogLineWithoutVisitPrefix,
-} from '../../../features/profile/model/masterLocation';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useAdminMasterDraft } from '../useAdminMasterData';
@@ -35,8 +31,16 @@ import {
   SheetRules,
   SheetSchedule,
 } from './AdminProfileEditSheets';
+import { AddressSection } from './AdminProfileAddressUi';
 import { MasterBookingLinkCard } from './MasterBookingLinkCard';
 import { TrustSection } from './AdminProfilePortfolioUi';
+import {
+  sheetCancelBtnClass,
+  sheetChipClass,
+  sheetFieldClass,
+  sheetLabelClass,
+  sheetPrimaryBtnClass,
+} from './adminProfileCabinetTheme';
 import {
   AboutCard,
   AdminProfileHero as CabinetProfileHero,
@@ -93,26 +97,6 @@ function newEntityId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function fieldClass(): string {
-  return `
-    mt-1.5
-    w-full
-    rounded-[24px]
-    bg-[#F7F7F8]
-    px-4
-    py-3.5
-    text-[16px]
-    font-semibold
-    text-neutral-950
-    outline-none
-    ring-0
-    placeholder:text-neutral-400
-    transition
-    focus:bg-white
-    focus:shadow-[0_10px_28px_rgba(17,17,17,0.05)]
-  `;
-}
-
 function normalizeCareerType(raw: string | CareerItemType | undefined): CareerItemType {
   return normalizeMasterCareerItemType(raw);
 }
@@ -138,69 +122,6 @@ function normalizeCareerItems(draft: MasterDraft): MasterCareerItem[] {
   }
 
   return [];
-}
-
-function AddressDetailGrid({ rows }: { rows: Array<{ label: string; value: string }> }) {
-  if (!rows.length) return null;
-  return (
-    <dl className="mt-3 flex flex-col gap-4">
-      {rows.map((row) => (
-        <div key={row.label} className="min-w-0">
-          <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">{row.label}</dt>
-          <dd className="mt-1 text-[15px] font-semibold leading-relaxed text-neutral-950">{row.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function AddressPreviewPanel({
-  title,
-  hint,
-  visitLabel,
-  mode = 'short',
-  mainLine,
-  detailRows,
-  wayfinding,
-}: {
-  title: string;
-  hint?: string;
-  visitLabel: string;
-  mode?: 'short' | 'detailed';
-  mainLine?: string;
-  detailRows?: Array<{ label: string; value: string }>;
-  wayfinding?: Array<{ label: string; value: string }>;
-}) {
-  return (
-    <div className="rounded-[26px] bg-white px-4 py-4 shadow-[0_8px_24px_rgba(17,17,17,0.035)]">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">{title}</p>
-      {hint ? <p className="mt-1 text-[12px] leading-snug text-neutral-500">{hint}</p> : null}
-      <div className="mt-3">
-        {mode === 'short' ? (
-          <p className="text-[17px] font-semibold leading-snug tracking-[-0.02em] text-neutral-950">
-            {mainLine || '—'}
-          </p>
-        ) : (
-          <AddressDetailGrid rows={detailRows ?? []} />
-        )}
-        <span className="mt-2 inline-flex rounded-full bg-[#F7F7F8] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-700">
-          {visitLabel}
-        </span>
-        {wayfinding?.length ? (
-          <div className="mt-3 space-y-2 border-t border-[#F7F7F8] pt-3">
-            {wayfinding.map((row) => (
-              <div key={row.label}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">{row.label}</p>
-                <p className="mt-0.5 whitespace-pre-wrap text-[14px] font-medium leading-relaxed text-neutral-800">
-                  {row.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
 }
 
 function hasRulesContent(d: MasterDraft): boolean {
@@ -231,20 +152,6 @@ function portfolioHttpsError(portfolio: { imageUrl?: string }[]): string | null 
     }
   }
   return null;
-}
-
-function IconPencil({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function valueOrDash(value?: string | null): string {
@@ -379,59 +286,6 @@ function MainSection({
   );
 }
 
-function AddressSection({
-  draft,
-  onEditAddress,
-}: {
-  draft: MasterDraft;
-  onEditAddress: () => void;
-}) {
-  const parts = buildLocationDisplayParts(draft.location);
-  const visitLabel = parts?.visitLabel ?? 'Адрес';
-  const catalogMain = parts
-    ? catalogLineWithoutVisitPrefix(parts.catalogLine, visitLabel)
-    : '—';
-  const afterBookingLine = parts
-    ? catalogLineWithoutVisitPrefix(parts.addressLine, visitLabel)
-    : '—';
-  const afterBookingRows =
-    afterBookingLine && afterBookingLine !== '—'
-      ? [{ label: 'Адрес', value: afterBookingLine }, ...(parts?.access ?? [])]
-      : [...(parts?.access ?? [])];
-
-  return (
-    <SectionCard
-      title="Адрес и как пройти"
-      text="Здесь должно быть понятно не только куда ехать, но и как найти кабинет."
-      headerAction={
-        <button
-          type="button"
-          onClick={onEditAddress}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F7F7F8] text-neutral-800 transition active:scale-[0.96]"
-          aria-label="Редактировать адрес"
-        >
-          <IconPencil className="h-[18px] w-[18px]" />
-        </button>
-      }
-    >
-      <AddressPreviewPanel
-        title="На карточке"
-        visitLabel={visitLabel}
-        mainLine={catalogMain}
-      />
-
-      <AddressPreviewPanel
-        title="После записи"
-        hint="Подъезд, этаж и другие детали — только у клиента с записью"
-        visitLabel={visitLabel}
-        mode="detailed"
-        detailRows={afterBookingRows}
-        wayfinding={parts?.wayfinding}
-      />
-    </SectionCard>
-  );
-}
-
 function CareerSheet({
   draft,
   itemId,
@@ -488,81 +342,73 @@ function CareerSheet({
   return (
     <div className="space-y-4 pb-2">
       <div>
-        <p className="text-[13px] font-semibold text-neutral-500">Тип</p>
+        <p className={sheetLabelClass}>Тип</p>
 
         <div className="mt-2 flex flex-wrap gap-2">
-          {CAREER_TYPES.map((item) => {
-            const active = type === item.value;
-
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setType(item.value)}
-                className={`rounded-full px-4 py-2.5 text-[14px] font-semibold transition active:scale-[0.98] ${
-                  active
-                    ? 'bg-[#F47C8C] text-white shadow-[0_8px_20px_rgba(244,124,140,0.24)]'
-                    : 'bg-[#F7F7F8] text-neutral-700'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
+          {CAREER_TYPES.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setType(item.value)}
+              className={sheetChipClass(type === item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Название *</span>
+        <span className={sheetLabelClass}>Название *</span>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Например: Минский колледж сферы обслуживания"
-          className={fieldClass()}
+          className={sheetFieldClass}
         />
       </label>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Место / организация *</span>
+        <span className={sheetLabelClass}>Место / организация *</span>
         <input
           value={place}
           onChange={(event) => setPlace(event.target.value)}
           placeholder="Колледж, школа, салон или студия"
-          className={fieldClass()}
+          className={sheetFieldClass}
         />
       </label>
 
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">С</span>
+          <span className={sheetLabelClass}>С</span>
           <input
             value={startYear}
             onChange={(event) => setStartYear(event.target.value)}
             placeholder="2022"
             inputMode="numeric"
-            className={fieldClass()}
+            className={sheetFieldClass}
           />
         </label>
 
         <label className="block">
-          <span className="text-[13px] font-semibold text-neutral-500">По</span>
+          <span className={sheetLabelClass}>По</span>
           <input
             value={endYear}
             onChange={(event) => setEndYear(event.target.value)}
             placeholder="2025 / сейчас"
-            className={fieldClass()}
+            className={sheetFieldClass}
           />
         </label>
       </div>
 
       <label className="block">
-        <span className="text-[13px] font-semibold text-neutral-500">Описание</span>
+        <span className={sheetLabelClass}>Описание</span>
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Коротко: специальность, практика, обязанности или чему научились"
           rows={3}
-          className={`${fieldClass()} resize-none leading-relaxed`}
+          className={`${sheetFieldClass} resize-none leading-relaxed`}
         />
       </label>
 
@@ -572,20 +418,11 @@ function CareerSheet({
         </p>
       ) : null}
 
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F7F7F8] text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-        >
+      <div className="mt-8 flex gap-3 pb-1 pt-2">
+        <button type="button" onClick={onCancel} className={sheetCancelBtnClass}>
           Отмена
         </button>
-
-        <button
-          type="button"
-          onClick={save}
-          className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F47C8C] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(244,124,140,0.22)] transition active:scale-[0.98]"
-        >
+        <button type="button" onClick={save} className={sheetPrimaryBtnClass}>
           Сохранить
         </button>
       </div>
@@ -1269,7 +1106,9 @@ export function AdminProfileSection() {
 
         <AdminBottomSheet open={sheet != null} onClose={closeSheet} title={sheetTitle(sheet)}>
           {sheetApiError ? (
-            <p className="mb-3 rounded-2xl bg-red-50 px-3 py-2 text-[14px] font-medium text-red-700">{sheetApiError}</p>
+            <p className="mb-3 rounded-[16px] bg-red-50 px-3 py-2 text-[14px] font-medium text-red-600 ring-1 ring-red-100">
+              {sheetApiError}
+            </p>
           ) : null}
           {sheetBody}
         </AdminBottomSheet>

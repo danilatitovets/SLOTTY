@@ -45,14 +45,14 @@ export function AdminBottomSheet({ open, onClose, title, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'admin-sheet-title' : undefined}
-        className="relative z-10 mx-auto mt-auto w-full max-w-lg md:mt-0 rounded-t-[36px] md:rounded-[36px] shadow-[0_-12px_40px_rgba(17,17,17,0.12)] md:shadow-[0_18px_55px_rgba(17,17,17,0.12)]"
+        className="relative z-10 mx-auto mt-auto w-full max-w-lg md:mt-0 rounded-t-[28px] md:rounded-[24px] shadow-[0_-12px_40px_rgba(17,24,39,0.1)] md:shadow-[0_18px_48px_rgba(17,24,39,0.1)]"
       >
-        <div className="overflow-hidden rounded-t-[36px] bg-white md:rounded-[36px]">
-          <div className="max-h-[min(88dvh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain p-5 md:max-h-[85vh]">
-            <div className="mx-auto mb-4 h-1 w-10 shrink-0 rounded-full bg-neutral-200 md:hidden" aria-hidden />
+        <div className="overflow-hidden rounded-t-[28px] bg-white md:rounded-[24px]">
+          <div className="max-h-[min(88dvh,640px)] overflow-y-auto overflow-x-hidden overscroll-contain px-[18px] pb-5 pt-3 md:max-h-[85vh]">
+            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-[#EAECEF] md:hidden" aria-hidden />
             <div className="flex items-start justify-between gap-3">
               {title ? (
-                <h2 id="admin-sheet-title" className="text-[18px] font-semibold tracking-[-0.04em] text-neutral-950">
+                <h2 id="admin-sheet-title" className="text-[18px] font-semibold tracking-[-0.03em] text-[#111827]">
                   {title}
                 </h2>
               ) : (
@@ -61,13 +61,13 @@ export function AdminBottomSheet({ open, onClose, title, children }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] text-[20px] font-semibold leading-none text-neutral-600 transition active:scale-[0.97]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7F7F8] text-[20px] font-semibold leading-none text-[#6B7280] transition hover:bg-[#F3F4F6] active:scale-[0.97]"
                 aria-label="Закрыть"
               >
                 ×
               </button>
             </div>
-            <div className="mt-2">{children}</div>
+            <div className="mt-3">{children}</div>
           </div>
         </div>
       </div>
