@@ -39,9 +39,53 @@ export function formatDurationRu(minutes: number): string {
   return `${h} ч ${m}м`;
 }
 
-export function serviceImageUrl(service: ManagedService, draft: MasterDraft): string | null {
+/** Как на главной и в онбординге — фото работ по категории мастера. */
+const CATEGORY_WORK_IMAGES: Record<string, string> = {
+  manicure: '/photos/work/manicure.webp',
+  barbers: '/photos/work/barbers.webp',
+  'brows-lashes': '/photos/work/brows_lashes.webp',
+  brows_lashes: '/photos/work/brows_lashes.webp',
+  massage: '/photos/work/massage.webp',
+  fitness: '/photos/work/fitness.webp',
+  tattoo: '/photos/work/tattoo.webp',
+};
+
+function portfolioImageUrls(draft: MasterDraft): string[] {
+  return (draft.portfolio ?? [])
+    .map((p) => p.imageUrl?.trim())
+    .filter((url): url is string => Boolean(url));
+}
+
+export function draftCategoryWorkImageUrl(draft: MasterDraft): string | null {
+  const code = draft.primaryCategoryCode;
+  if (!code) return null;
+  return CATEGORY_WORK_IMAGES[code] ?? CATEGORY_WORK_IMAGES[code.replace(/_/g, '-')] ?? null;
+}
+
+function portfolioImageForService(
+  draft: MasterDraft,
+  serviceId: string,
+  serviceIndex: number,
+): string | null {
+  const urls = portfolioImageUrls(draft);
+  if (!urls.length) return null;
+  let idx = serviceIndex % urls.length;
+  for (let i = 0; i < serviceId.length; i++) {
+    idx = (idx + serviceId.charCodeAt(i)) % urls.length;
+  }
+  return urls[idx] ?? urls[0];
+}
+
+/** Превью услуги: своё фото → работа из портфолио → фото категории. */
+export function serviceImageUrl(
+  service: ManagedService,
+  draft: MasterDraft,
+  serviceIndex = 0,
+): string | null {
   if (service.imageUrl?.trim()) return service.imageUrl.trim();
-  return draft.portfolio?.[0]?.imageUrl ?? draft.photoUrl ?? null;
+  const fromPortfolio = portfolioImageForService(draft, service.id, serviceIndex);
+  if (fromPortfolio) return fromPortfolio;
+  return draftCategoryWorkImageUrl(draft);
 }
 
 export function resolvePromotionImage(params: {
@@ -70,7 +114,9 @@ export function resolvePromotionImage(params: {
     }
   }
 
-  return draft.portfolio?.[0]?.imageUrl ?? draft.photoUrl ?? null;
+  const portfolio = portfolioImageUrls(draft);
+  if (portfolio[0]) return portfolio[0];
+  return draftCategoryWorkImageUrl(draft);
 }
 
 export function promotionStatusLabel(status: string): string {

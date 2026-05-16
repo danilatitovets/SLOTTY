@@ -65,28 +65,27 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
 
   return (
     <div className="space-y-4 pb-2">
-      <button type="button" onClick={onCreate} className={servicesPinkBtn}>
-        + Создать акцию
-      </button>
-
-      <div className="flex justify-end">
+      <div className="flex gap-2">
+        <button type="button" onClick={onCreate} className={`${servicesPinkBtn} min-w-0 flex-1`}>
+          + Создать акцию
+        </button>
         <button
           type="button"
           onClick={() => setFilterOpen(true)}
-          className={`relative inline-flex min-h-11 items-center gap-2 rounded-[16px] border px-4 py-2.5 text-[14px] font-bold transition active:scale-[0.98] ${
+          className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border transition active:scale-[0.96] ${
             filterIsActive
               ? 'border-[#FDE8ED] bg-[#FFF1F4] text-[#F47C8C] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]'
-              : 'border-[#EAECEF] bg-white text-[#374151]'
+              : 'border-[#EAECEF] bg-white text-[#6B7280]'
           }`}
           aria-label={`Фильтры: ${activeFilterLabel}`}
           aria-expanded={filterOpen}
         >
-          <HiFunnel className="h-5 w-5 shrink-0" aria-hidden />
-          Фильтры
+          <HiFunnel className="h-5 w-5" aria-hidden />
           {filterIsActive ? (
-            <span className="rounded-full bg-[#F47C8C]/15 px-2 py-0.5 text-[12px] font-bold text-[#F47C8C]">
-              {activeFilterLabel}
-            </span>
+            <span
+              className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#F47C8C]"
+              aria-hidden
+            />
           ) : null}
         </button>
       </div>

@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import {
   HiCheck,
   HiMagnifyingGlass,
   HiPhoto,
   HiScissors,
 } from 'react-icons/hi2';
+import { uploadMasterPortfolioImageFile } from '../../../features/admin/api/masterCabinetApi';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import {
   calcBundleDiscount,
   generateBundleTitle,
   resolveBundleDisplayImage,
-  resolveBundleImageFromServices,
   sumServicesDuration,
   sumServicesPrice,
 } from './bundleUtils';
@@ -55,7 +56,11 @@ export function ServicesBundleFormSheet({
   const [durationManual, setDurationManual] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | undefined>();
-  const [imageSource, setImageSource] = useState<ServiceBundleImageSource>('service');
+  const [imageSource, setImageSource] = useState<ServiceBundleImageSource>('placeholder');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { useCabinetApi } = useAdminMasterCabinet();
   const [visibleToClients, setVisibleToClients] = useState(true);
   const [createdAt, setCreatedAt] = useState(() => new Date().toISOString());
 
@@ -100,6 +105,8 @@ export function ServicesBundleFormSheet({
       setImageSource(initial.imageSource);
       setVisibleToClients(initial.status === 'visible');
       setCreatedAt(initial.createdAt);
+      setUploadErr(null);
+      setUploadingImage(false);
       return;
     }
 
@@ -109,7 +116,9 @@ export function ServicesBundleFormSheet({
     setBundlePriceInput('');
     setDurationMinutes(0);
     setImageUrl(undefined);
-    setImageSource('service');
+    setImageSource('placeholder');
+    setUploadErr(null);
+    setUploadingImage(false);
     setVisibleToClients(true);
     setCreatedAt(new Date().toISOString());
   }, [open, initial]);
@@ -130,12 +139,58 @@ export function ServicesBundleFormSheet({
     setBundlePriceInput(String(Math.max(1, Math.round(originalPrice * 0.88))));
   }, [bundlePriceInput, open, originalPrice, step]);
 
-  useEffect(() => {
-    if (!open || imageSource !== 'service') return;
-    const resolved = resolveBundleImageFromServices(services, selectedIds, draft);
-    setImageUrl(resolved.url ?? undefined);
-    setImageSource(resolved.source);
-  }, [draft, imageSource, open, selectedIds, services]);
+  const onBundlePhotoFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+    setUploadErr(null);
+
+    if (useCabinetApi) {
+      const preview = URL.createObjectURL(file);
+      setImageUrl(preview);
+      setImageSource('upload');
+      setUploadingImage(true);
+      const prevUrl = imageUrl;
+      void uploadMasterPortfolioImageFile(file)
+        .then((url) => {
+          URL.revokeObjectURL(preview);
+          setImageUrl(url);
+          setImageSource('upload');
+        })
+        .catch((err: unknown) => {
+          URL.revokeObjectURL(preview);
+          setImageUrl(prevUrl);
+          if (!prevUrl) setImageSource('placeholder');
+          setUploadErr(err instanceof Error ? err.message : 'Не удалось загрузить фото');
+        })
+        .finally(() => setUploadingImage(false));
+      return;
+    }
+
+    const preview = URL.createObjectURL(file);
+    setImageUrl(preview);
+    setImageSource('upload');
+    const reader = new FileReader();
+    reader.onload = () => {
+      URL.revokeObjectURL(preview);
+      const result = reader.result;
+      if (typeof result === 'string') {
+        setImageUrl(result);
+        setImageSource('upload');
+      }
+    };
+    reader.onerror = () => {
+      URL.revokeObjectURL(preview);
+      setUploadErr('Не удалось прочитать файл');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeBundlePhoto = () => {
+    setImageUrl(undefined);
+    setImageSource('placeholder');
+    setUploadErr(null);
+  };
 
   const toggleService = (id: string) => {
     setSelectedIds((prev) =>
@@ -219,8 +274,7 @@ export function ServicesBundleFormSheet({
       onClose={onClose}
       title={initial ? 'Редактирование набора' : 'Создание набора'}
     >
-      <div className="flex max-h-[min(82dvh,720px)] flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [-webkit-overflow-scrolling:touch]">
+      <div className="pb-2">
           <ServicesBundleStepper step={step} />
           <p className="mb-4 text-[12px] font-semibold text-[#9CA3AF]">
             Шаг {step + 1} из {BUNDLE_FORM_STEPS.length}: {BUNDLE_FORM_STEPS[step]}
@@ -251,15 +305,15 @@ export function ServicesBundleFormSheet({
               ) : null}
 
               <ul className="space-y-2">
-                {filteredServices.map((service) => {
+                {filteredServices.map((service, serviceIndex) => {
                   const selected = selectedIds.includes(service.id);
-                  const thumb = serviceImageUrl(service, draft);
+                  const thumb = serviceImageUrl(service, draft, serviceIndex);
                   return (
                     <li key={service.id}>
                       <button
                         type="button"
                         onClick={() => toggleService(service.id)}
-                        className={`flex w-full gap-3 rounded-[18px] border p-3 text-left transition active:scale-[0.99] ${
+                        className={`flex w-full touch-pan-y gap-3 rounded-[18px] border p-3 text-left transition active:scale-[0.99] ${
                           selected
                             ? 'border-[#FDE8ED] bg-[#FFF1F4] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]'
                             : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED]'
@@ -267,7 +321,13 @@ export function ServicesBundleFormSheet({
                       >
                         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-[#FFF1F4]">
                           {thumb ? (
-                            <img src={thumb} alt="" className="h-full w-full object-cover" />
+                            <img
+                              src={thumb}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                            />
                           ) : (
                             <span className="flex h-full w-full items-center justify-center">
                               <HiScissors className="h-6 w-6 text-[#F47C8C]" aria-hidden />
@@ -408,61 +468,36 @@ export function ServicesBundleFormSheet({
                 )}
               </div>
 
-              <p className="text-[13px] text-[#6B7280]">
-                {imageSource === 'service'
-                  ? 'Фото взято из услуги'
-                  : imageSource === 'portfolio'
-                    ? 'Фото из портфолио'
-                    : imageSource === 'upload'
-                      ? 'Загруженное фото'
-                      : 'Стандартное оформление набора'}
-              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={onBundlePhotoFile}
+                disabled={uploadingImage}
+              />
 
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    const resolved = resolveBundleImageFromServices(services, selectedIds, draft);
-                    setImageUrl(resolved.url ?? undefined);
-                    setImageSource(resolved.source);
-                  }}
-                  className="rounded-[14px] border border-[#EAECEF] bg-white py-2.5 text-[13px] font-bold text-[#374151] transition active:scale-[0.98]"
-                >
-                  Из услуг
-                </button>
-                <button
-                  type="button"
-                  disabled={!draft.portfolio?.length && !draft.photoUrl}
-                  onClick={() => {
-                    const url = draft.portfolio?.[0]?.imageUrl ?? draft.photoUrl;
-                    if (url) {
-                      setImageUrl(url);
-                      setImageSource('portfolio');
-                    }
-                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
                   className="rounded-[14px] border border-[#EAECEF] bg-white py-2.5 text-[13px] font-bold text-[#374151] transition active:scale-[0.98] disabled:opacity-45"
                 >
-                  Из портфолио
+                  {uploadingImage ? 'Загрузка…' : displayImage ? 'Заменить' : 'Загрузить'}
                 </button>
                 <button
                   type="button"
-                  disabled
-                  title="Скоро"
-                  className="rounded-[14px] border border-[#EAECEF] bg-[#FAFAFA] py-2.5 text-[13px] font-bold text-[#9CA3AF]"
-                >
-                  Загрузить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageUrl(undefined);
-                    setImageSource('placeholder');
-                  }}
-                  className="rounded-[14px] border border-[#FDE8ED] bg-[#FFF1F4] py-2.5 text-[13px] font-bold text-[#F47C8C] transition active:scale-[0.98]"
+                  onClick={removeBundlePhoto}
+                  disabled={!displayImage || uploadingImage}
+                  className="rounded-[14px] border border-[#FDE8ED] bg-[#FFF1F4] py-2.5 text-[13px] font-bold text-[#F47C8C] transition active:scale-[0.98] disabled:opacity-45"
                 >
                   Удалить фото
                 </button>
               </div>
+              {uploadErr ? (
+                <p className="text-center text-[12px] font-medium text-red-600">{uploadErr}</p>
+              ) : null}
             </div>
           ) : null}
 
@@ -496,9 +531,8 @@ export function ServicesBundleFormSheet({
               </label>
             </div>
           ) : null}
-        </div>
 
-        <div className="shrink-0 border-t border-[#F3F4F6] bg-white pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+        <div className="mt-5 flex flex-col gap-2 border-t border-[#F3F4F6] pt-4 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
           {step < BUNDLE_FORM_STEPS.length - 1 ? (
             <>
               <button
