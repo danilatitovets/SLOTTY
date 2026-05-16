@@ -55,9 +55,11 @@ function TrendSub({ delta }: { delta: number }) {
 function ReviewReplyBlock({
   review,
   onReplied,
+  onReply,
 }: {
   review: MasterOverviewReview;
   onReplied: () => void;
+  onReply?: (reviewId: string, text: string) => Promise<void>;
 }) {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -89,18 +91,35 @@ function ReviewReplyBlock({
         disabled={!text.trim()}
         className={`${overviewPinkBtn} w-full disabled:cursor-not-allowed disabled:opacity-45`}
         onClick={() => {
-          const result = trySaveMasterReviewReply(review.id, text);
-          if (!result.ok) {
-            if (result.reason === 'already_replied') {
-              setError('На этот отзыв уже можно ответить только один раз.');
-            } else {
-              setError('Не удалось отправить ответ.');
+          void (async () => {
+            if (onReply) {
+              try {
+                await onReply(review.id, text);
+                setText('');
+                onReplied();
+              } catch (e) {
+                if (e instanceof Error && e.message === 'ALREADY_REPLIED') {
+                  setError('На этот отзыв уже можно ответить только один раз.');
+                } else {
+                  setError('Не удалось отправить ответ.');
+                }
+                onReplied();
+              }
+              return;
             }
+            const result = trySaveMasterReviewReply(review.id, text);
+            if (!result.ok) {
+              if (result.reason === 'already_replied') {
+                setError('На этот отзыв уже можно ответить только один раз.');
+              } else {
+                setError('Не удалось отправить ответ.');
+              }
+              onReplied();
+              return;
+            }
+            setText('');
             onReplied();
-            return;
-          }
-          setText('');
-          onReplied();
+          })();
         }}
       >
         Ответить
@@ -112,10 +131,12 @@ function ReviewReplyBlock({
 function ReviewCard({
   review,
   onReplied,
+  onReply,
   showReply = true,
 }: {
   review: MasterOverviewReview;
   onReplied: () => void;
+  onReply?: (reviewId: string, text: string) => Promise<void>;
   showReply?: boolean;
 }) {
   return (
@@ -137,26 +158,38 @@ function ReviewCard({
           <p className="mt-2 text-[13px] leading-relaxed text-[#374151]">{review.text}</p>
         </div>
       </div>
-      {showReply ? <ReviewReplyBlock review={review} onReplied={onReplied} /> : null}
+      {showReply ? <ReviewReplyBlock review={review} onReplied={onReplied} onReply={onReply} /> : null}
     </article>
   );
 }
 
 export function OverviewReputationPanel({
+  data: dataProp,
   periodStart,
   periodEnd,
+  useApi = false,
+  onReplied,
+  onReply,
 }: {
-  periodStart: string;
-  periodEnd: string;
+  data: import('./overviewReputationDemo').ReputationAnalyticsPayload;
+  periodStart?: string;
+  periodEnd?: string;
+  useApi?: boolean;
+  onReplied?: () => void;
+  onReply?: (reviewId: string, text: string) => Promise<void>;
 }) {
   const unansweredRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
-  const refresh = useCallback(() => setTick((n) => n + 1), []);
+  const refreshLocal = useCallback(() => setTick((n) => n + 1), []);
+  const refresh = onReplied ?? refreshLocal;
 
-  const data = useMemo(() => {
+  const dataFromPeriod = useMemo(() => {
+    if (useApi || !periodStart || !periodEnd) return null;
     void tick;
     return computeReputationFromReviews(periodStart, periodEnd);
-  }, [periodEnd, periodStart, tick]);
+  }, [periodEnd, periodStart, tick, useApi]);
+
+  const data = useApi ? dataProp : dataFromPeriod ?? dataProp;
 
   const unansweredExceptLatest = useMemo(() => {
     const latestId = data.latestReview?.id;
@@ -275,7 +308,7 @@ export function OverviewReputationPanel({
           subtitle="Ответ можно отправить только один раз"
           icon={<HiChatBubbleLeftRight className="h-5 w-5" aria-hidden />}
         >
-          <ReviewCard review={data.latestReview} onReplied={refresh} />
+          <ReviewCard review={data.latestReview} onReplied={refresh} onReply={onReply} />
         </OverviewSectionCard>
       ) : null}
 
@@ -288,7 +321,7 @@ export function OverviewReputationPanel({
           >
             <div className="space-y-3">
               {unansweredExceptLatest.map((review) => (
-                <ReviewCard key={review.id} review={review} onReplied={refresh} />
+                <ReviewCard key={review.id} review={review} onReplied={refresh} onReply={onReply} />
               ))}
             </div>
           </OverviewSectionCard>

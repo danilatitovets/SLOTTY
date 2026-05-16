@@ -50,7 +50,7 @@ function ClientsDynamicsSection({
   return (
     <OverviewSectionCard
       title="Динамика клиентов"
-      subtitle="Новые и повторные по дням — наведите на график"
+      subtitle="Новые и повторные по дням"
       icon={<HiCalendar className="h-5 w-5" aria-hidden />}
     >
       <OverviewClientsDynamicsChart stats={clientsPerDay} />

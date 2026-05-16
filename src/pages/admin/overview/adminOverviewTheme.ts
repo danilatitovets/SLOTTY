@@ -1,5 +1,8 @@
 /** Палитра и классы экрана «Сводка». */
-export const overviewPageBg = 'bg-[#F7F7F8]';
+/** Единый фон страницы за белыми карточками (контрастнее #F7F7F8). */
+export const OVERVIEW_CANVAS_HEX = '#EBEDF0';
+export const overviewPageBg = 'bg-[#EBEDF0]';
+export const overviewInsetBg = 'bg-[#E4E7EC]';
 
 /** Высота нижнего таббара аналитики. */
 export const OVERVIEW_TAB_BAR_HEIGHT = '5.75rem';
@@ -21,7 +24,7 @@ export const overviewPinkOutline =
   'shrink-0 rounded-[18px] border border-[#FDE8ED] bg-white px-4 py-2.5 text-[13px] font-bold text-[#F47C8C] transition hover:bg-[#FFF1F4] active:scale-[0.98]';
 
 export const overviewMutedSurface =
-  'rounded-[20px] border border-[#F3F4F6] bg-[#FAFAFA]';
+  'rounded-[20px] border border-[#E4E7EC] bg-[#F3F4F6]';
 
 export const overviewEmptyIllustrationSrc =
   '/photos/' + encodeURIComponent('ничего не нашли.webp');

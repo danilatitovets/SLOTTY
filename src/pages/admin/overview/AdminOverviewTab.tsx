@@ -1,69 +1,71 @@
 import { useMemo, useState } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
-import {
-  ADMIN_CABINET_SHELL_MAX,
-  OVERVIEW_TAB_BAR_HEIGHT,
-} from './adminOverviewTheme';
+import { postOverviewReviewReply } from '../../../features/admin/api/masterOverviewApi';
+import { OVERVIEW_TAB_BAR_HEIGHT } from './adminOverviewTheme';
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
-import {
-  computeClientAnalytics,
-  computeRevenueAnalytics,
-  overviewPeriodRange,
-  overviewSummaryMetrics,
-  type OverviewAnalyticsTab,
-  type OverviewPeriodPreset,
-} from './overviewAnalytics';
+import type { OverviewAnalyticsTab, OverviewPeriodPreset } from './overviewAnalytics';
 import {
   OverviewClientsPanel,
   OverviewReputationPanel,
   OverviewRevenuePanel,
   OverviewSummaryPanel,
 } from './OverviewTabPanels';
+import { useOverviewTabData } from './useOverviewTabData';
 
 type Props = {
   draft: MasterDraft;
   appointments: DemoMasterAppointment[];
   appointmentsPath: string;
   onOpenAppointment: (a: DemoMasterAppointment) => void;
+  useCabinetApi: boolean;
 };
-
-const isLoading = false;
 
 export function AdminOverviewTab({
   draft,
   appointments,
   appointmentsPath,
   onOpenAppointment,
+  useCabinetApi,
 }: Props) {
   const [activeTab, setActiveTab] = useState<OverviewAnalyticsTab>('summary');
   const [periodPreset, setPeriodPreset] = useState<OverviewPeriodPreset>('month');
 
-  const reportRange = useMemo(
-    () => overviewPeriodRange(periodPreset, appointments),
-    [appointments, periodPreset],
-  );
-
-  const summary = useMemo(
-    () => overviewSummaryMetrics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
-  );
-
-  const revenue = useMemo(
-    () => computeRevenueAnalytics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
-  );
-
-  const clients = useMemo(
-    () => computeClientAnalytics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
-  );
+  const {
+    loading,
+    error,
+    summary,
+    dayStats,
+    revenue,
+    clients,
+    reputation,
+    refreshReputation,
+  } = useOverviewTabData({
+    activeTab,
+    periodPreset,
+    appointments,
+    useCabinetApi,
+  });
 
   const serviceCount = draft.services?.length ?? 0;
 
   const panel = useMemo(() => {
-    if (isLoading) return null;
+    if (loading) {
+      return (
+        <div className="flex min-h-[12rem] items-center justify-center rounded-[24px] border border-[#F3F4F6] bg-white p-8">
+          <p className="text-[14px] font-medium text-[#6B7280]">Загрузка…</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="rounded-[24px] border border-[#FEE2E2] bg-[#FEF2F2] p-5">
+          <p className="text-[14px] font-semibold text-[#B91C1C]">{error}</p>
+        </div>
+      );
+    }
 
     switch (activeTab) {
       case 'revenue':
@@ -75,8 +77,13 @@ export function AdminOverviewTab({
       case 'reputation':
         return (
           <OverviewReputationPanel
-            periodStart={reportRange.start}
-            periodEnd={reportRange.end}
+            data={reputation}
+            useApi={useCabinetApi}
+            onReplied={refreshReputation}
+            onReply={async (reviewId, text) => {
+              await postOverviewReviewReply(reviewId, text);
+              refreshReputation();
+            }}
           />
         );
 
@@ -86,7 +93,7 @@ export function AdminOverviewTab({
             metrics={summary}
             serviceCount={serviceCount}
             appointmentsPath={appointmentsPath}
-            dayStats={revenue.dayStats}
+            dayStats={dayStats}
             onOpenNearest={() => {
               if (summary.nearest) onOpenAppointment(summary.nearest);
             }}
@@ -97,25 +104,29 @@ export function AdminOverviewTab({
     activeTab,
     appointmentsPath,
     clients,
+    dayStats,
+    error,
+    loading,
     onOpenAppointment,
-    reportRange.end,
-    reportRange.start,
     periodPreset,
+    refreshReputation,
     revenue,
+    reputation,
     serviceCount,
     summary,
+    useCabinetApi,
   ]);
 
   return (
     <>
       <section
-        className={`mx-auto w-full min-w-0 max-w-full overflow-x-hidden ${ADMIN_CABINET_SHELL_MAX} space-y-4`}
+        className="w-full min-w-0 space-y-4 overflow-x-hidden"
         style={{ paddingBottom: `calc(${OVERVIEW_TAB_BAR_HEIGHT} + 1.25rem)` }}
       >
         <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
 
         <div
-          key={`${activeTab}-${periodPreset}`}
+          key={`${activeTab}-${periodPreset}-${useCabinetApi ? 'api' : 'local'}`}
           className="min-w-0 animate-[overviewPanelIn_0.22s_ease-out]"
         >
           {panel}

@@ -258,11 +258,7 @@ export function OverviewClientsDynamicsChart({
                   {formatDdMmYyyy(activeDay.date)}
                 </p>
               </div>
-            ) : (
-              <p className="pointer-events-none absolute inset-x-0 top-8 text-center text-[11px] font-medium text-[#9CA3AF]">
-                Наведите на график клиентов
-              </p>
-            )}
+            ) : null}
           </>
         )}
       </div>

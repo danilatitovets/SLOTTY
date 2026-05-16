@@ -44,6 +44,7 @@ import { masterServicesRouter } from '../services/services.routes.js';
 import { masterSlotsRouter } from '../slots/slots.routes.js';
 import { masterAppointmentsRouter } from '../appointments/appointments.routes.js';
 import { getMasterSubscriptionWithUsage, switchMasterSubscriptionMock } from '../billing/billing.service.js';
+import { masterOverviewRouter } from './masterOverview.routes.js';
 import { normalizeBelarusPhone, isOptionalBelarusPhoneValid } from '../../utils/belarusPhone.js';
 
 export const mastersRouter = Router();
@@ -929,6 +930,7 @@ mastersRouter.delete(
 mastersRouter.use('/me/services', authMiddleware, requireMasterDbAccess, masterServicesRouter);
 mastersRouter.use('/me/slots', authMiddleware, requireMasterDbAccess, masterSlotsRouter);
 mastersRouter.use('/me/appointments', authMiddleware, requireMasterDbAccess, masterAppointmentsRouter);
+mastersRouter.use('/me/overview', masterOverviewRouter);
 
 mastersRouter.get(
   '/me/subscription',

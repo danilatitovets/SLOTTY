@@ -83,9 +83,6 @@ export function OverviewLineChart({
   const padX = 4;
   const padY = 20;
   const baseline = chartHeight - padY;
-  const idleHint =
-    mode === 'revenue' ? 'Наведите на график дохода' : 'Наведите на график';
-
   const points = useMemo((): ChartPoint[] => {
     return values.map((v, i) => {
       const x =
@@ -236,11 +233,7 @@ export function OverviewLineChart({
                   </>
                 )}
               </div>
-            ) : (
-              <p className="pointer-events-none absolute inset-x-0 top-3 text-center text-[11px] font-medium text-[#9CA3AF]">
-                {idleHint}
-              </p>
-            )}
+            ) : null}
           </>
         )}
       </div>

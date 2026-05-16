@@ -111,7 +111,7 @@ export function AdminCabinetStatusBanner() {
   if (!useCabinetApi) return null;
   if (!cabinetLoading && !cabinetError) return null;
   return (
-    <div className="px-4 pb-2 pt-2">
+    <div className={`mx-auto w-full min-w-0 px-4 pb-2 pt-2 ${ADMIN_CABINET_SHELL_MAX}`}>
       {cabinetLoading ? (
         <p className="rounded-2xl bg-white px-4 py-2 text-center text-[13px] font-medium text-neutral-500 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
           Загрузка данных мастера…
@@ -153,14 +153,17 @@ export function AdminLayout() {
       ? `pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1rem)]`
       : '';
 
+  const overviewShellBg = isOverview ? overviewPageBg : 'bg-white';
+
   return (
     <div
-      className={`min-h-dvh pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827] ${isOverview ? overviewPageBg : 'bg-white'}`}
+      className={`min-h-dvh pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827] ${overviewShellBg}`}
     >
       <AdminMasterCabinetProvider>
         <ProfileTabProvider>
           <div
-            className={`mx-auto w-full ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom}`}
+            ref={stickyShellRef}
+            className={`sticky top-0 z-40 w-full min-w-0 ${overviewShellBg}`}
             style={
               {
                 '--slotty-admin-header-h': '4.5rem',
@@ -168,12 +171,11 @@ export function AdminLayout() {
               } as CSSProperties
             }
           >
-            <div ref={stickyShellRef} className="sticky top-0 z-40 flex flex-col gap-0 overflow-hidden bg-white">
-              <div
-                className={`relative z-40 flex w-full shrink-0 items-center justify-between gap-3 overflow-hidden bg-white px-4 pb-0.5 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${
-                  isProfileHome ? 'min-h-11 border-b-2 border-[#F47C8C]' : 'min-h-[3.25rem] border-b-2 border-[#F47C8C]'
-                }`}
-              >
+            <div
+              className={`mx-auto flex w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} items-center justify-between gap-3 px-4 pb-0.5 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] ${
+                isProfileHome ? 'min-h-11 border-b-2 border-[#F47C8C]' : 'min-h-[3.25rem] border-b-2 border-[#F47C8C]'
+              }`}
+            >
                 <Link
                   to={HUB_PATH}
                   aria-label="SLOTTY — на главную"
@@ -184,23 +186,29 @@ export function AdminLayout() {
                     alt=""
                     decoding="async"
                     fetchPriority="low"
-                    className="h-8 w-auto max-w-[7.5rem] object-contain object-left sm:h-9"
+                    className="h-8 w-auto max-w-[min(7.5rem,40vw)] object-contain object-left sm:h-9 sm:max-w-[7.5rem]"
                   />
                 </Link>
                 <button
                   type="button"
                   onClick={() => setMenuOpen(true)}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F7F7F8] text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.97]"
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[#111827] transition active:scale-[0.97] ${
+                    isOverview
+                      ? 'bg-white shadow-[0_4px_14px_rgba(17,24,39,0.06)] hover:bg-white'
+                      : 'bg-[#F7F7F8] hover:bg-[#F3F4F6]'
+                  }`}
                   aria-label="Меню разделов"
                   aria-expanded={menuOpen}
                 >
                   <IconBurger className="text-neutral-800" />
                 </button>
               </div>
-            </div>
+          </div>
 
-            {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
-            <div className={isOverview ? 'px-4 pt-1' : ''}>
+          {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
+
+          <div className={`mx-auto w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom}`}>
+            <div className={isOverview ? 'w-full min-w-0 px-4 pt-1' : 'w-full min-w-0'}>
               <Outlet />
             </div>
             <ProfileSectionTabsBar />

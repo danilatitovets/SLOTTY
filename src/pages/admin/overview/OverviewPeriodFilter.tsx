@@ -28,7 +28,7 @@ export function OverviewPeriodFilter({ value, onChange }: Props) {
               className={`min-h-11 flex-1 rounded-[18px] px-1.5 text-[12px] font-bold transition duration-200 active:scale-[0.97] sm:text-[13px] ${
                 selected
                   ? 'bg-[#FFF1F4] text-[#F47C8C] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.10)]'
-                  : 'bg-transparent text-[#6B7280] hover:bg-[#FAFAFA] hover:text-[#111827]'
+                  : 'bg-transparent text-[#6B7280] hover:bg-[#E4E7EC] hover:text-[#111827]'
               }`}
             >
               {preset.label}

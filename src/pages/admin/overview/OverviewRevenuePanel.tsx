@@ -87,17 +87,19 @@ function RevenueMetricTile({
   icon: ReactNode;
 }) {
   return (
-    <div className={`${overviewCard} flex items-center gap-3 p-4`}>
-      <span className={`${overviewIconCircle} h-11 w-11`}>{icon}</span>
+    <div className={`${overviewCard} flex w-full min-w-0 items-center gap-3 p-4`}>
+      <span className={`${overviewIconCircle} h-11 w-11 shrink-0`}>{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-0.5 text-[13px] font-semibold text-[#6B7280]">
-          {label}
+        <p className="flex min-w-0 items-center gap-0.5 text-[12px] font-semibold leading-snug text-[#6B7280] sm:text-[13px]">
+          <span className="truncate">{label}</span>
           <HiChevronDown className="h-3.5 w-3.5 shrink-0 opacity-35" aria-hidden />
         </p>
-        <p className="mt-1 text-[22px] font-bold tabular-nums tracking-[-0.05em] text-[#111827]">
+        <p className="mt-1 break-words text-[20px] font-bold leading-tight tabular-nums tracking-[-0.04em] text-[#111827] sm:text-[22px] sm:tracking-[-0.05em]">
           {value}
         </p>
-        <TrendLine value={trend} tone={trendTone} />
+        <div className="mt-1">
+          <TrendLine value={trend} tone={trendTone} />
+        </div>
       </div>
     </div>
   );
@@ -116,7 +118,7 @@ function RevenueChartSection({
         <h2 className="text-[17px] font-bold tracking-[-0.04em] text-[#111827]">График дохода</h2>
         <button
           type="button"
-          className="flex shrink-0 items-center gap-1 rounded-full border border-[#F3F4F6] bg-[#FAFAFA] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]"
+          className="flex shrink-0 items-center gap-1 rounded-full border border-[#E4E7EC] bg-[#F3F4F6] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]"
         >
           Все источники
           <HiChevronDown className="h-3.5 w-3.5 opacity-50" aria-hidden />
@@ -151,21 +153,19 @@ function RevenueMetricsGrid({ data }: { data: RevenueAnalytics }) {
   const avgTrend = formatTrendPercent(data.avgCheckTrendPercent) ?? '—';
 
   return (
-    <>
-      <div className="grid min-w-0 grid-cols-2 gap-2.5">
-        <RevenueMetricTile
-          label="Средний чек"
-          value={data.completedCount > 0 ? formatBynRu(data.avgCheck) : '0 BYN'}
-          trend={avgTrend}
-          icon={<HiArrowTrendingUp className="h-5 w-5" aria-hidden />}
-        />
-        <RevenueMetricTile
-          label="Оплачено"
-          value={formatBynRu(data.paidAmount)}
-          trend={`${data.paidSharePercent}%`}
-          icon={<HiReceiptPercent className="h-5 w-5" aria-hidden />}
-        />
-      </div>
+    <div className="flex w-full min-w-0 flex-col gap-2.5">
+      <RevenueMetricTile
+        label="Средний чек"
+        value={data.completedCount > 0 ? formatBynRu(data.avgCheck) : '0 BYN'}
+        trend={avgTrend}
+        icon={<HiArrowTrendingUp className="h-5 w-5" aria-hidden />}
+      />
+      <RevenueMetricTile
+        label="Оплачено"
+        value={formatBynRu(data.paidAmount)}
+        trend={`${data.paidSharePercent}%`}
+        icon={<HiReceiptPercent className="h-5 w-5" aria-hidden />}
+      />
       <RevenueMetricTile
         label="Не оплачено"
         value={formatBynRu(data.unpaidAmount)}
@@ -173,7 +173,7 @@ function RevenueMetricsGrid({ data }: { data: RevenueAnalytics }) {
         trendTone="warning"
         icon={<HiStop className="h-5 w-5" aria-hidden />}
       />
-    </>
+    </div>
   );
 }
 

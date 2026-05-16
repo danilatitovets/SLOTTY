@@ -102,7 +102,7 @@ export function OverviewSummaryPanel({
                     {formatBynRu(nearest.priceByn)}
                   </span>
 
-                  <span className="rounded-full bg-[#F7F7F8] px-3 py-1 text-[12px] font-bold text-[#6B7280]">
+                  <span className="rounded-full bg-[#E4E7EC] px-3 py-1 text-[12px] font-bold text-[#6B7280]">
                     {appointmentStatusLabel(nearest.status)}
                   </span>
                 </div>
@@ -120,7 +120,7 @@ export function OverviewSummaryPanel({
 
               <Link
                 to={appointmentsPath}
-                className="flex min-h-12 items-center justify-center rounded-[18px] bg-[#F7F7F8] text-[14px] font-bold text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.98]"
+                className="flex min-h-12 items-center justify-center rounded-[18px] bg-[#E4E7EC] text-[14px] font-bold text-[#111827] transition hover:bg-[#DDE1E8] active:scale-[0.98]"
               >
                 Все записи
               </Link>

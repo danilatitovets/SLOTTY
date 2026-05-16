@@ -1,0 +1,79 @@
+import { apiFetch } from '../../../shared/api/backendClient';
+import { readSlottyApiErrorMessage } from '../../../shared/api/slottyApiErrorMessage';
+import type { OverviewDayStat } from '../../master/model/demoMasterAppointments';
+import type { DemoMasterAppointment } from '../../master/model/demoMasterAppointments';
+import type {
+  ClientAnalytics,
+  OverviewPeriodPreset,
+  RevenueAnalytics,
+} from '../../../pages/admin/overview/overviewAnalytics';
+import type {
+  MasterOverviewReview,
+  ReputationAnalyticsPayload,
+} from '../../../pages/admin/overview/overviewReputationDemo';
+
+async function readApiError(res: Response): Promise<string> {
+  return readSlottyApiErrorMessage(res);
+}
+
+export type OverviewSummaryApiDto = {
+  totalRevenue: number;
+  totalVisits: number;
+  nearest: DemoMasterAppointment | null;
+  hasAny: boolean;
+  dayStats: OverviewDayStat[];
+  periodStart: string;
+  periodEnd: string;
+};
+
+function overviewQuery(period: OverviewPeriodPreset): string {
+  return `?period=${encodeURIComponent(period)}`;
+}
+
+export async function fetchOverviewSummary(period: OverviewPeriodPreset): Promise<OverviewSummaryApiDto> {
+  const res = await apiFetch(`/api/masters/me/overview/summary${overviewQuery(period)}`);
+  if (!res.ok) throw new Error(await readApiError(res));
+  return (await res.json()) as OverviewSummaryApiDto;
+}
+
+export async function fetchOverviewRevenue(period: OverviewPeriodPreset): Promise<RevenueAnalytics> {
+  const res = await apiFetch(`/api/masters/me/overview/revenue${overviewQuery(period)}`);
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as RevenueAnalytics & { periodStart?: string; periodEnd?: string };
+  const { periodStart: _s, periodEnd: _e, ...data } = j;
+  return data;
+}
+
+export async function fetchOverviewClients(period: OverviewPeriodPreset): Promise<ClientAnalytics> {
+  const res = await apiFetch(`/api/masters/me/overview/clients${overviewQuery(period)}`);
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as ClientAnalytics & { periodStart?: string; periodEnd?: string };
+  const { periodStart: _s, periodEnd: _e, ...data } = j;
+  return data;
+}
+
+export async function fetchOverviewReputation(
+  period: OverviewPeriodPreset,
+): Promise<ReputationAnalyticsPayload> {
+  const res = await apiFetch(`/api/masters/me/overview/reputation${overviewQuery(period)}`);
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as ReputationAnalyticsPayload & {
+    periodStart?: string;
+    periodEnd?: string;
+  };
+  const { periodStart: _s, periodEnd: _e, ...data } = j;
+  return data;
+}
+
+export async function postOverviewReviewReply(reviewId: string, text: string): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/overview/reviews/${reviewId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+  if (res.status === 409) {
+    throw new Error('ALREADY_REPLIED');
+  }
+  if (!res.ok) throw new Error(await readApiError(res));
+}
+
+export type { MasterOverviewReview };

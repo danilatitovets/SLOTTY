@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { ADMIN_APPOINTMENTS_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { AdminAppointmentDetailSheet } from '../shared/AdminAppointmentDetailSheet';
-import { useAdminAppointments, useAdminMasterDraft } from '../useAdminMasterData';
+import { useAdminAppointments, useAdminMasterCabinet, useAdminMasterDraft } from '../useAdminMasterData';
 import { AdminOverviewTab } from './AdminOverviewTab';
 
 export function AdminOverviewSection() {
   const { draft } = useAdminMasterDraft();
+  const { useCabinetApi } = useAdminMasterCabinet();
   const { appointments, persistAppointments } = useAdminAppointments();
   const [detailAppt, setDetailAppt] = useState<DemoMasterAppointment | null>(null);
 
@@ -16,6 +17,7 @@ export function AdminOverviewSection() {
         draft={draft}
         appointments={appointments}
         appointmentsPath={ADMIN_APPOINTMENTS_PATH}
+        useCabinetApi={useCabinetApi}
         onOpenAppointment={(a) => setDetailAppt(a)}
       />
 

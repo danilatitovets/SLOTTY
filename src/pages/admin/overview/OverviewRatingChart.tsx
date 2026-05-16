@@ -204,11 +204,7 @@ export function OverviewRatingChart({
                   {formatDdMmYyyy(activeStat.date)}
                 </p>
               </div>
-            ) : (
-              <p className="pointer-events-none absolute inset-x-0 top-3 text-center text-[11px] font-medium text-[#9CA3AF]">
-                Наведите на график рейтинга
-              </p>
-            )}
+            ) : null}
           </>
         )}
       </div>
