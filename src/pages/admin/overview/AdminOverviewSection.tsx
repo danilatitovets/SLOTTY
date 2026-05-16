@@ -13,7 +13,7 @@ export function AdminOverviewSection() {
 
   return (
     <>
-      <div className={`-mx-4 px-4 pb-10 pt-1 ${overviewPageBg}`}>
+      <div className={`-mx-4 px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px)+1rem)] pt-1 ${overviewPageBg}`}>
         <AdminOverviewTab
           draft={draft}
           appointments={appointments}
