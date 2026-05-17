@@ -1,5 +1,12 @@
 export const APPOINTMENTS_PAGE_BG = 'bg-[#F7F7F8]';
 
+const appointmentsTabPhotosDir = '/photos/' + encodeURIComponent('заявки') + '/';
+
+/** Фото для шапок табов «Записи» (`public/photos/заявки`). */
+export function appointmentsTabPhotoSrc(fileName: string): string {
+  return appointmentsTabPhotosDir + encodeURIComponent(fileName);
+}
+
 export const APPOINTMENTS_TAB_BAR_HEIGHT = '5.75rem';
 export const APPOINTMENTS_TAB_BAR_SCROLL_PAD = `calc(${APPOINTMENTS_TAB_BAR_HEIGHT} + 1.25rem + env(safe-area-inset-bottom, 0px))`;
 
@@ -20,3 +27,8 @@ export const apptChipActive =
 
 export const apptChipIdle =
   'border-[#EAECEF] bg-white text-[#6B7280] hover:border-[#FDE8ED] hover:text-[#374151]';
+
+export const apptFilterBtnActive =
+  'border-[#FDE8ED] bg-[#FFF1F4] text-[#F47C8C] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]';
+
+export const apptFilterBtnIdle = 'border-[#EAECEF] bg-white text-[#6B7280]';

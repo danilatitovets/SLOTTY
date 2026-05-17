@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { preloadTabIntroImages } from '../useTabIntroImage';
 import { Link } from 'react-router-dom';
 import { HiInbox } from 'react-icons/hi2';
 import { ADMIN_BILLING_PATH } from '../../../app/paths';
@@ -26,11 +27,12 @@ import {
 } from './AppointmentsActionSheet';
 import { AppointmentsBottomTabBar } from './AppointmentsBottomTabBar';
 import { AppointmentsEmptyState } from './AppointmentsEmptyState';
-import { AppointmentsFilterPills } from './AppointmentsFilterPills';
+import { AppointmentsFilterBar } from './AppointmentsFilterBar';
+import { AppointmentsFiltersSheet } from './AppointmentsFiltersSheet';
 import { AppointmentsHistoryRow } from './AppointmentsHistoryRow';
 import { AppointmentsHistorySummary } from './AppointmentsHistorySummary';
 import { AppointmentsNearestCard } from './AppointmentsNearestCard';
-import { AppointmentsPageHeader } from './AppointmentsPageHeader';
+import { APPOINTMENTS_TAB_INTRO_IMAGES, AppointmentsTabIntro } from './AppointmentsTabIntro';
 import { AppointmentsRequestCard } from './AppointmentsRequestCard';
 import { AppointmentsStatsCard } from './AppointmentsStatsCard';
 import { AppointmentsUpcomingRow } from './AppointmentsUpcomingRow';
@@ -66,6 +68,12 @@ function updateStatus(
   return rows.map((row) => (row.id === id ? { ...row, status } : row));
 }
 
+function apptLimitProgressClass(ratio: number): string {
+  if (ratio >= 1) return 'bg-[#EF4444]';
+  if (ratio >= 0.85) return 'bg-amber-400';
+  return 'bg-gradient-to-r from-[#F47C8C] to-[#F26D83]';
+}
+
 export function AdminAppointmentsTab({
   appointments,
   onChangeAppointments,
@@ -82,6 +90,15 @@ export function AdminAppointmentsTab({
   const [upcomingSort, setUpcomingSort] = useState<UpcomingSort>('date');
   const [historyStatus, setHistoryStatus] = useState<HistoryStatusFilter>('all');
   const [historyPeriod, setHistoryPeriod] = useState<HistoryPeriodFilter>('all');
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  useEffect(() => {
+    setFilterOpen(false);
+  }, [tab]);
+
+  useEffect(() => {
+    preloadTabIntroImages(APPOINTMENTS_TAB_INTRO_IMAGES);
+  }, []);
 
   const stats = useMemo(() => {
     const requests = appointments.filter((a) => a.status === 'pending').length;
@@ -168,6 +185,7 @@ export function AdminAppointmentsTab({
     billingPlan.plan === 'free' && !canCreateMoreAppointments('free', monthlyApptCount);
   const almostFreeAppt =
     billingPlan.plan === 'free' && isFreeAppointmentLimitAlmostReached(monthlyApptCount);
+  const apptUsageRatio = Math.min(1, monthlyApptCount / freeApptCap);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -217,6 +235,55 @@ export function AdminAppointmentsTab({
     { id: 'all', label: 'Все услуги' },
     ...uniqueServiceTitles(rows).map((title) => ({ id: title, label: title })),
   ];
+
+  const requestsFilterActive = requestsService !== 'all' || requestsSort !== 'newest';
+  const upcomingFilterActive = upcomingService !== 'all' || upcomingSort !== 'date';
+  const historyFilterActive = historyStatus !== 'all' || historyPeriod !== 'all';
+
+  const filterActive =
+    tab === 'requests'
+      ? requestsFilterActive
+      : tab === 'upcoming'
+        ? upcomingFilterActive
+        : historyFilterActive;
+
+  const filterLabel = useMemo(() => {
+    if (tab === 'requests') {
+      const parts: string[] = [];
+      if (requestsService !== 'all') parts.push(requestsService);
+      parts.push(requestsSort === 'newest' ? 'По новизне' : 'Сначала старые');
+      return parts.join(' · ');
+    }
+    if (tab === 'upcoming') {
+      const parts: string[] = [];
+      if (upcomingService !== 'all') parts.push(upcomingService);
+      parts.push(upcomingSort === 'date' ? 'По дате' : 'По новизне');
+      return parts.join(' · ');
+    }
+    const parts: string[] = [];
+    if (historyStatus === 'completed') parts.push('Завершено');
+    else if (historyStatus === 'cancelled') parts.push('Отменено');
+    else parts.push('Все статусы');
+    if (historyPeriod === 'month') parts.push('Месяц');
+    else if (historyPeriod === 'quarter') parts.push('3 мес.');
+    else parts.push('Всё время');
+    return parts.join(' · ');
+  }, [tab, requestsService, requestsSort, upcomingService, upcomingSort, historyStatus, historyPeriod]);
+
+  const resetFilters = useCallback(() => {
+    if (tab === 'requests') {
+      setRequestsService('all');
+      setRequestsSort('newest');
+      return;
+    }
+    if (tab === 'upcoming') {
+      setUpcomingService('all');
+      setUpcomingSort('date');
+      return;
+    }
+    setHistoryStatus('all');
+    setHistoryPeriod('all');
+  }, [tab]);
 
   const renderRequests = () => {
     if (!requestsFiltered.length) {
@@ -349,13 +416,13 @@ export function AdminAppointmentsTab({
         className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 ${APPOINTMENTS_PAGE_BG}`}
         style={{ paddingBottom: APPOINTMENTS_TAB_BAR_SCROLL_PAD }}
       >
-        <AppointmentsPageHeader onCalendarClick={() => setTab('upcoming')} />
-
         <AppointmentsStatsCard
           requests={stats.requests}
           upcoming={stats.upcoming}
           history={stats.history}
         />
+
+        <AppointmentsTabIntro tab={tab} />
 
         {toast ? (
           <div className="rounded-full bg-[#ECFDF5] px-5 py-3 text-center text-[14px] font-semibold text-[#16A34A] shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
@@ -380,6 +447,17 @@ export function AdminAppointmentsTab({
                 Мой тариф
               </Link>
             </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F3F4F6]">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${apptLimitProgressClass(apptUsageRatio)}`}
+                style={{ width: `${apptUsageRatio * 100}%` }}
+                role="progressbar"
+                aria-valuenow={monthlyApptCount}
+                aria-valuemin={0}
+                aria-valuemax={freeApptCap}
+                aria-label={`Записей в месяце: ${monthlyApptCount} из ${freeApptCap}`}
+              />
+            </div>
             {atFreeApptLimit || almostFreeAppt ? (
               <p className="mt-1.5 text-[12px] font-medium text-amber-800/85">
                 {atFreeApptLimit
@@ -390,63 +468,51 @@ export function AdminAppointmentsTab({
           </section>
         ) : null}
 
+        <AppointmentsFilterBar
+          activeLabel={filterLabel}
+          isActive={filterActive}
+          open={filterOpen}
+          onOpen={() => setFilterOpen(true)}
+        />
+
         {tab === 'requests' ? (
-          <AppointmentsFilterPills
+          <AppointmentsFiltersSheet
+            open={filterOpen}
+            onClose={() => setFilterOpen(false)}
+            mode="requests"
             serviceOptions={servicePills(pendingRows)}
-            serviceFilter={requestsService}
-            onServiceFilter={setRequestsService}
-            sortLabel={requestsSort === 'newest' ? 'По новизне' : 'Сначала старые'}
-            onSortClick={() => setRequestsSort((s) => (s === 'newest' ? 'oldest' : 'newest'))}
+            service={requestsService}
+            onService={setRequestsService}
+            sort={requestsSort}
+            onSort={setRequestsSort}
+            onReset={resetFilters}
           />
         ) : null}
 
         {tab === 'upcoming' ? (
-          <AppointmentsFilterPills
+          <AppointmentsFiltersSheet
+            open={filterOpen}
+            onClose={() => setFilterOpen(false)}
+            mode="upcoming"
             serviceOptions={servicePills(upcomingRows)}
-            serviceFilter={upcomingService}
-            onServiceFilter={setUpcomingService}
-            sortLabel={upcomingSort === 'date' ? 'По дате' : 'По новизне'}
-            onSortClick={() => setUpcomingSort((s) => (s === 'date' ? 'newest' : 'date'))}
+            service={upcomingService}
+            onService={setUpcomingService}
+            sort={upcomingSort}
+            onSort={setUpcomingSort}
+            onReset={resetFilters}
           />
         ) : null}
 
         {tab === 'history' ? (
-          <AppointmentsFilterPills
-            serviceOptions={[{ id: 'all', label: 'Все статусы' }]}
-            serviceFilter="all"
-            onServiceFilter={() => {}}
-            sortLabel={
-              historyPeriod === 'all'
-                ? 'Период: всё'
-                : historyPeriod === 'month'
-                  ? 'Период: месяц'
-                  : 'Период: 3 мес.'
-            }
-            onSortClick={() =>
-              setHistoryPeriod((p) =>
-                p === 'all' ? 'month' : p === 'month' ? 'quarter' : 'all',
-              )
-            }
-            extraPills={[
-              {
-                id: 'all',
-                label: 'Все',
-                active: historyStatus === 'all',
-                onClick: () => setHistoryStatus('all'),
-              },
-              {
-                id: 'completed',
-                label: 'Завершено',
-                active: historyStatus === 'completed',
-                onClick: () => setHistoryStatus('completed'),
-              },
-              {
-                id: 'cancelled',
-                label: 'Отменено',
-                active: historyStatus === 'cancelled',
-                onClick: () => setHistoryStatus('cancelled'),
-              },
-            ]}
+          <AppointmentsFiltersSheet
+            open={filterOpen}
+            onClose={() => setFilterOpen(false)}
+            mode="history"
+            status={historyStatus}
+            onStatus={setHistoryStatus}
+            period={historyPeriod}
+            onPeriod={setHistoryPeriod}
+            onReset={resetFilters}
           />
         ) : null}
 

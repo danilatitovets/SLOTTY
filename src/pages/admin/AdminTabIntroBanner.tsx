@@ -31,9 +31,11 @@ export function AdminTabIntroBanner({
       <div
         className={`relative flex ${ADMIN_TAB_INTRO_HEIGHT_CLASS} items-center justify-center px-4`}
       >
-        <h2 className="text-center text-[22px] font-bold leading-tight tracking-[-0.04em] text-neutral-950">
-          {title}
-        </h2>
+        <span className="inline-flex max-w-[min(100%,18rem)] items-center justify-center rounded-full border border-white/55 bg-white/35 px-6 py-2.5 shadow-[0_4px_24px_rgba(17,24,39,0.08)] backdrop-blur-md backdrop-saturate-150">
+          <h2 className="text-center text-[22px] font-bold leading-tight tracking-[-0.04em] text-neutral-950">
+            {title}
+          </h2>
+        </span>
       </div>
     </div>
   );
