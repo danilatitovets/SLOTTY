@@ -1,5 +1,6 @@
 import { HiCalendar, HiUsers } from 'react-icons/hi2';
 import type { ClientAnalytics } from './overviewAnalytics';
+import { OVERVIEW_CLIENTS_FOOTER_SRC } from './adminOverviewTheme';
 import {
   OverviewClientsDynamicsChart,
   OverviewCompactMetricCard,
@@ -28,6 +29,15 @@ function ClientsDynamicsSection({
           График показывает последние 90 дней, итоги — за весь выбранный период.
         </p>
       ) : null}
+
+      <div className="mt-4 overflow-hidden rounded-[20px] bg-gradient-to-b from-[#FFF5F7] to-white">
+        <img
+          src={OVERVIEW_CLIENTS_FOOTER_SRC}
+          alt=""
+          decoding="async"
+          className="mx-auto w-full max-h-[220px] object-contain object-center"
+        />
+      </div>
     </OverviewSectionCard>
   );
 }

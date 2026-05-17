@@ -13,18 +13,34 @@ type View = 'menu' | 'support' | 'documents' | 'legal';
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Сразу открыть раздел (для кабинета мастера из меню «Разделы»). */
+  initialView?: View;
+  /** «Назад» из support/documents закрывает sheet, без меню настроек. */
+  directEntry?: boolean;
 };
 
-export function ClientSettingsSheet({ open, onClose }: Props) {
+export function ClientSettingsSheet({
+  open,
+  onClose,
+  initialView = 'menu',
+  directEntry = false,
+}: Props) {
   const [view, setView] = useState<View>('menu');
   const [legalId, setLegalId] = useState<LegalDocId | null>(null);
+
+  const leaveSubView = () => {
+    if (directEntry) onClose();
+    else setView('menu');
+  };
 
   useEffect(() => {
     if (!open) {
       setView('menu');
       setLegalId(null);
+      return;
     }
-  }, [open]);
+    if (initialView !== 'menu') setView(initialView);
+  }, [open, initialView]);
 
   useLayoutEffect(() => {
     if (!open || view !== 'legal' || !legalId) return;
@@ -72,16 +88,16 @@ export function ClientSettingsSheet({ open, onClose }: Props) {
 
   if (view === 'documents') {
     return (
-      <ProfileSheetShell onClose={() => setView('menu')} labelledBy="settings-docs-title">
+      <ProfileSheetShell onClose={leaveSubView} labelledBy="settings-docs-title">
         <button
           type="button"
-          onClick={() => setView('menu')}
+          onClick={leaveSubView}
           className="mb-2 text-[14px] font-semibold text-neutral-500 transition hover:text-neutral-800"
         >
           ← Назад
         </button>
         <h2 id="settings-docs-title" className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950">
-          Документы
+          Все документы
         </h2>
         <p className="mt-2 text-[14px] leading-relaxed text-neutral-500">
           Тексты носят информационный характер. Заполните контакты оператора в константах перед публикацией.
@@ -108,10 +124,10 @@ export function ClientSettingsSheet({ open, onClose }: Props) {
 
   if (view === 'support') {
     return (
-      <ProfileSheetShell onClose={() => setView('menu')} labelledBy="settings-support-title">
+      <ProfileSheetShell onClose={leaveSubView} labelledBy="settings-support-title">
         <button
           type="button"
-          onClick={() => setView('menu')}
+          onClick={leaveSubView}
           className="mb-2 text-[14px] font-semibold text-neutral-500 transition hover:text-neutral-800"
         >
           ← Назад

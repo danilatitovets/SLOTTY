@@ -310,6 +310,12 @@ function mapDbAppointmentStatus(s: string): DemoAppointmentStatus {
   return 'cancelled';
 }
 
+function formatHmLocal(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 export function mapMasterAppointmentRowToDemo(row: {
   id: string;
   starts_at: string;
@@ -317,12 +323,15 @@ export function mapMasterAppointmentRowToDemo(row: {
   price_snapshot: string;
   service_title_snapshot: string;
   client_name: string;
+  client_phone?: string | null;
   client_note: string | null;
 }): DemoMasterAppointment {
   const d = new Date(row.starts_at);
   const date = isoDateLocal(d);
-  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const time = formatHmLocal(d);
   const price = Number(row.price_snapshot);
+  const phone = row.client_phone?.trim();
+  const note = row.client_note?.trim();
   return {
     id: row.id,
     clientName: row.client_name || 'Клиент',
@@ -330,7 +339,7 @@ export function mapMasterAppointmentRowToDemo(row: {
     date,
     time,
     priceByn: Number.isFinite(price) ? price : 0,
-    contact: row.client_note?.trim() || undefined,
+    contact: phone || note || undefined,
     status: mapDbAppointmentStatus(row.status),
   };
 }

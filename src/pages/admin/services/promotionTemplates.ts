@@ -19,7 +19,7 @@ export const PROMOTION_TEMPLATES: PromotionTemplateDef[] = [
   {
     id: 'first_visit',
     title: 'Скидка на первый визит',
-    description: 'Для новых клиентов',
+    description: 'Скидка для тех, кто записывается впервые — привлекает новых клиентов в каталоге.',
     defaultDiscountLabel: '-15%',
     defaultDiscountType: 'percent',
     defaultDiscountValue: 15,
@@ -28,7 +28,7 @@ export const PROMOTION_TEMPLATES: PromotionTemplateDef[] = [
   {
     id: 'weekly_combo',
     title: 'Комплекс недели',
-    description: 'Выгодное предложение на услугу',
+    description: 'Комбо или услуга недели — можно привязать к конкретной позиции прайса.',
     defaultDiscountLabel: '-20%',
     defaultDiscountType: 'percent',
     defaultDiscountValue: 20,
@@ -37,7 +37,7 @@ export const PROMOTION_TEMPLATES: PromotionTemplateDef[] = [
   {
     id: 'seasonal',
     title: 'Сезонная акция',
-    description: 'Спецпредложение на выбранный период',
+    description: 'Ограниченная по датам скидка — удобно для праздников и сезонных кампаний.',
     defaultDiscountLabel: '-30%',
     defaultDiscountType: 'percent',
     defaultDiscountValue: 30,
@@ -46,7 +46,7 @@ export const PROMOTION_TEMPLATES: PromotionTemplateDef[] = [
   {
     id: 'happy_hours',
     title: 'Счастливые часы',
-    description: 'Скидка в свободные часы',
+    description: 'Сниженная цена в «тихие» часы — помогает заполнить окна в расписании.',
     defaultDiscountLabel: '-10%',
     defaultDiscountType: 'percent',
     defaultDiscountValue: 10,

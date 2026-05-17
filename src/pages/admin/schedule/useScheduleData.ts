@@ -110,6 +110,11 @@ export function useScheduleData(
     return list;
   }, [useCabinetApi]);
 
+  const appointmentsSlotSignature = useMemo(
+    () => appointments.map((a) => `${a.id}:${a.status}`).join('|'),
+    [appointments],
+  );
+
   useEffect(() => {
     setTemplates(loadWindowTemplates(masterId));
   }, [masterId]);
@@ -133,7 +138,7 @@ export function useScheduleData(
     return () => {
       cancelled = true;
     };
-  }, [useCabinetApi]);
+  }, [useCabinetApi, appointmentsSlotSignature]);
 
   useEffect(() => {
     if (!useCabinetApi) {

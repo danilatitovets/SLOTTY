@@ -72,8 +72,10 @@ export function EditWindowModal({
   if (!w) return null;
 
   const booked = w.status === 'booked';
+  const locked = booked;
 
   const applyTemplate = (tplId: string) => {
+    if (locked) return;
     const tpl = templates.find((t) => t.id === tplId);
     if (!tpl) return;
     setServiceId(tpl.serviceId);
@@ -81,6 +83,7 @@ export function EditWindowModal({
   };
 
   const handleSave = () => {
+    if (locked) return;
     const sid = serviceId.trim() && isUuid(serviceId.trim()) ? serviceId.trim() : null;
     onSave({ dateIso, startTime, endTime, serviceId: sid });
   };
@@ -104,86 +107,97 @@ export function EditWindowModal({
           ) : null}
         </div>
 
-        <div>
-          <p className={labelClass}>Дата</p>
-          <SlottyDatePicker className="mt-1.5 w-full" value={dateIso} onChange={setDateIso} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className={labelClass}>С</p>
-            <SlottySelect
-              className="mt-1.5 w-full"
-              value={startTime}
-              onChange={(v) => {
-                setStartTime(v);
-                const dur = durationMinutesBetween(startTime, endTime);
-                if (dur > 0) setEndTime(addMinutesToTime(v, dur));
-              }}
-              options={mergedTimeOptions}
-              aria-label="Время начала"
-            />
-          </div>
-          <div>
-            <p className={labelClass}>По</p>
-            <SlottySelect
-              className="mt-1.5 w-full"
-              value={endTime}
-              onChange={setEndTime}
-              options={mergedTimeOptions}
-              aria-label="Время окончания"
-            />
-          </div>
-        </div>
-        <div>
-          <p className={labelClass}>Услуга</p>
-          <SlottySelect
-            className="mt-1.5 w-full"
-            value={serviceId}
-            onChange={setServiceId}
-            options={serviceOptions}
-            aria-label="Услуга"
-          />
-        </div>
-        {templates.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {templates.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => applyTemplate(t.id)}
-                className="rounded-full bg-[#FFF5F5] px-3 py-1.5 text-[12px] font-semibold text-[#C97B7B]"
-              >
-                {t.serviceName} · {formatDurationRu(t.durationMinutes)}
-              </button>
-            ))}
-          </div>
+        {locked ? (
+          <p className="rounded-[16px] border border-[#FDE8ED] bg-[#FFF1F4] px-4 py-3 text-[13px] font-medium leading-snug text-[#9B2C2C]">
+            На это окно уже есть запись. Изменить время или услугу нельзя — отмените запись в разделе «Заявки».
+          </p>
         ) : null}
 
-        <button type="button" className={primaryBtnClass} disabled={saving} onClick={handleSave}>
-          Сохранить изменения
-        </button>
-
-        {!confirmDelete ? (
-          <button type="button" className={dangerBtnClass} onClick={() => setConfirmDelete(true)}>
-            Удалить окно
-          </button>
-        ) : (
-          <div className="space-y-2 rounded-[20px] bg-[#FFF0F0] p-4">
-            <p className="text-[13px] font-semibold leading-snug text-[#9B2C2C]">
-              {booked
-                ? 'На это окно уже записан клиент. Удаление может отменить запись.'
-                : 'Удалить это окно? Клиенты больше не смогут записаться на это время.'}
-            </p>
-            <div className="flex gap-2">
-              <button type="button" className={secondaryBtnClass} onClick={() => setConfirmDelete(false)}>
-                Отмена
-              </button>
-              <button type="button" className={dangerBtnClass} disabled={saving} onClick={onDelete}>
-                Удалить
-              </button>
+        <div className={locked ? 'pointer-events-none space-y-4 opacity-45' : 'space-y-4'}>
+          <div>
+            <p className={labelClass}>Дата</p>
+            <SlottyDatePicker className="mt-1.5 w-full" value={dateIso} onChange={setDateIso} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className={labelClass}>С</p>
+              <SlottySelect
+                className="mt-1.5 w-full"
+                value={startTime}
+                onChange={(v) => {
+                  setStartTime(v);
+                  const dur = durationMinutesBetween(startTime, endTime);
+                  if (dur > 0) setEndTime(addMinutesToTime(v, dur));
+                }}
+                options={mergedTimeOptions}
+                aria-label="Время начала"
+              />
+            </div>
+            <div>
+              <p className={labelClass}>По</p>
+              <SlottySelect
+                className="mt-1.5 w-full"
+                value={endTime}
+                onChange={setEndTime}
+                options={mergedTimeOptions}
+                aria-label="Время окончания"
+              />
             </div>
           </div>
-        )}
+          <div>
+            <p className={labelClass}>Услуга</p>
+            <SlottySelect
+              className="mt-1.5 w-full"
+              value={serviceId}
+              onChange={setServiceId}
+              options={serviceOptions}
+              aria-label="Услуга"
+            />
+          </div>
+          {templates.length > 0 && !locked ? (
+            <div className="flex flex-wrap gap-2">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyTemplate(t.id)}
+                  className="rounded-full bg-[#FFF5F5] px-3 py-1.5 text-[12px] font-semibold text-[#C97B7B]"
+                >
+                  {t.serviceName} · {formatDurationRu(t.durationMinutes)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <button type="button" className={primaryBtnClass} disabled={saving || locked} onClick={handleSave}>
+            Сохранить изменения
+          </button>
+
+          {!confirmDelete ? (
+            <button
+              type="button"
+              className={dangerBtnClass}
+              disabled={locked}
+              onClick={() => setConfirmDelete(true)}
+            >
+              Удалить окно
+            </button>
+          ) : (
+            <div className="space-y-2 rounded-[20px] bg-[#FFF0F0] p-4">
+              <p className="text-[13px] font-semibold leading-snug text-[#9B2C2C]">
+                Удалить это окно? Клиенты больше не смогут записаться на это время.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" className={secondaryBtnClass} onClick={() => setConfirmDelete(false)}>
+                  Отмена
+                </button>
+                <button type="button" className={dangerBtnClass} disabled={saving} onClick={onDelete}>
+                  Удалить
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {services.length === 0 ? (
           <p className="text-center text-[13px] text-neutral-500">

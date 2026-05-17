@@ -18,6 +18,7 @@ import { ADMIN_CABINET_SHELL_MAX, OVERVIEW_TAB_BAR_HEIGHT } from './overview/adm
 import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_HEIGHT } from './services/adminServicesTheme';
 import { APPOINTMENTS_TAB_BAR_HEIGHT } from './appointments/adminAppointmentsTheme';
 import { SCHEDULE_TAB_BAR_HEIGHT } from './schedule/adminScheduleTheme';
+import { ClientSettingsSheet } from '../profile/components/ClientSettingsSheet';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 import { AdminRouteTransitionOutlet } from './shared/AdminRouteTransitionOutlet';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
@@ -83,6 +84,23 @@ function IconNavBilling({ className }: { className?: string }) {
   );
 }
 
+function IconNavSupport({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
+
+function IconNavDocuments({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    </svg>
+  );
+}
+
 type MenuItem = {
   to: string;
   label: string;
@@ -132,8 +150,11 @@ export function AdminCabinetStatusBanner() {
   );
 }
 
+type SettingsSheetView = 'support' | 'documents' | null;
+
 export function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsSheet, setSettingsSheet] = useState<SettingsSheetView>(null);
   const stickyShellRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
   const isProfileHome = pathname === ADMIN_PATH;
@@ -266,7 +287,7 @@ export function AdminLayout() {
             </NavLink>
           ))}
 
-          <div className="mt-2 border-t border-neutral-200/80 pt-3">
+          <div className="mt-2 flex flex-col gap-2 border-t border-neutral-200/80 pt-3">
             <NavLink
               to={ADMIN_BILLING_PATH}
               onClick={() => setMenuOpen(false)}
@@ -292,9 +313,46 @@ export function AdminLayout() {
                 );
               }}
             </NavLink>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setSettingsSheet('support');
+              }}
+              className={navClass(false)}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <IconNavSupport className="shrink-0 opacity-95" />
+                <span className="truncate">Поддержка</span>
+              </span>
+              <span className="w-3 shrink-0" aria-hidden />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setSettingsSheet('documents');
+              }}
+              className={navClass(false)}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <IconNavDocuments className="shrink-0 opacity-95" />
+                <span className="truncate">Все документы</span>
+              </span>
+              <span className="w-3 shrink-0" aria-hidden />
+            </button>
           </div>
         </nav>
       </AdminBottomSheet>
+
+      <ClientSettingsSheet
+        open={settingsSheet !== null}
+        initialView={settingsSheet ?? 'menu'}
+        directEntry
+        onClose={() => setSettingsSheet(null)}
+      />
     </div>
   );
 }

@@ -228,7 +228,8 @@ export async function listMasterAppointments(masterId: string) {
   const r = await query(
     `select a.id, a.client_id, a.service_id, a.slot_id, a.starts_at, a.ends_at, a.status::text,
             a.price_snapshot::text, a.service_title_snapshot, a.client_note, a.created_at,
-            coalesce(nullif(trim(p.full_name), ''), 'Клиент') as client_name
+            coalesce(nullif(trim(p.full_name), ''), 'Клиент') as client_name,
+            nullif(trim(p.phone), '') as client_phone
        from public.appointments a
        left join public.profiles p on p.id = a.client_id
       where a.master_id = $1
@@ -252,6 +253,13 @@ export async function cancelClientAppointment(clientId: string, appointmentId: s
   }
   await query(
     `update public.appointments set status = 'cancelled_by_client', updated_at = now() where id = $1`,
+    [appointmentId],
+  );
+  await query(
+    `update public.master_availability_slots s
+        set status = 'available', updated_at = now()
+      from public.appointments a
+      where a.id = $1 and s.id = a.slot_id and s.status = 'booked'`,
     [appointmentId],
   );
   return { masterId: row.master_id };
@@ -307,6 +315,13 @@ export async function masterCancelAppointment(masterId: string, appointmentId: s
   }
   await query(
     `update public.appointments set status = 'cancelled_by_master', updated_at = now() where id = $1`,
+    [appointmentId],
+  );
+  await query(
+    `update public.master_availability_slots s
+        set status = 'available', updated_at = now()
+      from public.appointments a
+      where a.id = $1 and s.id = a.slot_id and s.status = 'booked'`,
     [appointmentId],
   );
   return { clientId: row.client_id };

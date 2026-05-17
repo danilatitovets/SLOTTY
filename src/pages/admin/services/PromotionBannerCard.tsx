@@ -1,5 +1,9 @@
 import { HiCalendarDays, HiEllipsisHorizontal } from 'react-icons/hi2';
-import { promotionCardOverlayClass, promotionCardScrimClass } from '../adminIntroOverlay';
+import {
+  promotionCardLeftOverlayClass,
+  promotionCardOverlayClass,
+  promotionCardScrimClass,
+} from '../adminIntroOverlay';
 import { promotionStatusLabel } from './servicesFormat';
 import type { ServicePromotion, ServicePromotionStatus } from './servicesTypes';
 
@@ -51,6 +55,7 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
           loading="lazy"
         />
         <div className={`absolute inset-0 z-[1] ${promotionCardScrimClass}`} aria-hidden />
+        <div className={`absolute inset-0 z-[1] ${promotionCardLeftOverlayClass}`} aria-hidden />
         <div className={`absolute inset-0 z-[1] ${promotionCardOverlayClass}`} aria-hidden />
 
         <div className="absolute left-4 top-4 z-20">

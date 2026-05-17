@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
+import { LoadingScreen } from '../../../shared/ui/LoadingVideo';
 import { AdminAppointmentDetailSheet } from '../shared/AdminAppointmentDetailSheet';
-import { useAdminAppointments } from '../useAdminMasterData';
+import { useAdminAppointments, useAdminMasterCabinet } from '../useAdminMasterData';
 import { AdminAppointmentsTab } from './AdminAppointmentsTab';
 
 export function AdminAppointmentsSection() {
   const { appointments, persistAppointments } = useAdminAppointments();
+  const { useCabinetApi, cabinetLoading, cabinetError } = useAdminMasterCabinet();
   const [detailAppt, setDetailAppt] = useState<DemoMasterAppointment | null>(null);
 
   const handleUpdateAppointment = useCallback(
@@ -16,8 +18,17 @@ export function AdminAppointmentsSection() {
     [appointments, persistAppointments],
   );
 
+  if (useCabinetApi && cabinetLoading) {
+    return <LoadingScreen className="bg-[#F1EFEF]" />;
+  }
+
   return (
     <>
+      {cabinetError ? (
+        <p className="mx-4 mb-3 rounded-2xl bg-[#FFF0F0] px-4 py-2 text-center text-[13px] font-semibold text-[#9B2C2C]">
+          {cabinetError}
+        </p>
+      ) : null}
       <AdminAppointmentsTab
         appointments={appointments}
         onChangeAppointments={persistAppointments}
@@ -28,6 +39,7 @@ export function AdminAppointmentsSection() {
         appointment={detailAppt}
         onClose={() => setDetailAppt(null)}
         onUpdateAppointment={handleUpdateAppointment}
+        actionsDisabled={useCabinetApi && cabinetLoading}
       />
     </>
   );

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { HiGift } from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import {
   servicesCard,
   servicesIconCircle,
@@ -11,24 +12,32 @@ import { ServicesBundleFormSheet } from './ServicesBundleFormSheet';
 import { ServicesBundleMenuSheet } from './ServicesBundleMenuSheet';
 import type { ManagedService } from './servicesFormat';
 import type { ServiceBundle } from './servicesTypes';
-import { loadServiceBundles, saveServiceBundles } from './servicesStorage';
 
 type Props = {
   draft: MasterDraft;
   services: ManagedService[];
-  onToast?: (message: string) => void;
+  bundles: ServiceBundle[];
+  loading?: boolean;
+  extrasLocked?: boolean;
+  onExtrasLocked?: () => void;
+  onSave: (bundle: ServiceBundle) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
 };
 
-export function ServicesBundlesTab({ draft, services, onToast }: Props) {
-  const [bundles, setBundles] = useState<ServiceBundle[]>(() => loadServiceBundles());
+export function ServicesBundlesTab({
+  draft,
+  services,
+  bundles,
+  loading = false,
+  extrasLocked = false,
+  onExtrasLocked,
+  onSave,
+  onDelete,
+}: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceBundle | null>(null);
   const [menuTarget, setMenuTarget] = useState<ServiceBundle | null>(null);
-
-  const persist = useCallback((next: ServiceBundle[]) => {
-    setBundles(next);
-    saveServiceBundles(next);
-  }, []);
+  const [saving, setSaving] = useState(false);
 
   const serviceTitleById = useMemo(() => {
     const m = new Map<string, string>();
@@ -41,39 +50,54 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
     [bundles],
   );
 
+  const tryExtrasAction = (action: () => void) => {
+    if (extrasLocked) {
+      onExtrasLocked?.();
+      return;
+    }
+    action();
+  };
+
   const openCreate = () => {
-    setEditing(null);
-    setFormOpen(true);
+    tryExtrasAction(() => {
+      setEditing(null);
+      setFormOpen(true);
+    });
   };
 
   const openEdit = (bundle: ServiceBundle) => {
-    setEditing(bundle);
-    setFormOpen(true);
+    tryExtrasAction(() => {
+      setEditing(bundle);
+      setFormOpen(true);
+    });
   };
 
   const handleSave = (bundle: ServiceBundle) => {
-    const exists = bundles.some((b) => b.id === bundle.id);
-    const next = exists
-      ? bundles.map((b) => (b.id === bundle.id ? bundle : b))
-      : [bundle, ...bundles];
-    persist(next);
-    setFormOpen(false);
-    setEditing(null);
-    onToast?.(
-      bundle.status === 'draft'
-        ? 'Черновик набора сохранён'
-        : exists
-          ? 'Набор обновлён'
-          : 'Набор опубликован',
-    );
+    void (async () => {
+      setSaving(true);
+      try {
+        await onSave(bundle);
+        setFormOpen(false);
+        setEditing(null);
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   const handleDelete = (id: string) => {
-    persist(bundles.filter((b) => b.id !== id));
-    onToast?.('Набор удалён');
+    void onDelete(id);
   };
 
-  const canCreate = services.length >= 2;
+  const canCreate = !extrasLocked && services.length >= 2;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[14rem] items-center justify-center py-8">
+        <LoadingVideo size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-2">
@@ -81,14 +105,14 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
         <button
           type="button"
           onClick={openCreate}
-          disabled={!canCreate}
+          disabled={!canCreate || saving}
           className={servicesPinkBtn}
         >
           + Создать набор
         </button>
       ) : null}
 
-      {!canCreate ? (
+      {!extrasLocked && !canCreate ? (
         <p className="text-[13px] font-medium text-[#9CA3AF]">
           Добавьте минимум 2 услуги в каталоге, чтобы создать набор
         </p>
@@ -108,7 +132,7 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
           <button
             type="button"
             onClick={openCreate}
-            disabled={!canCreate}
+            disabled={!canCreate || saving}
             className={`${servicesPinkBtn} mt-5`}
           >
             + Создать набор
@@ -123,7 +147,13 @@ export function ServicesBundlesTab({ draft, services, onToast }: Props) {
                 services={services}
                 draft={draft}
                 serviceTitleById={serviceTitleById}
-                onMenu={() => setMenuTarget(bundle)}
+                onMenu={() => {
+                  if (extrasLocked) {
+                    onExtrasLocked?.();
+                    return;
+                  }
+                  setMenuTarget(bundle);
+                }}
               />
             </li>
           ))}

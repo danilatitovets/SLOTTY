@@ -1,23 +1,20 @@
 import { useMemo, useState } from 'react';
-import { HiCheck, HiEllipsisHorizontal, HiFunnel, HiMagnifyingGlass, HiScissors } from 'react-icons/hi2';
-import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { HiEllipsisHorizontal, HiFunnel, HiMagnifyingGlass, HiScissors } from 'react-icons/hi2';
 import {
   servicesCard,
-  servicesChipActive,
   servicesIconCircle,
   servicesInput,
   servicesPinkBtn,
 } from './adminServicesTheme';
+import { filterCatalogServices } from './catalogFilterUtils';
 import type { ManagedService } from './servicesFormat';
 import { formatDurationRu, formatServicePrice } from './servicesFormat';
-
-type VisibilityFilter = 'all' | 'visible' | 'hidden';
-
-const FILTER_OPTIONS: Array<{ id: VisibilityFilter; label: string; hint: string }> = [
-  { id: 'all', label: 'Все', hint: 'Показать все услуги' },
-  { id: 'visible', label: 'Видимые', hint: 'Только доступные для записи' },
-  { id: 'hidden', label: 'Скрытые', hint: 'Скрытые от клиентов' },
-];
+import {
+  catalogFiltersAreActive,
+  DEFAULT_CATALOG_FILTERS,
+  ServicesCatalogFiltersSheet,
+  type CatalogFiltersState,
+} from './ServicesCatalogFiltersSheet';
 
 type Props = {
   services: ManagedService[];
@@ -27,25 +24,18 @@ type Props = {
 
 export function ServicesCatalogTab({ services, onAdd, onOpenMenu }: Props) {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<VisibilityFilter>('all');
+  const [filters, setFilters] = useState<CatalogFiltersState>(DEFAULT_CATALOG_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return services.filter((s) => {
-      if (filter === 'visible' && !s.isActive) return false;
-      if (filter === 'hidden' && s.isActive) return false;
-      if (!q) return true;
-      return s.title.toLowerCase().includes(q);
-    });
-  }, [filter, query, services]);
+  const filtered = useMemo(
+    () => filterCatalogServices(services, query, filters),
+    [filters, query, services],
+  );
 
-  const activeFilterLabel = FILTER_OPTIONS.find((o) => o.id === filter)?.label ?? 'Все';
-  const filterIsActive = filter !== 'all';
+  const filterIsActive = catalogFiltersAreActive(filters);
 
-  const pickFilter = (id: VisibilityFilter) => {
-    setFilter(id);
-    setFilterOpen(false);
+  const patchFilters = (patch: Partial<CatalogFiltersState>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
   };
 
   return (
@@ -71,7 +61,7 @@ export function ServicesCatalogTab({ services, onAdd, onOpenMenu }: Props) {
               ? 'border-[#FDE8ED] bg-[#FFF1F4] text-[#F47C8C] shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]'
               : 'border-[#EAECEF] bg-white text-[#6B7280]'
           }`}
-          aria-label={`Фильтр: ${activeFilterLabel}`}
+          aria-label={filterIsActive ? 'Фильтры: выбраны' : 'Фильтры каталога'}
           aria-expanded={filterOpen}
         >
           <HiFunnel className="h-5 w-5" aria-hidden />
@@ -142,37 +132,13 @@ export function ServicesCatalogTab({ services, onAdd, onOpenMenu }: Props) {
         </ul>
       )}
 
-      <AdminBottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Фильтр">
-        <div className="space-y-2 pb-2">
-          {FILTER_OPTIONS.map((option) => {
-            const selected = filter === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => pickFilter(option.id)}
-                className={`flex w-full items-center gap-3 rounded-[18px] border px-4 py-3.5 text-left transition active:scale-[0.98] ${
-                  selected
-                    ? servicesChipActive
-                    : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED] hover:bg-[#FAFAFA]'
-                }`}
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-bold text-[#111827]">{option.label}</span>
-                  <span className="mt-0.5 block text-[12px] font-medium text-[#9CA3AF]">{option.hint}</span>
-                </span>
-                {selected ? (
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F47C8C] text-white">
-                    <HiCheck className="h-5 w-5" aria-hidden />
-                  </span>
-                ) : (
-                  <span className="h-8 w-8 shrink-0 rounded-full border border-[#EAECEF] bg-[#FAFAFA]" aria-hidden />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </AdminBottomSheet>
+      <ServicesCatalogFiltersSheet
+        open={filterOpen}
+        filters={filters}
+        onChange={patchFilters}
+        onReset={() => setFilters(DEFAULT_CATALOG_FILTERS)}
+        onClose={() => setFilterOpen(false)}
+      />
     </div>
   );
 }

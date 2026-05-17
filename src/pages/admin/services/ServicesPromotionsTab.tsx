@@ -19,6 +19,8 @@ type PromoFilter = 'all' | ServicePromotionStatus;
 type Props = {
   services: ManagedService[];
   promotions: ServicePromotion[];
+  extrasLocked?: boolean;
+  onExtrasLocked?: () => void;
   onCreate: () => void;
   onEdit: (promo: ServicePromotion) => void;
   onDelete: (id: string) => void;
@@ -32,7 +34,15 @@ const FILTER_OPTIONS: Array<{ id: PromoFilter; label: string; hint: string }> = 
   { id: 'draft', label: 'Черновики', hint: 'Ещё не опубликованы' },
 ];
 
-export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, onDelete }: Props) {
+export function ServicesPromotionsTab({
+  services,
+  promotions,
+  extrasLocked = false,
+  onExtrasLocked,
+  onCreate,
+  onEdit,
+  onDelete,
+}: Props) {
   const [filter, setFilter] = useState<PromoFilter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [menuPromo, setMenuPromo] = useState<ServicePromotion | null>(null);
@@ -63,10 +73,31 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
     setFilterOpen(false);
   };
 
+  const tryCreate = () => {
+    if (extrasLocked) {
+      onExtrasLocked?.();
+      return;
+    }
+    onCreate();
+  };
+
+  const tryEdit = (promo: ServicePromotion) => {
+    if (extrasLocked) {
+      onExtrasLocked?.();
+      return;
+    }
+    onEdit(promo);
+  };
+
   return (
     <div className="space-y-4 pb-2">
       <div className="flex gap-2">
-        <button type="button" onClick={onCreate} className={`${servicesPinkBtn} min-w-0 flex-1`}>
+        <button
+          type="button"
+          onClick={tryCreate}
+          disabled={extrasLocked}
+          className={`${servicesPinkBtn} min-w-0 flex-1 disabled:opacity-50`}
+        >
           + Создать акцию
         </button>
         <button
@@ -104,7 +135,12 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
               : 'Попробуйте другой фильтр'}
           </p>
           {promotions.length === 0 ? (
-            <button type="button" onClick={onCreate} className={`${servicesPinkBtn} mt-5`}>
+            <button
+              type="button"
+              onClick={tryCreate}
+              disabled={extrasLocked}
+              className={`${servicesPinkBtn} mt-5 disabled:opacity-50`}
+            >
               Создать акцию
             </button>
           ) : null}
@@ -113,7 +149,16 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
         <ul className="space-y-3.5">
           {rows.map((promo) => (
             <li key={promo.id}>
-              <PromotionBannerCard promo={promo} onMenu={() => setMenuPromo(promo)} />
+              <PromotionBannerCard
+                promo={promo}
+                onMenu={() => {
+                  if (extrasLocked) {
+                    onExtrasLocked?.();
+                    return;
+                  }
+                  setMenuPromo(promo);
+                }}
+              />
             </li>
           ))}
         </ul>
@@ -156,7 +201,7 @@ export function ServicesPromotionsTab({ services, promotions, onCreate, onEdit, 
         promo={menuPromo}
         onClose={() => setMenuPromo(null)}
         onEdit={() => {
-          if (menuPromo) onEdit(menuPromo);
+          if (menuPromo) tryEdit(menuPromo);
           setMenuPromo(null);
         }}
         onDelete={() => {

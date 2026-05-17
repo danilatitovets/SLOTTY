@@ -27,6 +27,12 @@ export type PlanLimits = {
   scheduleHorizonDays: number;
 };
 
+/** Наборы и акции доступны только на тарифе Pro. */
+export function canUseBundlesAndPromotions(plan?: PlanId): boolean {
+  const id = plan ?? getCurrentMasterPlan().plan;
+  return id === 'pro';
+}
+
 export function planBadgeLabel(plan: PlanId): string {
   switch (plan) {
     case 'free':

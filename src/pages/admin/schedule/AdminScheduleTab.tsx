@@ -295,6 +295,10 @@ export function AdminScheduleTab({ draft }: Props) {
     serviceId: string | null;
   }) => {
     if (!editWindow) return;
+    if (editWindow.status === 'booked') {
+      showToast('На это окно уже есть запись — изменить нельзя');
+      return;
+    }
     if (isLocalDateIsoBeforeToday(payload.dateIso)) {
       showToast('Нельзя перенести в прошлое');
       return;
@@ -327,6 +331,10 @@ export function AdminScheduleTab({ draft }: Props) {
 
   const onEditDelete = async () => {
     if (!editWindow) return;
+    if (editWindow.status === 'booked') {
+      showToast('На это окно есть запись — удалить нельзя');
+      return;
+    }
     setEditSaving(true);
     try {
       await removeSlot(editWindow.id);

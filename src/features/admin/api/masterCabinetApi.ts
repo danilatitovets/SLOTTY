@@ -194,6 +194,7 @@ export type MasterAppointmentListRow = {
   client_note: string | null;
   created_at: string;
   client_name: string;
+  client_phone: string | null;
 };
 
 export async function fetchMasterAppointments(): Promise<MasterAppointmentListRow[]> {

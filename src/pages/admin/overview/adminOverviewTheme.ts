@@ -37,3 +37,6 @@ const overviewSvodkaDir = '/photos/' + encodeURIComponent('сводка') + '/';
 export function overviewSvodkaPhotoSrc(fileName: string): string {
   return overviewSvodkaDir + encodeURIComponent(fileName);
 }
+
+/** Декор внизу вкладки «Клиенты» (после графика). */
+export const OVERVIEW_CLIENTS_FOOTER_SRC = '/photos/KLIENT.webp';

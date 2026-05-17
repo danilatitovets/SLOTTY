@@ -456,6 +456,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
 
       const calls: Promise<void>[] = [];
       for (const row of rows) {
+        if (!isUuid(row.id)) continue;
         const before = prevById.get(row.id);
         if (!before || before.status === row.status) continue;
         if (before.status === 'pending' && row.status === 'confirmed') {

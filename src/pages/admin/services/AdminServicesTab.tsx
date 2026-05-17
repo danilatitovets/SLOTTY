@@ -6,7 +6,10 @@ import type {
   MasterDraft,
   MasterOnboardingService,
 } from '../../../features/profile/lib/demoMasterStorage';
-import { isFreeServiceLimitReached } from '../../../features/billing/model/masterPlans';
+import {
+  canUseBundlesAndPromotions,
+  isFreeServiceLimitReached,
+} from '../../../features/billing/model/masterPlans';
 import { ADMIN_BILLING_PATH } from '../../../app/paths';
 import {
   deleteMasterService,
@@ -17,8 +20,10 @@ import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
+import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_SCROLL_PAD } from './adminServicesTheme';
 import { ServicesBundlesTab } from './ServicesBundlesTab';
+import { ServicesExtrasProBlock } from './ServicesExtrasProBlock';
 import { ServicesCatalogTab } from './ServicesCatalogTab';
 import { ServicesPageHeader } from './ServicesPageHeader';
 import { SERVICES_TAB_INTRO_IMAGES } from './ServicesTabIntro';
@@ -27,8 +32,18 @@ import { ServicesPromotionFormSheet } from './ServicesPromotionFormSheet';
 import { ServicesPromotionsTab } from './ServicesPromotionsTab';
 import { ServicesServiceMenuSheet } from './ServicesServiceMenuSheet';
 import { ServicesTabBar } from './ServicesTabBar';
-import { loadServicePromotions, saveServicePromotions } from './servicesStorage';
-import type { ServicePromotion, ServicesTabId } from './servicesTypes';
+import {
+  deleteMasterBundle,
+  deleteMasterPromotion,
+  fetchMasterBundles,
+  fetchMasterPromotions,
+  patchMasterBundle,
+  patchMasterPromotion,
+  postMasterBundle,
+  postMasterPromotion,
+} from '../../../features/admin/api/masterServiceExtrasApi';
+import { loadServiceBundles, loadServicePromotions, saveServiceBundles, saveServicePromotions } from './servicesStorage';
+import type { ServiceBundle, ServicePromotion, ServicesTabId } from './servicesTypes';
 
 type PriceType = 'fixed' | 'from';
 
@@ -86,6 +101,8 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<ServiceSheetMode>('full');
   const [freeLimitOpen, setFreeLimitOpen] = useState(false);
+  const [extrasProOpen, setExtrasProOpen] = useState(false);
+  const extrasLocked = !canUseBundlesAndPromotions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ManagedService | null>(null);
   const [previewTarget, setPreviewTarget] = useState<ManagedService | null>(null);
@@ -94,13 +111,42 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ServicesTabId>('catalog');
   const [menuTarget, setMenuTarget] = useState<ManagedService | null>(null);
+  const [bundles, setBundles] = useState<ServiceBundle[]>(() => loadServiceBundles());
   const [promotions, setPromotions] = useState<ServicePromotion[]>(() => loadServicePromotions());
+  const [extrasLoading, setExtrasLoading] = useState(false);
+  const [extrasError, setExtrasError] = useState<string | null>(null);
   const [promoFormOpen, setPromoFormOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<ServicePromotion | null>(null);
 
   useEffect(() => {
     preloadTabIntroImages(SERVICES_TAB_INTRO_IMAGES);
   }, []);
+
+  const reloadServiceExtras = useCallback(async () => {
+    if (!useCabinetApi) {
+      setBundles(loadServiceBundles());
+      setPromotions(loadServicePromotions());
+      return;
+    }
+    setExtrasLoading(true);
+    setExtrasError(null);
+    try {
+      const [nextBundles, nextPromotions] = await Promise.all([
+        fetchMasterBundles(),
+        fetchMasterPromotions(),
+      ]);
+      setBundles(nextBundles);
+      setPromotions(nextPromotions);
+    } catch (e) {
+      setExtrasError(e instanceof Error ? e.message : 'Не удалось загрузить наборы и акции');
+    } finally {
+      setExtrasLoading(false);
+    }
+  }, [useCabinetApi]);
+
+  useEffect(() => {
+    void reloadServiceExtras();
+  }, [reloadServiceExtras]);
 
   const [title, setTitle] = useState('');
   const [dur, setDur] = useState('');
@@ -506,40 +552,183 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     });
   }, [commitDraftBaseline, deleteTarget, draft, persistServices, refreshDraft, runServiceAction, services, showSuccessToast, useCabinetApi]);
 
-  const persistPromotions = useCallback((rows: ServicePromotion[]) => {
+  const persistPromotionsLocal = useCallback((rows: ServicePromotion[]) => {
     setPromotions(rows);
     saveServicePromotions(rows);
   }, []);
 
+  const persistBundlesLocal = useCallback((rows: ServiceBundle[]) => {
+    setBundles(rows);
+    saveServiceBundles(rows);
+  }, []);
+
+  const bundleApiBody = (bundle: ServiceBundle) => ({
+    title: bundle.title,
+    description: bundle.description,
+    serviceIds: bundle.serviceIds.filter((id) => isUuid(id)),
+    originalPrice: bundle.originalPrice,
+    bundlePrice: bundle.bundlePrice,
+    discountPercent: bundle.discountPercent,
+    discountAmount: bundle.discountAmount,
+    durationMinutes: bundle.durationMinutes,
+    imageUrl: bundle.imageUrl,
+    imageSource: bundle.imageSource,
+    status: bundle.status,
+  });
+
+  const promoApiBody = (promo: ServicePromotion, publish: boolean) => ({
+    template: promo.template,
+    title: promo.title,
+    description: promo.description,
+    serviceId: promo.serviceId,
+    discountType: promo.discountType,
+    discountValue: promo.discountValue,
+    discountLabel: promo.discountLabel,
+    startsAt: promo.startsAt,
+    endsAt: promo.endsAt,
+    backgroundImage: promo.backgroundImage,
+    publish,
+  });
+
+  const saveBundle = useCallback(
+    async (bundle: ServiceBundle) => {
+      if (extrasLocked) {
+        setExtrasProOpen(true);
+        return;
+      }
+      const exists = bundles.some((b) => b.id === bundle.id);
+      const toastMsg =
+        bundle.status === 'draft'
+          ? 'Черновик набора сохранён'
+          : exists
+            ? 'Набор обновлён'
+            : 'Набор опубликован';
+
+      if (!useCabinetApi) {
+        const next = exists
+          ? bundles.map((b) => (b.id === bundle.id ? bundle : b))
+          : [bundle, ...bundles];
+        persistBundlesLocal(next);
+        showSuccessToast(toastMsg);
+        return;
+      }
+
+      setListError(null);
+      try {
+        const body = bundleApiBody(bundle);
+        if (exists && isUuid(bundle.id)) {
+          await patchMasterBundle(bundle.id, body);
+        } else {
+          await postMasterBundle(body);
+        }
+        await reloadServiceExtras();
+        showSuccessToast(toastMsg);
+      } catch (e) {
+        setListError(e instanceof Error ? e.message : 'Не удалось сохранить набор');
+        throw e;
+      }
+    },
+    [bundles, extrasLocked, persistBundlesLocal, reloadServiceExtras, showSuccessToast, useCabinetApi],
+  );
+
+  const deleteBundle = useCallback(
+    async (id: string) => {
+      if (extrasLocked) {
+        setExtrasProOpen(true);
+        return;
+      }
+      if (!useCabinetApi) {
+        persistBundlesLocal(bundles.filter((b) => b.id !== id));
+        showSuccessToast('Набор удалён');
+        return;
+      }
+      if (isUuid(id)) {
+        await deleteMasterBundle(id);
+      }
+      await reloadServiceExtras();
+      showSuccessToast('Набор удалён');
+    },
+    [bundles, extrasLocked, persistBundlesLocal, reloadServiceExtras, showSuccessToast, useCabinetApi],
+  );
+
   const openPromoCreate = useCallback(() => {
+    if (extrasLocked) {
+      setExtrasProOpen(true);
+      return;
+    }
     setEditingPromo(null);
     setPromoFormOpen(true);
-  }, []);
+  }, [extrasLocked]);
 
   const openPromoEdit = useCallback((promo: ServicePromotion) => {
+    if (extrasLocked) {
+      setExtrasProOpen(true);
+      return;
+    }
     setEditingPromo(promo);
     setPromoFormOpen(true);
-  }, []);
+  }, [extrasLocked]);
 
   const savePromo = useCallback(
-    (promo: ServicePromotion, publish: boolean) => {
-      const rows = editingPromo
-        ? promotions.map((p) => (p.id === promo.id ? promo : p))
-        : [promo, ...promotions];
-      persistPromotions(rows);
-      setPromoFormOpen(false);
-      setEditingPromo(null);
-      showSuccessToast(publish ? 'Акция опубликована' : 'Черновик сохранён');
+    async (promo: ServicePromotion, publish: boolean) => {
+      if (extrasLocked) {
+        setExtrasProOpen(true);
+        return;
+      }
+      if (!useCabinetApi) {
+        const rows = editingPromo
+          ? promotions.map((p) => (p.id === promo.id ? promo : p))
+          : [promo, ...promotions];
+        persistPromotionsLocal(rows);
+        setPromoFormOpen(false);
+        setEditingPromo(null);
+        showSuccessToast(publish ? 'Акция опубликована' : 'Черновик сохранён');
+        return;
+      }
+
+      if (!isUuid(promo.serviceId)) {
+        setListError('Выберите услугу из каталога (сохранённую на сервере).');
+        return;
+      }
+
+      setListError(null);
+      try {
+        const body = promoApiBody(promo, publish);
+        const exists = editingPromo && isUuid(editingPromo.id);
+        if (exists) {
+          await patchMasterPromotion(editingPromo.id, body);
+        } else {
+          await postMasterPromotion(body);
+        }
+        await reloadServiceExtras();
+        setPromoFormOpen(false);
+        setEditingPromo(null);
+        showSuccessToast(publish ? 'Акция опубликована' : 'Черновик сохранён');
+      } catch (e) {
+        setListError(e instanceof Error ? e.message : 'Не удалось сохранить акцию');
+      }
     },
-    [editingPromo, persistPromotions, promotions, showSuccessToast],
+    [editingPromo, extrasLocked, persistPromotionsLocal, promotions, reloadServiceExtras, showSuccessToast, useCabinetApi],
   );
 
   const deletePromo = useCallback(
-    (id: string) => {
-      persistPromotions(promotions.filter((p) => p.id !== id));
+    async (id: string) => {
+      if (extrasLocked) {
+        setExtrasProOpen(true);
+        return;
+      }
+      if (!useCabinetApi) {
+        persistPromotionsLocal(promotions.filter((p) => p.id !== id));
+        showSuccessToast('Акция удалена');
+        return;
+      }
+      if (isUuid(id)) {
+        await deleteMasterPromotion(id);
+      }
+      await reloadServiceExtras();
       showSuccessToast('Акция удалена');
     },
-    [persistPromotions, promotions, showSuccessToast],
+    [extrasLocked, persistPromotionsLocal, promotions, reloadServiceExtras, showSuccessToast, useCabinetApi],
   );
 
   const menuIndex = menuTarget ? services.findIndex((s) => s.id === menuTarget.id) : -1;
@@ -552,9 +741,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       >
       <ServicesPageHeader activeTab={activeTab} />
 
-      {listError ? (
+      {listError || extrasError ? (
         <p className="mb-4 rounded-[16px] border border-[#FDE8ED] bg-[#FFF1F4] px-4 py-3 text-[14px] font-semibold text-[#B45309]">
-          {listError}
+          {listError ?? extrasError}
         </p>
       ) : null}
 
@@ -580,20 +769,39 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           />
         ) : null}
         {activeTab === 'bundles' ? (
-          <ServicesBundlesTab
-            draft={draft}
-            services={services}
-            onToast={showSuccessToast}
-          />
+          <div className="space-y-4">
+            {extrasLocked ? <ServicesExtrasProBlock variant="bundles" /> : null}
+            <ServicesBundlesTab
+              draft={draft}
+              services={services}
+              bundles={bundles}
+              loading={useCabinetApi && extrasLoading}
+              extrasLocked={extrasLocked}
+              onExtrasLocked={() => setExtrasProOpen(true)}
+              onSave={saveBundle}
+              onDelete={deleteBundle}
+            />
+          </div>
         ) : null}
         {activeTab === 'promotions' ? (
-          <ServicesPromotionsTab
-            services={services}
-            promotions={promotions}
-            onCreate={openPromoCreate}
-            onEdit={openPromoEdit}
-            onDelete={deletePromo}
-          />
+          <div className="space-y-4">
+            {extrasLocked ? <ServicesExtrasProBlock variant="promotions" /> : null}
+            {extrasLoading && useCabinetApi ? (
+              <div className="flex min-h-[14rem] items-center justify-center py-8">
+                <LoadingVideo size="lg" />
+              </div>
+            ) : (
+              <ServicesPromotionsTab
+                services={services}
+                promotions={promotions}
+                extrasLocked={extrasLocked}
+                onExtrasLocked={() => setExtrasProOpen(true)}
+                onCreate={openPromoCreate}
+                onEdit={openPromoEdit}
+                onDelete={(id) => void deletePromo(id)}
+              />
+            )}
+          </div>
         ) : null}
       </AdminTabContentTransition>
       </div>
@@ -943,6 +1151,31 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-50"
           >
             {serviceActionBusy ? 'Удаление…' : 'Удалить'}
+          </button>
+        </div>
+      </AdminBottomSheet>
+
+      <AdminBottomSheet open={extrasProOpen} onClose={() => setExtrasProOpen(false)} title="Наборы и акции в Pro">
+        <p className="text-[15px] leading-relaxed text-neutral-600">
+          На тарифе Free доступны каталог и прайс. Наборы услуг и акции открываются после подключения Pro.
+        </p>
+        <div className="mt-6 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setExtrasProOpen(false)}
+            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
+          >
+            Позже
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setExtrasProOpen(false);
+              navigate(ADMIN_BILLING_PATH);
+            }}
+            className="flex min-h-12 flex-[1.15] items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+          >
+            Подключить Pro
           </button>
         </div>
       </AdminBottomSheet>

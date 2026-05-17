@@ -10,8 +10,9 @@ import { AdminBottomSheet } from './AdminBottomSheet';
 type Props = {
   appointment: DemoMasterAppointment | null;
   onClose: () => void;
-  /** Локальное обновление демо-записи. TODO (Supabase): PATCH appointment, валидация слота. */
+  /** Подтверждение / отмена / завершение — через persistAppointments → API. */
   onUpdateAppointment?: (next: DemoMasterAppointment) => void;
+  actionsDisabled?: boolean;
 };
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -23,7 +24,12 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AdminAppointmentDetailSheet({ appointment, onClose, onUpdateAppointment }: Props) {
+export function AdminAppointmentDetailSheet({
+  appointment,
+  onClose,
+  onUpdateAppointment,
+  actionsDisabled,
+}: Props) {
   const patch = (next: DemoMasterAppointment) => {
     onUpdateAppointment?.(next);
     onClose();
@@ -53,6 +59,7 @@ export function AdminAppointmentDetailSheet({ appointment, onClose, onUpdateAppo
             <div className="flex flex-col gap-2">
               <button
                 type="button"
+                disabled={actionsDisabled}
                 onClick={() => patch({ ...appointment, status: 'confirmed' })}
                 className={apptPinkBtn}
               >
@@ -60,6 +67,7 @@ export function AdminAppointmentDetailSheet({ appointment, onClose, onUpdateAppo
               </button>
               <button
                 type="button"
+                disabled={actionsDisabled}
                 onClick={() => patch({ ...appointment, status: 'cancelled' })}
                 className={apptOutlineBtn}
               >
@@ -72,6 +80,7 @@ export function AdminAppointmentDetailSheet({ appointment, onClose, onUpdateAppo
             <div className="flex flex-col gap-2">
               <button
                 type="button"
+                disabled={actionsDisabled}
                 onClick={() => patch({ ...appointment, status: 'completed' })}
                 className={apptPinkBtn}
               >
@@ -79,6 +88,7 @@ export function AdminAppointmentDetailSheet({ appointment, onClose, onUpdateAppo
               </button>
               <button
                 type="button"
+                disabled={actionsDisabled}
                 onClick={() => patch({ ...appointment, status: 'cancelled' })}
                 className={apptOutlineBtn}
               >

@@ -30,6 +30,56 @@ async function assertSlotNoOverlap(
   }
 }
 
+async function assertSlotMutable(
+  masterId: string,
+  slotId: string,
+  mode: 'edit' | 'delete',
+): Promise<void> {
+  const cur = await getMySlot(masterId, slotId);
+  const status = String(cur.status);
+
+  if (status === 'booked') {
+    throw ApiError.conflict(
+      mode === 'edit'
+        ? 'На это окно уже записан клиент. Изменить время и услугу нельзя — отмените запись в разделе «Заявки».'
+        : 'На это окно уже записан клиент. Удалить окно нельзя, пока запись активна.',
+      'SLOT_BOOKED',
+    );
+  }
+
+  const activeAppt = await query(
+    `select 1 from public.appointments
+      where slot_id = $1
+        and status in ('pending', 'confirmed')
+      limit 1`,
+    [slotId],
+  );
+  if (activeAppt.rowCount) {
+    throw ApiError.conflict(
+      'На это окно есть активная запись. Сначала отмените её в разделе «Заявки».',
+      'SLOT_HAS_APPOINTMENT',
+    );
+  }
+
+  if (mode === 'delete') {
+    if (status !== 'available') {
+      throw ApiError.conflict('Удалить можно только свободное окно без записей.', 'SLOT_NOT_AVAILABLE');
+    }
+    const historyAppt = await query(`select 1 from public.appointments where slot_id = $1 limit 1`, [slotId]);
+    if (historyAppt.rowCount) {
+      throw ApiError.conflict(
+        'Нельзя удалить окно: по нему уже была запись и оно сохранено в истории.',
+        'SLOT_HAS_HISTORY',
+      );
+    }
+    return;
+  }
+
+  if (status !== 'available') {
+    throw ApiError.conflict('Редактировать можно только свободное окно.', 'SLOT_NOT_AVAILABLE');
+  }
+}
+
 export async function listPublicSlots(filters: {
   masterId?: string;
   serviceId?: string;
@@ -157,7 +207,7 @@ export async function createMySlot(
   body: { startsAt: Date; endsAt: Date; serviceId?: string | null },
 ) {
   if (body.endsAt <= body.startsAt) {
-    throw ApiError.badRequest('endsAt must be after startsAt', 'BAD_SLOT_RANGE');
+    throw ApiError.badRequest('Время окончания должно быть позже начала', 'BAD_SLOT_RANGE');
   }
   const now = new Date();
   if (body.startsAt < now) {
@@ -173,7 +223,7 @@ export async function createMySlot(
       masterId,
     ]);
     if (!s.rowCount) {
-      throw ApiError.badRequest('Invalid service for this master', 'BAD_SERVICE');
+      throw ApiError.badRequest('Услуга не найдена или скрыта', 'BAD_SERVICE');
     }
   }
 
@@ -197,7 +247,7 @@ export async function getMySlot(masterId: string, slotId: string) {
   );
   const row = r.rows[0];
   if (!row) {
-    throw ApiError.notFound('Slot not found');
+    throw ApiError.notFound('Окно не найдено');
   }
   return row;
 }
@@ -207,15 +257,14 @@ export async function patchMySlot(
   slotId: string,
   patch: { startsAt?: Date; endsAt?: Date; serviceId?: string | null },
 ) {
+  await assertSlotMutable(masterId, slotId, 'edit');
+
   const cur = await getMySlot(masterId, slotId);
-  if (cur.status !== 'available') {
-    throw ApiError.conflict('Only available slots can be edited', 'SLOT_NOT_AVAILABLE');
-  }
   const starts = patch.startsAt ?? (cur.starts_at as Date);
   const ends = patch.endsAt ?? (cur.ends_at as Date);
   const now = new Date();
   if (ends <= starts) {
-    throw ApiError.badRequest('endsAt must be after startsAt', 'BAD_SLOT_RANGE');
+    throw ApiError.badRequest('Время окончания должно быть позже начала', 'BAD_SLOT_RANGE');
   }
   if (starts < now) {
     throw ApiError.badRequest('Окно не может начинаться в прошлом', 'SLOT_IN_PAST');
@@ -232,7 +281,7 @@ export async function patchMySlot(
       masterId,
     ]);
     if (!s.rowCount) {
-      throw ApiError.badRequest('Invalid service for this master', 'BAD_SERVICE');
+      throw ApiError.badRequest('Услуга не найдена или скрыта', 'BAD_SERVICE');
     }
   }
 
@@ -248,13 +297,6 @@ export async function patchMySlot(
 }
 
 export async function deleteMySlot(masterId: string, slotId: string) {
-  const cur = await getMySlot(masterId, slotId);
-  if (cur.status !== 'available') {
-    throw ApiError.conflict('Only available slots can be deleted', 'SLOT_NOT_AVAILABLE');
-  }
-  const ap = await query(`select 1 from public.appointments where slot_id = $1`, [slotId]);
-  if (ap.rowCount) {
-    throw ApiError.conflict('Slot has an appointment', 'SLOT_HAS_APPOINTMENT');
-  }
+  await assertSlotMutable(masterId, slotId, 'delete');
   await query(`delete from public.master_availability_slots where id = $1 and master_id = $2`, [slotId, masterId]);
 }

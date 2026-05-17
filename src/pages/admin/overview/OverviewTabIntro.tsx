@@ -1,12 +1,13 @@
 import { AdminTabIntroBanner } from '../AdminTabIntroBanner';
 import type { OverviewAnalyticsTab } from './overviewAnalytics';
-import { overviewSvodkaPhotoSrc } from './adminOverviewTheme';
+import { OVERVIEW_CLIENTS_FOOTER_SRC, overviewSvodkaPhotoSrc } from './adminOverviewTheme';
 
 export const OVERVIEW_TAB_INTRO_IMAGES = [
   overviewSvodkaPhotoSrc('обзор.webp'),
   overviewSvodkaPhotoSrc('доход.webp'),
   overviewSvodkaPhotoSrc('клиенты.webp'),
   overviewSvodkaPhotoSrc('репутация.webp'),
+  OVERVIEW_CLIENTS_FOOTER_SRC,
 ] as const;
 
 const OVERVIEW_TAB_INTRO: Record<OverviewAnalyticsTab, { title: string; imageSrc: string }> = {
