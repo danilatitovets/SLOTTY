@@ -3,7 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { listMyServices } from '../services/services.service.js';
 import { listMyScheduleRules } from './masterOnboarding.service.js';
 import { contactsToLegacyContactLine, type MasterContactPayload } from './masterContactsCodec.js';
-import { decodePaymentNote } from './masterTrustProfile.service.js';
+import { decodePaymentNote, listMasterPaymentMethodNames } from './masterTrustProfile.service.js';
 
 function num(v: string | number | null | undefined): number | null {
   if (v == null || v === '') return null;
@@ -286,7 +286,14 @@ export async function getMasterDetail(masterId: string) {
   const cat = category.rows[0];
 
   const br = bookingRules.rows[0] as BookingRulesRow | undefined;
-  const paymentDecodedPublic = br ? decodePaymentNote(br.payment_note) : { paymentNote: '', paymentMethods: [] as string[] };
+  const paymentMethodsPublic = await listMasterPaymentMethodNames(masterId);
+  const paymentDecodedPublic = br
+    ? decodePaymentNote(br.payment_note)
+    : { paymentNote: '', paymentMethods: [] as string[] };
+  const paymentNotePublic = paymentDecodedPublic.paymentNote || null;
+  const paymentMethodsResolved = paymentMethodsPublic.length
+    ? paymentMethodsPublic
+    : paymentDecodedPublic.paymentMethods;
 
   const locRows = locations.rows as {
     id: string;
@@ -345,8 +352,8 @@ export async function getMasterDetail(masterId: string) {
       ? {
           bookingRules: br.booking_rules,
           cancellationPolicy: br.cancellation_policy,
-          paymentNote: paymentDecodedPublic.paymentNote || null,
-          paymentMethods: paymentDecodedPublic.paymentMethods,
+          paymentNote: paymentNotePublic,
+          paymentMethods: paymentMethodsResolved,
         }
       : null,
     certificates: (certificates.rows as CertificateRow[]).map((row) => ({
@@ -636,7 +643,12 @@ export async function getMyMasterCabinet(masterId: string) {
 
   const loc = primaryLoc.rows[0];
   const br = bookingRules.rows[0] as BookingRulesRow | undefined;
+  const paymentMethodsCabinet = await listMasterPaymentMethodNames(masterId);
   const paymentDecoded = br ? decodePaymentNote(br.payment_note) : { paymentNote: '', paymentMethods: [] as string[] };
+  const paymentNoteCabinet = paymentDecoded.paymentNote || null;
+  const paymentMethodsCabinetResolved = paymentMethodsCabinet.length
+    ? paymentMethodsCabinet
+    : paymentDecoded.paymentMethods;
 
   let primaryCategory = category.rows[0] ?? null;
   let profileOut = profile;
@@ -697,8 +709,8 @@ export async function getMyMasterCabinet(masterId: string) {
       ? {
           bookingRules: br.booking_rules,
           cancellationPolicy: br.cancellation_policy,
-          paymentNote: paymentDecoded.paymentNote || null,
-          paymentMethods: paymentDecoded.paymentMethods,
+          paymentNote: paymentNoteCabinet,
+          paymentMethods: paymentMethodsCabinetResolved,
         }
       : null,
     certificates: (certificates.rows as CertificateRow[]).map((row) => ({

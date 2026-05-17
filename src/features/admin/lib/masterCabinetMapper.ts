@@ -14,6 +14,7 @@ import type { MasterLocation } from '../../profile/model/masterLocation';
 import { formatStoredPublicAddress } from '../../profile/model/masterLocation';
 import type { MasterCabinetDto, MasterCabinetScheduleRuleDto } from '../api/masterCabinetApi';
 import type { PrimaryLocationBody, ScheduleRuleDto } from '../../master-onboarding/api/becomeMasterApi';
+import { decodePaymentNote } from './paymentNoteCodec';
 
 const BOOKING_HORIZON_DAYS = 120;
 
@@ -285,8 +286,21 @@ export function cabinetDtoToMasterDraft(cabinet: MasterCabinetDto): MasterDraft 
     careerItems: careerItems.length ? careerItems : undefined,
     bookingRules: bookingRules?.bookingRules ?? undefined,
     cancellationPolicy: bookingRules?.cancellationPolicy ?? undefined,
-    paymentNote: bookingRules?.paymentNote ?? undefined,
-    paymentMethods: bookingRules?.paymentMethods?.length ? bookingRules.paymentMethods : undefined,
+    ...normalizeBookingRulesFields(bookingRules),
+  };
+}
+
+function normalizeBookingRulesFields(
+  bookingRules: MasterCabinetDto['bookingRules'],
+): Pick<MasterDraft, 'paymentNote' | 'paymentMethods'> {
+  if (!bookingRules) return {};
+  const decoded = decodePaymentNote(bookingRules.paymentNote);
+  const methods =
+    bookingRules.paymentMethods?.length ? bookingRules.paymentMethods : decoded.paymentMethods;
+  const note = decoded.paymentNote.trim() || undefined;
+  return {
+    paymentNote: note,
+    paymentMethods: methods.length ? methods : undefined,
   };
 }
 

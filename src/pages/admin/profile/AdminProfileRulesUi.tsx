@@ -9,6 +9,7 @@ import {
   sheetSectionTitleClass,
 } from './adminProfileCabinetTheme';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
+import { decodePaymentNote } from '../../../features/admin/lib/paymentNoteCodec';
 import { SheetFooter } from './AdminProfileEditSheets';
 
 export const PAYMENT_OPTIONS = ['Наличные', 'Карта', 'Перевод', 'Онлайн позже'] as const;
@@ -25,12 +26,20 @@ const PAYMENT_META: Record<PaymentOption, { icon: CabinetIconName; short: string
   'Онлайн позже': { icon: 'clock', short: 'Скоро в Slotty' },
 };
 
+function resolveRulesPayment(d: MasterDraft): { paymentMethods: string[]; paymentNote: string } {
+  const decoded = decodePaymentNote(d.paymentNote);
+  const paymentMethods =
+    (d.paymentMethods?.length ?? 0) > 0 ? (d.paymentMethods ?? []) : decoded.paymentMethods;
+  return { paymentMethods, paymentNote: decoded.paymentNote.trim() };
+}
+
 export function hasRulesContent(d: MasterDraft): boolean {
+  const pay = resolveRulesPayment(d);
   return Boolean(
     d.bookingRules?.trim() ||
       d.cancellationPolicy?.trim() ||
-      (d.paymentMethods?.length ?? 0) > 0 ||
-      d.paymentNote?.trim(),
+      pay.paymentMethods.length > 0 ||
+      pay.paymentNote,
   );
 }
 
@@ -104,7 +113,7 @@ export function RulesSection({
   draft: MasterDraft;
   onEditRules: () => void;
 }) {
-  const paymentMethods = draft.paymentMethods ?? [];
+  const { paymentMethods, paymentNote } = resolveRulesPayment(draft);
   const filled = hasRulesContent(draft);
 
   return (
@@ -171,9 +180,9 @@ export function RulesSection({
                   ) : (
                     <p className="mt-2 text-[13px] leading-snug text-[#9CA3AF]">Способы не выбраны</p>
                   )}
-                  {draft.paymentNote?.trim() ? (
+                  {paymentNote ? (
                     <p className="mt-2.5 whitespace-pre-wrap rounded-[14px] bg-white px-3 py-2.5 text-[13px] leading-relaxed text-[#374151] ring-1 ring-[#EAECEF]">
-                      {draft.paymentNote.trim()}
+                      {paymentNote}
                     </p>
                   ) : null}
                 </div>
@@ -214,14 +223,16 @@ export function SheetRules({
 }) {
   const [bookingRules, setBookingRules] = useState(draft.bookingRules ?? '');
   const [cancellationPolicy, setCancellationPolicy] = useState(draft.cancellationPolicy ?? '');
-  const [paymentMethods, setPaymentMethods] = useState<string[]>(draft.paymentMethods ?? []);
-  const [paymentNote, setPaymentNote] = useState(draft.paymentNote ?? '');
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(
+    () => resolveRulesPayment(draft).paymentMethods,
+  );
+  const [paymentNote, setPaymentNote] = useState(() => resolveRulesPayment(draft).paymentNote);
 
   useEffect(() => {
     setBookingRules(draft.bookingRules ?? '');
     setCancellationPolicy(draft.cancellationPolicy ?? '');
-    setPaymentMethods(draft.paymentMethods ?? []);
-    setPaymentNote(draft.paymentNote ?? '');
+    setPaymentMethods(resolveRulesPayment(draft).paymentMethods);
+    setPaymentNote(resolveRulesPayment(draft).paymentNote);
   }, [draft]);
 
   const togglePayment = (label: PaymentOption) => {
@@ -241,14 +252,10 @@ export function SheetRules({
 
   return (
     <div className="space-y-4 pb-1">
-      <p className="rounded-[16px] bg-[#FFF1F4] px-3.5 py-2.5 text-[12px] leading-relaxed text-[#6B7280]">
-        Эти тексты увидит клиент на странице мастера до записи. Пишите коротко и по делу.
-      </p>
-
       <section className={sheetSectionClass}>
         <p className={sheetSectionTitleClass}>Запись</p>
         <label className="mt-3 block">
-          <RulesFieldLabel iconName="calendar" hint="Сроки, предоплата, что нужно от клиента">
+          <RulesFieldLabel iconName="calendar">
             Условия записи
           </RulesFieldLabel>
           <textarea

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import type { MasterDraft, MasterPortfolioItem } from '../../../features/profile/lib/demoMasterStorage';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { CabinetIcon } from './cabinetIcons';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
@@ -161,7 +161,7 @@ function TrustBlockHeader({
   showBadge = true,
 }: {
   title: string;
-  description: string;
+  description?: string;
   countLabel?: string;
   showBadge?: boolean;
 }) {
@@ -169,7 +169,9 @@ function TrustBlockHeader({
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1 pr-1">
         <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">{title}</h2>
-        <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{description}</p>
+        {description?.trim() ? (
+          <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{description}</p>
+        ) : null}
       </div>
       {showBadge && countLabel ? (
         <span className="shrink-0 rounded-full bg-[#FFF1F4] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[#F47C8C]">
@@ -246,6 +248,211 @@ function formatCareerPeriod(startYear?: string, endYear?: string): string | null
   return `${start || '…'} — ${end || 'сейчас'}`;
 }
 
+const portfolioTextBreak = 'break-words [overflow-wrap:anywhere]';
+
+function PortfolioWorkDetailSheet({
+  item,
+  isCover,
+  categoryLabel,
+  open,
+  onClose,
+  onEdit,
+  onDelete,
+  onSetCover,
+  actionsDisabled,
+}: {
+  item: MasterPortfolioItem;
+  isCover: boolean;
+  categoryLabel: string;
+  open: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onSetCover: () => void;
+  actionsDisabled?: boolean;
+}) {
+  const imageUrl = item.imageUrl?.trim() ?? '';
+  const title = item.title?.trim() || 'Без названия';
+  const description = item.description?.trim() ?? '';
+
+  return (
+    <AdminBottomSheet open={open} onClose={onClose} title="Работа">
+      <div className="space-y-4 pb-1">
+        <div className="overflow-hidden rounded-[20px] bg-[#F3F4F6]">
+          {imageUrl ? (
+            <img src={imageUrl} alt="" className="aspect-[4/5] w-full object-cover" decoding="async" />
+          ) : (
+            <div className="flex aspect-[4/5] w-full items-center justify-center text-[#9CA3AF]">
+              <CabinetIcon name="photo" size={48} />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {isCover ? (
+            <span className="inline-flex rounded-full bg-[#111827] px-2.5 py-0.5 text-[11px] font-semibold text-white">
+              Обложка портфолио
+            </span>
+          ) : null}
+          <h3 className={`text-[18px] font-bold leading-snug tracking-[-0.03em] text-[#111827] ${portfolioTextBreak}`}>
+            {title}
+          </h3>
+          {categoryLabel ? (
+            <p className={`text-[14px] font-medium text-[#6B7280] ${portfolioTextBreak}`}>{categoryLabel}</p>
+          ) : null}
+          {description ? (
+            <p className={`text-[15px] leading-relaxed text-[#374151] ${portfolioTextBreak}`}>{description}</p>
+          ) : (
+            <p className="text-[14px] text-[#9CA3AF]">Описание не добавлено</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            disabled={actionsDisabled}
+            onClick={() => {
+              onClose();
+              onEdit();
+            }}
+            className="flex min-h-12 w-full items-center justify-center rounded-[17px] bg-[#F7F7F8] text-[15px] font-semibold text-[#111827] transition active:scale-[0.99] disabled:opacity-45"
+          >
+            Редактировать
+          </button>
+          <button
+            type="button"
+            disabled={actionsDisabled || !imageUrl || isCover}
+            onClick={() => {
+              onSetCover();
+              onClose();
+            }}
+            className="flex min-h-12 w-full items-center justify-center rounded-[17px] bg-[#FFF1F4] text-[15px] font-semibold text-[#F47C8C] transition active:scale-[0.99] disabled:opacity-45"
+          >
+            {isCover ? 'Уже обложка' : 'Сделать обложкой'}
+          </button>
+          <button
+            type="button"
+            disabled={actionsDisabled}
+            onClick={() => {
+              onClose();
+              onDelete();
+            }}
+            className="flex min-h-12 w-full items-center justify-center rounded-[17px] bg-[#FFF1F4] text-[15px] font-semibold text-red-600 transition active:scale-[0.99] disabled:opacity-45"
+          >
+            Удалить
+          </button>
+        </div>
+      </div>
+    </AdminBottomSheet>
+  );
+}
+
+function PortfolioWorkCard({
+  item,
+  index,
+  isCover,
+  categoryLabel,
+  onOpenDetail,
+  onEditPortfolio,
+  onDeletePortfolio,
+  onSetPortfolioCover,
+}: {
+  item: MasterPortfolioItem;
+  index: number;
+  isCover: boolean;
+  categoryLabel: string;
+  onOpenDetail: () => void;
+  onEditPortfolio: (id: string) => void;
+  onDeletePortfolio: (id: string) => void;
+  onSetPortfolioCover: (portfolioItemId: string) => void;
+}) {
+  const imageUrl = item.imageUrl?.trim() ?? '';
+  const title = item.title?.trim() || 'Без названия';
+
+  return (
+    <article className="flex flex-col overflow-hidden rounded-[20px] bg-[#FAFAFA] shadow-[0_4px_16px_rgba(17,24,39,0.05)]">
+      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-t-[20px] bg-[#F3F4F6]">
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="absolute inset-0 z-0 block h-full w-full text-left"
+          aria-label={`Подробнее: ${title}`}
+        >
+          {imageUrl ? (
+            <ImageReveal
+              src={imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              loading={index < 4 ? 'eager' : 'lazy'}
+              fetchPriority={index < 2 ? 'high' : 'low'}
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-[#9CA3AF]">
+              <CabinetIcon name="photo" size={40} />
+            </span>
+          )}
+        </button>
+        {isCover ? (
+          <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-[#111827]/80 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+            Обложка
+          </span>
+        ) : null}
+        <div className="absolute right-2 top-2 z-20" onClick={(e) => e.stopPropagation()}>
+          <CardOverflowMenu
+            ariaLabel="Действия с работой"
+            sheetTitle="Работа"
+            items={[
+              {
+                id: 'detail',
+                label: 'Подробнее',
+                onClick: onOpenDetail,
+              },
+              {
+                id: 'cover',
+                label: isCover ? 'Уже обложка' : 'Сделать обложкой',
+                onClick: () => onSetPortfolioCover(item.id),
+                disabled: !imageUrl || isCover,
+              },
+              {
+                id: 'edit',
+                label: 'Редактировать',
+                onClick: () => onEditPortfolio(item.id),
+              },
+              {
+                id: 'delete',
+                label: 'Удалить',
+                onClick: () => onDeletePortfolio(item.id),
+                tone: 'danger',
+              },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2.5">
+        <button type="button" onClick={onOpenDetail} className="w-full text-left">
+          <p className={`line-clamp-2 text-[14px] font-semibold leading-snug text-[#111827] ${portfolioTextBreak}`}>
+            {title}
+          </p>
+          {categoryLabel ? (
+            <p className={`mt-0.5 line-clamp-2 text-[12px] leading-snug text-[#6B7280] ${portfolioTextBreak}`}>
+              {categoryLabel}
+            </p>
+          ) : null}
+        </button>
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="mt-2 flex min-h-9 w-full items-center justify-center gap-1 rounded-[12px] border border-[#FDE8ED] bg-white text-[13px] font-semibold text-[#F47C8C] transition hover:bg-[#FFF1F4] active:scale-[0.98]"
+        >
+          Подробнее
+          <CabinetIcon name="chevron-right" size={16} className="shrink-0 opacity-80" />
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export function TrustSection({
   draft,
   onAddCareer,
@@ -270,94 +477,67 @@ export function TrustSection({
   onAddPortfolio: () => void;
   onEditPortfolio: (id: string) => void;
   onDeletePortfolio: (id: string) => void;
-  onSetPortfolioCover: (imageUrl: string) => void;
+  onSetPortfolioCover: (portfolioItemId: string) => void;
   actionsDisabled?: boolean;
 }) {
+  const [portfolioDetailId, setPortfolioDetailId] = useState<string | null>(null);
   const careerItems = normalizeCareerItems(draft);
   const certificates = draft.certificates ?? [];
   const portfolio = draft.portfolio ?? [];
-  const coverPhoto = draft.photoUrl?.trim() ?? '';
+  const portfolioCoverId = draft.portfolioCoverId?.trim() ?? '';
   const categoryHint = draft.category?.trim() ?? '';
+  const portfolioDetailItem = portfolioDetailId
+    ? portfolio.find((p) => p.id === portfolioDetailId)
+    : undefined;
 
   return (
     <div className="space-y-4">
       {/* Работы */}
       <section className={trustSectionCard}>
-        <TrustBlockHeader
-          title="Работы"
-          description="Добавьте фото работ, чтобы клиенты быстрее выбрали вас"
-          countLabel={worksCountLabel(portfolio.length)}
-        />
+        <TrustBlockHeader title="Работы" countLabel={worksCountLabel(portfolio.length)} />
 
         {portfolio.length > 0 ? (
           <>
             <div className="mt-4 grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
               {portfolio.map((item, i) => {
-                const imageUrl = item.imageUrl?.trim() ?? '';
-                const isCover = Boolean(imageUrl && coverPhoto && imageUrl === coverPhoto);
-                const title = item.title?.trim() || 'Без названия';
-                const subtitle = item.description?.trim() || categoryHint;
+                const isCover = Boolean(portfolioCoverId && item.id === portfolioCoverId);
+                const categoryLabel = item.description?.trim() || categoryHint || '';
 
                 return (
-                  <article
+                  <PortfolioWorkCard
                     key={item.id}
-                    className="overflow-hidden rounded-[20px] bg-[#FAFAFA] shadow-[0_4px_16px_rgba(17,24,39,0.05)]"
-                  >
-                    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[20px] bg-[#F3F4F6]">
-                      <div className="absolute right-2 top-2 z-20">
-                        <CardOverflowMenu
-                          ariaLabel="Действия с работой"
-                          sheetTitle="Работа"
-                          items={[
-                            {
-                              id: 'cover',
-                              label: isCover ? 'Уже обложка' : 'Сделать обложкой',
-                              onClick: () => onSetPortfolioCover(imageUrl),
-                              disabled: !imageUrl || isCover,
-                            },
-                            {
-                              id: 'edit',
-                              label: 'Редактировать',
-                              onClick: () => onEditPortfolio(item.id),
-                            },
-                            {
-                              id: 'delete',
-                              label: 'Удалить',
-                              onClick: () => onDeletePortfolio(item.id),
-                              tone: 'danger',
-                            },
-                          ]}
-                        />
-                      </div>
-                      {isCover ? (
-                        <span className="absolute left-2 top-2 z-10 rounded-full bg-[#111827]/80 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-                          Обложка
-                        </span>
-                      ) : null}
-                      {imageUrl ? (
-                        <ImageReveal
-                          src={imageUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          loading={i < 4 ? 'eager' : 'lazy'}
-                          fetchPriority={i < 2 ? 'high' : 'low'}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[#9CA3AF]">
-                          <CabinetIcon name="photo" size={40} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-3 pb-3 pt-2.5">
-                      <p className="truncate text-[14px] font-semibold text-[#111827]">{title}</p>
-                      {subtitle ? (
-                        <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-[#6B7280]">{subtitle}</p>
-                      ) : null}
-                    </div>
-                  </article>
+                    item={item}
+                    index={i}
+                    isCover={isCover}
+                    categoryLabel={categoryLabel}
+                    onOpenDetail={() => setPortfolioDetailId(item.id)}
+                    onEditPortfolio={onEditPortfolio}
+                    onDeletePortfolio={onDeletePortfolio}
+                    onSetPortfolioCover={onSetPortfolioCover}
+                  />
                 );
               })}
             </div>
+            {portfolioDetailItem ? (
+              <PortfolioWorkDetailSheet
+                item={portfolioDetailItem}
+                isCover={Boolean(
+                  portfolioCoverId && portfolioDetailItem.id === portfolioCoverId,
+                )}
+                categoryLabel={
+                  portfolioDetailItem.description?.trim() || categoryHint || ''
+                }
+                open={Boolean(portfolioDetailId)}
+                onClose={() => setPortfolioDetailId(null)}
+                onEdit={() => onEditPortfolio(portfolioDetailItem.id)}
+                onDelete={() => {
+                  setPortfolioDetailId(null);
+                  onDeletePortfolio(portfolioDetailItem.id);
+                }}
+                onSetCover={() => onSetPortfolioCover(portfolioDetailItem.id)}
+                actionsDisabled={actionsDisabled}
+              />
+            ) : null}
             <TrustAddButton label="Добавить работу" onClick={onAddPortfolio} disabled={actionsDisabled} />
           </>
         ) : (
@@ -374,11 +554,7 @@ export function TrustSection({
 
       {/* Сертификаты */}
       <section className={trustSectionCard}>
-        <TrustBlockHeader
-          title="Сертификаты"
-          description="Покажите клиентам документы, подтверждающие вашу квалификацию"
-          countLabel={certsCountLabel(certificates.length)}
-        />
+        <TrustBlockHeader title="Сертификаты" countLabel={certsCountLabel(certificates.length)} />
 
         {certificates.length > 0 ? (
           <>
@@ -451,7 +627,6 @@ export function TrustSection({
       <section className={trustSectionCard}>
         <TrustBlockHeader
           title="Опыт и образование"
-          description="Расскажите, где учились и сколько работаете в сфере"
           countLabel={careerCountLabel(careerItems.length)}
           showBadge={careerItems.length > 0}
         />

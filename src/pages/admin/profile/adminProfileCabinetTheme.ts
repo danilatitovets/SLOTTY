@@ -22,8 +22,7 @@ export const sheetSectionClass = 'rounded-[20px] bg-[#F7F7F8] p-4';
 
 export const sheetHintClass = 'text-[12px] leading-snug text-[#6B7280]';
 
-export const sheetSectionTitleClass =
-  'text-[11px] font-semibold uppercase tracking-[0.08em] text-[#9CA3AF]';
+export const sheetSectionTitleClass = 'text-[13px] font-semibold text-[#111827]';
 
 export const sheetCancelBtnClass =
   'flex min-h-12 flex-1 items-center justify-center rounded-[17px] bg-[#F7F7F8] px-4 text-[15px] font-semibold text-[#111827] transition hover:bg-[#F3F4F6] active:scale-[0.99] disabled:opacity-50';

@@ -471,9 +471,7 @@ export function ProfileCompletionCard({
             decoding="async"
             className="block w-full object-cover"
           />
-          <p className="px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-[#6B7280]">
-            Профиль полностью готов — клиенты могут записываться
-          </p>
+
         </div>
       ) : (
         <ul className="mt-4 divide-y divide-[#EAECEF]">

@@ -334,7 +334,6 @@ export function SheetMainInfo({
   return (
     <div className="space-y-4">
       <div className={sheetSectionClass}>
-        <p className={sheetSectionTitleClass}>Фото в профиле</p>
         <input
           ref={photoInputRef}
           type="file"
@@ -366,9 +365,7 @@ export function SheetMainInfo({
         </div>
         <div className="mt-2 space-y-1">
           {photoUploadErr ? <p className="text-center text-[12px] font-medium text-red-600">{photoUploadErr}</p> : null}
-          <p className={`text-center ${sheetHintClass}`}>
-            JPG или PNG. Так фото будет выглядеть на карточке в каталоге.
-          </p>
+
         </div>
       </div>
 
@@ -737,7 +734,6 @@ export function SheetAddress({
 
       <div className={sheetSectionClass}>
         <p className="text-[13px] font-semibold text-[#111827]">Как найти вас</p>
-        <p className={`mt-0.5 ${sheetHintClass}`}>Подъезд, этаж и подсказки — у клиента с записью</p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {visitType === 'at_home' ? (
             <label className="block sm:col-span-2">

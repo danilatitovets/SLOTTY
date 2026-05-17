@@ -75,6 +75,8 @@ export type MasterDraft = {
   careerItems?: MasterDraftCareerItem[];
   certificates?: MasterCertificate[];
   portfolio?: MasterPortfolioItem[];
+  /** Id работы-портфолио, отмеченной как обложка (не меняет фото профиля). */
+  portfolioCoverId?: string;
   bookingRules?: string;
   cancellationPolicy?: string;
   paymentMethods?: string[];

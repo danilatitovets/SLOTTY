@@ -2,30 +2,84 @@ import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 const PAYMENT_METHODS_MARKER = '\n\n__SLOTTY_PAYMENT_METHODS_JSON__\n';
+const PAYMENT_METHODS_MARKER_ALT = '__SLOTTY_PAYMENT_METHODS_JSON__';
 
-function encodePaymentNote(note: string | null | undefined, methods: string[] | undefined): string | null {
-  const n = (note ?? '').trim();
-  const m = methods?.filter(Boolean) ?? [];
-  if (!m.length) return n || null;
-  const payload = `${n}${PAYMENT_METHODS_MARKER}${JSON.stringify(m)}`;
-  return payload.trim() || null;
-}
+/** Имена в UI кабинета → code в `payment_methods`. */
+const PAYMENT_LABEL_TO_CODE: Record<string, string> = {
+  Наличные: 'cash',
+  Карта: 'card',
+  Перевод: 'transfer',
+  'Онлайн позже': 'online_later',
+};
 
 export function decodePaymentNote(db: string | null): { paymentNote: string; paymentMethods: string[] } {
-  if (!db) return { paymentNote: '', paymentMethods: [] };
-  const idx = db.indexOf(PAYMENT_METHODS_MARKER);
-  if (idx === -1) return { paymentNote: db, paymentMethods: [] };
-  const note = db.slice(0, idx).trim();
-  const raw = db.slice(idx + PAYMENT_METHODS_MARKER.length).trim();
+  const raw = (db ?? '').trim();
+  if (!raw) return { paymentNote: '', paymentMethods: [] };
+  let idx = raw.indexOf(PAYMENT_METHODS_MARKER);
+  let markerLen = PAYMENT_METHODS_MARKER.length;
+  if (idx === -1) {
+    idx = raw.indexOf(PAYMENT_METHODS_MARKER_ALT);
+    markerLen = PAYMENT_METHODS_MARKER_ALT.length;
+  }
+  if (idx === -1) return { paymentNote: raw, paymentMethods: [] };
+  const note = raw.slice(0, idx).trim();
+  const jsonPart = raw.slice(idx + markerLen).trim();
   try {
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed = JSON.parse(jsonPart) as unknown;
     if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
       return { paymentNote: note, paymentMethods: parsed as string[] };
     }
   } catch {
     /* ignore */
   }
-  return { paymentNote: db, paymentMethods: [] };
+  return { paymentNote: note || raw, paymentMethods: [] };
+}
+
+function sanitizePlainPaymentNote(note: string | null | undefined): string | null {
+  const plain = decodePaymentNote(note ?? '').paymentNote.trim();
+  return plain || null;
+}
+
+export async function listMasterPaymentMethodNames(masterId: string): Promise<string[]> {
+  const r = await query<{ name: string }>(
+    `select pm.name
+       from public.master_payment_methods mpm
+       join public.payment_methods pm on pm.id = mpm.payment_method_id
+      where mpm.master_id = $1
+        and pm.is_active = true
+      order by pm.sort_order asc, pm.name asc`,
+    [masterId],
+  );
+  return r.rows.map((row) => row.name);
+}
+
+async function replaceMasterPaymentMethods(masterId: string, labels: string[] | undefined): Promise<void> {
+  await query(`delete from public.master_payment_methods where master_id = $1`, [masterId]);
+  const unique = [...new Set((labels ?? []).map((x) => x.trim()).filter(Boolean))];
+  if (!unique.length) return;
+
+  for (const label of unique) {
+    const code = PAYMENT_LABEL_TO_CODE[label];
+    const found = await query<{ id: string }>(
+      `select id
+         from public.payment_methods
+        where is_active = true
+          and (
+            ($1::text is not null and code = $1)
+            or name = $2
+          )
+        limit 1`,
+      [code ?? null, label],
+    );
+    const pmId = found.rows[0]?.id;
+    if (!pmId) continue;
+    await query(
+      `insert into public.master_payment_methods (master_id, payment_method_id)
+       values ($1, $2)
+       on conflict (master_id, payment_method_id) do nothing`,
+      [masterId, pmId],
+    );
+  }
 }
 
 /** Для API-ответа: paymentNote без маркера + paymentMethods отдельно. */
@@ -45,12 +99,14 @@ export async function getMyBookingRulesDecoded(masterId: string): Promise<{
   if (!row) {
     return { bookingRules: null, cancellationPolicy: null, paymentNote: null, paymentMethods: [] };
   }
+  const fromDb = await listMasterPaymentMethodNames(masterId);
   const dec = decodePaymentNote(row.payment_note);
+  const paymentMethods = fromDb.length ? fromDb : dec.paymentMethods;
   return {
     bookingRules: row.booking_rules,
     cancellationPolicy: row.cancellation_policy,
     paymentNote: dec.paymentNote || null,
-    paymentMethods: dec.paymentMethods,
+    paymentMethods,
   };
 }
 
@@ -66,9 +122,11 @@ export async function patchMyBookingRules(
   const cur = await getMyBookingRulesDecoded(masterId);
   const bookingRules = patch.bookingRules !== undefined ? patch.bookingRules : cur.bookingRules;
   const cancellationPolicy = patch.cancellationPolicy !== undefined ? patch.cancellationPolicy : cur.cancellationPolicy;
-  const notePlain = patch.paymentNote !== undefined ? (patch.paymentNote ?? '') : cur.paymentNote ?? '';
+  const notePlain =
+    patch.paymentNote !== undefined
+      ? sanitizePlainPaymentNote(patch.paymentNote)
+      : sanitizePlainPaymentNote(cur.paymentNote);
   const methods = patch.paymentMethods !== undefined ? patch.paymentMethods : cur.paymentMethods;
-  const paymentNoteEncoded = encodePaymentNote(notePlain, methods);
 
   await query(
     `insert into public.master_booking_rules (master_id, booking_rules, cancellation_policy, payment_note)
@@ -78,8 +136,9 @@ export async function patchMyBookingRules(
        cancellation_policy = excluded.cancellation_policy,
        payment_note = excluded.payment_note,
        updated_at = now()`,
-    [masterId, bookingRules ?? null, cancellationPolicy ?? null, paymentNoteEncoded],
+    [masterId, bookingRules ?? null, cancellationPolicy ?? null, notePlain],
   );
+  await replaceMasterPaymentMethods(masterId, methods);
 }
 
 export type CareerItemCamel = {

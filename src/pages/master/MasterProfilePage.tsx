@@ -746,6 +746,9 @@ export function MasterProfilePage() {
           bookingRules: detail.bookingRules?.bookingRules ?? undefined,
           cancellationPolicy: detail.bookingRules?.cancellationPolicy ?? undefined,
           paymentNote: detail.bookingRules?.paymentNote ?? undefined,
+          paymentMethods: detail.bookingRules?.paymentMethods?.length
+            ? detail.bookingRules.paymentMethods
+            : undefined,
         };
         setApiProfile(extended);
       } catch {

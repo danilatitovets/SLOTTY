@@ -65,13 +65,8 @@ function AddressInfoRow({
   );
 }
 
-function AddressBlockTitle({ children, hint }: { children: ReactNode; hint?: string }) {
-  return (
-    <div className="mb-2">
-      <p className="text-[13px] font-semibold text-[#111827]">{children}</p>
-      {hint ? <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">{hint}</p> : null}
-    </div>
-  );
+function AddressBlockTitle({ children }: { children: ReactNode }) {
+  return <p className="mb-2 text-[13px] font-semibold text-[#111827]">{children}</p>;
 }
 
 /** Подпись поля в форме редактирования адреса. */
@@ -125,9 +120,6 @@ export function AddressSection({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">Адрес</h2>
-            <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">
-              Как клиенты увидят адрес до и после записи
-            </p>
           </div>
           <button
             type="button"
@@ -155,9 +147,7 @@ export function AddressSection({
 
           {hasAfterBooking ? (
             <div className="border-t border-[#EAECEF] pt-3">
-              <AddressBlockTitle hint="Подъезд, этаж и подсказки — только у клиента с записью">
-                После записи
-              </AddressBlockTitle>
+              <AddressBlockTitle>После записи</AddressBlockTitle>
               <div className="space-y-2">
                 {detailRows.map((row) => (
                   <AddressInfoRow

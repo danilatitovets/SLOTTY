@@ -190,25 +190,25 @@ export function AdminLayout() {
             className="sticky top-0 z-40 w-full min-w-0 bg-white"
             style={
               {
-                '--slotty-admin-header-h': '4.5rem',
+                '--slotty-admin-header-h': '6.5rem',
                 '--slotty-profile-tab-bar-h': PROFILE_TAB_BAR_HEIGHT,
               } as CSSProperties
             }
           >
             <div
-              className={`mx-auto flex w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} items-center justify-between gap-3 px-4 pb-3 pt-[calc(0.625rem+env(safe-area-inset-top,0px))] min-h-[3.5rem]`}
+              className={`mx-auto flex w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} items-center justify-between gap-3 px-4 pb-3 pt-[calc(0.625rem+env(safe-area-inset-top,0px))] min-h-[5.5rem]`}
             >
                 <Link
                   to={HUB_PATH}
                   aria-label="SLOTTY — на главную"
-                  className="inline-flex h-12 min-h-12 shrink-0 items-center overflow-hidden outline-none ring-0 transition hover:opacity-60 active:scale-[0.99]"
+                  className="inline-flex h-20 min-h-20 shrink-0 items-center overflow-hidden outline-none ring-0 transition hover:opacity-60 active:scale-[0.99] sm:h-[5.5rem] sm:min-h-[5.5rem]"
                 >
                   <img
                     src={HEADER_LOGO_SRC}
                     alt=""
                     decoding="async"
                     fetchPriority="low"
-                    className="h-10 w-auto max-w-[min(10rem,52vw)] object-contain object-left sm:h-11 sm:max-w-[11rem]"
+                    className="h-20 w-auto max-w-[min(20rem,70vw)] object-contain object-left sm:h-[5.5rem] sm:max-w-[22rem]"
                   />
                 </Link>
                 <button

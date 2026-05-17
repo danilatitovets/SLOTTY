@@ -23,6 +23,7 @@ import {
   uploadMasterPortfolioImageFile,
 } from '../../../features/admin/api/masterCabinetApi';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
+import { sanitizePaymentNoteForSave } from '../../../features/admin/lib/paymentNoteCodec';
 import {
   SheetAddress,
   SheetCertificate,
@@ -354,7 +355,7 @@ function AdminProfileReadView({
   onAddPortfolio: () => void;
   onEditPortfolio: (id: string) => void;
   onDeletePortfolio: (id: string) => void;
-  onSetPortfolioCover: (imageUrl: string) => void;
+  onSetPortfolioCover: (portfolioItemId: string) => void;
   actionsDisabled?: boolean;
 }) {
   const { activeSection, setActiveSection } = useProfileTabs();
@@ -447,6 +448,7 @@ export function AdminProfileSection() {
   const {
     draft,
     persistDraft,
+    commitDraftBaseline,
     flushDraftToBackend,
     flushScheduleToBackend,
     patchProfileToBackend,
@@ -518,26 +520,15 @@ export function AdminProfileSection() {
   );
 
   const setPortfolioCover = useCallback(
-    async (imageUrl: string) => {
-      const photoUrl = imageUrl.trim();
-      if (!photoUrl) return;
+    async (portfolioItemId: string) => {
+      const id = portfolioItemId.trim();
+      if (!id || !(draft.portfolio ?? []).some((p) => p.id === id)) return;
       await runSheetPersist(async () => {
         setSheetApiError(null);
-        const next: MasterDraft = { ...draft, photoUrl };
+        const next: MasterDraft = { ...draft, portfolioCoverId: id };
         try {
           if (useCabinetApi) {
-            await patchProfileToBackend({
-              name: next.name,
-              description: next.description,
-              phone: next.phone,
-              contact: next.contact,
-              contacts: next.contacts,
-              photoUrl: next.photoUrl,
-              category: next.category,
-              primaryCategoryId: next.primaryCategoryId,
-              primaryCategoryCode: next.primaryCategoryCode,
-            });
-            await refreshDraft();
+            commitDraftBaseline(next);
           } else {
             persistDraft(next);
           }
@@ -547,7 +538,7 @@ export function AdminProfileSection() {
         }
       });
     },
-    [draft, patchProfileToBackend, persistDraft, refreshDraft, runSheetPersist, showSaved, useCabinetApi],
+    [commitDraftBaseline, draft, persistDraft, runSheetPersist, showSaved, useCabinetApi],
   );
 
   const saveLocation = useCallback(
@@ -610,8 +601,8 @@ export function AdminProfileSection() {
           await updateMyBookingRules({
             bookingRules: patch.bookingRules ?? null,
             cancellationPolicy: patch.cancellationPolicy ?? null,
-            paymentNote: patch.paymentNote ?? null,
-            paymentMethods: patch.paymentMethods,
+            paymentNote: sanitizePaymentNoteForSave(patch.paymentNote),
+            paymentMethods: patch.paymentMethods ?? [],
           });
           await refreshDraft();
           closeSheet();
@@ -798,10 +789,12 @@ export function AdminProfileSection() {
     await runSheetPersist(async () => {
     const id = sheet.id;
     const next = (draft.portfolio ?? []).filter((item) => item.id !== id);
+    const portfolioCoverId =
+      draft.portfolioCoverId === id ? undefined : draft.portfolioCoverId;
 
     if (!useCabinetApi) {
       setSheetApiError(null);
-      persistDraft({ ...draft, portfolio: next });
+      persistDraft({ ...draft, portfolio: next, portfolioCoverId });
       closeSheet();
       showSaved();
       return;
@@ -809,7 +802,7 @@ export function AdminProfileSection() {
 
     setSheetApiError(null);
     if (!isUuid(id)) {
-      persistDraft({ ...draft, portfolio: next });
+      persistDraft({ ...draft, portfolio: next, portfolioCoverId });
       closeSheet();
       showSaved();
       return;

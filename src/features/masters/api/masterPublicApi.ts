@@ -60,6 +60,7 @@ export type MasterPublicDetailDto = {
     bookingRules: string | null;
     cancellationPolicy: string | null;
     paymentNote: string | null;
+    paymentMethods?: string[];
   } | null;
   certificates: {
     id: string;

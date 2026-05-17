@@ -5,6 +5,7 @@ import {
   saveMasterDraft,
 } from '../../profile/lib/demoMasterStorage';
 import type { MasterLocation } from '../../profile/model/masterLocation';
+import { decodePaymentNote } from '../../admin/lib/paymentNoteCodec';
 
 /** Демо-id по умолчанию для `/master/:id`. TODO (Supabase): id из БД. */
 export const DEFAULT_MASTER_ID = 'demo_master_local';
@@ -61,6 +62,18 @@ export function getMasterDraft(): MasterDraft {
   return normalizeMasterDraft(raw);
 }
 
+function normalizeStoredPaymentFields(
+  d: MasterDraft,
+): Pick<MasterDraft, 'paymentNote' | 'paymentMethods'> {
+  const decoded = decodePaymentNote(d.paymentNote);
+  const methods = Array.isArray(d.paymentMethods) && d.paymentMethods.length ? d.paymentMethods : decoded.paymentMethods;
+  const note = decoded.paymentNote.trim() || undefined;
+  return {
+    paymentNote: note,
+    paymentMethods: methods,
+  };
+}
+
 function normalizeMasterDraft(d: MasterDraft): MasterDraft {
   const base = baseDefaultDraft();
   const sched = d.schedule;
@@ -88,10 +101,13 @@ function normalizeMasterDraft(d: MasterDraft): MasterDraft {
     experience: typeof d.experience === 'string' ? d.experience : undefined,
     certificates: Array.isArray(d.certificates) ? d.certificates : [],
     portfolio: Array.isArray(d.portfolio) ? d.portfolio : [],
+    portfolioCoverId:
+      typeof d.portfolioCoverId === 'string' && d.portfolioCoverId.trim()
+        ? d.portfolioCoverId.trim()
+        : undefined,
     bookingRules: typeof d.bookingRules === 'string' ? d.bookingRules : undefined,
     cancellationPolicy: typeof d.cancellationPolicy === 'string' ? d.cancellationPolicy : undefined,
-    paymentMethods: Array.isArray(d.paymentMethods) ? d.paymentMethods : [],
-    paymentNote: typeof d.paymentNote === 'string' ? d.paymentNote : undefined,
+    ...normalizeStoredPaymentFields(d),
     careerItems: Array.isArray(d.careerItems) ? d.careerItems : undefined,
     primaryCategoryId: typeof d.primaryCategoryId === 'string' && d.primaryCategoryId.trim() ? d.primaryCategoryId.trim() : undefined,
     profileSlug: typeof d.profileSlug === 'string' && d.profileSlug.trim() ? d.profileSlug.trim() : undefined,

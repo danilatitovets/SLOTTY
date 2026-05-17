@@ -134,8 +134,14 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     try {
       const [cabinet, rows] = await Promise.all([fetchMasterCabinet(), fetchMasterAppointments()]);
       const mapped = cabinetDtoToMasterDraft(cabinet);
-      setDraft(mapped);
-      lastSyncedSnapshotRef.current = cloneDraft(mapped);
+      setDraft((prev) => {
+        const coverId = prev.portfolioCoverId?.trim();
+        const keepCover =
+          coverId && mapped.portfolio?.some((p) => p.id === coverId) ? coverId : undefined;
+        const next = keepCover ? { ...mapped, portfolioCoverId: keepCover } : mapped;
+        lastSyncedSnapshotRef.current = cloneDraft(next);
+        return next;
+      });
       setAppointments(rows.map(mapMasterAppointmentRowToDemo));
     } catch {
       /* ignore */
