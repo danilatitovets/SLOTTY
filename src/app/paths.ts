@@ -4,6 +4,13 @@ export const HUB_PATH = '/book';
 /** Поиск услуг для клиента. */
 export const SERVICES_PATH = '/services';
 
+/** Каталог мастеров для клиента. */
+export const MASTERS_PATH = '/masters';
+
+export function getServiceCategoryPath(categoryCode: string): string {
+  return `${SERVICES_PATH}/category/${encodeURIComponent(categoryCode)}`;
+}
+
 /** Мой профиль: записи, избранное, настройки (вкладки через query). */
 export const PROFILE_PATH = '/profile';
 

@@ -7,6 +7,7 @@ import {
   LEGAL_PD_CONSENT_PATH,
   LEGAL_PRIVACY_PATH,
   LEGAL_TERMS_PATH,
+  MASTERS_PATH,
   PROFILE_PATH,
   SERVICES_PATH,
 } from './paths';
@@ -16,7 +17,10 @@ import { Home } from '../pages/Home';
 import { BecomeMasterPage } from '../pages/master-onboarding/BecomeMasterPage';
 import { MasterProfilePage } from '../pages/master/MasterProfilePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
-import { ServicesPage } from '../pages/services/ServicesPage';
+import { ClientLayout } from '../pages/client/ClientLayout';
+import { MastersCatalogPage } from '../pages/client/pages/MastersCatalogPage';
+import { ServiceCategoryPage } from '../pages/client/pages/ServiceCategoryPage';
+import { ServicesCatalogPage } from '../pages/client/pages/ServicesCatalogPage';
 import { PersonalDataConsentPage } from '../pages/legal/PersonalDataConsentPage';
 import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
@@ -39,6 +43,7 @@ export {
   LEGAL_PRIVACY_PATH,
   LEGAL_TERMS_PATH,
   MASTER_PATH,
+  MASTERS_PATH,
   PROFILE_PATH,
   SERVICES_PATH,
 } from './paths';
@@ -49,8 +54,13 @@ export function AppRouter() {
       <Routes>
         <Route path="/" element={<Navigate to={HUB_PATH} replace />} />
         <Route path={HUB_PATH} element={<Home />} />
-        <Route path={SERVICES_PATH} element={<ServicesPage />} />
-        <Route path={PROFILE_PATH} element={<ProfilePage />} />
+        <Route element={<ClientLayout />}>
+          <Route path={SERVICES_PATH} element={<ServicesCatalogPage />} />
+          <Route path={`${SERVICES_PATH}/category/:categoryCode`} element={<ServiceCategoryPage />} />
+          <Route path={MASTERS_PATH} element={<MastersCatalogPage />} />
+          <Route path={PROFILE_PATH} element={<ProfilePage />} />
+        </Route>
+        <Route path="/catalog" element={<Navigate to={SERVICES_PATH} replace />} />
         <Route path="/master/:id" element={<MasterProfilePage />} />
         <Route path={BOOKING_PATH} element={<BookingPage />} />
         <Route path={`${ADMIN_PATH}/*`} element={<AdminPage />} />

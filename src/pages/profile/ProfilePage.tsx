@@ -7,7 +7,7 @@ import {
   type ChangeEvent,
   type ReactNode,
 } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import { ADMIN_PATH, BECOME_MASTER_PATH, getMasterPath, getProfilePath, SERVICES_PATH } from '../../app/paths';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
@@ -45,6 +45,8 @@ import { apiFetch, getApiBaseUrl } from '../../shared/api/backendClient';
 import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
 import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { HomeHeader } from '../HomeHeader';
+import type { ClientOutletContext } from '../client/clientOutletContext';
+import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../client/clientNavConstants';
 import { formatBelarusPhoneDisplay } from '../../features/profile/lib/belarusPhone';
 import { ClientSettingsSheet } from './components/ClientSettingsSheet';
 import { ProfileEditModal } from './components/ProfileEditModal';
@@ -588,6 +590,8 @@ export function ProfilePage() {
   const { profile, isLoading: authLoading, isAuthenticated, backendConfigured, refreshProfile } = useAuth();
   const { isTelegramWebApp, telegramUserPhotoUrl, telegramUserPreview } = useTelegram();
   const isMasterCabinet = useIsMasterUser();
+  const outletCtx = useOutletContext<ClientOutletContext | undefined>();
+  const clientShell = outletCtx?.clientShell === true;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [apptSubTab, setApptSubTab] = useState<DemoAppointmentTab>('upcoming');
@@ -919,14 +923,44 @@ export function ProfilePage() {
   const hasNewNotifications = notifications.some((n) => !n.read_at);
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-0 text-neutral-900">
-      <HomeHeader isDemoMaster={isMasterCabinet} onProfileTab={onProfileTab} />
+    <div
+      className={`min-h-dvh overflow-x-hidden bg-white pt-0 text-neutral-900 ${
+        clientShell
+          ? CLIENT_CONTENT_PAD_BOTTOM
+          : 'pb-[calc(2rem+env(safe-area-inset-bottom,0px))]'
+      }`}
+    >
+      {!clientShell ? (
+        <HomeHeader isDemoMaster={isMasterCabinet} onProfileTab={onProfileTab} />
+      ) : null}
 
       <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
-        <div className="bg-white pb-5 pt-[calc(5.5rem+env(safe-area-inset-top,0px))]">
+        <div
+          className={`bg-white pb-5 ${
+            clientShell
+              ? CLIENT_HEADER_OFFSET
+              : 'pt-[calc(5.5rem+env(safe-area-inset-top,0px))]'
+          }`}
+        >
           <h1 className="text-[38px] font-semibold leading-none tracking-[-0.065em] text-neutral-950">
             Мой профиль
           </h1>
+
+          {clientShell && isMasterCabinet ? (
+            <Link
+              to={ADMIN_PATH}
+              className="mt-5 flex items-center gap-4 rounded-[28px] bg-gradient-to-br from-[#FFF1F4] to-white p-4 ring-1 ring-[#FCE7EC] shadow-[0_8px_28px_rgba(244,124,140,0.12)] transition active:scale-[0.99]"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[22px] shadow-sm">
+                ✨
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[16px] font-semibold text-neutral-950">Вы мастер</p>
+                <p className="mt-0.5 text-[13px] text-neutral-500">Перейти в кабинет мастера</p>
+              </div>
+              <IconChevronRight className="h-5 w-5 shrink-0 text-[#F47C8C]" />
+            </Link>
+          ) : null}
 
           {!authLoading && !backendConfigured ? (
             <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-[14px] font-medium leading-snug text-amber-950">
@@ -1331,13 +1365,15 @@ export function ProfilePage() {
                   </button>
                 ) : null}
 
-                <Link
-                  to={isMasterCabinet ? ADMIN_PATH : BECOME_MASTER_PATH}
-                  className="mt-1 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
-                >
-                  {isMasterCabinet ? 'Кабинет мастера' : 'Стать мастером'}
-                  <IconChevronRight className="h-4 w-4" />
-                </Link>
+                {!(clientShell && isMasterCabinet) ? (
+                  <Link
+                    to={isMasterCabinet ? ADMIN_PATH : BECOME_MASTER_PATH}
+                    className="mt-1 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
+                  >
+                    {isMasterCabinet ? 'Кабинет мастера' : 'Стать мастером'}
+                    <IconChevronRight className="h-4 w-4" />
+                  </Link>
+                ) : null}
               </div>
           </section>
         ) : null}
