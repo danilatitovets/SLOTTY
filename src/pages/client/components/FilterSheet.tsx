@@ -44,7 +44,7 @@ export function FilterSheet({ open, title, onClose, onReset, onApply, children }
             Закрыть
           </button>
         </div>
-        <div className="max-h-[52dvh] overflow-y-auto px-5 pb-4">{children}</div>
+        <div className="max-h-[62dvh] overflow-y-auto px-5 pb-4">{children}</div>
         <div className="flex gap-2 border-t border-[#F3F4F6] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button type="button" className={`${clientOutlineBtn} flex-1`} onClick={onReset}>
             Сбросить
@@ -92,5 +92,36 @@ export function FilterChipGroup({
         })}
       </div>
     </div>
+  );
+}
+
+export function FilterSwitch({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="mb-4 flex cursor-pointer items-center justify-between gap-3 rounded-[16px] bg-[#FAFAFA] px-4 py-3.5">
+      <span className="text-[15px] font-medium text-[#111827]">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+          checked ? 'bg-[#F47C8C]' : 'bg-[#D1D5DB]'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+            checked ? 'left-[22px]' : 'left-0.5'
+          }`}
+        />
+      </button>
+    </label>
   );
 }

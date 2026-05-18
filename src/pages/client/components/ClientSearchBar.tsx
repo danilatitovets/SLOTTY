@@ -9,6 +9,7 @@ type Props = {
   placeholder: string;
   onFilterClick?: () => void;
   showFilter?: boolean;
+  activeFilterCount?: number;
 };
 
 export function ClientSearchBar({
@@ -17,6 +18,7 @@ export function ClientSearchBar({
   placeholder,
   onFilterClick,
   showFilter = true,
+  activeFilterCount = 0,
 }: Props) {
   return (
     <div className="flex gap-2.5 pt-0.5">
@@ -37,10 +39,17 @@ export function ClientSearchBar({
         <button
           type="button"
           onClick={onFilterClick}
-          aria-label="Фильтры"
-          className={`flex h-12 w-12 shrink-0 items-center justify-center ${fieldBase} text-[#6B7280] active:scale-95 hover:text-[#F47C8C] focus:bg-white focus:text-[#F47C8C] focus:shadow-[0_6px_24px_rgba(244,124,140,0.14)]`}
+          aria-label={
+            activeFilterCount > 0 ? `Фильтры, выбрано ${activeFilterCount}` : 'Фильтры'
+          }
+          className={`relative flex h-12 w-12 shrink-0 items-center justify-center ${fieldBase} text-[#6B7280] active:scale-95 hover:text-[#F47C8C] focus:bg-white focus:text-[#F47C8C] focus:shadow-[0_6px_24px_rgba(244,124,140,0.14)]`}
         >
           <HiAdjustmentsHorizontal className="h-5 w-5" aria-hidden />
+          {activeFilterCount > 0 ? (
+            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F47C8C] px-1 text-[10px] font-bold text-white">
+              {activeFilterCount > 9 ? '9+' : activeFilterCount}
+            </span>
+          ) : null}
         </button>
       ) : null}
     </div>

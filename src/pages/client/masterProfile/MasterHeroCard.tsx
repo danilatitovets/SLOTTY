@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react';
 import { HiCheckBadge, HiMapPin, HiHomeModern, HiStar } from 'react-icons/hi2';
+import type { MasterLocation } from '../../../features/profile/model/masterLocation';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 import { formatReviewsCountLabel } from '../../../features/services/model/demoMasters';
 import { formatDistanceKm, haversineKm } from '../lib/catalogFormat';
 import type { ExtendedMasterProfile } from './types';
-import { formatMasterRoleLabel, locationDistrictLine, visitChipLabel } from './masterProfileUtils';
+import { formatMasterRoleLabel, visitChipLabel } from './masterProfileUtils';
 
 type Props = {
   master: ExtendedMasterProfile;
@@ -18,6 +20,35 @@ function initials(name: string): string {
   return (name[0] ?? 'M').toUpperCase();
 }
 
+/** Адрес для чипа без дублирования города. */
+function formatHeroAddressChip(location: MasterLocation): string | null {
+  const city = location.city?.trim();
+  const street = location.street?.trim();
+  if (!street || street === '—') return city || null;
+  if (city && (street === city || street.startsWith(`${city},`) || street.startsWith(`${city} `))) {
+    return street;
+  }
+  if (city) return `${city}, ${street}`;
+  return street;
+}
+
+/** Короткая подпись района, если нет расстояния. */
+function formatHeroDistrictShort(location: MasterLocation): string | null {
+  const street = location.street?.trim();
+  const city = location.city?.trim();
+  if (street && street !== '—') {
+    const s = street.length > 22 ? `${street.slice(0, 21)}…` : street;
+    return s;
+  }
+  return city || null;
+}
+
+type HeroStat = {
+  key: string;
+  value: ReactNode;
+  label: string;
+};
+
 export function MasterHeroCard({ master, userLat, userLng }: Props) {
   const lat = master.location.lat;
   const lng = master.location.lng;
@@ -26,8 +57,63 @@ export function MasterHeroCard({ master, userLat, userLng }: Props) {
       ? haversineKm(userLat, userLng, lat, lng)
       : null;
   const distanceLabel = formatDistanceKm(distanceKm);
-  const district = locationDistrictLine(master.location.city, master.location.street);
+  const addressChip = formatHeroAddressChip(master.location);
   const showVerified = master.rating >= 4.5 && master.reviewsCount >= 10;
+
+  const hasRating = master.rating > 0;
+  const hasReviews = master.reviewsCount > 0;
+  const isNewMaster = !hasRating && !hasReviews;
+
+  const stats: HeroStat[] = [];
+
+  if (isNewMaster) {
+    stats.push({
+      key: 'new',
+      value: <span className="text-[#F47C8C]">Новый</span>,
+      label: 'мастер',
+    });
+  } else {
+    if (hasRating) {
+      stats.push({
+        key: 'rating',
+        value: (
+          <span className="inline-flex items-center justify-center gap-0.5">
+            <HiStar className="h-4 w-4 text-[#F47C8C]" aria-hidden />
+            {master.rating.toFixed(1)}
+          </span>
+        ),
+        label: hasReviews
+          ? formatReviewsCountLabel(master.reviewsCount)
+          : 'Пока нет отзывов',
+      });
+    } else if (hasReviews) {
+      stats.push({
+        key: 'reviews',
+        value: formatReviewsCountLabel(master.reviewsCount),
+        label: 'отзывы',
+      });
+    }
+  }
+
+  if (distanceLabel) {
+    stats.push({
+      key: 'distance',
+      value: distanceLabel,
+      label: 'от вас',
+    });
+  } else {
+    const district = formatHeroDistrictShort(master.location);
+    if (district) {
+      stats.push({
+        key: 'district',
+        value: district,
+        label: 'район',
+      });
+    }
+  }
+
+  const gridCols =
+    stats.length >= 3 ? 'grid-cols-3' : stats.length === 2 ? 'grid-cols-2' : 'grid-cols-1';
 
   return (
     <section className="flex gap-4">
@@ -59,38 +145,31 @@ export function MasterHeroCard({ master, userLat, userLng }: Props) {
         </div>
         <p className="mt-0.5 text-[14px] font-medium text-[#6B7280]">{formatMasterRoleLabel(master.category)}</p>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="flex items-center justify-center gap-0.5 text-[15px] font-semibold text-[#111827]">
-              <HiStar className="h-4 w-4 text-[#F47C8C]" aria-hidden />
-              {master.rating > 0 ? master.rating.toFixed(1) : '—'}
-            </p>
-            <p className="mt-0.5 text-[11px] text-[#9CA3AF]">{formatReviewsCountLabel(master.reviewsCount)}</p>
+        {stats.length > 0 ? (
+          <div className={`mt-3 grid ${gridCols} gap-2 text-center`}>
+            {stats.map((s) => (
+              <div key={s.key}>
+                <p className="text-[15px] font-semibold leading-snug text-[#111827]">{s.value}</p>
+                <p className="mt-0.5 text-[11px] text-[#9CA3AF]">{s.label}</p>
+              </div>
+            ))}
           </div>
-          <div>
-            <p className="text-[15px] font-semibold text-[#111827]">
-              {master.reviewsCount > 0 ? Math.max(master.reviewsCount, 1) : '—'}
-            </p>
-            <p className="mt-0.5 text-[11px] text-[#9CA3AF]">записей</p>
-          </div>
-          <div>
-            <p className="text-[15px] font-semibold text-[#111827]">{distanceLabel ?? '—'}</p>
-            <p className="mt-0.5 text-[11px] text-[#9CA3AF]">
-              {distanceLabel ? 'от вас' : 'район'}
-            </p>
-          </div>
-        </div>
+        ) : null}
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-medium text-[#374151]">
-            <HiMapPin className="h-3.5 w-3.5 text-[#9CA3AF]" aria-hidden />
-            {district}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-medium text-[#374151]">
-            <HiHomeModern className="h-3.5 w-3.5 text-[#9CA3AF]" aria-hidden />
-            {visitChipLabel(master.location.visitType)}
-          </span>
-        </div>
+        {(addressChip || master.location.visitType) && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {addressChip ? (
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-medium text-[#374151]">
+                <HiMapPin className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
+                <span className="truncate">{addressChip}</span>
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#F1EFEF] px-3 py-1.5 text-[12px] font-medium text-[#374151]">
+              <HiHomeModern className="h-3.5 w-3.5 text-[#9CA3AF]" aria-hidden />
+              {visitChipLabel(master.location.visitType)}
+            </span>
+          </div>
+        )}
       </div>
     </section>
   );

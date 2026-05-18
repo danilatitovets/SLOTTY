@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { HiHeart, HiMapPin } from 'react-icons/hi2';
 import { HEADER_LOGO_SRC } from '../../../app/headerLogo';
-import { getProfilePath, SERVICES_PATH } from '../../../app/paths';
+import { getProfilePath, HUB_PATH } from '../../../app/paths';
 
 type Props = {
   cityLabel: string;
@@ -14,8 +14,8 @@ export function ClientHeader({ cityLabel, onCityClick }: Props) {
       <div className="mx-auto max-w-lg px-4">
         <div className="flex items-center justify-between gap-2 rounded-[28px] bg-[#F1EFEF] px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:px-4">
           <Link
-            to={SERVICES_PATH}
-            aria-label="SLOTTY"
+            to={HUB_PATH}
+            aria-label="SLOTTY — на главную"
             className="inline-flex h-9 shrink-0 items-center transition active:opacity-70"
           >
             <img

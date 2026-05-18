@@ -9,6 +9,10 @@ import { getStoredMasterDraft } from '../../profile/lib/demoMasterStorage';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { DEMO_MASTER_LOCATIONS } from './demoMasterLocations';
+import {
+  getCategoryWorkPhotoUrl,
+  resolveCategoryWorkCode,
+} from '../../catalog/categoryWorkPhotos';
 
 export type ServiceListingRecord = {
   id: string;
@@ -73,6 +77,8 @@ export type DemoMasterProfile = {
   masterId: string;
   masterName: string;
   category: string;
+  /** Slug категории (`manicure`, …) — фото услуг и фильтры. */
+  categoryCode?: string;
   rating: number;
   reviewsCount: number;
   location: MasterLocation;
@@ -538,6 +544,10 @@ export const DEMO_MASTER_PROFILES: readonly DemoMasterProfile[] = MASTERS;
 /** Карточки ленты поиска: по одной записи на мастера (главная услуга). */
 export const DEMO_SERVICE_LISTINGS: ServiceListingRecord[] = MASTERS.map((m) => {
   const primary = m.services[0];
+  const nextSlot = new Date();
+  nextSlot.setHours(16, 0, 0, 0);
+  if (nextSlot.getTime() < Date.now()) nextSlot.setDate(nextSlot.getDate() + 1);
+  const categoryPhoto = getCategoryWorkPhotoUrl(resolveCategoryWorkCode(m.category));
   return {
     id: `listing-${m.masterId}`,
     masterId: m.masterId,
@@ -550,6 +560,10 @@ export const DEMO_SERVICE_LISTINGS: ServiceListingRecord[] = MASTERS.map((m) => 
     priceFrom: primary.price,
     photoUrl: m.photoUrl,
     primaryServiceId: primary.id,
+    nextSlotStartsAt: nextSlot.toISOString(),
+    nextSlotId: `demo-slot-${m.masterId}`,
+    portfolioPreview: [categoryPhoto, categoryPhoto, categoryPhoto, categoryPhoto],
+    portfolioTotal: 27,
   };
 });
 

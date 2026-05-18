@@ -1,10 +1,17 @@
-import { HiChevronRight, HiSparkles } from 'react-icons/hi2';
-import { SectionHeading } from '../components/SectionHeading';
+import { HiChevronRight } from 'react-icons/hi2';
+import {
+  getCategoryWorkPhotoUrl,
+  resolveCategoryWorkCode,
+} from '../../../features/catalog/categoryWorkPhotos';
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
+import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { SectionHeading } from '../components/SectionHeading';
 import { formatServicePrice, serviceDurationLabel } from './masterProfileUtils';
 
 type Props = {
   services: DemoMasterService[];
+  categoryCode?: string;
+  categoryLabel?: string;
   highlightServiceId?: string | null;
   onSelect: (service: DemoMasterService) => void;
   onViewAll?: () => void;
@@ -12,10 +19,15 @@ type Props = {
 
 export function MasterServicesList({
   services,
+  categoryCode,
+  categoryLabel,
   highlightServiceId,
   onSelect,
   onViewAll,
 }: Props) {
+  const workPhotoCode = resolveCategoryWorkCode(categoryCode ?? categoryLabel);
+  const workPhotoUrl = getCategoryWorkPhotoUrl(workPhotoCode);
+
   const sorted = [...services].sort((a, b) => {
     if (highlightServiceId) {
       if (a.id === highlightServiceId) return -1;
@@ -50,9 +62,12 @@ export function MasterServicesList({
                     : 'bg-white shadow-[0_4px_20px_rgba(17,24,39,0.05)]'
                 }`}
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[#F47C8C]">
-                  <HiSparkles className="h-5 w-5" aria-hidden />
-                </span>
+                <ImageReveal
+                  src={workPhotoUrl}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-[14px] object-cover"
+                  loading="lazy"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-[16px] font-semibold text-[#111827]">{service.title}</p>
                   <p className="mt-0.5 text-[13px] text-[#9CA3AF]">

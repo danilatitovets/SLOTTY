@@ -174,6 +174,8 @@ export function MasterPublicPage() {
 
         <MasterServicesList
           services={master.services}
+          categoryCode={master.categoryCode}
+          categoryLabel={master.category}
           highlightServiceId={highlightServiceId}
           onSelect={setServiceSheet}
           onViewAll={() => openBooking()}
@@ -187,9 +189,8 @@ export function MasterPublicPage() {
       <MasterStickyActions
         onChooseTime={() => openBooking()}
         phone={master.phone}
-        contact={master.contact}
-        onContactUnavailable={() =>
-          showToast('Контакты будут доступны после подтверждения записи')
+        onPhoneUnavailable={() =>
+          showToast('Телефон будет доступен после подтверждения записи')
         }
       />
 

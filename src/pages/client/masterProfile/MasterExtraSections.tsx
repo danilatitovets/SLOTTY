@@ -1,10 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { HiChevronDown } from 'react-icons/hi2';
-import {
-  formatBookingHowToFind,
-  formatPublicAddress,
-  masterVisitTypeLabel,
-} from '../../../features/profile/model/masterLocation';
+import { MasterAddressBlock } from './MasterAddressBlock';
 import type { ExtendedMasterProfile } from './types';
 
 type Props = { master: ExtendedMasterProfile };
@@ -20,11 +16,11 @@ function Accordion({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-[20px] bg-white shadow-[0_4px_20px_rgba(17,24,39,0.05)]">
+    <div className="overflow-hidden rounded-[20px] bg-white shadow-[0_4px_20px_rgba(17,24,39,0.05)] ring-1 ring-[#F3F4F6]/80">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3.5 text-left"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left active:bg-[#FAFAFA]"
       >
         <span className="text-[16px] font-semibold text-[#111827]">{title}</span>
         <HiChevronDown
@@ -32,7 +28,9 @@ function Accordion({
           aria-hidden
         />
       </button>
-      {open ? <div className="border-t border-[#F3F4F6] px-4 pb-4 pt-2">{children}</div> : null}
+      {open ? (
+        <div className="border-t border-[#F3F4F6] px-4 pb-4 pt-3">{children}</div>
+      ) : null}
     </div>
   );
 }
@@ -41,21 +39,25 @@ export function MasterExtraSections({ master }: Props) {
   const [bioExpanded, setBioExpanded] = useState(false);
   const bio = master.bio?.trim();
   const rules = [master.bookingRules, master.cancellationPolicy, master.paymentNote]
-    .filter(Boolean)
+    .filter((s) => s?.trim())
     .join('\n\n');
 
   return (
-    <section className="mt-8 space-y-2">
+    <section className="mt-8 space-y-2.5">
       {bio ? (
         <Accordion title="О мастере">
-          <p className={`text-[14px] leading-relaxed text-[#4B5563] ${bioExpanded ? '' : 'line-clamp-3'}`}>
+          <p
+            className={`text-[14px] leading-relaxed text-[#4B5563] ${
+              bioExpanded ? '' : 'line-clamp-4'
+            }`}
+          >
             {bio}
           </p>
-          {bio.length > 120 ? (
+          {bio.length > 160 ? (
             <button
               type="button"
               onClick={() => setBioExpanded((v) => !v)}
-              className="mt-2 text-[13px] font-semibold text-[#F47C8C]"
+              className="mt-2.5 text-[13px] font-semibold text-[#F47C8C]"
             >
               {bioExpanded ? 'Свернуть' : 'Показать полностью'}
             </button>
@@ -63,23 +65,44 @@ export function MasterExtraSections({ master }: Props) {
         </Accordion>
       ) : null}
 
-      <Accordion title="Адрес и формат">
-        <p className="text-[14px] font-medium text-[#111827]">
-          {formatPublicAddress(master.location)}
-        </p>
-        <p className="mt-1 text-[13px] text-[#6B7280]">{masterVisitTypeLabel(master.location.visitType)}</p>
-        {master.location.showExactAddressAfterBooking ? (
-          <p className="mt-2 text-[13px] text-[#9CA3AF]">
-            Точный адрес будет доступен после подтверждения записи
-          </p>
-        ) : (
-          <p className="mt-2 text-[13px] text-[#6B7280]">{formatBookingHowToFind(master.location)}</p>
-        )}
+      <Accordion title="Адрес и формат" defaultOpen>
+        <MasterAddressBlock location={master.location} />
       </Accordion>
 
       {rules ? (
         <Accordion title="Правила записи">
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">{rules}</p>
+          <div className="space-y-3">
+            {master.bookingRules?.trim() ? (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                  Запись
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
+                  {master.bookingRules.trim()}
+                </p>
+              </div>
+            ) : null}
+            {master.cancellationPolicy?.trim() ? (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                  Отмена и перенос
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
+                  {master.cancellationPolicy.trim()}
+                </p>
+              </div>
+            ) : null}
+            {master.paymentNote?.trim() ? (
+              <div>
+                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                  Оплата
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
+                  {master.paymentNote.trim()}
+                </p>
+              </div>
+            ) : null}
+          </div>
         </Accordion>
       ) : null}
     </section>

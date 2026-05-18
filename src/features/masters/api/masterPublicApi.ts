@@ -178,11 +178,13 @@ export function mapMasterDetailToDemoProfile(detail: MasterPublicDetailDto): Dem
   }));
 
   const categoryLabel = master.category?.name?.trim() || master.category?.code || 'Мастер';
+  const categoryCode = master.category?.code?.trim() || undefined;
 
   return {
     masterId: master.masterId,
     masterName: master.displayName.trim() || 'Мастер',
     category: categoryLabel,
+    categoryCode,
     rating: master.rating,
     reviewsCount: master.reviewsCount,
     location,

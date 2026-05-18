@@ -20,7 +20,7 @@ export function MasterSectionRail({ title, subtitle, items, userLat, userLng }: 
       </div>
       <div className="flex gap-3 overflow-x-auto px-4 py-1.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
         {items.map((listing) => (
-          <div key={listing.masterId} className="w-[min(82vw,300px)] shrink-0 snap-start">
+          <div key={listing.masterId} className="w-[min(88vw,340px)] shrink-0 snap-start">
             <MasterCard
               listing={listing}
               userLat={userLat}

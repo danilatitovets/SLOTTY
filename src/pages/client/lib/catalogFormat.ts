@@ -77,6 +77,58 @@ export function formatMasterCategoryLabel(category: string): string {
   return `Мастер · ${c}`;
 }
 
+/** Подпись специализации на карточке мастера («Мастер маникюра»). */
+export function formatMasterCardSpecialty(category: string): string {
+  const c = category.trim();
+  if (!c || c === 'Мастер') return 'Beauty-мастер';
+  if (/^мастер\s/i.test(c)) return c;
+  return `Мастер ${c.charAt(0).toLowerCase()}${c.slice(1)}`;
+}
+
+export function visitFormatChipLabel(listing: ServiceListingRecord): string {
+  return listing.location.visitType === 'at_home' ? 'На дому' : 'В студии';
+}
+
+/** Короткая локация для чипа («Минск, Центр»). */
+export function masterLocationChipLine(listing: ServiceListingRecord): string {
+  const city = listing.location.city?.trim() || 'Минск';
+  const district = listing.location.district?.trim();
+  if (district && district !== '—') {
+    const short = district.length > 22 ? `${district.slice(0, 21)}…` : district;
+    return `${city}, ${short}`;
+  }
+  const landmark = listing.location.landmark?.trim();
+  if (landmark) {
+    const center = /центр/i.test(landmark);
+    const districtMatch = landmark.match(/район\s+([^,.]+)/i);
+    if (center && !districtMatch) return `${city}, Центр`;
+    if (districtMatch?.[1]) {
+      const part = districtMatch[1].trim();
+      const short = part.length > 18 ? `${part.slice(0, 17)}…` : part;
+      return `${city}, ${short}`;
+    }
+    const shortLm = landmark.length > 22 ? `${landmark.slice(0, 21)}…` : landmark;
+    return `${city}, ${shortLm}`;
+  }
+  const street = listing.location.street?.trim();
+  if (street && street !== '—') {
+    const cleaned = street
+      .replace(/^ул\.?\s*/i, '')
+      .replace(/^улица\s*/i, '')
+      .replace(/^пр-т\s*/i, '')
+      .replace(/^проспект\s*/i, '');
+    const short = cleaned.length > 20 ? `${cleaned.slice(0, 19)}…` : cleaned;
+    return `${city}, ${short}`;
+  }
+  return city;
+}
+
+/** Оценка числа записей для колонки статистики (пока нет поля с бэка). */
+export function estimatedBookingsCount(reviewsCount: number): number | null {
+  if (reviewsCount <= 0) return null;
+  return Math.max(Math.round(reviewsCount * 2.4), reviewsCount + 12);
+}
+
 export function formatMasterRatingLine(listing: ServiceListingRecord): {
   primary: string;
   secondary: string | null;

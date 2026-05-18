@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useSwipeHorizontal } from '../client/hooks/useSwipeHorizontal';
 
 const AUTO_MS = 2400;
 
@@ -104,12 +105,21 @@ export function OnboardingStep1Intro() {
     window.setTimeout(() => setPaused(false), AUTO_MS * 2);
   };
 
+  const swipePrev = useCallback(() => goTo(index - 1), [goTo, index]);
+  const swipeNext = useCallback(() => next(), [next]);
+  const swipe = useSwipeHorizontal(swipePrev, swipeNext);
+
   return (
     <div className="mx-auto w-full min-w-0 max-w-sm">
+      <p className="mb-2 text-center text-[12px] font-semibold tabular-nums text-neutral-400">
+        {index + 1} / {SLIDES.length}
+      </p>
       <div
         className="relative overflow-hidden rounded-[32px] bg-[#F8F0F0] shadow-[inset_0_0_0_1px_rgba(226,149,149,0.12)] sm:rounded-[36px]"
         aria-roledescription="carousel"
         aria-label="Что входит в анкету мастера"
+        onTouchStart={swipe.onTouchStart}
+        onTouchEnd={swipe.onTouchEnd}
       >
         <div className="overflow-hidden">
           <div
