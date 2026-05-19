@@ -177,6 +177,8 @@ export function MasterPublicPage() {
       <ServiceDetailSheet
         open={Boolean(serviceSheet)}
         service={serviceSheet}
+        paymentMethods={master.paymentMethods}
+        paymentNote={master.paymentNote}
         onClose={() => setServiceSheet(null)}
         onChooseTime={() => openBooking(serviceSheet?.id)}
       />

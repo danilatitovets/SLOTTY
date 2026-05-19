@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { HiChevronDown } from 'react-icons/hi2';
 import { MasterAddressBlock } from './MasterAddressBlock';
+import { MasterPaymentMethodsBlock } from './MasterPaymentMethodsBlock';
 import type { ExtendedMasterProfile } from './types';
 
 type Props = { master: ExtendedMasterProfile };
@@ -38,9 +39,13 @@ function Accordion({
 export function MasterExtraSections({ master }: Props) {
   const [bioExpanded, setBioExpanded] = useState(false);
   const bio = master.bio?.trim();
-  const rules = [master.bookingRules, master.cancellationPolicy, master.paymentNote]
-    .filter((s) => s?.trim())
-    .join('\n\n');
+  const paymentMethods = master.paymentMethods ?? [];
+  const hasRulesContent = Boolean(
+    master.bookingRules?.trim() ||
+      master.cancellationPolicy?.trim() ||
+      master.paymentNote?.trim() ||
+      paymentMethods.length > 0,
+  );
 
   return (
     <section className="mt-8 space-y-2.5">
@@ -69,7 +74,7 @@ export function MasterExtraSections({ master }: Props) {
         <MasterAddressBlock location={master.location} />
       </Accordion>
 
-      {rules ? (
+      {hasRulesContent ? (
         <Accordion title="Правила записи">
           <div className="space-y-3">
             {master.bookingRules?.trim() ? (
@@ -92,14 +97,16 @@ export function MasterExtraSections({ master }: Props) {
                 </p>
               </div>
             ) : null}
-            {master.paymentNote?.trim() ? (
+            {paymentMethods.length > 0 || master.paymentNote?.trim() ? (
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
                   Оплата
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
-                  {master.paymentNote.trim()}
-                </p>
+                <MasterPaymentMethodsBlock
+                  methods={paymentMethods}
+                  note={master.paymentNote}
+                  compact
+                />
               </div>
             ) : null}
           </div>
