@@ -19,7 +19,7 @@ import { HomeTrust } from './HomeTrust';
 
 export function Home() {
   const navigate = useNavigate();
-  const { isReady, masterId } = useTelegram();
+  const { isReady, masterId, isTelegramWebApp } = useTelegram();
   const nativeStart = useMemo(() => readTelegramWebAppStartParam(), []);
   const { data: masters = [], isLoading } = useMastersFeed();
   const isMasterUser = useIsMasterUser();
@@ -67,7 +67,7 @@ export function Home() {
     [pickClientRoleAnd],
   );
 
-  if (nativeStart || (isReady && masterId)) {
+  if (isTelegramWebApp && (nativeStart || (isReady && masterId))) {
     return <Navigate to={BOOKING_PATH} replace />;
   }
 

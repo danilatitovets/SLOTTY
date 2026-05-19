@@ -22,6 +22,8 @@ function hasRealTelegramInitData(): boolean {
  */
 export function ensureDevTelegramMock(): void {
   if (typeof window === 'undefined') return;
+  /** В production mock ломает открытие сайта: SDK монтирует iframe с URL приложения. */
+  if (import.meta.env.PROD) return;
   if (import.meta.env.VITE_DISABLE_TELEGRAM_MOCK === 'true') return;
   if (hasRealTelegramInitData()) return;
 

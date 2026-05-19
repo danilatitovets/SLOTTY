@@ -1,7 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { clearStaleTelegramLaunchParams } from './shared/lib/telegramEnv';
 import './app/styles/index.css';
+
+clearStaleTelegramLaunchParams();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

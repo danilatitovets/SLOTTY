@@ -14,6 +14,11 @@ import {
 } from '@telegram-apps/sdk';
 import { ensureDevTelegramMock, resetDevTelegramMockState } from '../lib/devTelegramMock';
 import {
+  clearStaleTelegramLaunchParams,
+  hasRealTelegramInitData,
+  shouldUseTelegramSdkShell,
+} from '../lib/telegramEnv';
+import {
   getTelegramWebAppInitDataRaw,
   readTelegramWebAppUserPreview,
   type TelegramUserPreview,
@@ -23,6 +28,8 @@ import {
 let telegramShellMounted = false;
 
 function tryMountTelegramShell(): void {
+  if (!shouldUseTelegramSdkShell()) return;
+
   if (telegramShellMounted) {
     try {
       if (expandViewport.isAvailable()) expandViewport();
@@ -120,6 +127,12 @@ export interface UseTelegramResult {
 }
 
 function tryInit(): VoidFunction | undefined {
+  clearStaleTelegramLaunchParams();
+
+  if (!shouldUseTelegramSdkShell()) {
+    return undefined;
+  }
+
   ensureDevTelegramMock();
   try {
     return init();
@@ -167,7 +180,7 @@ export function useTelegram(): UseTelegramResult {
     };
   }, []);
 
-  const launch = useMemo(() => readLaunchParamsSafe(), []);
+  const launch = useMemo(() => (shouldUseTelegramSdkShell() ? readLaunchParamsSafe() : undefined), []);
 
   const initDataRawValue = useMemo(() => {
     if (!isReady) return undefined;
@@ -217,7 +230,7 @@ export function useTelegram(): UseTelegramResult {
     isReady,
     initDataRaw: initDataRawValue,
     masterId,
-    isTelegramWebApp: Boolean(initDataRawValue || telegramUserPreview),
+    isTelegramWebApp: hasRealTelegramInitData(),
     telegramUserPhotoUrl,
     telegramUserPreview,
   };
