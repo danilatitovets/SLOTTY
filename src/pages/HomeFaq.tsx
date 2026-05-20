@@ -35,38 +35,21 @@ const FAQ_ITEMS = [
 
 export const HomeFaq: FC = () => {
   return (
-    <section
-      id="faq"
-      className="mt-20 animate-fade-enter scroll-mt-32 sm:mt-24"
-      style={{ animationDelay: '100ms' }}
-    >
-      <div className="mx-auto max-w-2xl px-1 text-center">
-
-
-        <h2 className="mt-2 font-sans text-[clamp(1.65rem,4.2vw,2.25rem)] font-bold leading-tight tracking-[-0.03em] text-neutral-950">
+    <section id="faq" className="mt-14 scroll-mt-28 sm:mt-16" style={{ animationDelay: '100ms' }}>
+      <div className="px-0.5 text-center sm:text-left">
+        <h2 className="text-[clamp(1.35rem,4vw,1.75rem)] font-semibold tracking-tight text-[#111827]">
           Частые вопросы
         </h2>
-
-        <p className="mt-3 text-[15px] leading-relaxed text-neutral-500 sm:text-base">
+        <p className="mt-1 text-[13px] leading-snug text-[#9CA3AF] sm:text-[14px]">
           Коротко о записи, Telegram и возможностях для мастеров.
         </p>
       </div>
 
-      <div className="mx-auto mt-10 max-w-2xl space-y-3 sm:mt-12">
+      <div className="mt-6 space-y-2.5">
         {FAQ_ITEMS.map((item) => (
           <details
             key={item.key}
-            className="
-              group
-              rounded-[22px]
-              bg-[#F1EFEF]
-              px-5
-              py-4
-              shadow-[0_12px_40px_rgba(17,17,17,0.04)]
-              sm:rounded-[26px]
-              sm:px-6
-              sm:py-4
-            "
+            className="group rounded-[20px] bg-white px-5 py-4 ring-1 ring-[#F3F4F6] shadow-[0_6px_24px_rgba(17,24,39,0.05)] sm:px-6"
           >
             <summary
               className="

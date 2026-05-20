@@ -1,29 +1,36 @@
 import type { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { BECOME_MASTER_PATH, SERVICES_PATH } from '../app/paths';
+import { homePinkBtn, homeSection, homeSectionTitle } from './home/homeTheme';
 
 const PLANS = [
   {
     key: 'client',
     title: 'Клиент',
     price: '0 BYN',
-    subtitle: 'поиск и запись бесплатно',
-    text: 'Выбирайте услуги, мастеров и удобное время без оплаты за использование SLOTTY.',
-    features: ['Поиск услуг', 'Профили мастеров', 'Запись онлайн'],
-    cta: 'Найти услуги',
+    text: 'Для клиентов SLOTTY бесплатный: выбирайте услуги, смотрите мастеров и записывайтесь онлайн.',
+    features: ['Поиск услуг', 'Профили мастеров', 'Онлайн-запись', 'Напоминания в Telegram'],
+    cta: 'Найти мастера',
     to: SERVICES_PATH,
-    muted: true,
+    recommended: false,
   },
   {
     key: 'master',
     title: 'Мастер Pro',
     price: '29 BYN',
-    subtitle: 'в месяц',
-    text: 'Для мастеров, которые хотят принимать записи без переписок и управлять услугами в одном кабинете.',
-    features: ['Профиль мастера', 'Услуги и цены', 'График работы', 'Заявки клиентов'],
+    priceNote: '/ месяц',
+    text: 'Для мастеров, которые хотят принимать записи онлайн и управлять услугами в одном кабинете.',
+    features: [
+      'Профиль мастера',
+      'Услуги и цены',
+      'График работы',
+      'Заявки клиентов',
+      'Акции и свободные окна',
+      'Telegram-уведомления',
+    ],
     cta: 'Стать мастером',
     to: BECOME_MASTER_PATH,
-    muted: false,
+    recommended: true,
   },
 ] as const;
 
@@ -46,195 +53,80 @@ function IconCheck({ className }: { className?: string }) {
 
 export const HomeTariffs: FC = () => {
   return (
-    <section
-      id="tarify"
-      className="mt-20 animate-fade-enter scroll-mt-32 sm:mt-24"
-      style={{ animationDelay: '60ms' }}
-    >
-      <div
-        className="
-          rounded-[38px]
-          bg-[#F1EFEF]
-          p-3
-          shadow-[0_24px_70px_rgba(17,17,17,0.05)]
-          sm:rounded-[44px]
-        "
-      >
-        <div
-          className="
-            rounded-[32px]
-            bg-white
-            px-5
-            py-6
-            shadow-[0_10px_30px_rgba(17,17,17,0.035)]
-            sm:rounded-[38px]
-            sm:px-7
-            sm:py-8
-          "
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-400">
-            Тарифы
-          </p>
+    <section id="tarify" className={homeSection} style={{ animationDelay: '60ms' }}>
+      <div className="mb-5 px-0.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9CA3AF]">Тарифы</p>
+        <h2 className={`${homeSectionTitle} mt-1`}>Простые условия для клиентов и мастеров</h2>
+      </div>
 
-          <h2
-            className="
-              mt-2
-              max-w-[22rem]
-              text-[clamp(2rem,5.5vw,3rem)]
-              font-semibold
-              leading-[1.02]
-              tracking-[-0.07em]
-              text-neutral-950
-            "
+      <div className="grid gap-3 sm:grid-cols-2">
+        {PLANS.map((plan) => (
+          <article
+            key={plan.key}
+            className={`
+              relative flex min-h-[20rem] flex-col overflow-hidden rounded-[26px] px-5 pb-6 pt-5
+              shadow-[0_12px_40px_rgba(17,24,39,0.08)]
+              ${
+                plan.recommended
+                  ? 'bg-gradient-to-br from-[#F47C8C] to-[#F26D83] text-white shadow-[0_20px_56px_rgba(244,124,140,0.35)] ring-2 ring-[#F47C8C]/30'
+                  : 'bg-white text-[#111827] ring-1 ring-[#F3F4F6]'
+              }
+            `}
           >
-            Начните бесплатно.
-            <br />
-            Растите с Pro.
-          </h2>
+            {plan.recommended ? (
+              <span className="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em]">
+                Рекомендуем
+              </span>
+            ) : null}
 
+            <p className={`text-[18px] font-semibold tracking-tight ${plan.recommended ? 'text-white' : 'text-[#111827]'}`}>
+              {plan.title}
+            </p>
 
-        </div>
+            <div className="mt-4 flex items-baseline gap-1">
+              <span className={`text-[36px] font-bold tracking-tight ${plan.recommended ? 'text-white' : 'text-[#111827]'}`}>
+                {plan.price}
+              </span>
+              {'priceNote' in plan && plan.priceNote ? (
+                <span className={`text-[14px] font-medium ${plan.recommended ? 'text-white/75' : 'text-[#9CA3AF]'}`}>
+                  {plan.priceNote}
+                </span>
+              ) : null}
+            </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {PLANS.map((plan) => (
-            <article
-              key={plan.key}
-              className={`
-                overflow-hidden
-                rounded-[32px]
-                px-5
-                pb-7
-                pt-5
-                shadow-[0_14px_42px_rgba(17,17,17,0.045)]
-                sm:pb-8
-                ${
-                  plan.muted
-                    ? 'bg-white text-neutral-950'
-                    : 'bg-[#F47C8C] text-white shadow-[0_20px_60px_rgba(244,124,140,0.32)]'
-                }
-              `}
-            >
-              <div className="flex min-h-[15.5rem] flex-col">
-                <div>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p
-                        className={`
-                          text-[18px]
-                          font-semibold
-                          tracking-[-0.045em]
-                          ${plan.muted ? 'text-neutral-950' : 'text-white'}
-                        `}
-                      >
-                        {plan.title}
-                      </p>
+            <p className={`mt-3 text-[14px] leading-relaxed ${plan.recommended ? 'text-white/85' : 'text-[#6B7280]'}`}>
+              {plan.text}
+            </p>
 
-                      <p
-                        className={`
-                          mt-1
-                          text-[13px]
-                          font-medium
-                          ${plan.muted ? 'text-neutral-400' : 'text-white/75'}
-                        `}
-                      >
-                        {plan.subtitle}
-                      </p>
-                    </div>
-
-                    {!plan.muted ? (
-                      <span className="rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-                        Pro
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-6">
-                    <span
-                      className={`
-                        text-[38px]
-                        font-semibold
-                        leading-none
-                        tracking-[-0.075em]
-                        ${plan.muted ? 'text-neutral-950' : 'text-white'}
-                      `}
-                    >
-                      {plan.price}
-                    </span>
-                  </div>
-
-                  <p
-                    className={`
-                      mt-4
-                      text-[14px]
-                      leading-relaxed
-                      ${plan.muted ? 'text-neutral-500' : 'text-white/82'}
-                    `}
+            <ul className="mt-4 flex flex-1 flex-col gap-2">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex items-center gap-2.5">
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                      plan.recommended ? 'bg-white/20 text-white' : 'bg-[#FFF1F4] text-[#F47C8C]'
+                    }`}
                   >
-                    {plan.text}
-                  </p>
-                </div>
+                    <IconCheck className="h-3.5 w-3.5" />
+                  </span>
+                  <span className={`text-[14px] font-medium ${plan.recommended ? 'text-white/90' : 'text-[#374151]'}`}>
+                    {feature}
+                  </span>
+                </li>
+              ))}
+            </ul>
 
-                <ul className="mt-5 flex flex-col gap-2">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2.5">
-                      <span
-                        className={`
-                          flex
-                          h-6
-                          w-6
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-full
-                          ${plan.muted ? 'bg-[#F1EFEF] text-[#F47C8C]' : 'bg-white/20 text-white'}
-                        `}
-                      >
-                        <IconCheck className="h-3.5 w-3.5" />
-                      </span>
-
-                      <span
-                        className={`
-                          text-[14px]
-                          font-medium
-                          ${plan.muted ? 'text-neutral-700' : 'text-white/90'}
-                        `}
-                      >
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="min-h-5 flex-1" aria-hidden />
-
-                <Link
-                  to={plan.to}
-                  className={`
-                    flex
-                    min-h-[3.15rem]
-                    w-full
-                    items-center
-                    justify-center
-                    rounded-full
-                    text-[15px]
-                    font-semibold
-                    transition
-                    active:scale-[0.98]
-                    ${
-                      plan.muted
-                        ? 'bg-[#F1EFEF] text-neutral-950'
-                        : 'bg-white text-neutral-950 shadow-[0_12px_30px_rgba(100,50,50,0.16)]'
-                    }
-                  `}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
-
-
+            <Link
+              to={plan.to}
+              className={`mt-5 flex min-h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold transition active:scale-[0.98] ${
+                plan.recommended
+                  ? 'bg-white text-[#111827] shadow-[0_10px_28px_rgba(0,0,0,0.12)]'
+                  : homePinkBtn
+              }`}
+            >
+              {plan.cta}
+            </Link>
+          </article>
+        ))}
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCatalogErrorModal } from '../hooks/useCatalogErrorModal';
 import type { AggregatedServiceCard } from '../lib/aggregateServices';
 import { ClientPageShell } from '../components/ClientPageShell';
@@ -33,7 +34,9 @@ function ServiceList({ items }: { items: AggregatedServiceCard[] }) {
 }
 
 export function ServicesCatalogPage() {
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialQ = searchParams.get('q')?.trim() ?? '';
+  const [search, setSearch] = useState(initialQ);
   const [chips, setChips] = useState<Set<string>>(() => new Set());
 
   const apiParams = useMemo((): CatalogListingsParams => {

@@ -34,10 +34,10 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({
       <div className="mb-4 flex items-end justify-between gap-3 px-0.5">
         <div className="min-w-0">
           <h2 id="top-masters-heading" className={homeSectionTitle}>
-            Мастера в ленте
+            Мастера рядом с вами
           </h2>
           <p className={homeSectionSubtitle}>
-            Популярные специалисты — как в каталоге SLOTTY
+            Выбирайте специалиста по рейтингу, услугам, цене и свободному времени.
           </p>
         </div>
         <Link to={MASTERS_PATH} className={homeLink}>
@@ -53,11 +53,11 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({
         ) : masters.length === 0 ? (
           <div className="w-full min-w-0 shrink-0 px-0.5">
             <NothingFoundCard
-              title="Пока никого нет"
-              text="Попробуйте позже или откройте каталог мастеров."
+              title="Мастера скоро появятся"
+              text="Откройте каталог и выберите услугу — мы подберём специалиста."
               action={
                 <Link to={MASTERS_PATH} className={`${homePinkBtn} w-full max-w-xs`}>
-                  Каталог мастеров
+                  Все мастера
                 </Link>
               }
             />

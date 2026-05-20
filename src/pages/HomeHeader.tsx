@@ -107,10 +107,10 @@ export function HomeHeader({
                 </a>
 
                 <a
-                  href="#nagrady"
+                  href="#faq"
                   className="transition hover:opacity-60"
                 >
-                  Награды
+                  FAQ
                 </a>
 
                 <button

@@ -1,16 +1,27 @@
 import { useCallback, useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ADMIN_PATH, BECOME_MASTER_PATH, BOOKING_PATH, getProfilePath, SERVICES_PATH } from '../app/paths';
+import {
+  ADMIN_PATH,
+  BECOME_MASTER_PATH,
+  BOOKING_PATH,
+  getProfilePath,
+  getServiceCategoryPath,
+  MASTERS_PATH,
+  SERVICES_PATH,
+} from '../app/paths';
 import { useMastersFeed } from '../features/booking/api/useMastersFeed';
 import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { useTelegram } from '../shared/hooks/useTelegram';
 import { readTelegramWebAppStartParam } from '../shared/lib/telegramWebApp';
+import { HomeBonusBlock } from './home/HomeBonusBlock';
+import { HomeForMasters } from './home/HomeForMasters';
+import { HomeHero } from './home/HomeHero';
+import { HomeHowItWorks } from './home/HomeHowItWorks';
 import { HomeCategories } from './HomeCategories';
 import { HomeFaq } from './HomeFaq';
 import { HomeFooter } from './HomeFooter';
 import { HomeHeader } from './HomeHeader';
-import { HomeMapSection } from './HomeMapSection';
 import { HomeQuickSlots } from './HomeQuickSlots';
 import { HomeTariffs } from './HomeTariffs';
 import { HomeTelegramShowcase } from './HomeTelegramShowcase';
@@ -23,6 +34,9 @@ export function Home() {
   const nativeStart = useMemo(() => readTelegramWebAppStartParam(), []);
   const { data: masters = [], isLoading } = useMastersFeed();
   const isMasterUser = useIsMasterUser();
+
+  const masterNavPath = isMasterUser ? ADMIN_PATH : BECOME_MASTER_PATH;
+  const masterCtaLabel = isMasterUser ? 'Кабинет мастера' : 'Я мастер';
 
   const pickClientRoleAnd = useCallback(
     async (path: string) => {
@@ -44,21 +58,36 @@ export function Home() {
     [navigate],
   );
 
-  const onCategory = useCallback(() => {
-    void pickClientRoleAnd(BOOKING_PATH);
-  }, [pickClientRoleAnd]);
+  const onCategory = useCallback(
+    (category: string) => {
+      void pickClientRoleAnd(getServiceCategoryPath(category));
+    },
+    [pickClientRoleAnd],
+  );
 
-  const onJoinFree = useCallback(() => {
-    void pickClientRoleAnd(BOOKING_PATH);
+  const onFindMaster = useCallback(() => {
+    void pickClientRoleAnd(MASTERS_PATH);
   }, [pickClientRoleAnd]);
 
   const onFindServices = useCallback(() => {
     void pickClientRoleAnd(SERVICES_PATH);
   }, [pickClientRoleAnd]);
 
+  const onSearch = useCallback(
+    (q: string) => {
+      void setProfileRole('client');
+      if (q) {
+        navigate(`${SERVICES_PATH}?q=${encodeURIComponent(q)}`);
+      } else {
+        navigate(SERVICES_PATH);
+      }
+    },
+    [navigate],
+  );
+
   const onBecomeMaster = useCallback(() => {
-    navigate(isMasterUser ? ADMIN_PATH : BECOME_MASTER_PATH);
-  }, [navigate, isMasterUser]);
+    navigate(masterNavPath);
+  }, [navigate, masterNavPath]);
 
   const onProfileTab = useCallback(
     (tab: 'appointments' | 'favorites') => {
@@ -72,62 +101,34 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-dvh bg-white text-neutral-900">
+    <div className="min-h-dvh bg-[#FFFCFC] text-neutral-900">
       <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
 
-      <main className="relative z-10 mx-auto max-w-[1100px] px-4 pb-10 pt-[calc(5.5rem+env(safe-area-inset-top,0px))] sm:px-6">
-        <section className="animate-fade-enter relative isolate mx-auto flex w-full max-w-4xl flex-col items-center overflow-x-clip pb-14 text-center sm:pb-16">
-          <div
-            className="pointer-events-none absolute left-1/2 top-4 z-0 flex w-[118vw] max-w-none -translate-x-1/2 justify-center select-none sm:top-6"
-            aria-hidden
-          >
-            <img
-              src="/photos/hero.png"
-              alt=""
-              width={1200}
-              height={900}
-              decoding="async"
-              fetchPriority="high"
-              loading="eager"
-              className="h-auto w-[min(145vw,48rem)] max-w-none translate-y-[19%] object-contain opacity-[0.22] sm:w-[min(120vw,54rem)] sm:translate-y-[22%]"
-            />
-          </div>
-
-          <h1 className="relative z-10 mt-10 max-w-[min(100%,38rem)] text-balance font-sans text-[clamp(2.25rem,6.5vw,4.25rem)] font-bold leading-[1.05] tracking-[-0.035em] text-neutral-900 sm:mt-14 sm:max-w-[42rem]">
-            Открывайте настоящую запись к мастерам.
-          </h1>
-
-          <div className="relative z-10 mt-[40px] mb-[20px] flex flex-row flex-wrap items-center justify-center gap-3 sm:mt-[48px] sm:gap-4">
-            <button
-              type="button"
-              onClick={() => void onFindServices()}
-              className="rounded-full bg-gradient-to-r from-[#F47C8C] to-[#F26D83] px-8 py-3.5 text-[15px] font-semibold text-white shadow-[0_10px_28px_rgba(244,124,140,0.28)] outline-none ring-0 transition active:scale-[0.99]"
-            >
-              Найти услуги
-            </button>
-            <button
-              type="button"
-              onClick={() => void onBecomeMaster()}
-              className="rounded-full bg-neutral-100 px-8 py-3.5 text-[15px] font-semibold text-neutral-900 outline-none ring-0 transition hover:bg-neutral-200/90 active:scale-[0.99]"
-            >
-              {isMasterUser ? 'Кабинет мастера' : 'Стать мастером'}
-            </button>
-          </div>
-        </section>
+      <main className="relative z-10 mx-auto max-w-[1100px] px-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[calc(5.25rem+env(safe-area-inset-top,0px))] sm:px-6">
+        <HomeHero
+          onFindMaster={onFindMaster}
+          onBecomeMaster={onBecomeMaster}
+          onSearch={onSearch}
+          masterCtaLabel={masterCtaLabel}
+        />
 
         <HomeCategories onCategory={onCategory} />
+
+        <HomeBonusBlock onClaim={onFindServices} />
 
         <HomeQuickSlots />
 
         <HomeTopMasters masters={masters} isLoading={isLoading} onPick={onMasterCard} />
 
-        <HomeMapSection />
+        <HomeHowItWorks />
 
         <HomeTelegramShowcase />
 
+        <HomeForMasters masterCtaPath={masterNavPath} masterCtaLabel={isMasterUser ? 'Открыть кабинет' : 'Стать мастером'} />
+
         <HomeTariffs />
 
-        <HomeTrust onJoinFree={onJoinFree} />
+        <HomeTrust onFindMaster={onFindMaster} />
 
         <HomeFaq />
       </main>
