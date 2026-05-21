@@ -11,7 +11,7 @@ import { syncMasterFlagFromProfile } from '../profile/lib/demoMasterStorage';
 import { syncLocalFavoritesToServer } from '../profile/lib/favoriteMastersResolve';
 import { apiFetch, getApiBaseUrl, getStoredAuthToken, setStoredAuthToken } from '../../shared/api/backendClient';
 import { useTelegram } from '../../shared/hooks/useTelegram';
-import type { BackendProfile } from './types';
+import type { AuthSessionResponse, BackendProfile } from './types';
 
 type AuthContextValue = {
   profile: BackendProfile | null;
@@ -20,13 +20,14 @@ type AuthContextValue = {
   isAuthenticated: boolean;
   backendConfigured: boolean;
   refreshProfile: () => Promise<void>;
+  applySession: (session: AuthSessionResponse) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { isReady, initDataRaw } = useTelegram();
+  const { isReady, initDataRaw, isTelegramWebApp } = useTelegram();
   const [profile, setProfile] = useState<BackendProfile | null>(null);
   const [token, setToken] = useState<string | null>(() => getStoredAuthToken());
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -38,6 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStoredAuthToken(null);
     setToken(null);
     setProfile(null);
+  }, []);
+
+  const applySession = useCallback((session: AuthSessionResponse) => {
+    setStoredAuthToken(session.token);
+    setToken(session.token);
+    setProfile(session.profile);
+    void syncLocalFavoritesToServer();
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -83,7 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        if (initDataRaw) {
+        const existing = getStoredAuthToken();
+        if (existing) {
+          const res = await apiFetch('/api/me');
+          if (res.ok) {
+            const me = (await res.json()) as BackendProfile;
+            if (!cancelled) {
+              setToken(existing);
+              setProfile(me);
+            }
+            await syncLocalFavoritesToServer();
+            return;
+          }
+          setStoredAuthToken(null);
+        }
+
+        // Автовход только в Telegram Web App и только без сохранённого JWT.
+        if (initDataRaw && isTelegramWebApp) {
           const res = await apiFetch('/api/auth/telegram', {
             method: 'POST',
             skipAuth: true,
@@ -97,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             return;
           }
-          const data = (await res.json()) as { token: string; profile: BackendProfile };
+          const data = (await res.json()) as AuthSessionResponse;
           setStoredAuthToken(data.token);
           if (!cancelled) {
             setToken(data.token);
@@ -107,26 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const existing = getStoredAuthToken();
-        if (existing) {
-          const res = await apiFetch('/api/me');
-          if (res.ok) {
-            const me = (await res.json()) as BackendProfile;
-            if (!cancelled) {
-              setToken(existing);
-              setProfile(me);
-            }
-            await syncLocalFavoritesToServer();
-          } else {
-            setStoredAuthToken(null);
-            if (!cancelled) {
-              setToken(null);
-              setProfile(null);
-            }
-          }
-        } else if (!cancelled) {
+        if (!cancelled) {
           setProfile(null);
-          setToken(null);
+          setToken(getStoredAuthToken());
         }
       } catch {
         if (!cancelled) {
@@ -144,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isReady, initDataRaw]);
+  }, [isReady, initDataRaw, isTelegramWebApp]);
 
   useEffect(() => {
     syncMasterFlagFromProfile(profile?.role);
@@ -158,9 +165,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(profile),
       backendConfigured,
       refreshProfile,
+      applySession,
       logout,
     }),
-    [profile, token, isLoading, backendConfigured, refreshProfile, logout],
+    [profile, token, isLoading, backendConfigured, refreshProfile, applySession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

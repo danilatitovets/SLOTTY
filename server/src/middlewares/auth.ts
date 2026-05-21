@@ -38,6 +38,25 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
   }
 }
 
+/** Если Bearer валиден — заполняет req.user; иначе продолжает без пользователя. */
+export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = header.slice('Bearer '.length).trim();
+  if (!token) return next();
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as JwtClaims;
+    if (decoded.sub && decoded.role) {
+      req.user = { id: decoded.sub, role: decoded.role };
+    }
+  } catch {
+    /* ignore invalid optional token */
+  }
+  next();
+}
+
 export function requireRole(...roles: JwtUserRole[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {

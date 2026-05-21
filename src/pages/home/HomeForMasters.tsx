@@ -13,7 +13,7 @@ export type HomeForMastersProps = {
 
 export const HomeForMasters: FC<HomeForMastersProps> = ({ masterCtaPath, masterCtaLabel }) => {
   return (
-    <section className={homeSection} aria-labelledby="home-masters-cta-heading">
+    <section id="for-masters" className={`${homeSection} scroll-mt-28`} aria-labelledby="home-masters-cta-heading">
       <div className="flex flex-col items-center gap-6 text-center lg:flex-row lg:items-start lg:gap-10 lg:text-left">
         <div className="w-full shrink-0 lg:sticky lg:top-28 lg:w-[min(100%,20.5rem)]">
           <h2

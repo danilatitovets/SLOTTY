@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_TELEGRAM_BOT_USERNAME?: string;
   /** Публичный URL фронта для ссылок клиентам (например https://slotty.of.by). */
   readonly VITE_PUBLIC_APP_URL?: string;
+  /** Google OAuth Web client id (Google Cloud Console). */
+  readonly VITE_GOOGLE_CLIENT_ID?: string;
 }
 
 interface ImportMeta {

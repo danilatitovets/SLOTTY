@@ -1,6 +1,20 @@
 /** Главный хаб (лендинг, поиск, лента). */
 export const HUB_PATH = '/book';
 
+export const LOGIN_PATH = '/login';
+export const MASTER_LOGIN_PATH = '/master/login';
+export const VERIFY_EMAIL_PATH = '/auth/verify-email';
+export const FORGOT_PASSWORD_PATH = '/auth/forgot-password';
+export const RESET_PASSWORD_PATH = '/auth/reset-password';
+
+/** /login с возвратом после входа (?from=/текущая-страница). */
+export function getLoginPath(fromPath?: string): string {
+  if (!fromPath || fromPath === LOGIN_PATH || fromPath.startsWith(`${LOGIN_PATH}?`)) {
+    return LOGIN_PATH;
+  }
+  return `${LOGIN_PATH}?${new URLSearchParams({ from: fromPath }).toString()}`;
+}
+
 /** Поиск услуг для клиента. */
 export const SERVICES_PATH = '/services';
 
@@ -30,6 +44,7 @@ export const ADMIN_APPOINTMENTS_PATH = '/admin/appointments';
 export const ADMIN_OVERVIEW_PATH = '/admin/overview';
 export const ADMIN_BILLING_PATH = '/admin/billing';
 export const ADMIN_NOTIFICATIONS_PATH = '/admin/notifications';
+export const ADMIN_LOGIN_METHODS_PATH = '/admin/login-methods';
 
 /** Политика обработки персональных данных (страница). */
 export const LEGAL_PRIVACY_PATH = '/legal/privacy';

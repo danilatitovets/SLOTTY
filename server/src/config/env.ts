@@ -9,6 +9,11 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
+  /** Google OAuth client id (Web) — same value as VITE_GOOGLE_CLIENT_ID on frontend. */
+  GOOGLE_CLIENT_ID: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
   /** HTTPS URL мини-приложения (ngrok / Cloudflare Tunnel / прод). Для `npm run telegram:setup`. */
   WEB_APP_URL: z.preprocess(
@@ -48,6 +53,16 @@ const envSchema = z.object({
     .transform((v) => v !== 'false' && v !== '0'),
   /** Интервал проверки напоминаний, мс (по умолчанию 5 мин). */
   APPOINTMENT_REMINDERS_INTERVAL_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
+  /** Resend API key; без ключа в dev письма логируются в консоль. */
+  RESEND_API_KEY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  /** Отправитель, например `SLOTTY <noreply@slotty.of.by>`. */
+  RESEND_FROM: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(3).optional(),
+  ),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -1,10 +1,22 @@
-import jwt from 'jsonwebtoken';
-import type { JwtUserRole } from '../../middlewares/auth.js';
 import { env } from '../../config/env.js';
-import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { verifyTelegramInitData } from './telegram.js';
-import { getProfileById } from '../profiles/profiles.service.js';
+import {
+  linkEmailToProfile,
+  linkGoogleToProfile,
+  linkTelegramToProfile,
+  loginOrRegisterWithEmail,
+  loginOrRegisterWithGoogle,
+  loginOrRegisterWithTelegram,
+} from './authIdentities.service.js';
+import { verifyGoogleIdToken } from './googleAuth.js';
+import { sendVerificationEmailForProfile } from './email/emailAuth.service.js';
+
+function scheduleVerificationEmail(profileId: string) {
+  void sendVerificationEmailForProfile(profileId).catch((e) => {
+    console.error('[SLOTTY] send verification email failed:', e);
+  });
+}
 
 function displayNameFromTelegram(first?: string, last?: string, username?: string): string {
   const n = [first?.trim(), last?.trim()].filter(Boolean).join(' ').trim();
@@ -13,58 +25,30 @@ function displayNameFromTelegram(first?: string, last?: string, username?: strin
   return 'Telegram user';
 }
 
-function isJwtRole(r: string): r is JwtUserRole {
-  return r === 'client' || r === 'master' || r === 'platform_admin';
-}
-
-export function signAccessToken(profileId: string, role: JwtUserRole): string {
-  return jwt.sign({ sub: profileId, role }, env.JWT_SECRET, { expiresIn: '7d' });
-}
-
-/**
- * Upsert `public.profiles` by `telegram_user_id` (unique).
- * Does not use Supabase Auth / `auth.users`.
- */
-export async function loginWithTelegram(initDataRaw: string) {
+function verifyTelegramInitDataOrThrow(initDataRaw: string) {
   if (!env.TELEGRAM_BOT_TOKEN?.trim()) {
     throw ApiError.internal('Telegram bot token is not configured', 'NO_TELEGRAM_BOT_TOKEN');
   }
-
-  let verified;
   try {
-    verified = verifyTelegramInitData(initDataRaw.trim(), env.TELEGRAM_BOT_TOKEN.trim());
+    return verifyTelegramInitData(initDataRaw.trim(), env.TELEGRAM_BOT_TOKEN.trim());
   } catch {
     throw ApiError.unauthorized('Invalid Telegram initData', 'TELEGRAM_INITDATA_INVALID');
   }
+}
 
-  const tgId = verified.user.id;
+/**
+ * Login or register via Telegram Web App initData.
+ * Uses auth_identities; keeps profiles.telegram_user_id in sync.
+ */
+export async function loginWithTelegram(initDataRaw: string) {
+  const verified = verifyTelegramInitDataOrThrow(initDataRaw);
   const fullName = displayNameFromTelegram(
     verified.user.first_name,
     verified.user.last_name,
     verified.user.username,
   );
-  const tgUsername = verified.user.username?.trim() || null;
-  const avatarUrl = verified.user.photo_url?.trim() || null;
-
   try {
-    const upsert = await query<{ id: string; role: string }>(
-      `insert into public.profiles (id, telegram_user_id, telegram_username, full_name, avatar_url, role)
-       values (gen_random_uuid(), $1, $2, $3, $4, 'client')
-       on conflict (telegram_user_id) do update set
-         telegram_username = excluded.telegram_username,
-         full_name = excluded.full_name,
-         avatar_url = excluded.avatar_url,
-         updated_at = now()
-       returning id, role::text as role`,
-      [tgId, tgUsername, fullName, avatarUrl],
-    );
-    const row = upsert.rows[0];
-    if (!row || !isJwtRole(row.role)) {
-      throw ApiError.internal('Invalid profile role after upsert', 'BAD_ROLE');
-    }
-    const token = signAccessToken(row.id, row.role);
-    const profile = await getProfileById(row.id);
-    return { token, profile };
+    return await loginOrRegisterWithTelegram(verified.user, fullName);
   } catch (e: unknown) {
     const err = e as { code?: string };
     if (err?.code === '23503') {
@@ -75,4 +59,40 @@ export async function loginWithTelegram(initDataRaw: string) {
     }
     throw e;
   }
+}
+
+export async function linkTelegram(initDataRaw: string, profileId: string) {
+  const verified = verifyTelegramInitDataOrThrow(initDataRaw);
+  const fullName = displayNameFromTelegram(
+    verified.user.first_name,
+    verified.user.last_name,
+    verified.user.username,
+  );
+  const identities = await linkTelegramToProfile(profileId, verified.user, fullName);
+  return { identities };
+}
+
+export async function loginWithGoogle(idToken: string) {
+  const payload = await verifyGoogleIdToken(idToken);
+  return loginOrRegisterWithGoogle(payload);
+}
+
+export async function linkGoogle(idToken: string, profileId: string) {
+  const payload = await verifyGoogleIdToken(idToken);
+  const identities = await linkGoogleToProfile(profileId, payload);
+  return { identities };
+}
+
+export async function loginWithEmail(email: string, password: string) {
+  const { session, isNewRegistration } = await loginOrRegisterWithEmail(email, password);
+  if (isNewRegistration) {
+    scheduleVerificationEmail(session.profile.id);
+  }
+  return session;
+}
+
+export async function linkEmail(email: string, password: string, profileId: string) {
+  const identities = await linkEmailToProfile(profileId, email, password);
+  scheduleVerificationEmail(profileId);
+  return { identities };
 }

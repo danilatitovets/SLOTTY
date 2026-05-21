@@ -10,3 +10,17 @@ export type BackendProfile = {
   privacy_consent_accepted_at?: string | null;
   terms_accepted_at?: string | null;
 };
+
+export type AuthProvider = 'telegram' | 'google' | 'email';
+
+export type AuthIdentityDto = {
+  provider: AuthProvider;
+  email: string | null;
+  linkedAt: string;
+  emailVerified?: boolean;
+};
+
+export type AuthSessionResponse = {
+  token: string;
+  profile: BackendProfile;
+};

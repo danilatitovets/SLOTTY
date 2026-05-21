@@ -1,0 +1,36 @@
+/** Сообщения для кодов ошибок API auth (см. server ApiError). */
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  GOOGLE_ALREADY_LINKED: 'Этот Google уже привязан к другому аккаунту.',
+  TELEGRAM_ALREADY_LINKED: 'Этот Telegram уже привязан к другому аккаунту.',
+  EMAIL_ALREADY_LINKED: 'Этот email уже привязан к другому аккаунту.',
+  GOOGLE_NOT_CONFIGURED: 'Google Sign-In пока не настроен.',
+  GOOGLE_TOKEN_INVALID: 'Не удалось войти через Google.',
+  GOOGLE_TOKEN_AUDIENCE: 'Не удалось войти через Google.',
+  TELEGRAM_NOT_AVAILABLE: 'Вход через Telegram доступен внутри Telegram Web App.',
+  EMAIL_LOGIN_FAILED: 'Неверный email или пароль.',
+  INVALID_CREDENTIALS: 'Неверный email или пароль.',
+  PASSWORD_TOO_SHORT: 'Пароль минимум 8 символов.',
+  EMAIL_INVALID: 'Введите корректный email.',
+  EMAIL_REQUIRED: 'Укажите email.',
+  EMAIL_IDENTITY_MISSING: 'Email не привязан к аккаунту.',
+  EMAIL_TOKEN_INVALID: 'Ссылка недействительна или устарела.',
+  EMAIL_TOKEN_USED: 'Ссылка уже использована.',
+  EMAIL_TOKEN_EXPIRED: 'Ссылка истекла. Запросите новую.',
+};
+
+export function messageForAuthErrorCode(code: string | undefined, fallback?: string): string {
+  if (!code) return fallback ?? 'Произошла ошибка. Попробуйте ещё раз.';
+  return AUTH_ERROR_MESSAGES[code] ?? fallback ?? 'Произошла ошибка. Попробуйте ещё раз.';
+}
+
+export async function readAuthApiError(res: Response): Promise<string> {
+  const j = (await res.json().catch(() => null)) as {
+    error?: { message?: string; code?: string };
+  } | null;
+  const code = j?.error?.code;
+  const serverMessage = j?.error?.message?.trim();
+  if (code) {
+    return messageForAuthErrorCode(code, serverMessage);
+  }
+  return serverMessage ?? `Ошибка ${res.status}`;
+}

@@ -7,7 +7,6 @@ import {
   getProfilePath,
   getServiceCategoryPath,
   MASTERS_PATH,
-  SERVICES_PATH,
 } from '../app/paths';
 import { useMastersFeed } from '../features/booking/api/useMastersFeed';
 import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
@@ -45,18 +44,6 @@ export function Home() {
     [navigate],
   );
 
-  const onMasterCard = useCallback(
-    (id: string) => {
-      void setProfileRole('client');
-      if (id.startsWith('demo-')) {
-        navigate(BOOKING_PATH);
-        return;
-      }
-      navigate(`${BOOKING_PATH}?master_id=${encodeURIComponent(id)}`);
-    },
-    [navigate],
-  );
-
   const onCategory = useCallback(
     (category: string) => {
       void pickClientRoleAnd(getServiceCategoryPath(category));
@@ -67,18 +54,6 @@ export function Home() {
   const onFindMaster = useCallback(() => {
     void pickClientRoleAnd(MASTERS_PATH);
   }, [pickClientRoleAnd]);
-
-  const onSearch = useCallback(
-    (q: string) => {
-      void setProfileRole('client');
-      if (q) {
-        navigate(`${SERVICES_PATH}?q=${encodeURIComponent(q)}`);
-      } else {
-        navigate(SERVICES_PATH);
-      }
-    },
-    [navigate],
-  );
 
   const onBecomeMaster = useCallback(() => {
     navigate(masterNavPath);
@@ -102,7 +77,6 @@ export function Home() {
       <HomeHeroStack
         onFindMaster={onFindMaster}
         onBecomeMaster={onBecomeMaster}
-        onSearch={onSearch}
         masterCtaLabel={masterCtaLabel}
       />
 
@@ -111,7 +85,7 @@ export function Home() {
 
         <HomeQuickSlots />
 
-        <HomeTopMasters masters={masters} isLoading={isLoading} onPick={onMasterCard} />
+        <HomeTopMasters masters={masters} isLoading={isLoading} />
 
         <HomeHowItWorks />
 

@@ -25,6 +25,18 @@ import { PersonalDataConsentPage } from '../pages/legal/PersonalDataConsentPage'
 import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { SettingsPage } from '../pages/settings/SettingsPage';
+import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
+import { LoginPage } from '../pages/auth/LoginPage';
+import { MasterLoginPage } from '../pages/auth/MasterLoginPage';
+import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
+import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage';
+import {
+  FORGOT_PASSWORD_PATH,
+  LOGIN_PATH,
+  MASTER_LOGIN_PATH,
+  RESET_PASSWORD_PATH,
+  VERIFY_EMAIL_PATH,
+} from './paths';
 
 export {
   ADMIN_APPOINTMENTS_PATH,
@@ -65,6 +77,11 @@ export function AppRouter() {
         </Route>
         <Route path="/catalog" element={<Navigate to={SERVICES_PATH} replace />} />
         <Route path={`${ADMIN_PATH}/*`} element={<AdminPage />} />
+        <Route path={LOGIN_PATH} element={<LoginPage />} />
+        <Route path={MASTER_LOGIN_PATH} element={<MasterLoginPage />} />
+        <Route path={VERIFY_EMAIL_PATH} element={<VerifyEmailPage />} />
+        <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
+        <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
         <Route path={BECOME_MASTER_PATH} element={<BecomeMasterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path={LEGAL_PRIVACY_PATH} element={<PrivacyPolicyPage />} />

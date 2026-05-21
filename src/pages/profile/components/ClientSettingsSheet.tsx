@@ -6,9 +6,11 @@ import {
   isPlaceholderContact,
   supportTelegramUrl,
 } from '../../../constants/support';
+import { LoginMethodsPanel } from '../../../features/auth/components/LoginMethodsPanel';
+import { useAuth } from '../../../features/auth/AuthProvider';
 import { ProfileSheetShell } from './ProfileSheetShell';
 
-type View = 'menu' | 'support' | 'documents' | 'legal';
+type View = 'menu' | 'support' | 'documents' | 'legal' | 'login-methods';
 
 type Props = {
   open: boolean;
@@ -25,6 +27,7 @@ export function ClientSettingsSheet({
   initialView = 'menu',
   directEntry = false,
 }: Props) {
+  const { isAuthenticated, backendConfigured } = useAuth();
   const [view, setView] = useState<View>('menu');
   const [legalId, setLegalId] = useState<LegalDocId | null>(null);
 
@@ -122,6 +125,30 @@ export function ClientSettingsSheet({
     );
   }
 
+  if (view === 'login-methods') {
+    return (
+      <ProfileSheetShell onClose={leaveSubView} labelledBy="settings-login-methods-title">
+        <button
+          type="button"
+          onClick={leaveSubView}
+          className="mb-2 text-[14px] font-semibold text-neutral-500 transition hover:text-neutral-800"
+        >
+          ← Назад
+        </button>
+        <h2 id="settings-login-methods-title" className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950">
+          Способы входа
+        </h2>
+        <div className="mt-5">
+          {isAuthenticated && backendConfigured ? (
+            <LoginMethodsPanel mode="settings" />
+          ) : (
+            <LoginMethodsPanel mode="login" onLinked={onClose} />
+          )}
+        </div>
+      </ProfileSheetShell>
+    );
+  }
+
   if (view === 'support') {
     return (
       <ProfileSheetShell onClose={leaveSubView} labelledBy="settings-support-title">
@@ -174,6 +201,15 @@ export function ClientSettingsSheet({
       </h2>
 
       <div className="mt-6 flex flex-col gap-2">
+        {backendConfigured ? (
+          <button
+            type="button"
+            onClick={() => setView('login-methods')}
+            className="flex min-h-12 w-full items-center justify-between rounded-[22px] bg-[#F1EFEF] px-4 text-left text-[15px] font-semibold text-neutral-900 transition active:scale-[0.99]"
+          >
+            {isAuthenticated ? 'Способы входа' : 'Войти в аккаунт'}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setView('support')}

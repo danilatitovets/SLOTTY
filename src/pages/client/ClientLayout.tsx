@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { SlottyHeader } from '../../shared/layout/SlottyHeader/SlottyHeader';
 import { ClientBottomNav } from './components/ClientBottomNav';
 import { ClientHeader } from './components/ClientHeader';
 import { ClientErrorModalProvider } from './ClientErrorModalContext';
@@ -34,7 +35,12 @@ export function ClientLayout() {
     <ClientErrorModalProvider>
       <div className="min-h-dvh bg-white text-neutral-900">
         {hideCatalogHeader ? null : (
-          <ClientHeader cityLabel={cityLabel} onCityClick={hasGeo ? undefined : requestGeo} />
+          <>
+            <div className="lg:hidden">
+              <ClientHeader cityLabel={cityLabel} onCityClick={hasGeo ? undefined : requestGeo} />
+            </div>
+            <SlottyHeader variant="bar" />
+          </>
         )}
         <Outlet context={outletContext} />
         {hideBottomNav ? null : <ClientBottomNav />}

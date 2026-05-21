@@ -115,7 +115,7 @@ function BentoStepsCard({ steps, className = '' }: { steps: Step[]; className?: 
 
 export const HomeHowItWorks: FC = () => {
   return (
-    <section className={homeSection} aria-labelledby="home-how-heading">
+    <section id="how-it-works" className={`${homeSection} scroll-mt-28`} aria-labelledby="home-how-heading">
       <div className="mx-auto max-w-[68rem]">
         <div className="mx-auto max-w-[40rem] px-1 text-center sm:px-0">
           <h2

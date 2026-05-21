@@ -5,6 +5,7 @@ import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import {
   ADMIN_APPOINTMENTS_PATH,
   ADMIN_BILLING_PATH,
+  ADMIN_LOGIN_METHODS_PATH,
   ADMIN_NOTIFICATIONS_PATH,
   ADMIN_OVERVIEW_PATH,
   ADMIN_PATH,
@@ -394,6 +395,28 @@ function AdminLayoutInner() {
                   </>
                 );
               }}
+            </NavLink>
+
+            <NavLink
+              to={ADMIN_LOGIN_METHODS_PATH}
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) => navClass(isActive)}
+            >
+              {({ isActive }) => (
+                <>
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <IconNavProfile className="shrink-0 opacity-95" />
+                    <span className="truncate">Способы входа</span>
+                  </span>
+                  {isActive ? (
+                    <span className="shrink-0 text-[12px] font-medium text-white/90" aria-hidden>
+                      ●
+                    </span>
+                  ) : (
+                    <span className="w-3 shrink-0" aria-hidden />
+                  )}
+                </>
+              )}
             </NavLink>
 
             <button
