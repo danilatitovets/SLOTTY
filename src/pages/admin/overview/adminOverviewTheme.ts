@@ -9,7 +9,7 @@ export const overviewInsetBg = 'bg-[#F3F4F6]';
 /** Высота нижнего таббара аналитики. */
 export const OVERVIEW_TAB_BAR_HEIGHT = '5.75rem';
 
-export const ADMIN_CABINET_SHELL_MAX = 'max-w-[460px]';
+export const ADMIN_CABINET_SHELL_MAX = 'w-full max-w-[460px] lg:max-w-none';
 
 export const overviewCard =
   'rounded-[24px] border border-white/80 bg-white shadow-[0_10px_36px_rgba(17,24,39,0.07)]';

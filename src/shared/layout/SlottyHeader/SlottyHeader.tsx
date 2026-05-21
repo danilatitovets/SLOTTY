@@ -25,6 +25,7 @@ import { resolveMasterEntryPath } from '../../../features/auth/lib/resolveMaster
 import { useIsMasterUser } from '../../../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../../../features/profile/lib/setProfileRole';
 import { useTelegram } from '../../hooks/useTelegram';
+import { HeaderProfileAvatar } from './HeaderProfileAvatar';
 import {
   landingAnchorHref,
   LANDING_ANCHOR_FAQ,
@@ -510,15 +511,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             aria-haspopup="menu"
             aria-label="Профиль"
           >
-            {profile?.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt=""
-                className="h-7 w-7 rounded-full object-cover"
-              />
-            ) : (
-              <HiUser className="h-5 w-5" aria-hidden />
-            )}
+            <HeaderProfileAvatar profile={profile} />
 
             <HiChevronDown className="h-4 w-4 opacity-60" aria-hidden />
           </button>
@@ -637,8 +630,8 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             aria-label={isAuthenticated ? 'Профиль' : 'Войти'}
             title={isAuthenticated ? 'Профиль' : 'Войти'}
           >
-            {isAuthenticated && profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+            {isAuthenticated ? (
+              <HeaderProfileAvatar profile={profile} />
             ) : (
               <HiUser className="h-5 w-5" aria-hidden />
             )}

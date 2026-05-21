@@ -31,8 +31,8 @@ export function useProfileTabs(): ProfileTabContextValue {
   return ctx;
 }
 
-/** Фиксированная нижняя панель разделов профиля. */
-export function ProfileSectionTabsBar() {
+/** Табы профиля: снизу на мобиле, сверху контента на десктопе. */
+export function ProfileSectionTabsBar({ placement = 'mobile' }: { placement?: 'mobile' | 'desktop' }) {
   const { pathname } = useLocation();
   const isProfileHome = pathname === ADMIN_PATH;
 
@@ -40,8 +40,16 @@ export function ProfileSectionTabsBar() {
 
   const { activeSection, setActiveSection } = useProfileTabs();
 
+  if (placement === 'desktop') {
+    return (
+      <div className="mb-5 hidden lg:block">
+        <SectionTabs active={activeSection} onChange={setActiveSection} />
+      </div>
+    );
+  }
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom,0px))]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[max(12px,env(safe-area-inset-bottom,0px))] lg:hidden">
       <div className="pointer-events-auto w-full max-w-[460px]">
         <SectionTabs active={activeSection} onChange={setActiveSection} />
       </div>

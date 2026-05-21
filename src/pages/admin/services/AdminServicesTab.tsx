@@ -18,7 +18,7 @@ import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
-import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_SCROLL_PAD } from './adminServicesTheme';
+import { SERVICES_PAGE_BG } from './adminServicesTheme';
 import { ServicesBundlesTab } from './ServicesBundlesTab';
 import { ServicesExtrasProBlock } from './ServicesExtrasProBlock';
 import { ServicesCatalogTab } from './ServicesCatalogTab';
@@ -733,9 +733,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
   return (
     <>
+      <ServicesTabBar active={activeTab} onChange={setActiveTab} />
+
       <div
-        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 ${SERVICES_PAGE_BG}`}
-        style={{ paddingBottom: SERVICES_TAB_BAR_SCROLL_PAD }}
+        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:mx-0 lg:pb-0 lg:px-0 ${SERVICES_PAGE_BG}`}
       >
       <ServicesPageHeader activeTab={activeTab} />
 
@@ -803,8 +804,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         ) : null}
       </AdminTabContentTransition>
       </div>
-
-      <ServicesTabBar active={activeTab} onChange={setActiveTab} />
 
       <ServicesServiceMenuSheet
         open={Boolean(menuTarget)}

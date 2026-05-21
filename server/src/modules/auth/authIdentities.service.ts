@@ -147,7 +147,7 @@ async function syncTelegramProfileColumns(
        telegram_user_id = $2,
        telegram_username = $3,
        full_name = coalesce(nullif(trim(full_name), ''), $4),
-       avatar_url = coalesce($5, avatar_url),
+       avatar_url = coalesce(nullif(trim(avatar_url), ''), $5),
        updated_at = now()
      where id = $1`,
     [profileId, user.id, tgUsername, fullName, avatarUrl],
@@ -226,11 +226,11 @@ export async function loginOrRegisterWithGoogle(payload: GoogleIdTokenPayload) {
   const existingProfileId = await findProfileIdByIdentity('google', providerUserId);
 
   if (existingProfileId) {
-    if (payload.picture || payload.name) {
+    if (payload.name || payload.picture) {
       await query(
         `update public.profiles set
            full_name = coalesce(nullif(trim($2), ''), full_name),
-           avatar_url = coalesce($3, avatar_url),
+           avatar_url = coalesce(nullif(trim(avatar_url), ''), $3),
            updated_at = now()
          where id = $1`,
         [existingProfileId, payload.name ?? null, payload.picture ?? null],
@@ -271,14 +271,13 @@ export async function linkGoogleToProfile(profileId: string, payload: GoogleIdTo
       providerUserId: payload.sub,
       email: payload.email ?? null,
     });
-    if (payload.picture || payload.name) {
+    if (payload.name) {
       await client.query(
         `update public.profiles set
            full_name = coalesce(nullif(trim($2), ''), full_name),
-           avatar_url = coalesce($3, avatar_url),
            updated_at = now()
          where id = $1`,
-        [profileId, payload.name ?? null, payload.picture ?? null],
+        [profileId, payload.name ?? null],
       );
     }
   });

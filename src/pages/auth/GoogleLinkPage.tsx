@@ -4,6 +4,7 @@ import { ADMIN_LOGIN_METHODS_PATH, HUB_PATH, LOGIN_PATH } from '../../app/paths'
 import { linkGoogle } from '../../features/auth/api/authApi';
 import { GoogleSignInButton } from '../../features/auth/components/GoogleSignInButton';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { ReturnToTelegramButton } from '../../features/auth/components/ReturnToTelegramButton';
 import { GoogleIcon } from '../../shared/ui/GoogleIcon';
 
 /** Привязка Google в обычном браузере (fallback, если OAuth redirect на API не настроен). */
@@ -65,11 +66,16 @@ export function GoogleLinkPage() {
         </p>
 
         {done ? (
-          <p className="mt-6 rounded-2xl bg-[#F0FDF4] px-4 py-3 text-[14px] font-semibold text-[#166534]">
-            {handoffToken
-              ? 'Google привязан к вашему кабинету. Закройте браузер и обновите «Способы входа» в Telegram.'
-              : 'Google привязан. Перенаправляем…'}
-          </p>
+          <div className="mt-6 space-y-3">
+            <p className="rounded-2xl bg-[#F0FDF4] px-4 py-3 text-[14px] font-semibold text-[#166534]">
+              {handoffToken
+                ? 'Google привязан к вашему кабинету. Откройте Telegram и нажмите «Обновить» в «Способы входа».'
+                : 'Google привязан. Перенаправляем…'}
+            </p>
+            {handoffToken ? (
+              <ReturnToTelegramButton className="flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-[#111827] text-[15px] font-semibold text-white" />
+            ) : null}
+          </div>
         ) : (
           <div className="relative mt-6 min-h-[52px] w-full">
             <div className="pointer-events-none flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#F47C8C] text-[15px] font-semibold text-white">

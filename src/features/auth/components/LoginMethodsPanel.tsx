@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { HiArrowPath, HiCheck } from 'react-icons/hi2';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FORGOT_PASSWORD_PATH } from '../../../app/paths';
 import {
@@ -21,14 +22,11 @@ import { readPublicAppOrigin } from '../../../shared/lib/masterBookingLink';
 import { GOOGLE_LINK_PATH } from '../../../app/paths';
 import type { AuthIdentityDto, AuthProvider, BackendProfile } from '../types';
 import { GoogleSignInButton } from './GoogleSignInButton';
-import { LoginMethodsHint } from './LoginMethodsHint';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
 import { openTelegramOrBrowserUrl } from '../../../shared/lib/telegramWebApp';
 import { GoogleIcon } from '../../../shared/ui/GoogleIcon';
 import { useAuth } from '../AuthProvider';
 import {
-  cabinetCard,
-  cabinetCardPad,
   cabinetIconCircle,
   sheetFieldClass,
   sheetHintClass,
@@ -629,15 +627,13 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
     ].filter(Boolean).length;
 
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[#F7F7F8] px-4 py-3">
-          <p className="text-[13px] font-medium text-[#6B7280]">Статус</p>
-          <p className="text-[14px] font-semibold text-[#111827]">
-            {loading ? '…' : `Подключено ${connectedCount} из 3`}
-          </p>
-        </div>
-
-        <LoginMethodsHint />
+      <div className="space-y-3">
+        <LoginMethodsProgressCard
+          connectedCount={connectedCount}
+          loading={loading}
+          busy={busy}
+          onRefresh={() => void reload()}
+        />
 
         {error ? <ErrorBanner message={error} pageStyle={false} /> : null}
         {emailNotice ? (
@@ -649,11 +645,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
         <LoginMethodSheetCard
           icon={<TelegramMark />}
           title="Telegram"
-          subtitle={
-            linked.telegram
-              ? 'Основной способ входа в Mini App'
-              : 'Откройте SLOTTY в приложении Telegram'
-          }
+          subtitle={linked.telegram ? 'Вход в Mini App' : 'Откройте SLOTTY в Telegram'}
           connected={linked.telegram}
         >
           {!linked.telegram ? (
@@ -680,15 +672,13 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
                 </>
               )}
             </div>
-          ) : (
-            <p className={sheetHintClass}>Можно входить через кнопку «Открыть SLOTTY» в боте.</p>
-          )}
+          ) : null}
         </LoginMethodSheetCard>
 
         <LoginMethodSheetCard
           icon={<GoogleIcon size={20} />}
           title="Google"
-          subtitle={linked.google ? 'Вход с почтой Google' : 'Удобно с телефона и компьютера'}
+          subtitle={linked.google ? 'Почта Google' : 'Вход с телефона и компьютера'}
           connected={linked.google}
         >
           {!linked.google ? (
@@ -709,7 +699,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
                 <p className={sheetHintClass}>{messageForAuthErrorCode('GOOGLE_NOT_CONFIGURED')}</p>
               )}
               {inTelegramApp ? (
-                <p className={sheetHintClass}>Откроется браузер — так Google разрешает вход из Telegram.</p>
+                <p className={sheetHintClass}>Откроется браузер для входа Google.</p>
               ) : null}
             </div>
           ) : null}
@@ -810,8 +800,6 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
       <p className="text-[14px] leading-relaxed text-neutral-600">
         Подключите несколько способов входа, чтобы не потерять доступ к кабинету.
       </p>
-
-      <LoginMethodsHint />
 
       {error ? <ErrorBanner message={error} pageStyle={false} /> : null}
       {emailNotice ? (
@@ -982,6 +970,52 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
   );
 }
 
+function LoginMethodsProgressCard({
+  connectedCount,
+  loading,
+  busy,
+  onRefresh,
+}: {
+  connectedCount: number;
+  loading: boolean;
+  busy: boolean;
+  onRefresh: () => void;
+}) {
+  const total = 3;
+  return (
+    <div className="rounded-[20px] bg-[#F7F7F8] px-4 py-3.5 ring-1 ring-[#EAECEF]">
+      <div className="flex gap-1.5" aria-hidden>
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 flex-1 rounded-full transition-colors ${
+              i < connectedCount ? 'bg-[#F47C8C]' : 'bg-[#E5E7EB]'
+            }`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-[13px] text-[#6B7280]">
+          <span className="font-semibold text-[#111827]">
+            {loading ? '…' : connectedCount}
+          </span>
+          {' '}
+          из {total} подключено
+        </p>
+        <button
+          type="button"
+          disabled={loading || busy}
+          onClick={onRefresh}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-[#111827] ring-1 ring-[#EAECEF] transition hover:bg-[#FAFAFA] active:scale-[0.98] disabled:opacity-50"
+        >
+          <HiArrowPath className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+          {loading ? '…' : 'Обновить'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LoginMethodSheetCard({
   icon,
   title,
@@ -997,20 +1031,32 @@ function LoginMethodSheetCard({
   pending?: boolean;
   children?: React.ReactNode;
 }) {
+  const hasActions = Boolean(children);
+
   return (
-    <div className={`${cabinetCard} ${cabinetCardPad}`}>
-      <div className="flex items-start gap-3">
+    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[#EAECEF]">
+      <div className="flex items-center gap-3">
         <div className={cabinetIconCircle}>{icon}</div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[16px] font-semibold text-[#111827]">{title}</p>
-            {connected ? <MethodStatusBadge tone="ok">Подключён</MethodStatusBadge> : null}
-            {pending ? <MethodStatusBadge tone="pending">Ждёт письмо</MethodStatusBadge> : null}
-          </div>
-          <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{subtitle}</p>
+          <p className="text-[15px] font-semibold leading-tight text-[#111827]">{title}</p>
+          <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">{subtitle}</p>
+          {pending && !connected ? (
+            <div className="mt-2">
+              <MethodStatusBadge tone="pending">Ждёт письмо</MethodStatusBadge>
+            </div>
+          ) : null}
         </div>
+        {connected ? (
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ECFDF5] text-[#16A34A] ring-1 ring-[#BBF7D0]"
+            aria-label="Подключён"
+            title="Подключён"
+          >
+            <HiCheck className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+          </span>
+        ) : null}
       </div>
-      {children ? <div className="mt-4 border-t border-[#F3F4F6] pt-4">{children}</div> : null}
+      {hasActions ? <div className="mt-3 border-t border-[#F3F4F6] pt-3">{children}</div> : null}
     </div>
   );
 }

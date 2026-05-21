@@ -3,7 +3,6 @@ import { preloadTabIntroImages } from '../useTabIntroImage';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { postOverviewReviewReply } from '../../../features/admin/api/masterOverviewApi';
-import { OVERVIEW_TAB_BAR_HEIGHT } from './adminOverviewTheme';
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
 import { OVERVIEW_TAB_INTRO_IMAGES, OverviewTabIntro } from './OverviewTabIntro';
@@ -123,9 +122,10 @@ export function AdminOverviewTab({
 
   return (
     <>
+      <OverviewAnalyticsTabBar active={activeTab} onChange={setActiveTab} />
+
       <section
-        className="w-full min-w-0 space-y-4 overflow-x-hidden"
-        style={{ paddingBottom: `calc(${OVERVIEW_TAB_BAR_HEIGHT} + 1.25rem)` }}
+        className="w-full min-w-0 space-y-4 overflow-x-hidden pb-[calc(5.75rem+1.25rem)] lg:pb-0"
       >
         <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
 
@@ -138,8 +138,6 @@ export function AdminOverviewTab({
           {panel}
         </AdminTabContentTransition>
       </section>
-
-      <OverviewAnalyticsTabBar active={activeTab} onChange={setActiveTab} />
     </>
   );
 }

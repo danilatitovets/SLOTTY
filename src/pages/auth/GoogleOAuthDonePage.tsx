@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HUB_PATH, LOGIN_PATH } from '../../app/paths';
+import { ReturnToTelegramButton } from '../../features/auth/components/ReturnToTelegramButton';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { messageForAuthErrorCode } from '../../features/auth/lib/authApiErrors';
 import { getPostClientLoginPath } from '../../features/auth/lib/postLoginRedirect';
@@ -20,6 +21,7 @@ export function GoogleOAuthDonePage() {
   const navigate = useNavigate();
   const { refreshProfile } = useAuth();
   const [message, setMessage] = useState('Завершаем вход…');
+  const [linked, setLinked] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -28,10 +30,11 @@ export function GoogleOAuthDonePage() {
     const from = params.get('from') ?? undefined;
 
     if (status === 'linked') {
+      setLinked(!error);
       setMessage(
         error
           ? messageForAuthErrorCode(error, 'Не удалось привязать Google.')
-          : 'Google привязан. Вернитесь в Telegram и обновите «Способы входа».',
+          : 'Google привязан. Вернитесь в Telegram и нажмите «Обновить» в «Способы входа».',
       );
       return;
     }
@@ -66,15 +69,20 @@ export function GoogleOAuthDonePage() {
       <h1 className="text-[22px] font-bold text-[#111827]">Google</h1>
       <p className="mt-4 text-[15px] leading-relaxed text-[#6B7280]">{message}</p>
       <div className="mt-8 flex flex-col gap-3">
+        {linked ? (
+          <ReturnToTelegramButton className="flex min-h-[52px] w-full items-center justify-center rounded-2xl bg-[#111827] text-[15px] font-semibold text-white" />
+        ) : null}
         <Link
           to={HUB_PATH}
-          className="rounded-2xl bg-[#111827] px-4 py-3.5 text-[15px] font-semibold text-white no-underline"
+          className="rounded-2xl bg-[#F7F7F8] px-4 py-3.5 text-[15px] font-semibold text-[#111827] no-underline ring-1 ring-[#EAECEF]"
         >
           На главную
         </Link>
-        <Link to={LOGIN_PATH} className="text-[14px] font-semibold text-[#6B7280] no-underline">
-          Страница входа
-        </Link>
+        {!linked ? (
+          <Link to={LOGIN_PATH} className="text-[14px] font-semibold text-[#6B7280] no-underline">
+            Страница входа
+          </Link>
+        ) : null}
       </div>
     </main>
   );

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { HEADER_LOGO_SRC } from '../../app/headerLogo';
@@ -19,6 +19,17 @@ import { useMasterPlanEntitlements } from '../../features/billing/useMasterPlanE
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import { ProfileSectionTabsBar, ProfileTabProvider, PROFILE_TAB_BAR_HEIGHT } from './profile/profileTabContext';
 import { ADMIN_CABINET_SHELL_MAX, OVERVIEW_TAB_BAR_HEIGHT } from './overview/adminOverviewTheme';
+import { ADMIN_DESKTOP_CANVAS } from './adminCabinetLayout';
+import {
+  ADMIN_LOGIN_METHODS_NAV,
+  ADMIN_MAIN_NAV,
+  IconNavBilling,
+  IconNavNotifications,
+  IconNavSupport,
+  IconNavDocuments,
+} from './adminCabinetNav';
+import { AdminDesktopSidebar } from './AdminDesktopSidebar';
+import { AdminDesktopTopBar } from './AdminDesktopTopBar';
 import { SERVICES_PAGE_BG, SERVICES_TAB_BAR_HEIGHT } from './services/adminServicesTheme';
 import { APPOINTMENTS_TAB_BAR_HEIGHT } from './appointments/adminAppointmentsTheme';
 import { SCHEDULE_TAB_BAR_HEIGHT } from './schedule/adminScheduleTheme';
@@ -27,92 +38,6 @@ import { AdminBottomSheet } from './shared/AdminBottomSheet';
 import { AdminRouteTransitionOutlet } from './shared/AdminRouteTransitionOutlet';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { LOADING_VIDEO_SRC } from '../../shared/ui/loadingVideoSrc';
-
-const iconStroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-
-function IconNavProfile({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function IconNavOverview({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M3 3v18h18" />
-      <path d="M7 16V11" />
-      <path d="M12 16V8" />
-      <path d="M17 16V13" />
-    </svg>
-  );
-}
-
-function IconNavServices({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M12 2 2 7l10 5 10-5-10-5Z" />
-      <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-    </svg>
-  );
-}
-
-function IconNavSchedule({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function IconNavAppointments({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <path d="M9 2v4M15 2v4M8 6h8" />
-      <path d="M9 12h6M9 16h4" />
-    </svg>
-  );
-}
-
-function IconNavBilling({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <path d="M2 10h20" />
-      <path d="M6 15h4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconNavSupport({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-    </svg>
-  );
-}
-
-function IconNavDocuments({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-    </svg>
-  );
-}
-
-function IconNavNotifications({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
 
 function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean }) {
   const label = count > 9 ? '9+' : String(count);
@@ -126,21 +51,6 @@ function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean })
     </span>
   );
 }
-
-type MenuItem = {
-  to: string;
-  label: string;
-  end?: boolean;
-  icon: (p: { className?: string }) => ReactNode;
-};
-
-const MAIN_MENU: MenuItem[] = [
-  { to: ADMIN_PATH, label: 'Профиль мастера', end: true, icon: IconNavProfile },
-  { to: ADMIN_OVERVIEW_PATH, label: 'Сводка', icon: IconNavOverview },
-  { to: ADMIN_SERVICES_PATH, label: 'Услуги', icon: IconNavServices },
-  { to: ADMIN_SCHEDULE_PATH, label: 'Окна', icon: IconNavSchedule },
-  { to: ADMIN_APPOINTMENTS_PATH, label: 'Записи', icon: IconNavAppointments },
-];
 
 function IconBurger({ className }: { className?: string }) {
   return (
@@ -161,7 +71,7 @@ export function AdminCabinetStatusBanner() {
   if (!useCabinetApi) return null;
   if (!cabinetLoading && !cabinetError) return null;
   return (
-    <div className={`mx-auto w-full min-w-0 px-4 pb-2 pt-2 ${ADMIN_CABINET_SHELL_MAX}`}>
+    <div className={`mx-auto w-full min-w-0 px-4 pb-2 pt-2 lg:max-w-none lg:px-8 ${ADMIN_CABINET_SHELL_MAX}`}>
       {cabinetLoading ? (
         <div className="rounded-2xl bg-white px-4 py-3 shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
           <LoadingVideo size="md" />
@@ -225,28 +135,32 @@ function AdminLayoutInner() {
   }, []);
 
   const shellPadBottom = isProfileHome
-    ? 'pb-[calc(var(--slotty-profile-tab-bar-h)+env(safe-area-inset-bottom,0px)+1rem)]'
+    ? 'pb-[calc(var(--slotty-profile-tab-bar-h)+env(safe-area-inset-bottom,0px)+1rem)] lg:pb-0'
     : isOverview
-      ? `pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1rem)]`
+      ? `pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1rem)] lg:pb-0`
       : isServices
-        ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
+        ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
         : isSchedule
-          ? `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
+          ? `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
           : isAppointments
-            ? `pb-[calc(${APPOINTMENTS_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)]`
-            : '';
+            ? `pb-[calc(${APPOINTMENTS_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
+            : 'lg:pb-8';
 
   const pageShellBg =
     isOverview || isServices || isSchedule || isAppointments ? SERVICES_PAGE_BG : 'bg-white';
 
   return (
-    <div
-      className={`min-h-dvh pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827] ${pageShellBg}`}
-    >
+    <div className={`flex min-h-dvh text-[#111827] ${pageShellBg} lg:bg-[#F5F6FA]`}>
+      <AdminDesktopSidebar
+        onSupport={() => setSettingsSheet('support')}
+        onDocuments={() => setSettingsSheet('documents')}
+      />
+
+      <div className={`flex min-h-dvh min-w-0 flex-1 flex-col ${ADMIN_DESKTOP_CANVAS}`}>
         <ProfileTabProvider>
           <div
             ref={stickyShellRef}
-            className="sticky top-0 z-40 w-full min-w-0 bg-white"
+            className="sticky top-0 z-40 w-full min-w-0 bg-white lg:hidden"
             style={
               {
                 '--slotty-admin-header-h': '5.25rem',
@@ -306,19 +220,22 @@ function AdminLayoutInner() {
             <div className="w-full border-b-2 border-[#F47C8C]" aria-hidden />
           </div>
 
+          <AdminDesktopTopBar />
+
           {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
 
-          <div className={`mx-auto w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom}`}>
-            <div className="w-full min-w-0 px-4 pt-4">
+          <div className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom}`}>
+            <div className="w-full min-w-0 px-4 pt-4 lg:mx-auto lg:max-w-6xl lg:rounded-[24px] lg:bg-white lg:px-8 lg:pb-8 lg:pt-6 lg:shadow-[0_4px_24px_rgba(17,24,39,0.06)] lg:ring-1 lg:ring-[#EAECEF]">
+              {isProfileHome ? <ProfileSectionTabsBar placement="desktop" /> : null}
               <AdminRouteTransitionOutlet />
             </div>
-            <ProfileSectionTabsBar />
+            <ProfileSectionTabsBar placement="mobile" />
           </div>
         </ProfileTabProvider>
 
-      <AdminBottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Разделы">
+        <AdminBottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Разделы">
         <nav className="flex flex-col gap-2 pb-1" aria-label="Разделы кабинета">
-          {MAIN_MENU.map((item) => (
+          {ADMIN_MAIN_NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -405,7 +322,7 @@ function AdminLayoutInner() {
               {({ isActive }) => (
                 <>
                   <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <IconNavProfile className="shrink-0 opacity-95" />
+                    <ADMIN_LOGIN_METHODS_NAV.icon className="shrink-0 opacity-95" />
                     <span className="truncate">Способы входа</span>
                   </span>
                   {isActive ? (
@@ -452,12 +369,13 @@ function AdminLayoutInner() {
         </nav>
       </AdminBottomSheet>
 
-      <ClientSettingsSheet
-        open={settingsSheet !== null}
-        initialView={settingsSheet ?? 'menu'}
-        directEntry
-        onClose={() => setSettingsSheet(null)}
-      />
+        <ClientSettingsSheet
+          open={settingsSheet !== null}
+          initialView={settingsSheet ?? 'menu'}
+          directEntry
+          onClose={() => setSettingsSheet(null)}
+        />
+      </div>
     </div>
   );
 }

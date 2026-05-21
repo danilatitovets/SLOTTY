@@ -4,6 +4,7 @@ export type BackendProfile = {
   telegram_username: string | null;
   full_name: string;
   avatar_url: string | null;
+  header_avatar_url?: string | null;
   role: string;
   phone?: string | null;
   address?: string | null;

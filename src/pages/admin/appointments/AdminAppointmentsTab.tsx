@@ -10,11 +10,7 @@ import type {
   DemoMasterAppointment,
 } from '../../../features/master/model/demoMasterAppointments';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
-import {
-  APPOINTMENTS_PAGE_BG,
-  APPOINTMENTS_TAB_BAR_SCROLL_PAD,
-  apptPinkBtn,
-} from './adminAppointmentsTheme';
+import { APPOINTMENTS_PAGE_BG, apptPinkBtn } from './adminAppointmentsTheme';
 import {
   AppointmentsActionSheet,
   type AppointmentActionConfig,
@@ -413,9 +409,10 @@ export function AdminAppointmentsTab({
 
   return (
     <>
+      <AppointmentsBottomTabBar active={tab} onChange={setTab} />
+
       <div
-        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 ${APPOINTMENTS_PAGE_BG}`}
-        style={{ paddingBottom: APPOINTMENTS_TAB_BAR_SCROLL_PAD }}
+        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:mx-0 lg:pb-0 lg:px-0 ${APPOINTMENTS_PAGE_BG}`}
       >
         <div className="relative z-0">
           <AppointmentsTabIntro tab={tab} />
@@ -543,8 +540,6 @@ export function AdminAppointmentsTab({
           {tab === 'history' ? renderHistory() : null}
         </AdminTabContentTransition>
       </div>
-
-      <AppointmentsBottomTabBar active={tab} onChange={setTab} />
 
       <AppointmentsActionSheet
         config={actionConfig}

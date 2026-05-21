@@ -26,12 +26,12 @@ export function LoginMethodsSheet({ open, onClose, mode = 'settings', onLinked }
       >
         Способы входа
       </h2>
-      <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">
+      <p className="mt-1.5 text-[14px] leading-relaxed text-[#6B7280]">
         {mode === 'settings'
-          ? 'Подключите 2–3 способа — так вы не потеряете доступ к кабинету, даже если смените телефон или почту.'
+          ? 'Telegram, Google и email — один кабинет, доступ не потеряется.'
           : 'Войдите, чтобы сохранить записи и настройки.'}
       </p>
-      <div className="mt-5 pb-2">
+      <div className="mt-4 pb-1">
         <LoginMethodsPanel mode={mode} appearance="sheet" onLinked={handleLinked} />
       </div>
     </ProfileSheetShell>

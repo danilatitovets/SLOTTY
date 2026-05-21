@@ -7,11 +7,41 @@ export interface ProfileDto {
   telegram_username: string | null;
   full_name: string;
   avatar_url: string | null;
+  /** Аватар для шапки: фото из кабинета мастера или загруженное в профиле клиента, не OAuth. */
+  header_avatar_url: string | null;
   role: string;
   phone: string | null;
   address: string | null;
   privacy_consent_accepted_at: string | null;
   terms_accepted_at: string | null;
+}
+
+function isOAuthProviderAvatarUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  return u.includes('googleusercontent.com') || u.includes('ggpht.com');
+}
+
+async function fetchMasterCabinetPhotoUrl(profileId: string): Promise<string | null> {
+  const r = await query<{ photo_url: string | null }>(
+    `select photo_url from public.master_profiles where master_id = $1 limit 1`,
+    [profileId],
+  );
+  const photo = r.rows[0]?.photo_url?.trim();
+  return photo || null;
+}
+
+export async function resolveHeaderAvatarUrl(
+  profileId: string,
+  role: string,
+  avatarUrl: string | null,
+): Promise<string | null> {
+  if (role === 'master' || role === 'platform_admin') {
+    const masterPhoto = await fetchMasterCabinetPhotoUrl(profileId);
+    if (masterPhoto) return masterPhoto;
+  }
+  const av = avatarUrl?.trim();
+  if (!av || isOAuthProviderAvatarUrl(av)) return null;
+  return av;
 }
 
 function toTelegramUserIdNumber(raw: string | null): number | null {
@@ -48,12 +78,14 @@ export async function getProfileById(profileId: string): Promise<ProfileDto> {
   if (!row) {
     throw ApiError.notFound('Profile not found');
   }
+  const header_avatar_url = await resolveHeaderAvatarUrl(profileId, row.role, row.avatar_url);
   return {
     id: row.id,
     telegram_user_id: toTelegramUserIdNumber(row.telegram_user_id),
     telegram_username: row.telegram_username,
     full_name: row.full_name,
     avatar_url: row.avatar_url,
+    header_avatar_url,
     role: row.role,
     phone: row.phone,
     address: row.address,

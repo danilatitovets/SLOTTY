@@ -12,7 +12,7 @@ import { ScheduleBottomTabBar } from './ScheduleBottomTabBar';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleCreateTab } from './ScheduleCreateTab';
 import { ScheduleSlotsListTab } from './ScheduleSlotsListTab';
-import { SCHEDULE_PAGE_BG, SCHEDULE_TAB_BAR_SCROLL_PAD } from './adminScheduleTheme';
+import { SCHEDULE_PAGE_BG } from './adminScheduleTheme';
 import { SCHEDULE_TAB_INTRO_IMAGES, ScheduleTabIntro } from './ScheduleTabIntro';
 import type { PlannedSlot, RepeatKind, SchedulePageTab, ScheduleWindowView } from './scheduleTypes';
 import { MSG_SLOTS_ALL_BUSY } from './scheduleTypes';
@@ -378,9 +378,10 @@ export function AdminScheduleTab({ draft }: Props) {
 
   return (
     <>
+      <ScheduleBottomTabBar active={pageTab} onChange={setPageTab} />
+
       <div
-        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 ${SCHEDULE_PAGE_BG}`}
-        style={{ paddingBottom: SCHEDULE_TAB_BAR_SCROLL_PAD }}
+        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:mx-0 lg:pb-0 lg:px-0 ${SCHEDULE_PAGE_BG}`}
       >
         <ScheduleTabIntro tab={pageTab} />
 
@@ -427,8 +428,6 @@ export function AdminScheduleTab({ draft }: Props) {
         ) : null}
         </AdminTabContentTransition>
       </div>
-
-      <ScheduleBottomTabBar active={pageTab} onChange={setPageTab} />
 
       <AddWindowSheet
         open={addSheetOpen}
