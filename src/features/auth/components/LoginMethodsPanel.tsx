@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FORGOT_PASSWORD_PATH } from '../../../app/paths';
 import {
@@ -22,12 +22,21 @@ import { useTelegram } from '../../../shared/hooks/useTelegram';
 import { openTelegramOrBrowserUrl } from '../../../shared/lib/telegramWebApp';
 import { GoogleIcon } from '../../../shared/ui/GoogleIcon';
 import { useAuth } from '../AuthProvider';
+import {
+  cabinetCard,
+  cabinetCardPad,
+  cabinetIconCircle,
+  sheetFieldClass,
+  sheetHintClass,
+  sheetPrimaryBtnClass,
+  sheetOutlineBtnClass,
+} from '../../../pages/admin/profile/adminProfileCabinetTheme';
 
 type Props = {
   /** settings = привязка способов входа; login = вход на сайте */
   mode?: 'settings' | 'login';
-  /** page = компактные pill-кнопки на /login */
-  appearance?: 'default' | 'page';
+  /** page = /login; sheet = bottom sheet кабинета */
+  appearance?: 'default' | 'page' | 'sheet';
   /** Вызывается после успешного входа или привязки; для входа передаётся актуальный profile. */
   onLinked?: (profile?: BackendProfile) => void;
 };
@@ -95,6 +104,7 @@ type GoogleLoginPillProps = {
   isTelegramWebApp: boolean;
   oauthPurpose: 'link' | 'login';
   oauthReturnPath?: string;
+  variant?: 'outline' | 'cabinet';
 };
 
 function GoogleLoginPill({
@@ -107,6 +117,7 @@ function GoogleLoginPill({
   isTelegramWebApp,
   oauthPurpose,
   oauthReturnPath,
+  variant = 'outline',
 }: GoogleLoginPillProps) {
   if (!googleClientId) {
     return (
@@ -116,8 +127,13 @@ function GoogleLoginPill({
     );
   }
 
-  const pillClass = pageStyle ? pageSocialBtn : socialOutlineBtn;
-  const overlayRound = pageStyle ? 'rounded-2xl' : 'rounded-full';
+  const pillClass =
+    variant === 'cabinet'
+      ? `${sheetPrimaryBtnClass} w-full gap-2`
+      : pageStyle
+        ? pageSocialBtn
+        : socialOutlineBtn;
+  const overlayRound = pageStyle ? 'rounded-2xl' : variant === 'cabinet' ? 'rounded-[17px]' : 'rounded-full';
 
   const openGoogleOAuth = async () => {
     try {
@@ -181,6 +197,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
 
   const isSettings = mode === 'settings' && isAuthenticated;
   const pageStyle = appearance === 'page';
+  const sheetStyle = appearance === 'sheet';
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
   const telegramLoginUrl = useTelegramLoginUrl(loginReturnPath);
   const inTelegramApp = Boolean(initDataRaw && isTelegramWebApp);
@@ -563,7 +580,191 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
     );
   }
 
-  /* ——— Способы входа (настройки) ——— */
+  /* ——— Способы входа: bottom sheet (кабинет) ——— */
+  if (sheetStyle && isSettings) {
+    const connectedCount = [
+      linked.telegram,
+      linked.google,
+      linked.email && linked.emailVerified,
+    ].filter(Boolean).length;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3 rounded-[16px] bg-[#F7F7F8] px-4 py-3">
+          <p className="text-[13px] font-medium text-[#6B7280]">Статус</p>
+          <p className="text-[14px] font-semibold text-[#111827]">
+            {loading ? '…' : `Подключено ${connectedCount} из 3`}
+          </p>
+        </div>
+
+        <LoginMethodsHint />
+
+        {error ? <ErrorBanner message={error} pageStyle={false} /> : null}
+        {emailNotice ? (
+          <p className="rounded-[18px] border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-[13px] leading-relaxed text-[#166534]">
+            {emailNotice}
+          </p>
+        ) : null}
+
+        <LoginMethodSheetCard
+          icon={<TelegramMark />}
+          title="Telegram"
+          subtitle={
+            linked.telegram
+              ? 'Основной способ входа в Mini App'
+              : 'Откройте SLOTTY в приложении Telegram'
+          }
+          connected={linked.telegram}
+        >
+          {!linked.telegram ? (
+            <div className="space-y-2">
+              {inTelegramApp ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleLinkTelegram()}
+                  className={sheetPrimaryBtnClass}
+                >
+                  Подключить Telegram
+                </button>
+              ) : (
+                <>
+                  <p className={sheetHintClass}>
+                    В браузере сначала откройте бота — затем вернитесь сюда и подключите аккаунт.
+                  </p>
+                  {telegramLoginUrl ? (
+                    <a href={telegramLoginUrl} className={`${sheetOutlineBtnClass} no-underline`}>
+                      Открыть бота в Telegram
+                    </a>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : (
+            <p className={sheetHintClass}>Можно входить через кнопку «Открыть SLOTTY» в боте.</p>
+          )}
+        </LoginMethodSheetCard>
+
+        <LoginMethodSheetCard
+          icon={<GoogleIcon size={20} />}
+          title="Google"
+          subtitle={linked.google ? 'Вход с почтой Google' : 'Удобно с телефона и компьютера'}
+          connected={linked.google}
+        >
+          {!linked.google ? (
+            <div className="space-y-2">
+              {googleClientId ? (
+                <GoogleLoginPill
+                  busy={busy}
+                  googleClientId={googleClientId}
+                  label="Подключить Google"
+                  pageStyle={false}
+                  variant="cabinet"
+                  isTelegramWebApp={inTelegramApp}
+                  oauthPurpose="link"
+                  onCredential={(t) => void handleGoogleCredential(t)}
+                  onError={(m) => setError(m)}
+                />
+              ) : (
+                <p className={sheetHintClass}>{messageForAuthErrorCode('GOOGLE_NOT_CONFIGURED')}</p>
+              )}
+              {inTelegramApp ? (
+                <p className={sheetHintClass}>Откроется браузер — так Google разрешает вход из Telegram.</p>
+              ) : null}
+            </div>
+          ) : null}
+        </LoginMethodSheetCard>
+
+        <LoginMethodSheetCard
+          icon={<EmailMethodIcon />}
+          title="Email"
+          subtitle={
+            linked.email
+              ? linked.emailVerified
+                ? (linkedEmailLabel ?? 'Почта подтверждена')
+                : 'Подтвердите почту по ссылке из письма'
+              : 'Резервный вход, если нет Telegram'
+          }
+          connected={Boolean(linked.email && linked.emailVerified)}
+          pending={Boolean(linked.email && !linked.emailVerified)}
+        >
+          {linked.email && !linked.emailVerified ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleResendVerification()}
+              className={sheetOutlineBtnClass}
+            >
+              Отправить письмо подтверждения снова
+            </button>
+          ) : null}
+
+          {!linked.email && !showEmailForm ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setShowEmailForm(true);
+                setEmailMode('link');
+              }}
+              className={sheetPrimaryBtnClass}
+            >
+              Добавить email
+            </button>
+          ) : null}
+
+          {!linked.email && showEmailForm ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[12px] font-medium text-[#6B7280]">Email</label>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className={sheetFieldClass}
+                />
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-[#6B7280]">Пароль</label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Минимум 8 символов"
+                  className={sheetFieldClass}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={busy || !email.trim() || password.length < 8}
+                onClick={() => void handleEmailSubmit()}
+                className={sheetPrimaryBtnClass}
+              >
+                Сохранить email
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setShowEmailForm(false);
+                  setEmail('');
+                  setPassword('');
+                }}
+                className="w-full text-center text-[13px] font-semibold text-[#6B7280]"
+              >
+                Отмена
+              </button>
+            </div>
+          ) : null}
+        </LoginMethodSheetCard>
+      </div>
+    );
+  }
+
+  /* ——— Способы входа (настройки, legacy) ——— */
   return (
     <div className="space-y-4">
       <p className="text-[14px] leading-relaxed text-neutral-600">
@@ -738,5 +939,67 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
         ) : null}
       </div>
     </div>
+  );
+}
+
+function LoginMethodSheetCard({
+  icon,
+  title,
+  subtitle,
+  connected,
+  pending,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  connected?: boolean;
+  pending?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={`${cabinetCard} ${cabinetCardPad}`}>
+      <div className="flex items-start gap-3">
+        <div className={cabinetIconCircle}>{icon}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[16px] font-semibold text-[#111827]">{title}</p>
+            {connected ? <MethodStatusBadge tone="ok">Подключён</MethodStatusBadge> : null}
+            {pending ? <MethodStatusBadge tone="pending">Ждёт письмо</MethodStatusBadge> : null}
+          </div>
+          <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{subtitle}</p>
+        </div>
+      </div>
+      {children ? <div className="mt-4 border-t border-[#F3F4F6] pt-4">{children}</div> : null}
+    </div>
+  );
+}
+
+function MethodStatusBadge({
+  children,
+  tone,
+}: {
+  children?: ReactNode;
+  tone: 'ok' | 'pending';
+}) {
+  const cls =
+    tone === 'ok'
+      ? 'bg-[#ECFDF5] text-[#15803D] ring-[#BBF7D0]'
+      : 'bg-[#FFFBEB] text-[#B45309] ring-[#FDE68A]';
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${cls}`}>{children}</span>
+  );
+}
+
+function EmailMethodIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+      <path
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 6h16v12H4V6Zm0 0 8 6 8-6"
+      />
+    </svg>
   );
 }

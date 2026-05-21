@@ -128,21 +128,22 @@ export function ClientSettingsSheet({
   if (view === 'login-methods') {
     return (
       <ProfileSheetShell onClose={leaveSubView} labelledBy="settings-login-methods-title">
-        <button
-          type="button"
-          onClick={leaveSubView}
-          className="mb-2 text-[14px] font-semibold text-neutral-500 transition hover:text-neutral-800"
-        >
-          ← Назад
-        </button>
-        <h2 id="settings-login-methods-title" className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950">
+        <div className="-mt-1 mb-4 flex justify-center sm:hidden" aria-hidden>
+          <div className="h-1 w-10 rounded-full bg-[#EAECEF]" />
+        </div>
+        <h2 id="settings-login-methods-title" className="text-[22px] font-bold tracking-[-0.04em] text-[#111827]">
           Способы входа
         </h2>
-        <div className="mt-5">
+        <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">
+          {isAuthenticated && backendConfigured
+            ? 'Подключите 2–3 способа — так вы не потеряете доступ к кабинету.'
+            : 'Войдите, чтобы сохранить записи и избранное.'}
+        </p>
+        <div className="mt-5 pb-2">
           {isAuthenticated && backendConfigured ? (
-            <LoginMethodsPanel mode="settings" />
+            <LoginMethodsPanel mode="settings" appearance="sheet" onLinked={onClose} />
           ) : (
-            <LoginMethodsPanel mode="login" onLinked={onClose} />
+            <LoginMethodsPanel mode="login" appearance="page" onLinked={onClose} />
           )}
         </div>
       </ProfileSheetShell>
