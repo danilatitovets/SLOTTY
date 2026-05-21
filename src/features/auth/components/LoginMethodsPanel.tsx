@@ -14,7 +14,10 @@ import {
   sendEmailVerification,
 } from '../api/authApi';
 import { messageForAuthErrorCode } from '../lib/authApiErrors';
+import { usePublicAppConfig } from '../hooks/usePublicAppConfig';
 import { useTelegramLoginUrl } from '../hooks/useTelegramLoginUrl';
+import { readPublicAppOrigin } from '../../../shared/lib/masterBookingLink';
+import { GOOGLE_LINK_PATH } from '../../../app/paths';
 import type { AuthIdentityDto, AuthProvider, BackendProfile } from '../types';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { LoginMethodsHint } from './LoginMethodsHint';
@@ -135,7 +138,14 @@ function GoogleLoginPill({
         : socialOutlineBtn;
   const overlayRound = pageStyle ? 'rounded-2xl' : variant === 'cabinet' ? 'rounded-[17px]' : 'rounded-full';
 
+  const publicConfig = usePublicAppConfig();
+
   const openGoogleOAuth = async () => {
+    if (isTelegramWebApp && publicConfig.googleOAuthConfigured === false) {
+      openTelegramOrBrowserUrl(`${readPublicAppOrigin()}${GOOGLE_LINK_PATH}`);
+      return;
+    }
+
     try {
       const { authorizationUrl } = await startGoogleOAuth({
         purpose: oauthPurpose,
@@ -143,7 +153,12 @@ function GoogleLoginPill({
       });
       openTelegramOrBrowserUrl(authorizationUrl);
     } catch (e) {
-      onError(e instanceof Error ? e.message : messageForAuthErrorCode('GOOGLE_OAUTH_EXCHANGE_FAILED'));
+      const msg = e instanceof Error ? e.message : messageForAuthErrorCode('GOOGLE_OAUTH_EXCHANGE_FAILED');
+      if (isTelegramWebApp && msg.includes('GOOGLE_CLIENT_SECRET')) {
+        openTelegramOrBrowserUrl(`${readPublicAppOrigin()}${GOOGLE_LINK_PATH}`);
+        return;
+      }
+      onError(msg);
     }
   };
 

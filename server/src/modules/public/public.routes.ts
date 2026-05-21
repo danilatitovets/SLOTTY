@@ -6,8 +6,8 @@ export const publicRouter = Router();
 
 publicRouter.get(
   '/config',
-  asyncHandler(async (_req, res) => {
-    const config = await getPublicAppConfig();
+  asyncHandler(async (req, res) => {
+    const config = await getPublicAppConfig(req);
     res.json({ ok: true, ...config });
   }),
 );

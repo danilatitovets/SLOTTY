@@ -1,0 +1,77 @@
+import { useCallback, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { ADMIN_LOGIN_METHODS_PATH, HUB_PATH, LOGIN_PATH } from '../../app/paths';
+import { linkGoogle } from '../../features/auth/api/authApi';
+import { GoogleSignInButton } from '../../features/auth/components/GoogleSignInButton';
+import { useAuth } from '../../features/auth/AuthProvider';
+import { GoogleIcon } from '../../shared/ui/GoogleIcon';
+
+/** Привязка Google в обычном браузере (fallback, если OAuth redirect на API не настроен). */
+export function GoogleLinkPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, refreshProfile } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const onCredential = useCallback(
+    async (idToken: string) => {
+      setError(null);
+      try {
+        await linkGoogle(idToken);
+        await refreshProfile();
+        setDone(true);
+        setTimeout(() => navigate(ADMIN_LOGIN_METHODS_PATH, { replace: true }), 1200);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Не удалось привязать Google');
+      }
+    },
+    [navigate, refreshProfile],
+  );
+
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to={LOGIN_PATH} replace />;
+  }
+
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
+      <Link to={HUB_PATH} className="mb-6 text-[14px] font-semibold text-[#6B7280]">
+        ← На главную
+      </Link>
+      <div className="rounded-[24px] bg-white p-6 shadow-[0_12px_40px_rgba(17,24,39,0.08)] ring-1 ring-[#F3F4F6]">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF1F4] text-[#F47C8C]">
+          <GoogleIcon size={28} />
+        </div>
+        <h1 className="text-[22px] font-bold tracking-[-0.04em] text-[#111827]">Привязать Google</h1>
+        <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">
+          Войдите через Google в браузере. После успеха вернитесь в Telegram и обновите «Способы входа».
+        </p>
+
+        {done ? (
+          <p className="mt-6 rounded-2xl bg-[#F0FDF4] px-4 py-3 text-[14px] font-semibold text-[#166534]">
+            Google привязан. Перенаправляем…
+          </p>
+        ) : (
+          <div className="relative mt-6 min-h-[52px] w-full">
+            <div className="pointer-events-none flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#F47C8C] text-[15px] font-semibold text-white">
+              <GoogleIcon size={20} className="brightness-0 invert" />
+              Войти через Google
+            </div>
+            <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-[0.011]">
+              <GoogleSignInButton
+                buttonWidth="full"
+                className="h-full w-full"
+                text="continue_with"
+                onCredential={(t) => void onCredential(t)}
+                onError={(m) => setError(m)}
+              />
+            </div>
+          </div>
+        )}
+
+        {error ? (
+          <p className="mt-4 rounded-2xl bg-[#FFF0F0] px-4 py-3 text-[13px] font-medium text-[#9B2C2C]">{error}</p>
+        ) : null}
+      </div>
+    </main>
+  );
+}

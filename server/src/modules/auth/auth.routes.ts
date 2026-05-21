@@ -144,7 +144,7 @@ authRouter.post(
       profileId: body.purpose === 'link' ? req.user!.id : undefined,
       returnPath: body.returnPath,
     });
-    res.json({ authorizationUrl: buildGoogleAuthorizationUrl(state) });
+    res.json({ authorizationUrl: buildGoogleAuthorizationUrl(state, req) });
   }),
 );
 
@@ -167,7 +167,7 @@ authRouter.get(
 
     try {
       const state = verifyGoogleOAuthState(stateRaw);
-      const idToken = await exchangeGoogleAuthorizationCode(code);
+      const idToken = await exchangeGoogleAuthorizationCode(code, req);
 
       if (state.purpose === 'link') {
         await linkGoogle(idToken, state.profileId!);

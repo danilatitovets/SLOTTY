@@ -5,7 +5,9 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   EMAIL_ALREADY_LINKED: 'Этот email уже привязан к другому аккаунту.',
   GOOGLE_NOT_CONFIGURED: 'Google Sign-In пока не настроен.',
   GOOGLE_OAUTH_NOT_CONFIGURED:
-    'Вход Google из Telegram не настроен на сервере (нужен GOOGLE_CLIENT_SECRET и PUBLIC_API_URL).',
+    'На сервере API не задан GOOGLE_CLIENT_SECRET. Добавьте его в Railway (slotty-api) или откройте привязку в браузере.',
+  API_PUBLIC_URL_MISSING:
+    'На сервере API не задан публичный URL (PUBLIC_API_URL или RAILWAY_PUBLIC_DOMAIN).',
   GOOGLE_OAUTH_STATE_INVALID: 'Сессия Google устарела. Начните вход заново.',
   GOOGLE_OAUTH_EXCHANGE_FAILED: 'Не удалось завершить вход через Google.',
   GOOGLE_TOKEN_INVALID: 'Не удалось войти через Google.',

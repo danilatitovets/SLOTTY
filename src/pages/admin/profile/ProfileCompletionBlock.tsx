@@ -133,24 +133,35 @@ function ProfileReadyActionButton({
 }) {
   const iconWrap =
     variant === 'primary'
-      ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/25 text-white shadow-sm'
+      ? 'flex h-10 w-10 items-center justify-center rounded-full bg-white/30 text-white'
       : variant === 'soft'
-        ? 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#F47C8C] shadow-[0_2px_8px_rgba(244,124,140,0.12)] ring-1 ring-[#FDE8ED]'
-        : 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#6B7280] ring-1 ring-[#EAECEF]';
+        ? 'flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#F47C8C] shadow-[0_2px_8px_rgba(244,124,140,0.1)] ring-1 ring-[#FDE8ED]'
+        : 'flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#6B7280] ring-1 ring-[#EAECEF]';
+
+  const shell =
+    'grid w-full min-h-[52px] grid-cols-[2.5rem_1fr_2.5rem] items-center gap-x-1 rounded-[16px] py-3 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50';
 
   const variantClass =
     variant === 'primary'
-      ? `${cabinetPinkBtn} w-full gap-3 px-4 py-3.5 text-[15px] disabled:opacity-50`
+      ? `${shell} bg-[#F47C8C] text-white shadow-[0_8px_24px_rgba(244,124,140,0.28)] hover:bg-[#F26D83]`
       : variant === 'soft'
-        ? 'flex w-full items-center justify-center gap-3 rounded-[16px] bg-[#FFF1F4] px-4 py-3.5 text-[15px] font-semibold text-[#F47C8C] ring-1 ring-[#FDE8ED] transition hover:bg-[#FFE4EA] active:scale-[0.99] disabled:opacity-50'
-        : 'flex w-full items-center justify-center gap-3 rounded-[16px] bg-[#F7F7F8] px-4 py-3.5 text-[15px] font-semibold text-[#111827] ring-1 ring-[#EAECEF] transition hover:bg-[#F3F4F6] active:scale-[0.99] disabled:opacity-50';
+        ? `${shell} bg-[#FFF1F4] text-[#F47C8C] ring-1 ring-[#FDE8ED] hover:bg-[#FFE4EA]`
+        : `${shell} bg-[#F7F7F8] text-[#111827] ring-1 ring-[#EAECEF] hover:bg-[#F3F4F6]`;
+
+  const textClass =
+    variant === 'primary'
+      ? 'text-center text-[15px] font-semibold leading-snug text-white'
+      : variant === 'soft'
+        ? 'text-center text-[15px] font-semibold leading-snug text-[#F47C8C]'
+        : 'text-center text-[15px] font-semibold leading-snug text-[#111827]';
 
   return (
     <button type="button" disabled={disabled} onClick={onClick} className={variantClass}>
-      <span className={iconWrap} aria-hidden>
-        <Icon className="h-5 w-5" />
+      <span className={`col-start-1 row-start-1 justify-self-start ${iconWrap}`} aria-hidden>
+        <Icon className="h-5 w-5 shrink-0" />
       </span>
-      <span>{children}</span>
+      <span className={`col-start-2 row-start-1 min-w-0 px-0.5 ${textClass}`}>{children}</span>
+      <span className="col-start-3 row-start-1 w-10" aria-hidden />
     </button>
   );
 }

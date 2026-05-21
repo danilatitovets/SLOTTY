@@ -1,4 +1,6 @@
+import type { Request } from 'express';
 import { env } from '../../config/env.js';
+import { getGoogleOAuthDiagnostics } from '../auth/googleOAuth.service.js';
 import { getBotToken, getBotUsername } from '../telegram/telegram.botApi.js';
 
 let cachedTelegramBotUsername: string | null | undefined;
@@ -24,7 +26,16 @@ export async function resolveTelegramBotUsername(): Promise<string | undefined> 
   return username;
 }
 
-export async function getPublicAppConfig(): Promise<{ telegramBotUsername?: string }> {
+export async function getPublicAppConfig(req?: Request): Promise<{
+  telegramBotUsername?: string;
+  googleOAuthConfigured: boolean;
+  googleOAuthMissing?: string[];
+}> {
   const telegramBotUsername = await resolveTelegramBotUsername();
-  return telegramBotUsername ? { telegramBotUsername } : {};
+  const google = getGoogleOAuthDiagnostics(req);
+  return {
+    ...(telegramBotUsername ? { telegramBotUsername } : {}),
+    googleOAuthConfigured: google.configured,
+    ...(google.missing.length > 0 ? { googleOAuthMissing: google.missing } : {}),
+  };
 }
