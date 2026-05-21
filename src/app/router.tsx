@@ -30,8 +30,10 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { MasterLoginPage } from '../pages/auth/MasterLoginPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage';
+import { GoogleOAuthDonePage } from '../pages/auth/GoogleOAuthDonePage';
 import {
   FORGOT_PASSWORD_PATH,
+  GOOGLE_OAUTH_DONE_PATH,
   LOGIN_PATH,
   MASTER_LOGIN_PATH,
   RESET_PASSWORD_PATH,
@@ -80,6 +82,7 @@ export function AppRouter() {
         <Route path={LOGIN_PATH} element={<LoginPage />} />
         <Route path={MASTER_LOGIN_PATH} element={<MasterLoginPage />} />
         <Route path={VERIFY_EMAIL_PATH} element={<VerifyEmailPage />} />
+        <Route path={GOOGLE_OAUTH_DONE_PATH} element={<GoogleOAuthDonePage />} />
         <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
         <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
         <Route path={BECOME_MASTER_PATH} element={<BecomeMasterPage />} />

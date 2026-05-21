@@ -19,6 +19,11 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).optional(),
   ),
+  /** OAuth Web client secret — для входа/привязки Google из Telegram (redirect flow). */
+  GOOGLE_CLIENT_SECRET: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
   CLIENT_URL: z.string().url().default('http://localhost:5173'),
   /** HTTPS URL мини-приложения (ngrok / Cloudflare Tunnel / прод). Для `npm run telegram:setup`. */
   WEB_APP_URL: z.preprocess(

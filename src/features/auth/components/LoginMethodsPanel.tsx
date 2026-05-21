@@ -9,6 +9,7 @@ import {
   loginWithEmail,
   loginWithGoogle,
   loginWithTelegram,
+  startGoogleOAuth,
   registerWithEmail,
   sendEmailVerification,
 } from '../api/authApi';
@@ -18,6 +19,7 @@ import type { AuthIdentityDto, AuthProvider, BackendProfile } from '../types';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { LoginMethodsHint } from './LoginMethodsHint';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
+import { openTelegramOrBrowserUrl } from '../../../shared/lib/telegramWebApp';
 import { GoogleIcon } from '../../../shared/ui/GoogleIcon';
 import { useAuth } from '../AuthProvider';
 
@@ -90,9 +92,22 @@ type GoogleLoginPillProps = {
   onError: (msg: string) => void;
   label: string;
   pageStyle: boolean;
+  isTelegramWebApp: boolean;
+  oauthPurpose: 'link' | 'login';
+  oauthReturnPath?: string;
 };
 
-function GoogleLoginPill({ busy, googleClientId, onCredential, onError, label, pageStyle }: GoogleLoginPillProps) {
+function GoogleLoginPill({
+  busy,
+  googleClientId,
+  onCredential,
+  onError,
+  label,
+  pageStyle,
+  isTelegramWebApp,
+  oauthPurpose,
+  oauthReturnPath,
+}: GoogleLoginPillProps) {
   if (!googleClientId) {
     return (
       <p className="text-[13px] font-medium text-neutral-500">
@@ -103,6 +118,27 @@ function GoogleLoginPill({ busy, googleClientId, onCredential, onError, label, p
 
   const pillClass = pageStyle ? pageSocialBtn : socialOutlineBtn;
   const overlayRound = pageStyle ? 'rounded-2xl' : 'rounded-full';
+
+  const openGoogleOAuth = async () => {
+    try {
+      const { authorizationUrl } = await startGoogleOAuth({
+        purpose: oauthPurpose,
+        returnPath: oauthReturnPath,
+      });
+      openTelegramOrBrowserUrl(authorizationUrl);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : messageForAuthErrorCode('GOOGLE_OAUTH_EXCHANGE_FAILED'));
+    }
+  };
+
+  if (isTelegramWebApp) {
+    return (
+      <button type="button" disabled={busy} onClick={() => void openGoogleOAuth()} className={pillClass}>
+        <GoogleIcon size={20} />
+        <span>{label}</span>
+      </button>
+    );
+  }
 
   return (
     <div className={`relative w-full ${pageStyle ? 'min-h-[52px]' : 'min-h-12'}`}>
@@ -408,6 +444,9 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
             googleClientId={googleClientId}
             label="Google"
             pageStyle
+            isTelegramWebApp={inTelegramApp}
+            oauthPurpose="login"
+            oauthReturnPath={loginReturnPath}
             onCredential={(t) => void handleGoogleCredential(t)}
             onError={(m) => setError(m)}
           />
@@ -442,6 +481,8 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
             googleClientId={googleClientId}
             label="Войти через Google"
             pageStyle={false}
+            isTelegramWebApp={inTelegramApp}
+            oauthPurpose="login"
             onCredential={(t) => void handleGoogleCredential(t)}
             onError={(m) => setError(m)}
           />
@@ -591,27 +632,26 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
           {linked.google ? <span className="shrink-0 text-[12px] font-semibold text-[#15803D]">✓</span> : null}
         </div>
         {!linked.google ? (
-          <div className="relative mt-3 w-full min-h-11">
-            <button
-              type="button"
-              disabled={busy}
-              className="pointer-events-none flex w-full min-h-11 items-center justify-center rounded-full bg-[#E29595] px-4 py-2.5 text-[14px] font-semibold text-white disabled:opacity-50"
-            >
-              Подключить Google
-            </button>
-            {!busy && googleClientId ? (
-              <div className="absolute inset-0 z-10 overflow-hidden rounded-full opacity-[0.011]">
-                <GoogleSignInButton
-                  buttonWidth="full"
-                  className="h-full w-full"
-                  onCredential={(t) => void handleGoogleCredential(t)}
-                  onError={(m) => setError(m)}
-                  text="continue_with"
-                />
-              </div>
+          <div className="mt-3">
+            {googleClientId ? (
+              <GoogleLoginPill
+                busy={busy}
+                googleClientId={googleClientId}
+                label="Подключить Google"
+                pageStyle={false}
+                isTelegramWebApp={inTelegramApp}
+                oauthPurpose="link"
+                onCredential={(t) => void handleGoogleCredential(t)}
+                onError={(m) => setError(m)}
+              />
             ) : (
-              <p className="mt-2 text-[12px] text-neutral-500">{messageForAuthErrorCode('GOOGLE_NOT_CONFIGURED')}</p>
+              <p className="text-[12px] text-neutral-500">{messageForAuthErrorCode('GOOGLE_NOT_CONFIGURED')}</p>
             )}
+            {inTelegramApp ? (
+              <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">
+                Откроется браузер для входа Google — это нормально в Telegram.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </div>

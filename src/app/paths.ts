@@ -6,6 +6,7 @@ export const MASTER_LOGIN_PATH = '/master/login';
 export const VERIFY_EMAIL_PATH = '/auth/verify-email';
 export const FORGOT_PASSWORD_PATH = '/auth/forgot-password';
 export const RESET_PASSWORD_PATH = '/auth/reset-password';
+export const GOOGLE_OAUTH_DONE_PATH = '/auth/google/done';
 
 /** /login с возвратом после входа (?from=/текущая-страница). */
 export function getLoginPath(fromPath?: string): string {

@@ -4,6 +4,10 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   TELEGRAM_ALREADY_LINKED: 'Этот Telegram уже привязан к другому аккаунту.',
   EMAIL_ALREADY_LINKED: 'Этот email уже привязан к другому аккаунту.',
   GOOGLE_NOT_CONFIGURED: 'Google Sign-In пока не настроен.',
+  GOOGLE_OAUTH_NOT_CONFIGURED:
+    'Вход Google из Telegram не настроен на сервере (нужен GOOGLE_CLIENT_SECRET и PUBLIC_API_URL).',
+  GOOGLE_OAUTH_STATE_INVALID: 'Сессия Google устарела. Начните вход заново.',
+  GOOGLE_OAUTH_EXCHANGE_FAILED: 'Не удалось завершить вход через Google.',
   GOOGLE_TOKEN_INVALID: 'Не удалось войти через Google.',
   GOOGLE_TOKEN_AUDIENCE: 'Не удалось войти через Google.',
   TELEGRAM_NOT_AVAILABLE: 'Вход через Telegram доступен внутри Telegram Web App.',

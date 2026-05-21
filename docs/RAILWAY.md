@@ -34,6 +34,9 @@
    | `WEB_APP_URL` | Тот же URL, что и фронт (HTTPS), для кнопки Web App в Telegram. |
    | `TELEGRAM_WEBHOOK_URL` | `https://ВАШ_API_ДОМЕН/api/telegram/webhook` — для команды **/start** (или задайте `PUBLIC_API_URL` = URL API без `/api`). |
    | `TELEGRAM_WEBHOOK_SECRET` | Случайная строка (опционально, но рекомендуется). |
+   | `GOOGLE_CLIENT_ID` | Тот же Web client id, что `VITE_GOOGLE_CLIENT_ID` на фронте. |
+   | `GOOGLE_CLIENT_SECRET` | Client secret — для привязки Google из Telegram (OAuth redirect). |
+   | `PUBLIC_API_URL` | Публичный URL API (для redirect URI Google и вебхука). |
    | `PORT` | Обычно **не задавать** — Railway подставит сам. |
 
 3. **Deploy** → дождаться **Public Networking** → **Generate Domain** → скопируйте URL API, например `https://slotty-api-production-xxxx.up.railway.app`.

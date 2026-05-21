@@ -59,6 +59,19 @@ export async function linkTelegram(initDataRaw: string): Promise<AuthIdentityDto
   return d.identities ?? [];
 }
 
+export async function startGoogleOAuth(params: {
+  purpose: 'link' | 'login';
+  returnPath?: string;
+}): Promise<{ authorizationUrl: string }> {
+  const res = await apiFetch('/api/auth/google/oauth/start', {
+    method: 'POST',
+    skipAuth: params.purpose === 'login',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(await readAuthApiError(res));
+  return (await res.json()) as { authorizationUrl: string };
+}
+
 export async function linkGoogle(idToken: string): Promise<AuthIdentityDto[]> {
   const res = await apiFetch('/api/auth/link/google', {
     method: 'POST',
