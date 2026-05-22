@@ -195,13 +195,11 @@ export function AdminOverviewTab({
           {panel}
         </AdminTabContentTransition>
       </section>
-      <div className="lg:hidden">
-        <OverviewAnalyticsTabBar active={activeTab} onChange={setActiveTab} />
-      </div>
+      <OverviewAnalyticsTabBar variant="mobile" active={activeTab} onChange={setActiveTab} />
 
       {/* Desktop: табы внутри белой карточки */}
       <div className={`${overviewShellCard} w-full min-w-0`}>
-        <OverviewAnalyticsTabBar active={activeTab} onChange={setActiveTab} />
+        <OverviewAnalyticsTabBar variant="desktop" active={activeTab} onChange={setActiveTab} />
         <div className="space-y-5 px-6 py-6">
           <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
           {activeTab !== 'summary' && !error ? <OverviewTabIntro tab={activeTab} /> : null}

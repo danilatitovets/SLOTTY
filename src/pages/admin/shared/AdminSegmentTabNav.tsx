@@ -12,6 +12,8 @@ type Props<T extends string> = {
   onChange: (tab: T) => void;
   ariaLabel: string;
   desktopClassName?: string;
+  /** `mobile` — только нижняя панель; `desktop` — только верхние табы на lg+. */
+  mode?: 'both' | 'mobile' | 'desktop';
 };
 
 function SegmentButtons<T extends string>({
@@ -62,6 +64,7 @@ export function AdminSegmentTabNav<T extends string>({
   onChange,
   ariaLabel,
   desktopClassName,
+  mode = 'both',
 }: Props<T>) {
   const desktopNav = (
     <nav
@@ -85,6 +88,9 @@ export function AdminSegmentTabNav<T extends string>({
       </nav>
     </div>
   );
+
+  if (mode === 'mobile') return mobileNav;
+  if (mode === 'desktop') return <div className="mb-4 hidden lg:block">{desktopNav}</div>;
 
   return (
     <>
