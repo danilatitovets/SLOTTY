@@ -6,11 +6,6 @@ import { normalizeMasterCareerItemType } from '../../../features/profile/lib/dem
 import type { MasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { cabinetCard } from './adminProfileCabinetTheme';
-import {
-  profileDesktopFlatSection,
-  profileDesktopStack,
-  profileDesktopStackItem,
-} from './adminProfileDashboardTheme';
 
 type CareerItemType = MasterCareerItemType;
 
@@ -24,7 +19,7 @@ type MasterCareerItem = {
   description?: string;
 };
 
-const trustSectionCard = `${cabinetCard} p-[18px] shadow-[0_8px_32px_rgba(17,24,39,0.05)] ${profileDesktopFlatSection}`;
+const trustSectionCard = `${cabinetCard} p-[18px] shadow-[0_8px_32px_rgba(17,24,39,0.05)]`;
 
 const trustAddBtn =
   'mt-4 flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[17px] border border-[#FDE8ED] bg-white text-[15px] font-semibold text-[#F47C8C] transition hover:bg-[#FFF1F4] active:bg-[#FFF1F4] active:scale-[0.99]';
@@ -529,9 +524,9 @@ export function TrustSection({
     : undefined;
 
   return (
-    <div className={profileDesktopStack}>
+    <div className="space-y-4">
       {/* Работы */}
-      <section className={`${trustSectionCard} ${profileDesktopStackItem}`}>
+      <section className={trustSectionCard}>
         <TrustBlockHeader title="Работы" countLabel={worksCountLabel(portfolio.length)} />
 
         {portfolio.length > 0 ? (
@@ -591,7 +586,7 @@ export function TrustSection({
       </section>
 
       {/* Сертификаты */}
-      <section className={`${trustSectionCard} ${profileDesktopStackItem}`}>
+      <section className={trustSectionCard}>
         <TrustBlockHeader title="Сертификаты" countLabel={certsCountLabel(certificates.length)} />
 
         {certificates.length > 0 ? (
@@ -668,7 +663,7 @@ export function TrustSection({
       </section>
 
       {/* Опыт и образование */}
-      <section className={`${trustSectionCard} ${profileDesktopStackItem}`}>
+      <section className={trustSectionCard}>
         <TrustBlockHeader
           title="Опыт и образование"
           countLabel={careerCountLabel(careerItems.length)}
