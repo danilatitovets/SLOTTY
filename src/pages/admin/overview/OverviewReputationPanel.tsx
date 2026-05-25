@@ -456,7 +456,7 @@ function RatingChartCard({
         </div>
       </div>
 
-      <OverviewRatingChart stats={data.ratingByDay} tone={ratingTone} />
+      <OverviewRatingChart stats={data.ratingByDay} tone={ratingTone} size="large" />
 
       {data.chartIsTruncated ? (
         <p className="mt-4 text-[12px] leading-snug text-[#9CA3AF]">

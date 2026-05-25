@@ -85,26 +85,33 @@ export function ServicesFilterAddressInput({
     }
   }, []);
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const t = value.trim();
-    if (t.length < 1) {
-      setItems([]);
-      setOpen(false);
-      setHint(null);
-      return;
-    }
-    if (t.length === 1) {
-      void runSearch(value);
-      return;
-    }
-    debounceRef.current = setTimeout(() => {
-      void runSearch(value);
-    }, 280);
-    return () => {
+  const scheduleSearch = useCallback(
+    (raw: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [value, runSearch]);
+      const t = raw.trim();
+      if (t.length < 1) {
+        setItems([]);
+        setOpen(false);
+        setHint(null);
+        return;
+      }
+      if (t.length === 1) {
+        void runSearch(raw);
+        return;
+      }
+      debounceRef.current = setTimeout(() => {
+        void runSearch(raw);
+      }, 280);
+    },
+    [runSearch],
+  );
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   const dropPlacement = useMemo((): ViewportListPlacement | null => {
     if (!viewportDropdown || !open || items.length === 0) return null;
@@ -203,20 +210,20 @@ export function ServicesFilterAddressInput({
         id={id}
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const next = e.target.value;
+          onChange(next);
+          scheduleSearch(next);
+        }}
         onFocus={() => {
-          if (items.length > 0) {
-            setOpen(true);
-            return;
-          }
-          if (value.trim().length >= 1) void runSearch(value);
+          if (items.length > 0) setOpen(true);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') setOpen(false);
           if (e.key === 'Enter') {
             e.preventDefault();
+            if (debounceRef.current) clearTimeout(debounceRef.current);
             void runSearch(value);
-            setOpen(true);
           }
         }}
         placeholder={placeholder}

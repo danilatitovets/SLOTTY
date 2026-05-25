@@ -22,7 +22,7 @@ export async function updateMyMasterProfile(payload: {
   photoUrl?: string | null;
   slug?: string | null;
   primaryCategoryCode?: string | null;
-  publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked';
+  publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
   globalBufferMinutes?: number;
 }): Promise<void> {
   await patchMasterMe(payload);

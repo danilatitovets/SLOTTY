@@ -39,6 +39,9 @@ export type MasterLocation = {
   otherNote?: string;
   lat?: number;
   lng?: number;
+  /** Координаты для расстояния, если lat/lng скрыты (приватный адрес). */
+  distanceLat?: number;
+  distanceLng?: number;
 };
 
 const VISIT_LABEL: Record<MasterVisitType, string> = {
@@ -263,6 +266,26 @@ export function buildLocationDisplayParts(loc: MasterLocation | null | undefined
   if (loc.clientNote?.trim()) wayfinding.push({ label: 'Комментарий', value: loc.clientNote.trim() });
 
   return { visitLabel, catalogLine, addressLine, access, wayfinding };
+}
+
+/** Детали адреса для блока «После записи» в кабинете мастера. */
+export function buildLocationAfterBookingPreview(
+  loc: MasterLocation | null | undefined,
+): LocationDetailField[] {
+  if (!loc) return [];
+  const rows: LocationDetailField[] = [];
+  const mainLine =
+    loc.visitType === 'at_home'
+      ? formatHomeAfterBookingMainLine(loc)
+      : baseAddressLine(loc) || formatCityWithAddressLine(loc);
+  if (mainLine?.trim()) rows.push({ label: 'Адрес', value: mainLine.trim() });
+  const parts = buildLocationDisplayParts(loc);
+  if (!parts) return rows;
+  return [...rows, ...parts.access, ...parts.wayfinding];
+}
+
+export function isHomeAddressHiddenUntilBooking(loc: MasterLocation | null | undefined): boolean {
+  return loc?.visitType === 'at_home' && loc.showExactAddressAfterBooking === true;
 }
 
 export function catalogLineWithoutVisitPrefix(catalogLine: string, visitLabel: string): string {

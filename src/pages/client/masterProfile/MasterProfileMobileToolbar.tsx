@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CLIENT_STICKY_BELOW_MOBILE_HEADER } from '../clientNavConstants';
 import { catalogDesktopPanel, masterProfileMobileToolbarStickyClass } from './masterProfileTheme';
 import { MasterProfileToolbarInner } from './MasterProfileToolbarInner';
 
@@ -29,7 +28,7 @@ export function MasterProfileMobileToolbar({
 
   return (
     <div
-      className={`${masterProfileMobileToolbarStickyClass} ${CLIENT_STICKY_BELOW_MOBILE_HEADER}`}
+      className={`${masterProfileMobileToolbarStickyClass} top-[max(0.25rem,env(safe-area-inset-top,0px))]`}
     >
       <div className={`${catalogDesktopPanel} px-4 py-2.5 xl:px-6`}>
         <MasterProfileToolbarInner

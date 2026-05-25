@@ -17,13 +17,21 @@ import { catalogFieldClass } from './servicesCatalogTheme';
 type Props = {
   filters: CatalogFiltersState;
   onChange: (next: CatalogFiltersState) => void;
-  layout?: 'grid' | 'sidebar';
+  layout?: 'grid' | 'sidebar' | 'sheet';
 };
 
 export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid' }: Props) {
   const sidebar = layout === 'sidebar';
-  const chipsClass = sidebar ? 'flex flex-wrap gap-2' : 'mt-3 flex flex-wrap gap-2';
-  const rootClass = sidebar ? 'flex flex-col gap-4' : 'grid gap-5 md:grid-cols-2 xl:grid-cols-3';
+  const sheet = layout === 'sheet';
+  /** На мобиле (sheet, grid) — все секции свёрнуты; в десктоп-сайдбаре — раскрыты. */
+  const sectionOpen = sidebar;
+  const uiVariant = sheet ? 'sheet' : 'default';
+  const chipsClass = sidebar || sheet ? 'flex flex-wrap gap-2' : 'mt-3 flex flex-wrap gap-2';
+  const rootClass = sidebar
+    ? 'flex flex-col gap-4'
+    : sheet
+      ? 'flex flex-col gap-6 pb-4'
+      : 'grid gap-5 md:grid-cols-2 xl:grid-cols-3';
 
   const set = (patch: Partial<CatalogFiltersState>) => onChange({ ...filters, ...patch });
 
@@ -48,7 +56,12 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
 
   return (
     <div className={rootClass}>
-      <FilterSection icon={HiCalendarDays} title="Когда">
+      <FilterSection
+        icon={HiCalendarDays}
+        title="Когда"
+        defaultOpen={sectionOpen}
+        variant={uiVariant}
+      >
         <div className={chipsClass}>
           {DATE_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -56,13 +69,14 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
               active={filters.dateRange === value}
               icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ dateRange: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Время">
+      <FilterSection icon={HiClock} title="Время" defaultOpen={sectionOpen} variant={uiVariant}>
         <div className={chipsClass}>
           {TIME_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -70,26 +84,33 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
               active={filters.timeOfDay === value}
               icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ timeOfDay: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBanknotes} title="Цена, BYN">
+      <FilterSection
+        icon={HiBanknotes}
+        title="Цена, BYN"
+        defaultOpen={sectionOpen}
+        variant={uiVariant}
+      >
         <div className={chipsClass}>
           {PRICE_FILTER_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={value}
               active={filters.priceTier === value}
               label={label}
+              variant={uiVariant}
               onClick={() => setPriceTier(value)}
             />
           ))}
         </div>
-        <div className={`${sidebar ? 'mt-2' : 'mt-2.5'} grid grid-cols-2 gap-1.5`}>
+        <div className={`${sidebar || sheet ? 'mt-3' : 'mt-2.5'} grid grid-cols-2 gap-2`}>
           <label className="block">
-            <span className="mb-1 block text-[12px] font-semibold text-[#6B7280]">от</span>
+            <span className="mb-1.5 block text-[12px] font-medium text-[#8E8E93]">от</span>
             <input
               type="text"
               inputMode="decimal"
@@ -103,11 +124,15 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
                 });
               }}
               placeholder="0"
-              className={`h-9 w-full px-2.5 text-[13px] font-medium ${catalogFieldClass}`}
+              className={`h-11 w-full px-3 text-[15px] font-medium ${
+                sheet
+                  ? 'rounded-[12px] border border-[#E5E7EB] bg-white text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#F47C8C]/40'
+                  : catalogFieldClass
+              }`}
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[12px] font-semibold text-[#6B7280]">до</span>
+            <span className="mb-1.5 block text-[12px] font-medium text-[#8E8E93]">до</span>
             <input
               type="text"
               inputMode="decimal"
@@ -121,13 +146,22 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
                 });
               }}
               placeholder="∞"
-              className={`h-9 w-full px-2.5 text-[13px] font-medium ${catalogFieldClass}`}
+              className={`h-11 w-full px-3 text-[15px] font-medium ${
+                sheet
+                  ? 'rounded-[12px] border border-[#E5E7EB] bg-white text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#F47C8C]/40'
+                  : catalogFieldClass
+              }`}
             />
           </label>
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiStar} title="Рейтинг мастера">
+      <FilterSection
+        icon={HiStar}
+        title="Рейтинг мастера"
+        defaultOpen={sectionOpen}
+        variant={uiVariant}
+      >
         <div className={chipsClass}>
           {RATING_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -135,13 +169,14 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
               active={filters.minRating === value}
               icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ minRating: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBuildingStorefront} title="Где">
+      <FilterSection icon={HiBuildingStorefront} title="Где" defaultOpen={sectionOpen} variant={uiVariant}>
         <div className={chipsClass}>
           {VISIT_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -149,13 +184,19 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
               active={filters.visitType === value}
               icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ visitType: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Длительность">
+      <FilterSection
+        icon={HiClock}
+        title="Длительность"
+        defaultOpen={sectionOpen}
+        variant={uiVariant}
+      >
         <div className={chipsClass}>
           {DURATION_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -163,6 +204,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
               active={filters.duration === value}
               icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ duration: value })}
             />
           ))}
@@ -172,6 +214,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
       <FilterSwitch
         active={filters.onlineBookingOnly}
         label="Только с онлайн-записью"
+        variant={uiVariant}
         onChange={(onlineBookingOnly) => set({ onlineBookingOnly })}
       />
     </div>

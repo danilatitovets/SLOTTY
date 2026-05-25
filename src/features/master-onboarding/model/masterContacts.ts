@@ -185,3 +185,68 @@ export function canAddContactChannel(rows: MasterContactRow[], type: ContactType
   if (type === 'other') return countContactsByType(rows, 'other') < 5;
   return countContactsByType(rows, type) < 1;
 }
+
+function digitsOnly(s: string): string {
+  return s.replace(/\D/g, '');
+}
+
+/** Ссылка для открытия контакта клиентом (профиль, кабинет). */
+export function contactExternalHref(type: ContactType, raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v) || /^viber:\/\//i.test(v)) return v;
+
+  switch (type) {
+    case 'telegram': {
+      const url = v.match(/(?:https?:\/\/)?(?:t\.me|telegram\.me)\/([^\s?#]+)/i);
+      if (url) return `https://t.me/${url[1].replace(/^\//, '')}`;
+      const user = v.replace(/^@/, '').trim();
+      if (TG_USER.test(user) || TG_USER.test(`@${user}`)) return `https://t.me/${user}`;
+      return null;
+    }
+    case 'instagram': {
+      const url = v.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^\s?#/]+)/i);
+      if (url) return `https://www.instagram.com/${url[1]}`;
+      const user = v.replace(/^@/, '').trim();
+      if (IG_USER.test(user) || IG_USER.test(`@${user}`)) return `https://www.instagram.com/${user}`;
+      return null;
+    }
+    case 'vk': {
+      const url = v.match(/(?:https?:\/\/)?(?:www\.)?(?:m\.)?vk\.com\/([^\s?#/]+)/i);
+      if (url) return `https://vk.com/${url[1]}`;
+      const id = v.replace(/^@/, '').trim();
+      if (VK_SHORT.test(id)) return `https://vk.com/${id}`;
+      return null;
+    }
+    case 'whatsapp': {
+      const url = v.match(/(?:https?:\/\/)?(?:www\.)?wa\.me\/(\d+)/i);
+      if (url) return `https://wa.me/${url[1]}`;
+      const d = digitsOnly(v);
+      if (d.length >= 10) return `https://wa.me/${d}`;
+      return null;
+    }
+    case 'viber': {
+      const d = digitsOnly(v);
+      if (d.length >= 10) return `viber://chat?number=%2B${d}`;
+      return null;
+    }
+    case 'other':
+      return /^https?:\/\//i.test(v) ? v : null;
+    default:
+      return null;
+  }
+}
+
+export function resolveFilledContacts(source: {
+  contact?: string | null;
+  contacts?: MasterContact[] | null;
+}): MasterContact[] {
+  if (source.contacts?.length) {
+    return source.contacts.filter((c) => c.value.trim());
+  }
+  const parsed = parseLegacyContactLine(source.contact?.trim() ?? '');
+  if (parsed.length) return parsed.filter((c) => c.value.trim());
+  const legacy = source.contact?.trim();
+  if (legacy) return [{ type: 'telegram', value: legacy }];
+  return [];
+}

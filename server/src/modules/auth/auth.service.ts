@@ -11,7 +11,14 @@ import {
   loginOrRegisterWithTelegram,
 } from './authIdentities.service.js';
 import { verifyGoogleIdToken } from './googleAuth.js';
+import { syncMasterAccountVerified } from './accountVerification.js';
 import { sendVerificationEmailForProfile } from './email/emailAuth.service.js';
+
+async function syncVerifiedAfterIdentityChange(profileId: string) {
+  await syncMasterAccountVerified(profileId).catch((e) => {
+    console.error('[SLOTTY] sync master is_verified failed:', e);
+  });
+}
 
 function scheduleVerificationEmail(profileId: string) {
   void sendVerificationEmailForProfile(profileId).catch((e) => {
@@ -70,6 +77,7 @@ export async function linkTelegram(initDataRaw: string, profileId: string) {
     verified.user.username,
   );
   const identities = await linkTelegramToProfile(profileId, verified.user, fullName);
+  await syncVerifiedAfterIdentityChange(profileId);
   return { identities };
 }
 
@@ -81,6 +89,7 @@ export async function loginWithGoogle(idToken: string) {
 export async function linkGoogle(idToken: string, profileId: string) {
   const payload = await verifyGoogleIdToken(idToken);
   const identities = await linkGoogleToProfile(profileId, payload);
+  await syncVerifiedAfterIdentityChange(profileId);
   return { identities };
 }
 
@@ -99,5 +108,6 @@ export async function registerWithEmail(email: string, password: string) {
 export async function linkEmail(email: string, password: string, profileId: string) {
   const identities = await linkEmailToProfile(profileId, email, password);
   scheduleVerificationEmail(profileId);
+  await syncVerifiedAfterIdentityChange(profileId);
   return { identities };
 }

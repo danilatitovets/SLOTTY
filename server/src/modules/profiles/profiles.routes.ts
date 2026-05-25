@@ -4,13 +4,18 @@ import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { authMiddleware } from '../../middlewares/auth.js';
+import { requireProfileMutation } from '../../middlewares/profileAccountAccess.js';
+import {
+  issueSessionForProfile,
+  resolveCanonicalProfileId,
+} from '../auth/authIdentities.service.js';
 import { getProfileById, syncMasterCabinetFromUserProfile, updateProfile } from './profiles.service.js';
 import { uploadProfileAvatar } from './profiles.storage.js';
 import { normalizeBelarusPhone } from './belarusPhone.js';
 
 export const profilesRouter = Router();
 
-profilesRouter.use(authMiddleware);
+profilesRouter.use(authMiddleware, requireProfileMutation);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -34,8 +39,14 @@ function trimOrUndef(s: string | null | undefined): string | null | undefined {
 profilesRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const profile = await getProfileById(req.user!.id);
-    res.json(profile);
+    const tokenProfileId = req.user!.id;
+    const canonicalId = await resolveCanonicalProfileId(tokenProfileId);
+    if (canonicalId !== tokenProfileId) {
+      const session = await issueSessionForProfile(tokenProfileId);
+      res.json({ ...session.profile, session_refresh: { token: session.token } });
+      return;
+    }
+    res.json(await getProfileById(tokenProfileId));
   }),
 );
 

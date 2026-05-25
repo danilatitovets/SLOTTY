@@ -40,6 +40,13 @@ const FAVORITE_MESSAGES: Record<string, string> = {
   MASTER_NOT_FOUND: 'Мастер не найден или недоступен.',
 };
 
+const CATEGORY_CHANGE_MESSAGES: Record<string, string> = {
+  active_request_exists: 'У вас уже есть заявка на смену категории.',
+  same_category: 'Выберите категорию, отличную от текущей.',
+  category_change_requires_request:
+    'Для активного профиля смена категории проходит через заявку.',
+};
+
 const LIMIT_MESSAGES: Record<string, string> = {
   LIMIT_SERVICES_REACHED:
     'Достигнут лимит услуг по тарифу. Оформите Pro или деактивируйте лишние услуги.',
@@ -49,15 +56,33 @@ const LIMIT_MESSAGES: Record<string, string> = {
     'У мастера достигнут лимит записей на этот месяц по тарифу. Попробуйте позже или выберите другого мастера.',
 };
 
+const ACCOUNT_MESSAGES: Record<string, (reason?: string) => string> = {
+  ACCOUNT_BLOCKED: (reason) =>
+    reason
+      ? `Аккаунт заблокирован. Причина: ${reason}`
+      : 'Аккаунт заблокирован. Обратитесь в поддержку.',
+  ACCOUNT_RESTRICTED: (reason) =>
+    reason
+      ? `Доступ ограничен. Причина: ${reason}`
+      : 'Доступ ограничен.',
+  ACCOUNT_DELETED: () => 'Аккаунт удалён.',
+  CANCEL_REASON_REQUIRED: () => 'Укажите причину отмены.',
+};
+
 /** Читает тело ошибки API и возвращает понятное сообщение (в т.ч. для кодов лимитов). */
 export async function readSlottyApiErrorMessage(res: Response): Promise<string> {
-  const j = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string } } | null;
+  const j = (await res.json().catch(() => null)) as {
+    error?: { message?: string; code?: string; reason?: string };
+  } | null;
   const code = j?.error?.code;
+  const accountMsg = code && ACCOUNT_MESSAGES[code];
+  if (accountMsg) return accountMsg(j?.error?.reason);
   if (code && APPOINTMENT_MESSAGES[code]) return APPOINTMENT_MESSAGES[code];
   if (code && SLOT_MESSAGES[code]) return SLOT_MESSAGES[code];
   if (code && REVIEW_MESSAGES[code]) return REVIEW_MESSAGES[code];
   if (code && FAVORITE_MESSAGES[code]) return FAVORITE_MESSAGES[code];
   if (code && LIMIT_MESSAGES[code]) return LIMIT_MESSAGES[code];
+  if (code && CATEGORY_CHANGE_MESSAGES[code]) return CATEGORY_CHANGE_MESSAGES[code];
   const msg = j?.error?.message;
   if (msg) return msg;
   return `Ошибка ${res.status}`;

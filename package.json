@@ -17,7 +17,8 @@
     "db:v2:baseline": "node scripts/apply-migrations-v2.mjs --baseline",
     "db:v2:migrate": "node scripts/apply-migrations-v2.mjs",
     "db:v2:status": "node scripts/apply-migrations-v2.mjs --status",
-    "db:v2:smoke": "node scripts/apply-migrations-v2.mjs --smoke"
+    "db:v2:smoke": "node scripts/apply-migrations-v2.mjs --smoke",
+    "make:admin": "npm run make:admin --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

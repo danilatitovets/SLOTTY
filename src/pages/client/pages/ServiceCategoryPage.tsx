@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCatalogErrorModal } from '../hooks/useCatalogErrorModal';
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import { HiArrowLeft } from 'react-icons/hi2';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import type { ClientOutletContext } from '../clientOutletContext';
 import { MasterCard } from '../components/MasterCard';
 import { QuickChips } from '../components/QuickChips';
@@ -27,9 +26,10 @@ import {
   type CategoryMasterFilters,
 } from '../lib/categoryMasterFilters';
 import { ServiceCategoryDesktop } from '../serviceCategory/ServiceCategoryDesktop';
+import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
 import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
 import { catalogCanvasClass, catalogMetaChipClass } from '../servicesCatalog/servicesCatalogTheme';
-import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../clientNavConstants';
+import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
 
 const FILTER_CHIPS = [
   { id: 'today', label: 'Сегодня' },
@@ -136,14 +136,11 @@ export function ServiceCategoryPage() {
     filteredMasters.length > 0 &&
     filteredMasters.every((m) => !m.nextSlotStartsAt);
 
+  const geoPromptMobile =
+    quickChipIds.has('near') && !hasGeo ? <GeoPromptCard onAllow={requestGeo} /> : null;
+
   const mobileResults = (
     <>
-      {quickChipIds.has('near') && !hasGeo ? (
-        <div className="mb-3">
-          <GeoPromptCard onAllow={requestGeo} />
-        </div>
-      ) : null}
-
       <div className="space-y-3">
         {loading ? (
           <>
@@ -204,10 +201,13 @@ export function ServiceCategoryPage() {
         showGeoPrompt={quickChipIds.has('near')}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_HEADER_OFFSET}`}>
-        <div className="mx-auto w-full max-w-lg px-4 pt-1 sm:px-5">
+      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
+        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
+          <CatalogMobilePageToolbar title={categoryName} backTo={SERVICES_PATH} backLabel="К услугам" />
           <CatalogStickyToolbar
             compact
+            belowPageToolbar
+            sticky={false}
             search={search}
             onSearchChange={setSearch}
             searchPlaceholder="Имя мастера, услуга, район…"
@@ -215,32 +215,21 @@ export function ServiceCategoryPage() {
             showResultCount={false}
             onFilterClick={openFilters}
             activeFilterCount={activeFilterCount}
+            afterSticky={geoPromptMobile}
           >
             <div className="min-w-0">
-              <Link
-                to={SERVICES_PATH}
-                className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6B7280] transition hover:text-[#111827]"
-              >
-                <HiArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Услуги
-              </Link>
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <h1 className="text-[18px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
-                  {categoryName}
-                </h1>
-                <div className="flex flex-wrap gap-1.5">
-                  {stats.minPrice != null ? (
-                    <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                      {formatPriceFrom(stats.minPrice)}
-                    </span>
-                  ) : null}
+              <div className="flex flex-wrap gap-1.5">
+                {stats.minPrice != null ? (
                   <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                    {formatDurationMinutes(stats.duration)}
+                    {formatPriceFrom(stats.minPrice)}
                   </span>
-                  <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                    {formatMastersCountLabel(stats.masterCount)}
-                  </span>
-                </div>
+                ) : null}
+                <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
+                  {formatDurationMinutes(stats.duration)}
+                </span>
+                <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
+                  {formatMastersCountLabel(stats.masterCount)}
+                </span>
               </div>
               <div className="mt-1.5">
                 <QuickChips chips={[...FILTER_CHIPS]} activeIds={quickChipIds} onToggle={toggleChip} />

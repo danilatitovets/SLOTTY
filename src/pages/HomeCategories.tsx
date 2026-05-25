@@ -60,7 +60,7 @@ export const HomeCategories: FC<HomeCategoriesProps> = ({ onCategory }) => {
                     loading={index < 2 ? 'eager' : 'lazy'}
                     fetchPriority={index < 2 ? 'high' : 'low'}
                     draggable={false}
-                    className="block h-auto w-full rounded-[18px] object-contain transition duration-500 group-hover:scale-[1.01] sm:rounded-[22px]"
+                    className="block h-auto w-full rounded-[20px] object-contain transition duration-500 group-hover:scale-[1.01] sm:rounded-[24px]"
                   />
                 </div>
               </button>

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { preloadTabIntroImages } from '../useTabIntroImage';
 import { Link } from 'react-router-dom';
 import { HiInbox } from 'react-icons/hi2';
 import { ADMIN_BILLING_PATH } from '../../../app/paths';
@@ -17,12 +16,19 @@ import {
   apptBillingBanner,
   apptEmptyIcon,
   apptGroupLabel,
-  apptListTray,
+  apptListGap,
+  apptHistoryDesktopPanel,
+  apptHistoryMonthDivider,
   apptMonthLabel,
+  apptHistoryTableHead,
+  apptHistoryTableHeadCell,
+  apptHistoryTableHeadCellEnd,
   apptPinkBtn,
   appointmentsDesktopCard,
+  appointmentsDesktopCardPad,
   appointmentsDesktopTabsSticky,
   appointmentsShellCard,
+  appointmentsTabPanelShell,
 } from './adminAppointmentsTheme';
 import { AppointmentsPageHeader } from './AppointmentsPageHeader';
 import { AppointmentsSectionTabs } from './AppointmentsSectionTabs';
@@ -37,9 +43,7 @@ import { AppointmentsQuickFilters } from './AppointmentsQuickFilters';
 import { AppointmentsHistoryRow } from './AppointmentsHistoryRow';
 import { AppointmentsHistorySummary } from './AppointmentsHistorySummary';
 import { AppointmentsNearestCard } from './AppointmentsNearestCard';
-import { APPOINTMENTS_TAB_INTRO_IMAGES } from './AppointmentsTabIntro';
 import { AppointmentsRequestCard } from './AppointmentsRequestCard';
-import { AppointmentsStatsCard } from './AppointmentsStatsCard';
 import { AppointmentsUpcomingRow } from './AppointmentsUpcomingRow';
 import {
   compareAppointmentsByDateAsc,
@@ -64,7 +68,10 @@ import type {
 
 type Props = {
   appointments: DemoMasterAppointment[];
-  onChangeAppointments: (rows: DemoMasterAppointment[]) => void | Promise<void>;
+  onChangeAppointments: (
+    rows: DemoMasterAppointment[],
+    options?: { cancelReason?: string },
+  ) => void | Promise<void>;
   onOpenDetail: (appointment: DemoMasterAppointment) => void;
 };
 
@@ -79,7 +86,7 @@ function updateStatus(
 function apptLimitProgressClass(ratio: number): string {
   if (ratio >= 1) return 'bg-[#EF4444]';
   if (ratio >= 0.85) return 'bg-amber-400';
-  return 'bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]';
+  return 'bg-[#F47C8C]';
 }
 
 export function AdminAppointmentsTab({
@@ -105,10 +112,6 @@ export function AdminAppointmentsTab({
   useEffect(() => {
     setFilterOpen(false);
   }, [tab]);
-
-  useEffect(() => {
-    preloadTabIntroImages(APPOINTMENTS_TAB_INTRO_IMAGES);
-  }, []);
 
   const stats = useMemo(() => {
     const requests = appointments.filter((a) => a.status === 'pending').length;
@@ -231,7 +234,12 @@ export function AdminAppointmentsTab({
       const nextRows = updateStatus(appointments, appointment.id, nextStatus);
       setActionApiError(null);
       try {
-        await Promise.resolve(onChangeAppointments(nextRows));
+        await Promise.resolve(
+          onChangeAppointments(nextRows, {
+            cancelReason:
+              nextStatus === 'cancelled' ? rejectReason?.trim() : undefined,
+          }),
+        );
         if (nextStatus === 'confirmed') {
           showToast('Запись подтверждена');
           setTab('upcoming');
@@ -308,7 +316,7 @@ export function AdminAppointmentsTab({
       );
     }
     return (
-      <ul className="flex flex-col gap-3">
+      <ul className={apptListGap}>
         {requestsFiltered.map((a) => (
           <li key={a.id}>
             <AppointmentsRequestCard
@@ -362,7 +370,7 @@ export function AdminAppointmentsTab({
         {upcomingGroups.map((group) => (
           <section key={group.dayIso}>
             <h3 className={`mb-2 px-0.5 ${apptGroupLabel}`}>{group.label}</h3>
-            <ul className="flex flex-col gap-3">
+            <ul className={apptListGap}>
               {group.items.map((a) => (
                 <li key={a.id}>
                   <AppointmentsUpcomingRow appointment={a} onOpen={() => onOpenDetail(a)} />
@@ -392,17 +400,61 @@ export function AdminAppointmentsTab({
         />
       );
     }
+    const historyFilters = (
+      <AppointmentsQuickFilters
+        sheetActive={sheetFilterActive}
+        sheetOpen={filterOpen}
+        onOpenSheet={() => setFilterOpen(true)}
+        sheetAriaLabel={sheetAriaLabel}
+      />
+    );
+
     return (
-      <div className="space-y-4">
-        <AppointmentsHistorySummary
-          completedCount={historySummary.completedCount}
-          earnedTotal={historySummary.earnedTotal}
-          cancelledCount={historySummary.cancelledCount}
-        />
+      <div className="space-y-3 lg:space-y-5">
+        <div className="relative lg:hidden">
+          <AppointmentsHistorySummary
+            completedCount={historySummary.completedCount}
+            earnedTotal={historySummary.earnedTotal}
+            cancelledCount={historySummary.cancelledCount}
+          />
+          <div className="absolute right-3 top-3.5">{historyFilters}</div>
+        </div>
+
+        <div className="hidden items-start justify-between gap-5 lg:flex">
+          <AppointmentsHistorySummary
+            completedCount={historySummary.completedCount}
+            earnedTotal={historySummary.earnedTotal}
+            cancelledCount={historySummary.cancelledCount}
+          />
+          <div className="shrink-0 pt-1">{historyFilters}</div>
+        </div>
+
+        <div className={apptHistoryDesktopPanel}>
+          <div className={apptHistoryTableHead} role="row">
+            <span className={apptHistoryTableHeadCell}>Клиент</span>
+            <span className={apptHistoryTableHeadCell}>Услуга</span>
+            <span className={apptHistoryTableHeadCell}>Дата</span>
+            <span className={apptHistoryTableHeadCellEnd}>Сумма</span>
+            <span className={apptHistoryTableHeadCellEnd}>Статус</span>
+          </div>
+          {historyGroups.map((group, groupIndex) => (
+            <section key={group.monthKey} className={groupIndex > 0 ? 'border-t border-[#F0F0F0]' : undefined}>
+              <h3 className={apptHistoryMonthDivider}>{group.label}</h3>
+              <ul className="flex flex-col" role="list">
+                {group.items.map((a, rowIndex) => (
+                  <li key={a.id} className={rowIndex === group.items.length - 1 ? 'last:[&_button]:border-b-0' : undefined}>
+                    <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a)} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+
         {historyGroups.map((group) => (
-          <section key={group.monthKey}>
+          <section key={`${group.monthKey}-mobile`} className="lg:hidden">
             <h3 className={apptMonthLabel}>{group.label}</h3>
-            <ul className="flex flex-col gap-3">
+            <ul className={apptListGap}>
               {group.items.map((a) => (
                 <li key={a.id}>
                   <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a)} />
@@ -428,12 +480,12 @@ export function AdminAppointmentsTab({
           </p>
           <Link
             to={ADMIN_BILLING_PATH}
-            className="inline-flex shrink-0 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-3 py-1.5 text-[12px] font-bold text-white shadow-[0_6px_16px_rgba(255,95,122,0.28)]"
+            className="inline-flex shrink-0 rounded-[10px] bg-[#F47C8C] px-3 py-1.5 text-[12px] font-bold text-white transition hover:opacity-95 active:scale-[0.98]"
           >
             Мой тариф
           </Link>
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#FFF1F4] ring-1 ring-[#FDE8ED]/80">
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#EBEBEB]">
           <div
             className={`h-full rounded-full transition-all duration-300 ${apptLimitProgressClass(apptUsageRatio)}`}
             style={{ width: `${apptUsageRatio * 100}%` }}
@@ -503,25 +555,12 @@ export function AdminAppointmentsTab({
   );
 
   const toolbar = (
-    <div className={apptListTray}>
-      <AppointmentsQuickFilters
-        tab={tab}
-        sheetActive={sheetFilterActive}
-        sheetOpen={filterOpen}
-        onOpenSheet={() => setFilterOpen(true)}
-        sheetAriaLabel={sheetAriaLabel}
-        requestsSort={requestsSort}
-        onRequestsSort={setRequestsSort}
-        upcomingSort={upcomingSort}
-        onUpcomingSort={setUpcomingSort}
-        historySort={historySort}
-        onHistorySort={setHistorySort}
-        historyStatus={historyStatus}
-        onHistoryStatus={setHistoryStatus}
-        historyPeriod={historyPeriod}
-        onHistoryPeriod={setHistoryPeriod}
-      />
-    </div>
+    <AppointmentsQuickFilters
+      sheetActive={sheetFilterActive}
+      sheetOpen={filterOpen}
+      onOpenSheet={() => setFilterOpen(true)}
+      sheetAriaLabel={sheetAriaLabel}
+    />
   );
 
   const tabPanels = (
@@ -534,21 +573,11 @@ export function AdminAppointmentsTab({
 
   const mobileBody = (
     <section
-      className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${APPOINTMENTS_PAGE_BG}`}
+      className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem+env(safe-area-inset-bottom,0px))] lg:hidden ${APPOINTMENTS_PAGE_BG}`}
     >
-      <div className="relative z-0">
-        <AppointmentsPageHeader tab={tab} stats={stats} />
-        <div className="relative z-10 -mt-7 lg:hidden">
-          <AppointmentsStatsCard
-            requests={stats.requests}
-            upcoming={stats.upcoming}
-            history={stats.history}
-            className="border-[#FDE8ED] shadow-[0_14px_40px_rgba(255,95,122,0.12)]"
-          />
-        </div>
-      </div>
+      <AppointmentsPageHeader tab={tab} stats={stats} />
       {billingBanner}
-      {toolbar}
+      {tab === 'history' ? null : toolbar}
       {tabPanels}
     </section>
   );
@@ -561,8 +590,24 @@ export function AdminAppointmentsTab({
       <div className="min-w-0 space-y-6">
         <AppointmentsPageHeader tab={tab} stats={stats} />
         {billingBanner}
-        {toolbar}
-        {tabPanels}
+        <div
+          className={
+            tab === 'history'
+              ? 'min-w-0 max-lg:overflow-hidden max-lg:rounded-[16px] max-lg:bg-white max-lg:ring-1 max-lg:ring-[#EEEEEE] lg:bg-transparent lg:ring-0'
+              : appointmentsTabPanelShell
+          }
+        >
+          <div
+            className={
+              tab === 'history'
+                ? 'space-y-4 max-lg:p-4 max-lg:sm:p-5 lg:space-y-5 lg:p-0'
+                : `space-y-4 lg:space-y-5 ${appointmentsDesktopCardPad}`
+            }
+          >
+            <div className={tab === 'history' ? 'lg:hidden' : undefined}>{toolbar}</div>
+            {tabPanels}
+          </div>
+        </div>
       </div>
     </div>
   );

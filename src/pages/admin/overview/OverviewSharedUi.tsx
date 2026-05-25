@@ -1,39 +1,23 @@
 import { type ReactNode } from 'react';
 import {
   HiArrowTrendingUp,
-  HiCalendarDays,
   HiChartBarSquare,
-  HiCloud,
   HiStar,
   HiUsers,
   HiWallet,
 } from 'react-icons/hi2';
-import type { OverviewDayStat } from '../../../features/master/model/demoMasterAppointments';
 import {
   OVERVIEW_WELCOME_IMAGE_SRC,
   overviewCard,
   overviewCardPad,
   overviewEmptyIllustrationSrc,
   overviewIconCircle,
-  overviewMutedSurface,
 } from './adminOverviewTheme';
-import { formatDdMm } from './overviewFormat';
 
 export { OverviewLineChart } from './OverviewLineChart';
 export { OverviewClientsDynamicsChart } from './OverviewClientsDynamicsChart';
 
 export const OVERVIEW_ANALYTICS_TAB_BAR_HEIGHT = '5.75rem';
-
-export function chartAxisIndices(n: number): number[] {
-  if (n <= 0) return [];
-  if (n === 1) return [0];
-  if (n === 2) return [0, 1];
-  return [0, Math.floor((n - 1) / 2), n - 1];
-}
-
-function chartValues(stats: OverviewDayStat[], mode: 'revenue' | 'visits') {
-  return stats.map((s) => (mode === 'revenue' ? s.completedRevenue : s.activeVisits));
-}
 
 /** Компактная KPI-карточка для узкой сетки 3×1 (экран «Обзор»). */
 export function OverviewWelcomeBanner({ displayName }: { displayName: string }) {
@@ -145,18 +129,38 @@ export function OverviewCompactMetricCard({
   sub?: ReactNode;
   valueClassName?: string;
 }) {
+  const compactValue = value.length > 5;
+  const compactLabel = label.length > 9;
+
   return (
-    <div className={`${overviewCard} flex min-w-0 flex-col gap-2 p-3`}>
-      <span className={`${overviewIconCircle} h-9 w-9 shrink-0`}>{icon}</span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold leading-snug text-[#6B7280]">{label}</p>
-        <p
-          className={`mt-0.5 break-words text-[15px] font-bold tabular-nums leading-tight tracking-[-0.03em] ${valueClassName}`}
-        >
-          {value}
+    <div
+      className={`${overviewCard} flex min-h-[7.75rem] min-w-0 flex-1 flex-col items-center justify-center px-2 py-3.5 text-center`}
+    >
+      <span className={`${overviewIconCircle} h-9 w-9`}>{icon}</span>
+
+      <p
+        className={`mt-2 flex min-h-[26px] max-w-full items-center justify-center px-0.5 font-semibold leading-tight text-[#6B7280] ${
+          compactLabel ? 'text-[10px]' : 'text-[11px]'
+        }`}
+      >
+        {label}
+      </p>
+
+      <p
+        className={`flex min-h-[22px] max-w-full items-center justify-center px-0.5 font-bold tabular-nums leading-none tracking-[-0.03em] ${valueClassName} ${
+          compactValue ? 'text-[13px]' : 'text-[17px]'
+        }`}
+      >
+        {value}
+      </p>
+
+      {sub ? (
+        <p className="mt-1 flex min-h-[14px] max-w-full items-center justify-center px-0.5 text-[10px] font-medium leading-tight text-[#9CA3AF]">
+          {sub}
         </p>
-        {sub ? <p className="mt-0.5 text-[10px] font-medium leading-snug text-[#9CA3AF]">{sub}</p> : null}
-      </div>
+      ) : (
+        <span className="mt-1 block min-h-[14px]" aria-hidden />
+      )}
     </div>
   );
 }
@@ -208,7 +212,10 @@ export function OverviewWideMetricCard({
 }) {
   return (
     <div className={`${overviewCard} ${overviewCardPad} relative overflow-hidden`}>
-      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#FFF1F4]" />
+      <div
+        className="pointer-events-none absolute -right-10 -top-10 hidden h-32 w-32 rounded-full bg-[#FFF1F4] lg:block"
+        aria-hidden
+      />
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -312,97 +319,28 @@ export function OverviewEmptyState({
 
 export function OverviewHeroEmpty() {
   return (
-    <div className={`${overviewCard} ${overviewCardPad} overflow-hidden text-center`}>
-      <div className="rounded-[22px] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] px-4 py-5">
-        <img
-          src={overviewEmptyIllustrationSrc}
-          alt=""
-          width={280}
-          height={240}
-          decoding="async"
-          className="mx-auto w-full max-w-[210px] object-contain"
-        />
+    <div className={`${overviewCard} ${overviewCardPad} text-center`}>
+      <img
+        src={overviewEmptyIllustrationSrc}
+        alt=""
+        width={280}
+        height={240}
+        decoding="async"
+        className="mx-auto w-full max-w-[210px] object-contain"
+      />
 
-        <h2 className="mt-3 text-[19px] font-bold tracking-[-0.05em] text-[#111827]">
-          За выбранный период данных нет
-        </h2>
+      <h2 className="mt-3 text-[19px] font-bold tracking-[-0.05em] text-[#111827]">
+        За выбранный период данных нет
+      </h2>
 
-        <p className="mx-auto mt-2 max-w-[19rem] text-[13px] leading-relaxed text-[#6B7280]">
-          Попробуйте выбрать другой период или дождитесь первых записей и платежей.
-        </p>
-      </div>
+      <p className="mx-auto mt-2 max-w-[19rem] text-[13px] leading-relaxed text-[#6B7280]">
+        Попробуйте выбрать другой период или дождитесь первых записей и платежей.
+      </p>
     </div>
   );
 }
 
-export function OverviewBarChart({
-  stats,
-  mode,
-  emptyHint,
-}: {
-  stats: OverviewDayStat[];
-  mode: 'revenue' | 'visits';
-  emptyHint: string;
-}) {
-  const values = chartValues(stats, mode);
-  const max = Math.max(1, ...values);
-  const hasAny = values.some((v) => v > 0);
-  const EmptyIcon = mode === 'revenue' ? HiCloud : HiCalendarDays;
-  const axisIdx = chartAxisIndices(stats.length);
-
-  return (
-    <div className="min-w-0">
-      <div className={`relative min-h-[11rem] overflow-hidden rounded-[20px] ${overviewMutedSurface} p-3 lg:min-h-[10.5rem]`}>
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 top-3 flex flex-col justify-between">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="border-t border-dashed border-[#E5E7EB]" />
-          ))}
-        </div>
-
-        {!hasAny ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-            <EmptyIcon className="h-10 w-10 text-[#D1D5DB]" aria-hidden />
-            <p className="text-[13px] font-semibold text-[#6B7280]">{emptyHint}</p>
-          </div>
-        ) : (
-          <div className="relative flex h-44 items-end gap-1 px-1">
-            {stats.map((s) => {
-              const v = mode === 'revenue' ? s.completedRevenue : s.activeVisits;
-              const h = Math.max((v / max) * 100, v > 0 ? 10 : 4);
-
-              return (
-                <div
-                  key={s.date}
-                  className="flex h-full min-w-0 flex-1 flex-col justify-end"
-                  title={`${s.date}: ${mode === 'revenue' ? `${v} BYN` : `${v} записей`}`}
-                >
-                  <div
-                    className={`mx-auto w-[min(100%,12px)] rounded-t-xl transition ${
-                      v > 0
-                        ? 'bg-gradient-to-t from-[#F47C8C] to-[#F9A8B4]'
-                        : 'bg-[#E5E7EB]'
-                    }`}
-                    style={{ height: `${h}%`, minHeight: v > 0 ? 8 : 4 }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {stats.length > 0 ? (
-        <div className="mt-3 flex justify-between px-1 text-[11px] font-semibold text-[#9CA3AF]">
-          {axisIdx.map((i) => (
-            <span key={`${stats[i].date}-${mode}`} className="tabular-nums">
-              {formatDdMm(stats[i].date)}
-            </span>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+export { OverviewInteractiveBarChart as OverviewBarChart } from './OverviewInteractiveBarChart';
 
 
 export const overviewTabIcons = {

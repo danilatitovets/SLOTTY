@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { createMySlot, deleteMySlot, listMySlots, listPublicSlots, patchMySlot } from './slots.service.js';
+import { publicCatalogRateLimit } from '../../middlewares/rateLimit.js';
 
 export const slotsPublicRouter = Router();
 
@@ -16,6 +17,7 @@ const publicQuery = z.object({
 
 slotsPublicRouter.get(
   '/',
+  publicCatalogRateLimit,
   asyncHandler(async (req, res) => {
     const q = publicQuery.parse(req.query);
     const rows = await listPublicSlots({

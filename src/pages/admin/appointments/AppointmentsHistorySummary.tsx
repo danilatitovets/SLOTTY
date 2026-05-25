@@ -1,6 +1,4 @@
-import { HiChartBar } from 'react-icons/hi2';
-import { apptCard } from './adminAppointmentsTheme';
-import { formatAppointmentPrice } from './appointmentsFormat';
+import { apptHistoryKpiTile, apptHistorySummaryTray } from './adminAppointmentsTheme';
 
 type Props = {
   completedCount: number;
@@ -8,34 +6,63 @@ type Props = {
   cancelledCount: number;
 };
 
+function StatBlock({
+  label,
+  value,
+  accent,
+  compact,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <div className="min-w-0 flex-1">
+        <p
+          className={`text-[22px] font-black tabular-nums leading-none tracking-[-0.04em] ${
+            accent ? 'text-[#F47C8C]' : 'text-[#111827]'
+          }`}
+        >
+          {value}
+        </p>
+        <p className="mt-1.5 text-[12px] font-medium text-[#9CA3AF]">{label}</p>
+      </div>
+    );
+  }
+
+  return (
+    <article className={`${apptHistoryKpiTile} flex min-h-[7.5rem] flex-col justify-between`}>
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">{label}</p>
+      <p
+        className={`text-[clamp(1.35rem,2vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.05em] ${
+          accent ? 'text-[#F47C8C]' : 'text-[#111827]'
+        }`}
+      >
+        {value}
+      </p>
+    </article>
+  );
+}
+
 export function AppointmentsHistorySummary({ completedCount, earnedTotal, cancelledCount }: Props) {
   return (
-    <section className={`${apptCard} p-4 lg:p-5`}>
-      <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_6px_16px_rgba(255,95,122,0.25)]">
-          <HiChartBar className="h-5 w-5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[15px] font-black text-[#111827]">Итоги за всё время</p>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Завершённые и отменённые записи</p>
+    <>
+      <section className={`${apptHistorySummaryTray} pr-14 lg:hidden`}>
+        <p className="text-[14px] font-bold text-[#111827]">Итоги за всё время</p>
+        <div className="mt-3 flex gap-6 sm:gap-8">
+          <StatBlock label="Завершено" value={String(completedCount)} compact />
+          <StatBlock label="Заработано" value={`${earnedTotal} BYN`} accent compact />
+          <StatBlock label="Отменено" value={String(cancelledCount)} compact />
         </div>
+      </section>
+
+      <div className="hidden min-w-0 flex-1 lg:grid lg:grid-cols-3 lg:gap-4">
+        <StatBlock label="Завершено" value={String(completedCount)} />
+        <StatBlock label="Заработано" value={`${earnedTotal} BYN`} accent />
+        <StatBlock label="Отменено" value={String(cancelledCount)} />
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <div className="rounded-[16px] bg-[#f6f7fb] px-2 py-3 text-center ring-1 ring-[#EAECEF]/80">
-          <p className="text-[20px] font-black tabular-nums text-[#111827]">{completedCount}</p>
-          <p className="mt-1 text-[11px] font-semibold leading-tight text-[#6B7280]">Завершено</p>
-        </div>
-        <div className="rounded-[16px] bg-[#FFF1F4] px-2 py-3 text-center ring-1 ring-[#FDE8ED]">
-          <p className="text-[15px] font-black tabular-nums leading-tight text-[#ff5f7a] sm:text-[16px]">
-            {formatAppointmentPrice(earnedTotal)}
-          </p>
-          <p className="mt-1 text-[11px] font-semibold leading-tight text-[#6B7280]">Заработано</p>
-        </div>
-        <div className="rounded-[16px] bg-[#f6f7fb] px-2 py-3 text-center ring-1 ring-[#EAECEF]/80">
-          <p className="text-[20px] font-black tabular-nums text-[#111827]">{cancelledCount}</p>
-          <p className="mt-1 text-[11px] font-semibold leading-tight text-[#6B7280]">Отменено</p>
-        </div>
-      </div>
-    </section>
+    </>
   );
 }

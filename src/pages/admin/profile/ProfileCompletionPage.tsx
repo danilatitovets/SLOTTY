@@ -1,29 +1,35 @@
 import { Link } from 'react-router-dom';
-import {
-  HiArrowRight,
-  HiCheckCircle,
-  HiExclamationCircle,
-} from 'react-icons/hi2';
+import { HiCheckCircle, HiExclamationCircle } from 'react-icons/hi2';
 import { ADMIN_PATH } from '../../../app/paths';
 import { buildProfileCompletionHref } from './profileCompletionNavigation';
 import { useProfileCompletionOverview } from './useProfileCompletionOverview';
+import {
+  profileCompletionDoneBadge,
+  profileCompletionList,
+  profileCompletionMetaChip,
+  profileCompletionPanel,
+  profileCompletionPrimaryBtn,
+  profileCompletionRowPad,
+  profileCompletionSecondaryBtn,
+  profileCompletionSectionLabel,
+} from './adminProfileCompletionTheme';
 
 function ProgressCircle({ percent }: { percent: number }) {
-  const size = 160;
-  const stroke = 12;
+  const size = 112;
+  const stroke = 8;
   const radius = (size - stroke) / 2;
   const length = 2 * Math.PI * radius;
   const offset = length - (percent / 100) * length;
 
   return (
-    <div className="relative flex h-40 w-40 items-center justify-center">
-      <svg width={size} height={size} className="-rotate-90">
+    <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-28 w-28 -rotate-90">
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#FFE8EE"
+          stroke="#F0F0F0"
           strokeWidth={stroke}
         />
         <circle
@@ -31,7 +37,7 @@ function ProgressCircle({ percent }: { percent: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#ff5f7a"
+          stroke="#F47C8C"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={length}
@@ -40,10 +46,10 @@ function ProgressCircle({ percent }: { percent: number }) {
       </svg>
 
       <div className="absolute text-center">
-        <div className="text-[38px] font-black tracking-[-0.06em] text-[#111827]">
+        <div className="text-[28px] font-bold tracking-[-0.04em] text-[#111827] sm:text-[32px]">
           {percent}%
         </div>
-        <div className="text-[12px] font-bold text-[#9CA3AF]">готово</div>
+        <div className={profileCompletionSectionLabel}>готово</div>
       </div>
     </div>
   );
@@ -54,83 +60,71 @@ export function ProfileCompletionPage() {
     useProfileCompletionOverview();
 
   return (
-    <main className="w-full bg-[#f6f7fb] px-6 py-8 lg:px-10">
-      <div className="mx-auto max-w-[1180px]">
-        <section className="mb-8 rounded-[32px] bg-white p-8 shadow-[0_18px_60px_rgba(17,24,39,0.06)] lg:p-10">
-          <div className="grid items-center gap-8 lg:grid-cols-[180px_1fr_auto]">
-            <ProgressCircle percent={percent} />
+    <div className="w-full min-w-0 space-y-4 lg:space-y-5">
+      <section className={`${profileCompletionPanel} ${profileCompletionRowPad} lg:py-6`}>
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">
+          <ProgressCircle percent={percent} />
 
-            <div>
-              <p className="mb-3 inline-flex rounded-full bg-[#FFF1F4] px-4 py-2 text-[13px] font-bold text-[#ff5f7a]">
-                {doneCount} из {totalCount} разделов заполнено
-              </p>
+          <div className="min-w-0 flex-1">
+            <p className={`mb-3 ${profileCompletionMetaChip}`}>
+              {doneCount} из {totalCount} разделов заполнено
+            </p>
 
-              <h1 className="text-[32px] font-black tracking-[-0.05em] text-[#111827] lg:text-[42px]">
-                {isComplete ? 'Профиль заполнен на 100%' : 'Заполните профиль до конца'}
-              </h1>
+            <h1 className="text-[22px] font-bold tracking-[-0.03em] text-[#111827] sm:text-[26px] lg:text-[28px]">
+              {isComplete ? 'Профиль заполнен на 100%' : 'Заполните профиль до конца'}
+            </h1>
 
-              <p className="mt-3 max-w-[620px] text-[15px] leading-7 text-[#6B7280]">
-                {isComplete
-                  ? 'Все основные данные готовы. Профиль выглядит аккуратно и готов для клиентов.'
-                  : 'Заполните недостающие разделы, чтобы профиль выглядел доверительно и профессионально.'}
-              </p>
-            </div>
-
-            <Link
-              to={ADMIN_PATH}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#ff5f7a] px-6 py-3 text-[14px] font-bold text-white shadow-[0_12px_28px_rgba(255,95,122,0.25)] transition hover:bg-[#f04f6c]"
-            >
-              Открыть профиль
-              <HiArrowRight className="h-5 w-5" />
-            </Link>
+            <p className="mt-2 max-w-[560px] text-[14px] leading-6 text-[#6B7280] sm:text-[15px] sm:leading-7">
+              {isComplete
+                ? 'Все основные данные готовы. Профиль выглядит аккуратно и готов для клиентов.'
+                : 'Заполните недостающие разделы, чтобы профиль выглядел доверительно и профессионально.'}
+            </p>
           </div>
-        </section>
 
-        <section className="grid gap-4 lg:grid-cols-2">
-          {sections.map((section) => (
+          <Link to={ADMIN_PATH} className={profileCompletionPrimaryBtn}>
+            Открыть профиль
+          </Link>
+        </div>
+      </section>
+
+      <section className={`${profileCompletionPanel} ${profileCompletionList}`}>
+        {sections.map((section) => (
+          <div
+            key={section.id}
+            className={`flex items-center gap-4 ${profileCompletionRowPad} transition hover:bg-[#FAFAFA]`}
+          >
             <div
-              key={section.id}
-              className="flex items-center gap-4 rounded-[24px] bg-white p-5 shadow-[0_10px_36px_rgba(17,24,39,0.05)]"
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${
+                section.done ? 'bg-[#ECFDF3] text-[#22C55E]' : 'bg-[#FFF1F4] text-[#F47C8C]'
+              }`}
             >
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
-                  section.done
-                    ? 'bg-[#ECFDF3] text-[#22C55E]'
-                    : 'bg-[#FFF1F4] text-[#ff5f7a]'
-                }`}
-              >
-                {section.done ? (
-                  <HiCheckCircle className="h-7 w-7" />
-                ) : (
-                  <HiExclamationCircle className="h-7 w-7" />
-                )}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <h3 className="text-[15px] font-extrabold text-[#111827]">
-                  {section.label}
-                </h3>
-                <p className="mt-1 text-[13px] leading-5 text-[#6B7280]">
-                  {section.done ? 'Раздел заполнен' : section.description}
-                </p>
-              </div>
-
               {section.done ? (
-                <span className="rounded-full bg-[#ECFDF3] px-3 py-1.5 text-[12px] font-bold text-[#16A34A]">
-                  Готово
-                </span>
+                <HiCheckCircle className="h-5 w-5" aria-hidden />
               ) : (
-                <Link
-                  to={buildProfileCompletionHref(section.target)}
-                  className="shrink-0 rounded-2xl bg-[#FFF1F4] px-4 py-2 text-[13px] font-bold text-[#ff5f7a] transition hover:bg-[#FFE1E8]"
-                >
-                  Заполнить
-                </Link>
+                <HiExclamationCircle className="h-5 w-5" aria-hidden />
               )}
             </div>
-          ))}
-        </section>
-      </div>
-    </main>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[15px] font-semibold text-[#111827]">{section.label}</h3>
+              <p className="mt-0.5 text-[13px] leading-5 text-[#6B7280]">
+                {section.done ? 'Раздел заполнен' : section.description}
+              </p>
+            </div>
+
+            {section.done ? (
+              <span className={profileCompletionDoneBadge}>Готово</span>
+            ) : (
+              <Link
+                to={buildProfileCompletionHref(section.target)}
+                className={profileCompletionSecondaryBtn}
+              >
+                Заполнить
+              </Link>
+            )}
+          </div>
+        ))}
+      </section>
+    </div>
   );
 }

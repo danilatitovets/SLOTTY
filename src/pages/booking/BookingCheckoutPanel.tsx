@@ -22,6 +22,9 @@ type Props = {
   onAcceptedTermsChange: (value: boolean) => void;
   comment: string;
   onCommentChange: (value: string) => void;
+  referencePhotoUrl: string | null;
+  onReferencePhotoUrlChange: (url: string | null) => void;
+  categoryCode?: string | null;
   onConfirm: () => void;
 };
 
@@ -41,6 +44,9 @@ export function BookingCheckoutPanel({
   onAcceptedTermsChange,
   comment,
   onCommentChange,
+  referencePhotoUrl,
+  onReferencePhotoUrlChange,
+  categoryCode,
   onConfirm,
 }: Props) {
   return (
@@ -111,6 +117,9 @@ export function BookingCheckoutPanel({
         onAcceptedTermsChange={onAcceptedTermsChange}
         comment={comment}
         onCommentChange={onCommentChange}
+        categoryCode={categoryCode}
+        referencePhotoUrl={referencePhotoUrl}
+        onReferencePhotoUrlChange={onReferencePhotoUrlChange}
         onConfirm={onConfirm}
       />
     </div>

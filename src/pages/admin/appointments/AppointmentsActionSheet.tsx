@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { DemoMasterAppointment, DemoAppointmentStatus } from '../../../features/master/model/demoMasterAppointments';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { apptPinkBtn, apptOutlineBtn } from './adminAppointmentsTheme';
+import {
+  catalogSheetField,
+  catalogSheetLabel,
+  catalogSheetPrimaryBtn,
+  catalogSheetSecondaryBtn,
+} from '../shared/adminCatalogSheetTheme';
 import { formatAppointmentPrice } from './appointmentsFormat';
 
 export type AppointmentActionKind = 'confirm' | 'reject' | 'complete' | 'cancel';
@@ -29,14 +34,42 @@ export function AppointmentsActionSheet({ config, apiError, onClose, onConfirm }
     if (!config) setRejectReason('');
   }, [config]);
 
-  const showRejectReason = config?.kind === 'reject';
+  const showCancelReason = config?.kind === 'reject' || config?.kind === 'cancel';
+  const dangerAction = config?.kind === 'reject' || config?.kind === 'cancel';
+  const cancelReasonRequired = config?.kind === 'reject' || config?.kind === 'cancel';
 
   return (
-    <AdminBottomSheet open={Boolean(config)} onClose={onClose} title={config?.title ?? ''}>
+    <AdminBottomSheet
+      variant="catalog"
+      open={Boolean(config)}
+      onClose={onClose}
+      title={config?.title ?? ''}
+      footer={
+        config ? (
+          <div className="flex w-full flex-col gap-2 sm:flex-row">
+            <button type="button" onClick={onClose} className={catalogSheetSecondaryBtn}>
+              Назад
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const reason = showCancelReason ? rejectReason.trim() : undefined;
+                if (cancelReasonRequired && !reason) return;
+                onConfirm(reason);
+              }}
+              disabled={cancelReasonRequired && !rejectReason.trim()}
+              className={`${catalogSheetPrimaryBtn} ${dangerAction ? '!bg-[#EF4444] hover:!opacity-95' : ''}`}
+            >
+              {config.buttonLabel}
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
       {config ? (
-        <>
-          <div className="rounded-[20px] border border-[#EAECEF] bg-[#FAFAFA] px-4 py-4">
-            <p className="text-[17px] font-bold tracking-[-0.03em] text-[#111827]">
+        <div className="space-y-4">
+          <div className="rounded-[10px] bg-[#F5F5F5] px-4 py-4 lg:px-5 lg:py-5">
+            <p className="text-[17px] font-bold tracking-[-0.03em] text-[#111827] lg:text-[18px]">
               {config.appointment.clientName}
             </p>
             <p className="mt-1 text-[14px] leading-relaxed text-[#6B7280]">
@@ -45,47 +78,38 @@ export function AppointmentsActionSheet({ config, apiError, onClose, onConfirm }
             <p className="mt-3 text-[14px] font-semibold text-[#374151]">
               {config.appointment.date} · {config.appointment.time}
             </p>
-            <p className="mt-1 text-[16px] font-bold text-[#111827]">
+            <p className="mt-1 text-[16px] font-bold text-[#F47C8C]">
               {formatAppointmentPrice(config.appointment.priceByn)}
             </p>
           </div>
 
-          <p className="mt-4 text-[15px] leading-relaxed text-[#6B7280]">{config.text}</p>
+          <p className="text-[15px] leading-relaxed text-[#6B7280]">{config.text}</p>
 
-          {showRejectReason ? (
-            <label className="mt-4 block">
-              <span className="text-[13px] font-semibold text-[#6B7280]">
-                Причина отклонения (необязательно)
+          {showCancelReason ? (
+            <label className="block">
+              <span className={catalogSheetLabel}>
+                Причина отмены{config.kind === 'reject' || config.kind === 'cancel' ? ' *' : ''}
               </span>
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 rows={3}
-                placeholder="Например: нет свободного окна в это время"
-                className="mt-2 w-full resize-none rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-[15px] text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#F9A8B4] focus:ring-2 focus:ring-[#FFF1F4]"
+                placeholder={
+                  config.kind === 'reject'
+                    ? 'Например: нет свободного окна в это время'
+                    : 'Например: заболел, не смогу принять клиента'
+                }
+                className={`${catalogSheetField} min-h-[5.5rem] resize-none`}
               />
             </label>
           ) : null}
 
           {apiError ? (
-            <p className="mt-4 rounded-[16px] bg-[#FEF2F2] px-4 py-3 text-[14px] font-semibold text-[#EF4444]">
+            <p className="rounded-[10px] bg-[#FEF2F2] px-4 py-3 text-[14px] font-semibold text-[#EF4444]">
               {apiError}
             </p>
           ) : null}
-
-          <div className="mt-6 flex gap-2">
-            <button type="button" onClick={onClose} className={apptOutlineBtn}>
-              Назад
-            </button>
-            <button
-              type="button"
-              onClick={() => onConfirm(showRejectReason ? rejectReason.trim() : undefined)}
-              className={apptPinkBtn}
-            >
-              {config.buttonLabel}
-            </button>
-          </div>
-        </>
+        </div>
       ) : null}
     </AdminBottomSheet>
   );

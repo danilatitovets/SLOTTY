@@ -11,6 +11,9 @@ export const SCHEDULE_TAB_BAR_SCROLL_PAD = `calc(${SCHEDULE_TAB_BAR_HEIGHT} + 1.
 
 export const SCHEDULE_PAGE_BG = 'bg-white';
 
+/** Мобилка: серое полотно как в кабинете / услугах. */
+export const SCHEDULE_MOBILE_CANVAS = 'bg-[#F5F5F5]';
+
 /** Desktop: как услуги / сводка. */
 export const SCHEDULE_DESKTOP_CANVAS = PROFILE_DESKTOP_PAGE_BG;
 
@@ -26,26 +29,98 @@ export const scheduleDesktopTabsSticky =
 export const SCHEDULE_GRADIENT =
   'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
 
-export const scheduleTabPanelShell = `${scheduleDesktopCard} max-lg:!rounded-none max-lg:!bg-transparent max-lg:!shadow-none lg:h-fit lg:w-full lg:self-start`;
+export const scheduleTabPanelShell =
+  'relative w-full min-w-0 max-w-none max-lg:space-y-4 max-lg:bg-transparent lg:h-fit lg:w-full lg:max-w-none lg:self-stretch lg:rounded-[16px] lg:bg-white lg:ring-1 lg:ring-[#EEEEEE]';
 
-/** Отступ под FAB на вкладке «Создать». */
-export const scheduleTabScrollBottomPad = `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+1rem+env(safe-area-inset-bottom,0px))] lg:pb-6`;
+/** Ячейка шаблона на desktop: растягивается на всю ширину лотка. */
+export const scheduleTemplateCellWrap = 'w-full min-w-0 lg:min-w-[9.5rem] lg:flex-1';
 
+export const scheduleTemplatesGridFull =
+  'grid w-full max-w-none grid-cols-2 gap-2.5 sm:grid-cols-3 lg:flex lg:w-full lg:flex-wrap lg:gap-4';
+
+export const scheduleTabContentPad = 'space-y-4 max-lg:p-0 lg:space-y-5 lg:p-6';
+
+/** Отступ под FAB на вкладке «Создать» (над нижним таббаром). */
+export const scheduleTabScrollBottomPad = 'pb-24 lg:pb-6';
+
+/** Сетка шаблонов на desktop — отделение от белой карточки таба. */
 export const scheduleTemplatesTray =
-  'rounded-[24px] bg-[#f6f7fb] p-4 lg:rounded-[24px] lg:p-5';
+  'w-full rounded-[20px] bg-[#F6F7FB] p-4 ring-1 ring-[#EEEEEE] lg:rounded-[22px] lg:p-5';
+
+export function scheduleTemplateCardClass(selected: boolean): string {
+  return `relative min-h-[5.75rem] overflow-hidden rounded-[16px] bg-white transition active:scale-[0.99] lg:min-h-[8.5rem] lg:rounded-[18px] lg:border lg:shadow-[0_2px_14px_rgba(17,24,39,0.06)] ${
+    selected
+      ? 'z-[1] ring-2 ring-[#F47C8C] lg:border-[#F47C8C]'
+      : 'ring-1 ring-[#EEEEEE] lg:border-[#EAECEF] lg:ring-0 hover:lg:border-[#FDE8ED]'
+  }`;
+}
+
+export const scheduleTemplateAddBtn =
+  'flex min-h-[5.75rem] w-full flex-col items-center justify-center gap-1.5 rounded-[16px] bg-[#EBEBEB] text-[13px] font-semibold text-[#111827] transition hover:bg-[#E4E4E4] active:scale-[0.98] lg:min-h-[8.5rem] lg:min-w-[9.5rem] lg:flex-1 lg:rounded-[18px] lg:border-2 lg:border-dashed lg:border-[#D1D5DB] lg:bg-white lg:text-[#F47C8C] lg:shadow-[0_2px_12px_rgba(17,24,39,0.04)] hover:lg:border-[#F9A8B4] hover:lg:bg-[#FFF9FB]';
+
+/** Ошибки в шитах расписания. */
+export const scheduleSheetErrorBox =
+  'rounded-[10px] bg-[#FFF4E8] px-4 py-3 text-[13px] font-medium leading-snug text-[#B45309] break-words [overflow-wrap:anywhere]';
+
+export const scheduleSheetSummaryBox = 'rounded-[10px] bg-[#EBEBEB] px-4 py-4';
+
+/** Мобилка: серый лоток; desktop — прежние панели. */
+export const scheduleMobileTray =
+  'w-full rounded-[16px] bg-[#EBEBEB] p-4 max-lg:shadow-none lg:rounded-[24px] lg:bg-[#f6f7fb] lg:p-5 lg:shadow-[0_4px_16px_rgba(17,24,39,0.04)]';
 
 /** Панель поиска и фильтров на вкладке «Окна». */
 export const scheduleListToolbar =
-  'rounded-[24px] bg-[#f6f7fb] p-4 shadow-[0_4px_16px_rgba(17,24,39,0.04)] lg:p-5';
+  'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:rounded-[20px] lg:bg-white lg:p-5 lg:ring-1 lg:ring-[#EEEEEE]';
+
+export const scheduleSlotsFilterBtn =
+  'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#6B7280] transition active:scale-[0.96]';
+
+export const scheduleSlotsFilterBtnActive =
+  'bg-[#F47C8C] text-white ring-1 ring-[#F9A8B4]';
+
+export const scheduleSlotsStatChip =
+  'inline-flex min-w-0 items-center gap-1.5 rounded-full bg-[#EBEBEB] px-3 py-1.5 text-[12px] font-semibold text-[#111827]';
+
+export const scheduleSlotsDayHeader =
+  'flex items-center justify-between gap-3 py-2.5 max-lg:sticky max-lg:top-[calc(var(--slotty-admin-header-h,5.25rem)+0.5rem)] max-lg:z-[1] max-lg:bg-[#F5F5F5] lg:mb-3 lg:rounded-[10px] lg:bg-[#F6F7FB] lg:px-3 lg:py-2';
 
 export const scheduleListGroupCard =
-  'rounded-[24px] border border-[#FDE8ED] bg-white p-4 shadow-[0_8px_28px_rgba(255,95,122,0.06)] lg:p-5';
+  'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:hidden lg:block lg:ring-[#EEEEEE]';
+
+/** Карточка окна — split layout как в каталоге услуг. */
+export const scheduleWindowCardShell =
+  'flex w-full overflow-hidden rounded-[16px] bg-white ring-1 ring-[#EEEEEE] transition active:scale-[0.99] lg:rounded-[18px] lg:ring-[#EAECEF]';
+
+export function scheduleWindowTimeStrip(status: 'free' | 'booked' | 'blocked'): string {
+  if (status === 'booked') return 'bg-[#FFF1F4] text-[#F47C8C]';
+  if (status === 'blocked') return 'bg-[#F5F5F5] text-[#9CA3AF]';
+  return 'bg-[#EBEBEB] text-[#111827]';
+}
+
+export function scheduleWindowStatusPill(status: 'free' | 'booked' | 'blocked'): string {
+  if (status === 'booked') return 'bg-[#FFF1F4] text-[#F47C8C]';
+  if (status === 'blocked') return 'bg-[#F5F5F5] text-[#6B7280]';
+  return 'bg-[#EBEBEB] text-[#111827]';
+}
 
 export const scheduleCalendarCard =
-  'rounded-[24px] border border-[#FDE8ED] bg-white p-4 shadow-[0_8px_28px_rgba(255,95,122,0.06)] lg:p-5';
+  'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:border-0 max-lg:shadow-none lg:rounded-[24px] lg:border lg:border-[#FDE8ED] lg:p-5 lg:shadow-[0_8px_28px_rgba(255,95,122,0.06)] lg:ring-0';
 
-export const scheduleCalendarTray =
-  'rounded-[24px] bg-[#f6f7fb] p-4 shadow-[0_4px_16px_rgba(17,24,39,0.04)] lg:p-5';
+/** Панель выбранного дня (календарь) — отступ сверху на мобиле. */
+export const scheduleCalendarDayPanel = `${scheduleCalendarCard} max-lg:px-4 max-lg:pb-4 max-lg:pt-5`;
+
+/** Горизонтальная лента «Дни с окнами» на мобиле (без роста вниз). */
+export const scheduleBusyDaysStrip =
+  'mt-2 flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
+export function scheduleBusyDayChipClass(selected: boolean): string {
+  return `flex min-w-[4.75rem] shrink-0 flex-col items-center justify-center rounded-[10px] px-2.5 py-2.5 transition active:scale-[0.98] ${
+    selected ? 'bg-[#F47C8C] text-white' : 'bg-white text-[#111827] ring-1 ring-[#EEEEEE]'
+  }`;
+}
+
+/** @deprecated Используйте scheduleMobileTray */
+export const scheduleCalendarTray = scheduleMobileTray;
 
 const scheduleTabPhotosDir = '/photos/' + encodeURIComponent('Расписание') + '/';
 

@@ -55,6 +55,17 @@ import {
 import type { MasterCertificate } from '../../features/master-onboarding/model/masterCertificate';
 import { parseHttpsCertificateImageUrl } from '../../features/master-onboarding/model/masterCertificate';
 import type { MasterPlanSelection } from '../../features/master-onboarding/model/masterOnboardingPlanTypes';
+import {
+  AT_HOME_ENTRANCE_MAX,
+  AT_HOME_INTERCOM_MAX,
+  AT_HOME_ROOM_MAX,
+  isAtHomeAddressDetailsComplete,
+  validateAtHomeEntrance,
+  validateAtHomeFloor,
+  validateAtHomeIntercom,
+  validateAtHomeRoom,
+  validateMasterAddressForm,
+} from '../../features/profile/lib/masterAddressValidation';
 
 const TOTAL_STEPS = 8;
 const ONBOARDING_PAGE_WRAP =
@@ -91,65 +102,12 @@ const CATEGORY_HINTS: Record<string, string> = {
 
 const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
-const AT_HOME_ENTRANCE_MAX = 10;
-const AT_HOME_ROOM_MAX = 20;
-const AT_HOME_INTERCOM_MAX = 20;
-
 function sanitizeAtHomeFloorInput(raw: string): string {
   let s = raw.replace(/[^\d-]/g, '');
   if (!s.includes('-')) return s.slice(0, 2);
   const negative = s.startsWith('-');
   const digits = s.replace(/-/g, '').slice(0, 2);
   return negative ? `-${digits}` : digits.slice(0, 2);
-}
-
-function validateAtHomeEntrance(value: string): string | null {
-  const t = value.trim();
-  if (!t) return 'Укажите подъезд';
-  if (t.length > AT_HOME_ENTRANCE_MAX) return `Не длиннее ${AT_HOME_ENTRANCE_MAX} символов`;
-  if (!/^[\dа-яА-Яa-zA-Z/-]+$/u.test(t)) return 'Только цифры и буквы';
-  return null;
-}
-
-function validateAtHomeFloor(value: string): string | null {
-  const t = value.trim();
-  if (!t) return 'Укажите этаж';
-  if (!/^-?\d{1,2}$/.test(t)) return 'Укажите этаж числом, например 3';
-  const n = Number.parseInt(t, 10);
-  if (!Number.isFinite(n) || n < -3 || n > 99) return 'Этаж от −3 до 99';
-  if (t === '0' || t === '-0') return 'Укажите этаж от −3 до 99';
-  return null;
-}
-
-function validateAtHomeRoom(value: string): string | null {
-  const t = value.trim();
-  if (!t) return 'Укажите квартиру';
-  if (t.length > AT_HOME_ROOM_MAX) return `Не длиннее ${AT_HOME_ROOM_MAX} символов`;
-  if (!/^[\dа-яА-Яa-zA-Z/-]+$/u.test(t)) return 'Только цифры и буквы';
-  return null;
-}
-
-function validateAtHomeIntercom(value: string): string | null {
-  const t = value.trim();
-  if (!t) return 'Укажите код домофона';
-  if (t.length > AT_HOME_INTERCOM_MAX) return `Не длиннее ${AT_HOME_INTERCOM_MAX} символов`;
-  if (!/^[\dа-яА-Яa-zA-Z#*+\s-]+$/u.test(t)) return 'Недопустимые символы в коде';
-  return null;
-}
-
-/** Для «На дому»: подъезд, этаж, квартира и домофон обязательны и проходят проверку формата. */
-function isAtHomeAddressDetailsComplete(
-  entrance: string,
-  floor: string,
-  room: string,
-  intercom: string,
-): boolean {
-  return (
-    validateAtHomeEntrance(entrance) === null &&
-    validateAtHomeFloor(floor) === null &&
-    validateAtHomeRoom(room) === null &&
-    validateAtHomeIntercom(intercom) === null
-  );
 }
 
 function newEntityId(prefix: string): string {
@@ -543,6 +501,8 @@ export function BecomeMasterPage() {
   const [categoriesReady, setCategoriesReady] = useState(false);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categoryChangePendingId, setCategoryChangePendingId] = useState<string | null>(null);
+  const [categoryChangeConfirmOpen, setCategoryChangeConfirmOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [clientContacts, setClientContacts] = useState<MasterContactRow[]>([]);
@@ -668,6 +628,19 @@ export function BecomeMasterPage() {
   const selectedCategory = useMemo(
     () => categories.find((item) => item.id === selectedCategoryId),
     [categories, selectedCategoryId],
+  );
+
+  const trySelectCategory = useCallback(
+    (categoryId: string) => {
+      if (selectedCategoryId === categoryId) return;
+      if (services.length > 0 && selectedCategoryId) {
+        setCategoryChangePendingId(categoryId);
+        setCategoryChangeConfirmOpen(true);
+        return;
+      }
+      setSelectedCategoryId(categoryId);
+    },
+    [selectedCategoryId, services.length],
   );
 
   const popularServiceTemplates = useMemo(
@@ -1274,56 +1247,28 @@ export function BecomeMasterPage() {
   );
 
   const validateAddressStep = useCallback((): boolean => {
-    const errs: Record<string, string> = {};
-
-    if (!street.trim()) errs.street = visitType === 'studio' ? 'Укажите адрес салона' : 'Укажите адрес приёма';
-    else if (street.trim().length > 200) errs.street = 'Не длиннее 200 символов.';
-
-    if (visitType === 'studio') {
-      const sn = salonName.trim();
-      if (!sn) errs.salonName = 'Укажите название салона или студии';
-      else if (sn.length < 2) errs.salonName = 'Минимум 2 символа.';
-    }
-
-    if (visitType === 'at_home') {
-      const entranceErr = validateAtHomeEntrance(entrance);
-      if (entranceErr) errs.entrance = entranceErr;
-
-      const floorErr = validateAtHomeFloor(floor);
-      if (floorErr) errs.floor = floorErr;
-
-      const roomErr = validateAtHomeRoom(room);
-      if (roomErr) errs.room = roomErr;
-
-      const intercomErr = validateAtHomeIntercom(intercom);
-      if (intercomErr) errs.intercom = intercomErr;
-    } else {
-      if (entrance.trim().length > 120) errs.entrance = 'Не длиннее 120 символов.';
-      const studioFloorErr = floor.trim() ? validateAtHomeFloor(floor) : null;
-      if (studioFloorErr) errs.floor = studioFloorErr;
-      if (room.trim().length > 80) errs.room = 'Не длиннее 80 символов.';
-      if (intercom.trim().length > 80) errs.intercom = 'Не длиннее 80 символов.';
-    }
-    if (directions.trim().length > 2000) errs.directions = 'Не длиннее 2000 символов.';
-    if (clientNote.trim().length > 2000) errs.clientNote = 'Не длиннее 2000 символов.';
-    if (salonName.trim().length > 120) errs.salonName = 'Не длиннее 120 символов.';
-    if (houseDetail.trim().length > 120) errs.houseDetail = 'Не длиннее 120 символов.';
-
-    const coordsRequired = mapScriptOk === true;
-    if (coordsRequired) {
-      const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
-      if (!hasCoords) {
-        errs.coords = 'Уточните точку на карте';
-      } else if (!addressPinnedToMap) {
-        errs.coords = 'Подтвердите адрес: выберите вариант из подсказок или уточните метку на карте';
-      }
-    }
-
+    const errs = validateMasterAddressForm(
+      {
+        visitType,
+        street,
+        salonName,
+        buildingDetail: houseDetail,
+        entrance,
+        floor,
+        room,
+        intercom,
+        landmark,
+        directions,
+        clientNote,
+        lat,
+        lng,
+      },
+      { mapScriptOk: mapScriptOk === true, addressPinnedToMap },
+    );
     setAddressFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }, [
     addressPinnedToMap,
-    building,
     clientNote,
     directions,
     entrance,
@@ -1730,6 +1675,14 @@ export function BecomeMasterPage() {
               <div className="mx-auto w-full max-w-xl">
                 <StepTitle dense eyebrow="Категория" title="Чем вы занимаетесь?" />
 
+                <div className="mt-4 rounded-2xl bg-[#FFFBEB] px-4 py-3 ring-1 ring-[#FDE68A]/60">
+                  <p className="text-[14px] font-semibold text-[#92400E]">Категория влияет на каталог</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-[#A16207]">
+                    Клиенты будут находить вас в этом разделе. После публикации профиля смена категории может
+                    проходить через проверку.
+                  </p>
+                </div>
+
                 {categoriesError ? (
                   <p className="mt-4 rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
                     {categoriesError}
@@ -1757,7 +1710,7 @@ export function BecomeMasterPage() {
                           <button
                             key={item.id}
                             type="button"
-                            onClick={() => setSelectedCategoryId(item.id)}
+                            onClick={() => trySelectCategory(item.id)}
                             className={`flex min-h-[4.25rem] w-full items-center gap-3 rounded-[26px] px-3.5 py-2.5 text-left transition sm:min-h-[4.35rem] sm:gap-3.5 sm:px-4 sm:py-3 ${
                               active
                                 ? 'bg-[#FDF9F9] text-neutral-950 shadow-[0_8px_22px_rgba(226,149,149,0.18)] ring-1 ring-[#E29595]/40'
@@ -3166,6 +3119,46 @@ export function BecomeMasterPage() {
                 {saving ? 'Публикуем…' : 'Опубликовать профиль'}
               </button>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {categoryChangeConfirmOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/35 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-[0_24px_70px_rgba(17,17,17,0.18)]">
+            <h3 className="text-[17px] font-semibold tracking-[-0.03em] text-neutral-950">
+              Проверьте услуги после смены категории
+            </h3>
+            <p className="mt-2 text-[14px] leading-relaxed text-neutral-600">
+              Некоторые услуги могут не подходить новой категории. После изменения проверьте прайс.
+            </p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryChangeConfirmOpen(false);
+                  setCategoryChangePendingId(null);
+                }}
+                className="min-h-12 flex-1 rounded-full bg-[#F1EFEF] text-[15px] font-semibold text-neutral-800"
+              >
+                Оставить текущую
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (categoryChangePendingId) setSelectedCategoryId(categoryChangePendingId);
+                  setCategoryChangeConfirmOpen(false);
+                  setCategoryChangePendingId(null);
+                }}
+                className="min-h-12 flex-1 rounded-full bg-[#E29595] text-[15px] font-semibold text-white"
+              >
+                Изменить категорию
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

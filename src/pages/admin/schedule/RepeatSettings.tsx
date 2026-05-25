@@ -36,6 +36,8 @@ type Props = {
   onChange: (value: RepeatSettingsValue) => void;
   /** Для превью числа дат в серии */
   dateIso?: string;
+  /** Компактный стиль в catalog-шите «Новое окно». */
+  cabinet?: boolean;
 };
 
 const KIND_ICONS: Record<RepeatKind, typeof HiCalendarDays> = {
@@ -52,13 +54,48 @@ function KindCard({
   description,
   onClick,
   icon: Icon,
+  cabinet,
 }: {
   selected: boolean;
   label: string;
   description: string;
   onClick: () => void;
   icon: typeof HiCalendarDays;
+  cabinet?: boolean;
 }) {
+  if (cabinet) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-left transition active:scale-[0.99] ${
+          selected ? 'bg-[#F47C8C] text-white' : 'bg-[#EBEBEB] text-[#111827] hover:bg-[#E4E4E4]'
+        }`}
+      >
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] ${
+            selected ? 'bg-white/20 text-white' : 'bg-white text-[#6B7280]'
+          }`}
+        >
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 text-[14px] font-semibold">{label}</span>
+          <span
+            className={`mt-0.5 block text-[12px] font-medium leading-relaxed ${
+              selected ? 'text-white/85' : 'text-[#6B7280]'
+            }`}
+          >
+            {description}
+          </span>
+        </span>
+        {selected ? (
+          <HiCheck className="h-5 w-5 shrink-0 text-white" strokeWidth={2.5} aria-hidden />
+        ) : null}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -128,7 +165,7 @@ function CountSelect({
   );
 }
 
-export function RepeatSettings({ value, onChange, dateIso = '' }: Props) {
+export function RepeatSettings({ value, onChange, dateIso = '', cabinet }: Props) {
   const dateCount = useMemo(
     () => (dateIso.trim() ? countRepeatDates(dateIso, value) : 0),
     [dateIso, value],
@@ -160,13 +197,20 @@ export function RepeatSettings({ value, onChange, dateIso = '' }: Props) {
               description={opt.description}
               icon={Icon}
               onClick={() => setKind(opt.value)}
+              cabinet={cabinet}
             />
           );
         })}
       </div>
 
       {seriesMode ? (
-        <div className="space-y-4 rounded-[20px] border border-[#FDE8ED] bg-[#f6f7fb] p-4">
+        <div
+          className={
+            cabinet
+              ? 'space-y-4 rounded-[10px] bg-[#EBEBEB] p-4'
+              : 'space-y-4 rounded-[20px] border border-[#FDE8ED] bg-[#f6f7fb] p-4'
+          }
+        >
           {value.kind === 'weekly' ? (
             <CountSelect
               label="Сколько недель"
@@ -242,10 +286,14 @@ export function RepeatSettings({ value, onChange, dateIso = '' }: Props) {
                         key={label}
                         type="button"
                         onClick={() => toggleWeekday(idx)}
-                        className={`min-h-[2.75rem] min-w-[2.75rem] rounded-[14px] px-3 text-[14px] font-bold transition active:scale-[0.97] ${
+                        className={`min-h-[2.75rem] min-w-[2.75rem] rounded-[10px] px-3 text-[14px] font-bold transition active:scale-[0.97] ${
                           on
-                            ? 'bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_6px_18px_rgba(255,95,122,0.28)]'
-                            : 'border border-[#EAECEF] bg-white text-[#6B7280] hover:border-[#FDE8ED] hover:text-[#ff5f7a]'
+                            ? cabinet
+                              ? 'bg-[#F47C8C] text-white'
+                              : 'bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_6px_18px_rgba(255,95,122,0.28)]'
+                            : cabinet
+                              ? 'bg-white text-[#6B7280] ring-1 ring-[#EEEEEE] hover:bg-[#F5F5F5]'
+                              : 'border border-[#EAECEF] bg-white text-[#6B7280] hover:border-[#FDE8ED] hover:text-[#ff5f7a]'
                         }`}
                         aria-pressed={on}
                       >
@@ -281,7 +329,11 @@ export function RepeatSettings({ value, onChange, dateIso = '' }: Props) {
 
               <button
                 type="button"
-                className="text-[13px] font-bold text-[#ff5f7a]"
+                className={
+                  cabinet
+                    ? 'text-[13px] font-semibold text-[#111827] underline decoration-[#D1D5DB] underline-offset-2'
+                    : 'text-[13px] font-bold text-[#ff5f7a]'
+                }
                 onClick={() =>
                   onChange(patchRepeatSettings(value, { pickWeekdayMask: [...DEFAULT_WEEKDAY_MASK] }))
                 }
@@ -298,16 +350,24 @@ export function RepeatSettings({ value, onChange, dateIso = '' }: Props) {
       ) : null}
 
       <div
-        className={`rounded-[16px] px-4 py-3 ${
-          seriesMode && dateCount > 0
-            ? 'bg-[#FFF1F4] ring-1 ring-[#FDE8ED]'
-            : 'bg-white ring-1 ring-[#EAECEF]'
-        }`}
+        className={
+          cabinet
+            ? 'rounded-[10px] bg-[#EBEBEB] px-4 py-3'
+            : `rounded-[16px] px-4 py-3 ${
+                seriesMode && dateCount > 0
+                  ? 'bg-[#FFF1F4] ring-1 ring-[#FDE8ED]'
+                  : 'bg-white ring-1 ring-[#EAECEF]'
+              }`
+        }
       >
         <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Итого по повтору</p>
         <p
           className={`mt-1 text-[14px] font-bold leading-snug ${
-            seriesMode && dateCount > 0 ? 'text-[#ff5f7a]' : 'text-[#374151]'
+            cabinet
+              ? 'text-[#111827]'
+              : seriesMode && dateCount > 0
+                ? 'text-[#ff5f7a]'
+                : 'text-[#374151]'
           }`}
         >
           {summary}

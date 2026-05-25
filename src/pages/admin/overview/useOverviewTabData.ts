@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import {
   fetchOverviewBundle,
+  fetchOverviewClients,
+  fetchOverviewReputation,
+  fetchOverviewRevenue,
+  fetchOverviewSummary,
   type OverviewSummaryApiDto,
 } from '../../../features/admin/api/masterOverviewApi';
 import {
@@ -14,6 +18,7 @@ import {
   overviewPeriodRange,
   overviewSummaryMetrics,
   type ClientAnalytics,
+  type OverviewAnalyticsTab,
   type OverviewPeriodPreset,
   type RevenueAnalytics,
 } from './overviewAnalytics';
@@ -30,42 +35,49 @@ type SummaryMetrics = {
 };
 
 export function useOverviewTabData({
-  activeTab: _activeTab,
+  activeTab,
   periodPreset,
   appointments,
   useCabinetApi,
 }: {
-  activeTab: import('./overviewAnalytics').OverviewAnalyticsTab;
+  activeTab: OverviewAnalyticsTab;
   periodPreset: OverviewPeriodPreset;
   appointments: DemoMasterAppointment[];
   useCabinetApi: boolean;
 }) {
-  const reportRange = useMemo(
+  const initialBundle = useCabinetApi ? readOverviewBundleCache(periodPreset) : null;
+
+  const localRange = useMemo(
     () => overviewPeriodRange(periodPreset, appointments),
     [appointments, periodPreset],
   );
 
   const localSummary = useMemo(
-    () => overviewSummaryMetrics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
+    () => overviewSummaryMetrics(appointments, localRange.start, localRange.end),
+    [appointments, localRange.end, localRange.start],
   );
   const localRevenue = useMemo(
-    () => computeRevenueAnalytics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
+    () => computeRevenueAnalytics(appointments, localRange.start, localRange.end),
+    [appointments, localRange.end, localRange.start],
   );
   const localClients = useMemo(
-    () => computeClientAnalytics(appointments, reportRange.start, reportRange.end),
-    [appointments, reportRange.end, reportRange.start],
+    () => computeClientAnalytics(appointments, localRange.start, localRange.end),
+    [appointments, localRange.end, localRange.start],
   );
   const localReputation = useMemo(
-    () => computeReputationFromReviews(reportRange.start, reportRange.end),
-    [reportRange.end, reportRange.start],
+    () => computeReputationFromReviews(localRange.start, localRange.end),
+    [localRange.end, localRange.start],
   );
 
-  const initialBundle = useCabinetApi ? readOverviewBundleCache(periodPreset) : null;
-
   const [fetching, setFetching] = useState(false);
+  const [tabFetching, setTabFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiPeriodRange, setApiPeriodRange] = useState<{ start: string; end: string } | null>(
+    () =>
+      initialBundle
+        ? { start: initialBundle.periodStart, end: initialBundle.periodEnd }
+        : null,
+  );
   const [apiSummary, setApiSummary] = useState<OverviewSummaryApiDto | null>(
     () => initialBundle?.summary ?? null,
   );
@@ -82,14 +94,17 @@ export function useOverviewTabData({
   const hasApiDataRef = useRef(false);
   hasApiDataRef.current = apiSummary !== null;
 
+  /** Полная сводка при смене периода. */
   useEffect(() => {
     if (!useCabinetApi) {
       setFetching(false);
+      setTabFetching(false);
       setError(null);
       setApiSummary(null);
       setApiRevenue(null);
       setApiClients(null);
       setApiReputation(null);
+      setApiPeriodRange(null);
       hasApiDataRef.current = false;
       return;
     }
@@ -109,6 +124,7 @@ export function useOverviewTabData({
         setApiRevenue(bundle.revenue);
         setApiClients(bundle.clients);
         setApiReputation(bundle.reputation);
+        setApiPeriodRange({ start: bundle.periodStart, end: bundle.periodEnd });
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Не удалось загрузить аналитику');
@@ -121,9 +137,64 @@ export function useOverviewTabData({
     return () => {
       cancelled = true;
     };
-  }, [periodPreset, useCabinetApi, reputationTick]);
+  }, [periodPreset, useCabinetApi]);
+
+  /** Актуализация активной вкладки с бэкенда (отдельный endpoint). */
+  useEffect(() => {
+    if (!useCabinetApi || fetching) return;
+
+    let cancelled = false;
+    setTabFetching(true);
+
+    void (async () => {
+      try {
+        switch (activeTab) {
+          case 'summary': {
+            const summary = await fetchOverviewSummary(periodPreset);
+            if (cancelled) return;
+            setApiSummary(summary);
+            setApiPeriodRange({ start: summary.periodStart, end: summary.periodEnd });
+            break;
+          }
+          case 'revenue': {
+            const revenue = await fetchOverviewRevenue(periodPreset);
+            if (cancelled) return;
+            setApiRevenue(revenue);
+            break;
+          }
+          case 'clients': {
+            const clients = await fetchOverviewClients(periodPreset);
+            if (cancelled) return;
+            setApiClients(clients);
+            break;
+          }
+          case 'reputation': {
+            const reputation = await fetchOverviewReputation(periodPreset);
+            if (cancelled) return;
+            setApiReputation(reputation);
+            break;
+          }
+          default:
+            break;
+        }
+        if (!cancelled) setError(null);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Не удалось загрузить аналитику');
+        }
+      } finally {
+        if (!cancelled) setTabFetching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, periodPreset, reputationTick, useCabinetApi, fetching]);
 
   const refreshReputation = () => setReputationTick((n) => n + 1);
+
+  const reportRange = useCabinetApi && apiPeriodRange ? apiPeriodRange : localRange;
 
   const summary: SummaryMetrics =
     useCabinetApi && apiSummary
@@ -145,6 +216,7 @@ export function useOverviewTabData({
 
   return {
     loading,
+    tabRefreshing: useCabinetApi && tabFetching,
     error: useCabinetApi ? error : null,
     reportRange,
     summary,

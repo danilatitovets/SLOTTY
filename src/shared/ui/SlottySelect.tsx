@@ -44,7 +44,7 @@ const TONE_TRIGGER: Record<SlottySelectTone, string> = {
   admin:
     'flex w-full min-h-[3rem] items-center rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
   catalog:
-    'inline-flex h-10 min-w-[200px] shrink-0 items-center rounded-[10px] border-0 bg-[#F5F5F5] px-3.5 text-left text-[13px] font-semibold text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
+    'flex w-full min-h-12 items-center rounded-[10px] border-0 bg-[#EBEBEB] px-4 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#E4E4E4] focus:bg-[#E4E4E4] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
 };
 
 const TONE_OPTION_ACTIVE: Record<SlottySelectTone, string> = {

@@ -5,6 +5,18 @@ export const HUB_PATH = '/book';
 
 export const LOGIN_PATH = '/login';
 export const MASTER_LOGIN_PATH = '/master/login';
+/** Вводная: что даёт SLOTTY мастеру (CTA «Стать мастером» без входа). */
+export const MASTER_START_PATH = '/master/start';
+export const MASTER_REGISTER_PATH = '/master/register';
+
+/** /master/login с возвратом после входа. */
+export function getMasterLoginPath(fromPath?: string): string {
+  if (!fromPath || fromPath === MASTER_LOGIN_PATH || fromPath.startsWith(`${MASTER_LOGIN_PATH}?`)) {
+    return MASTER_LOGIN_PATH;
+  }
+  return `${MASTER_LOGIN_PATH}?${new URLSearchParams({ from: fromPath }).toString()}`;
+}
+
 export const VERIFY_EMAIL_PATH = '/auth/verify-email';
 export const FORGOT_PASSWORD_PATH = '/auth/forgot-password';
 export const RESET_PASSWORD_PATH = '/auth/reset-password';
@@ -78,8 +90,26 @@ export const BOOKING_PATH = '/zapis';
 /** Онбординг мастера (демо, до кабинета). */
 export const BECOME_MASTER_PATH = '/become-master';
 
+/** Регистрация мастера (CTA «Стать мастером» без сессии). */
+export function getMasterRegisterPath(fromPath?: string): string {
+  const target = fromPath ?? BECOME_MASTER_PATH;
+  if (target === MASTER_REGISTER_PATH || target.startsWith(`${MASTER_REGISTER_PATH}?`)) {
+    return MASTER_REGISTER_PATH;
+  }
+  return `${MASTER_REGISTER_PATH}?${new URLSearchParams({ from: target }).toString()}`;
+}
+
 /** Кабинет мастера (после онбординга). */
 export const ADMIN_PATH = '/admin';
+
+/** Платформенная админ-панель (только role platform_admin). */
+export const PLATFORM_ADMIN_PATH = '/platform-admin';
+export const PLATFORM_ADMIN_REQUESTS_PATH = '/platform-admin/requests';
+export const PLATFORM_ADMIN_USERS_PATH = '/platform-admin/users';
+export const PLATFORM_ADMIN_MASTERS_PATH = '/platform-admin/masters';
+export const PLATFORM_ADMIN_SERVICES_PATH = '/platform-admin/services';
+export const PLATFORM_ADMIN_BOOKINGS_PATH = '/platform-admin/bookings';
+export const PLATFORM_ADMIN_AUDIT_PATH = '/platform-admin/audit';
 
 /** Разделы кабинета (отдельные страницы). */
 export const ADMIN_SERVICES_PATH = '/admin/services';

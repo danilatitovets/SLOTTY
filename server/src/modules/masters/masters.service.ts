@@ -5,6 +5,7 @@ import { listMyServices } from '../services/services.service.js';
 import { listMyScheduleRules } from './masterOnboarding.service.js';
 import { contactsToLegacyContactLine, type MasterContactPayload } from './masterContactsCodec.js';
 import { decodePaymentNote, listMasterPaymentMethodNames } from './masterTrustProfile.service.js';
+import { sanitizeMasterLocationForViewer } from '../../lib/sanitizeMasterLocation.js';
 
 function num(v: string | number | null | undefined): number | null {
   if (v == null || v === '') return null;
@@ -13,10 +14,72 @@ function num(v: string | number | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+type PublicMasterLocationRow = {
+  id: string;
+  visit_type: string;
+  city: string;
+  street: string;
+  building: string;
+  building_detail: string | null;
+  salon_name: string | null;
+  entrance: string | null;
+  floor: string | null;
+  room: string | null;
+  intercom: string | null;
+  landmark: string | null;
+  directions: string | null;
+  client_note: string | null;
+  public_address: string;
+  is_primary: boolean;
+  lat: number | null;
+  lng: number | null;
+  show_exact_address_after_booking: boolean;
+};
+
+function mapPublicMasterLocation(row: PublicMasterLocationRow) {
+  return sanitizeMasterLocationForViewer(
+    {
+      id: row.id,
+      visitType: row.visit_type,
+      city: row.city,
+      street: row.street,
+      building: row.building,
+      buildingDetail: row.building_detail,
+      salonName: row.salon_name,
+      entrance: row.entrance,
+      floor: row.floor,
+      room: row.room,
+      intercom: row.intercom,
+      landmark: row.landmark,
+      directions: row.directions,
+      clientNote: row.client_note,
+      publicAddress: row.public_address,
+      isPrimary: row.is_primary,
+      lat: row.lat,
+      lng: row.lng,
+      showExactAddressAfterBooking: row.show_exact_address_after_booking,
+    },
+    { isPublicCatalog: false },
+  );
+}
+
 export async function listPublishedMasters(filters: { category?: string; search?: string; limit: number }) {
   const params: unknown[] = [];
   let i = 1;
-  let where = `mp.publication_status = 'published'`;
+  let where = `mp.publication_status = 'published'
+    and exists (
+      select 1 from public.profiles pr
+      where pr.id = mp.master_id
+        and pr.account_status not in ('blocked', 'deleted')
+        and (
+          pr.account_status = 'active'
+          or (
+            pr.account_status = 'restricted'
+            and pr.access_restricted_until is not null
+            and pr.access_restricted_until <= now()
+          )
+        )
+    )`;
   if (filters.category) {
     where += ` and sc.code = $${i++}`;
     params.push(filters.category);
@@ -203,15 +266,24 @@ export async function getMasterDetail(masterId: string) {
     primary_category_id: string | null;
     phone: string | null;
     contact: string | null;
+    is_verified: boolean;
   }>(
     `select master_id, display_name, bio, photo_url, slug, rating_avg::text, reviews_count,
-            publication_status::text, primary_category_id, phone, contact
+            publication_status::text, primary_category_id, phone, contact, is_verified
        from public.master_profiles
       where master_id = $1`,
     [masterId],
   );
   const master = mp.rows[0];
   if (!master || master.publication_status !== 'published') {
+    throw ApiError.notFound('Master not found');
+  }
+  const account = await query<{ account_status: string }>(
+    `select account_status::text from public.profiles where id = $1`,
+    [masterId],
+  );
+  const st = account.rows[0]?.account_status;
+  if (!st || st === 'blocked' || st === 'deleted' || st === 'restricted') {
     throw ApiError.notFound('Master not found');
   }
 
@@ -234,13 +306,14 @@ export async function getMasterDetail(masterId: string) {
     query(
       `select id, title, description, duration_minutes, price_amount::text, price_type::text, is_active, sort_order
          from public.master_services
-        where master_id = $1 and is_active = true
+        where master_id = $1 and is_active = true and admin_hidden_at is null
         order by sort_order asc, title asc`,
       [masterId],
     ),
     query(
-      `select id, visit_type::text, city, street, building, building_detail, entrance, floor, room,
-              intercom, landmark, directions, client_note, public_address, is_primary, lat, lng
+      `select id, visit_type::text, city, street, building, building_detail, salon_name, entrance, floor, room,
+              intercom, landmark, directions, client_note, public_address, is_primary, lat, lng,
+              show_exact_address_after_booking
          from public.master_locations
         where master_id = $1
         order by is_primary desc, created_at asc`,
@@ -296,25 +369,7 @@ export async function getMasterDetail(masterId: string) {
     ? paymentMethodsPublic
     : paymentDecodedPublic.paymentMethods;
 
-  const locRows = locations.rows as {
-    id: string;
-    visit_type: string;
-    city: string;
-    street: string;
-    building: string;
-    building_detail: string | null;
-    entrance: string | null;
-    floor: string | null;
-    room: string | null;
-    intercom: string | null;
-    landmark: string | null;
-    directions: string | null;
-    client_note: string | null;
-    public_address: string;
-    is_primary: boolean;
-    lat: number | null;
-    lng: number | null;
-  }[];
+  const locRows = locations.rows as PublicMasterLocationRow[];
 
   return {
     master: {
@@ -327,28 +382,11 @@ export async function getMasterDetail(masterId: string) {
       contact: master.contact,
       rating: num(master.rating_avg) ?? 0,
       reviewsCount: master.reviews_count,
+      isVerified: Boolean(master.is_verified),
       category: cat ? { code: cat.code, name: cat.name } : null,
     },
     services: (services.rows as ServiceRow[]).map(mapService),
-    locations: locRows.map((row) => ({
-      id: row.id,
-      visitType: row.visit_type,
-      city: row.city,
-      street: row.street,
-      building: row.building,
-      buildingDetail: row.building_detail,
-      entrance: row.entrance,
-      floor: row.floor,
-      room: row.room,
-      intercom: row.intercom,
-      landmark: row.landmark,
-      directions: row.directions,
-      clientNote: row.client_note,
-      publicAddress: row.public_address,
-      isPrimary: row.is_primary,
-      lat: row.lat,
-      lng: row.lng,
-    })),
+    locations: locRows.map((row) => mapPublicMasterLocation(row)),
     bookingRules: br
       ? {
           bookingRules: br.booking_rules,
@@ -448,7 +486,7 @@ export async function upsertMyMasterProfile(
 export async function getMyMasterProfile(profileId: string) {
   const r = await query(
     `select master_id, display_name, slug, primary_category_id, bio, phone, contact, contacts, photo_url,
-            publication_status::text, rating_avg::text, reviews_count, global_buffer_minutes
+            publication_status::text, is_profile_active, rating_avg::text, reviews_count, global_buffer_minutes
        from public.master_profiles
       where master_id = $1`,
     [profileId],
@@ -465,6 +503,7 @@ export async function getMyMasterProfile(profileId: string) {
         contacts: unknown | null;
         photo_url: string | null;
         publication_status: string;
+        is_profile_active: boolean;
         rating_avg: string;
         reviews_count: number;
         global_buffer_minutes: number;
@@ -484,6 +523,7 @@ export async function getMyMasterProfile(profileId: string) {
     contacts: row.contacts ?? null,
     photoUrl: row.photo_url,
     publicationStatus: row.publication_status,
+    isProfileActive: row.is_profile_active,
     rating: num(row.rating_avg) ?? 0,
     reviewsCount: row.reviews_count,
     globalBufferMinutes: row.global_buffer_minutes,
@@ -501,25 +541,71 @@ export async function patchMyMasterProfile(
     photoUrl?: string | null;
     slug?: string | null;
     primaryCategoryCode?: string | null;
-    publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked';
+    publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
     globalBufferMinutes?: number;
   },
 ) {
-  const exists = await query(`select 1 from public.master_profiles where master_id = $1`, [profileId]);
-  if (!exists.rowCount) {
+  const exists = await query<{ publication_status: string }>(
+    `select publication_status::text from public.master_profiles where master_id = $1`,
+    [profileId],
+  );
+  const currentRow = exists.rows[0];
+  if (!currentRow) {
     throw ApiError.notFound('Master profile not found');
+  }
+
+  if (patch.publicationStatus !== undefined) {
+    const next = patch.publicationStatus;
+    const current = currentRow.publication_status;
+
+    if (next === 'blocked') {
+      throw ApiError.forbidden('Статус «заблокирован» назначает только администратор', 'FORBIDDEN_STATUS');
+    }
+    if (current === 'blocked') {
+      throw ApiError.forbidden(
+        'Профиль заблокирован администратором. Обратитесь в поддержку.',
+        'PROFILE_BLOCKED',
+      );
+    }
   }
 
   let primaryCategoryId: string | null | undefined;
   if (patch.primaryCategoryCode !== undefined) {
-    if (patch.primaryCategoryCode === null) {
-      primaryCategoryId = null;
-    } else {
-      const c = await query<{ id: string }>(
-        `select id from public.service_categories where code = $1 and is_active = true`,
-        [patch.primaryCategoryCode],
-      );
-      primaryCategoryId = c.rows[0]?.id ?? null;
+    const currentRes = await query<{ code: string | null }>(
+      `select c.code
+         from public.master_profiles mp
+         left join public.service_categories c on c.id = mp.primary_category_id
+        where mp.master_id = $1`,
+      [profileId],
+    );
+    const currentCode = currentRes.rows[0]?.code ?? null;
+    const nextCode = patch.primaryCategoryCode;
+    const categoryChanging = currentCode !== nextCode;
+
+    if (categoryChanging) {
+      const { buildCategoryChangePolicy } = await import('./categoryChangePolicy.service.js');
+      const policy = await buildCategoryChangePolicy(profileId);
+      if (!policy.canChangeDirectly) {
+        throw ApiError.badRequest(
+          'Для активного профиля смена категории проходит через заявку',
+          'category_change_requires_request',
+        );
+      }
+      if (policy.hasActiveRequest) {
+        throw ApiError.badRequest('У вас уже есть заявка на смену категории', 'active_request_exists');
+      }
+    }
+
+    if (categoryChanging) {
+      if (nextCode === null) {
+        primaryCategoryId = null;
+      } else {
+        const c = await query<{ id: string }>(
+          `select id from public.service_categories where code = $1 and is_active = true`,
+          [nextCode],
+        );
+        primaryCategoryId = c.rows[0]?.id ?? null;
+      }
     }
   }
 
@@ -543,7 +629,16 @@ export async function patchMyMasterProfile(
   if (patch.photoUrl !== undefined) push('photo_url', patch.photoUrl);
   if (patch.slug !== undefined) push('slug', patch.slug);
   if (primaryCategoryId !== undefined) push('primary_category_id', primaryCategoryId);
-  if (patch.publicationStatus !== undefined) push('publication_status', patch.publicationStatus);
+  if (patch.publicationStatus !== undefined) {
+    push('publication_status', patch.publicationStatus);
+    fields.push(`is_profile_active = ${patch.publicationStatus === 'published'}`);
+    if (patch.publicationStatus === 'published') {
+      fields.push(`published_at = coalesce(published_at, now())`);
+    }
+    if (patch.publicationStatus === 'hidden' || patch.publicationStatus === 'paused') {
+      fields.push('admin_hidden_reason = null');
+    }
+  }
   if (patch.globalBufferMinutes !== undefined) push('global_buffer_minutes', patch.globalBufferMinutes);
 
   if (fields.length) {
@@ -687,9 +782,13 @@ export async function getMyMasterCabinet(masterId: string) {
     }
   }
 
+  const { buildCategoryChangePolicy } = await import('./categoryChangePolicy.service.js');
+  const categoryChangePolicy = await buildCategoryChangePolicy(masterId);
+
   return {
     profile: profileOut,
     primaryCategory,
+    categoryChangePolicy,
     primaryLocation: loc
       ? {
           id: loc.id,

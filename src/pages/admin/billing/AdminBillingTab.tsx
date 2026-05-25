@@ -5,25 +5,37 @@ import {
   formatPlanPrice,
   getCurrentMasterPlan,
   getPlanLimits,
-  planBadgeLabel,
   priceForPlan,
   saveCurrentMasterPlan,
 } from '../../../features/billing/model/masterPlans';
-import { getBillingPlans, switchMySubscriptionMock, type BillingPlanDto } from '../../../features/admin/api/adminBillingApi';
+import {
+  getBillingPlans,
+  recordBillingCheckoutStarted,
+  switchMySubscriptionMock,
+  type BillingPlanDto,
+} from '../../../features/admin/api/adminBillingApi';
 import { getMasterDraft } from '../../../features/master/model/masterDraftStorage';
 import { ensureDemoAppointmentsSeeded } from '../../../features/master/model/demoMasterAppointments';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { AdminToast } from '../shared/AdminToast';
+import { useAdminToast } from '../shared/useAdminToast';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
+import { BillingDesktopHero } from './BillingDesktopHero';
 import { BillingLandingFreeCard } from './BillingLandingFreeCard';
 import { BillingLandingProCard } from './BillingLandingProCard';
-import { billingLandingPanel, homeOutlineBtn, homePinkBtn } from './adminBillingLandingTheme';
-
-function progressClass(ratio: number): string {
-  if (ratio >= 1) return 'bg-[#EF4444]';
-  if (ratio >= 0.85) return 'bg-amber-400';
-  return 'bg-gradient-to-r from-[#F47C8C] to-[#F26D83]';
-}
+import { BillingMobileHeader } from './BillingMobileHeader';
+import { BillingPeriodSwitch } from './BillingPeriodSwitch';
+import { BillingUsagePanel } from './BillingUsagePanel';
+import {
+  billingErrorBanner,
+  billingListTray,
+  billingOutlineBtn,
+  billingPinkBtn,
+  billingShellCard,
+  billingSoftNote,
+  BILLING_PAGE_BG,
+} from './adminBillingTheme';
 
 function planCodeToPlanId(code: string): PlanId {
   return code === 'pro' ? 'pro' : 'free';
@@ -96,7 +108,7 @@ export function AdminBillingTab() {
   const [planState, setPlanState] = useState<MasterPlanState>(() => getCurrentMasterPlan());
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => getCurrentMasterPlan().billingPeriod);
   const [mockProOpen, setMockProOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
 
   const [plansError, setPlansError] = useState(false);
   const [apiLoading, setApiLoading] = useState(() => Boolean(useCabinetApi));
@@ -156,11 +168,6 @@ export function AdminBillingTab() {
   const servicesLen = useLiveBilling && apiSub ? apiSub.usage.activeServices : getMasterDraft().services.length;
   const monthlyCount = useLiveBilling && apiSub ? apiSub.usage.monthlyAppointments : monthlyCountDemo;
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2200);
-  }, []);
-
   const persistPeriod = useCallback(
     async (next: BillingPeriod) => {
       if (useLiveBilling && apiSub) {
@@ -168,8 +175,7 @@ export function AdminBillingTab() {
           await switchMySubscriptionMock(apiSub.plan.code as 'free' | 'pro', next);
           await refreshSubscription();
         } catch (e) {
-          setToast(e instanceof Error ? e.message : 'Не удалось сохранить период');
-          window.setTimeout(() => setToast(null), 3200);
+          showErrorToast(e instanceof Error ? e.message : 'Не удалось сохранить период');
         }
         return;
       }
@@ -182,7 +188,7 @@ export function AdminBillingTab() {
       saveCurrentMasterPlan(merged);
       setPlanState(merged);
     },
-    [apiSub, planState, refreshSubscription, useLiveBilling],
+    [apiSub, planState, refreshSubscription, showErrorToast, useLiveBilling],
   );
 
   const applyPlan = useCallback(
@@ -193,8 +199,7 @@ export function AdminBillingTab() {
           await refreshSubscription();
           showToast(plan === 'free' ? 'Тариф Free' : 'Тариф обновлён');
         } catch (e) {
-          setToast(e instanceof Error ? e.message : 'Не удалось сменить тариф');
-          window.setTimeout(() => setToast(null), 3200);
+          showErrorToast(e instanceof Error ? e.message : 'Не удалось сменить тариф');
         }
         return;
       }
@@ -206,7 +211,7 @@ export function AdminBillingTab() {
       saveCurrentMasterPlan(next);
       setPlanState(next);
     },
-    [billingPeriod, billingPeriodView, refreshSubscription, showToast, useLiveBilling],
+    [billingPeriod, billingPeriodView, refreshSubscription, showErrorToast, showToast, useLiveBilling],
   );
 
   const confirmMockDemo = useCallback(() => {
@@ -229,16 +234,18 @@ export function AdminBillingTab() {
         setMockProOpen(false);
         showToast('Тариф Pro подключён');
       } catch (e) {
-        setToast(e instanceof Error ? e.message : 'Не удалось подключить Pro');
-        window.setTimeout(() => setToast(null), 3200);
+        showErrorToast(e instanceof Error ? e.message : 'Не удалось подключить Pro');
       }
       return;
     }
     confirmMockDemo();
-  }, [billingPeriodView, confirmMockDemo, refreshSubscription, showToast, useLiveBilling]);
+  }, [billingPeriodView, confirmMockDemo, refreshSubscription, showErrorToast, showToast, useLiveBilling]);
 
   const maxSvc = Math.max(1, limits.maxServices ?? 3);
   const maxAppt = Math.max(1, limits.maxMonthlyAppointments ?? 20);
+  const isPro = planStateView.plan === 'pro';
+  const servicesHeroLabel = isPro ? '∞' : `${servicesLen}/${maxSvc}`;
+  const appointmentsHeroLabel = isPro ? '∞' : `${monthlyCount}/${maxAppt}`;
 
   const freePriceLine =
     useLiveBilling && apiPlans
@@ -252,122 +259,121 @@ export function AdminBillingTab() {
 
   const proPriceParts = splitPlanPrice(proPriceLine);
 
-  return (
-    <div className="mt-8 space-y-6 sm:mt-10">
-      {toast ? (
-        <div className="rounded-full bg-[#FFF1F4] px-5 py-3 text-center text-[14px] font-semibold text-[#F47C8C] ring-1 ring-[#FDE8ED]">
-          {toast}
+  const statusBanners = (
+    <>
+      {apiLoading || (useCabinetApi && cabinetLoading) ? (
+        <div className="flex min-h-[10rem] items-center justify-center rounded-[22px] border border-[#FDE8ED] bg-white py-8 shadow-[0_8px_28px_rgba(255,95,122,0.06)]">
+          <LoadingVideo size="md" label="Загрузка тарифов…" />
         </div>
       ) : null}
 
-      {apiLoading || (useCabinetApi && cabinetLoading) ? (
-        <LoadingVideo size="sm" label="Загрузка тарифов…" className="py-2" />
-      ) : null}
-
       {useCabinetApi && !cabinetLoading && !subscription ? (
-        <p className="rounded-[20px] border border-[#FECACA] bg-[#FFF0F0] px-4 py-3 text-center text-[14px] font-semibold text-[#9B2C2C]">
+        <p className={billingErrorBanner}>
           Не удалось загрузить подписку. Обновите страницу или повторите позже.
         </p>
       ) : null}
 
       {plansError ? (
-        <p className="rounded-[20px] border border-[#FECACA] bg-[#FFF0F0] px-4 py-3 text-center text-[14px] font-semibold text-[#9B2C2C]">
-          Не удалось загрузить список тарифов.
-        </p>
+        <p className={billingErrorBanner}>Не удалось загрузить список тарифов.</p>
       ) : null}
+    </>
+  );
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <section className={billingLandingPanel}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9CA3AF]">Сейчас</p>
-          <p className="mt-2 text-[32px] font-bold leading-none tracking-[-0.05em] text-[#111827] lg:text-[36px]">
-            {planBadgeLabel(planStateView.plan)}
-          </p>
-          <p className="mt-2 text-[14px] font-semibold text-[#F47C8C]">Активен · {billingPeriodView === 'year' ? 'год' : 'месяц'}</p>
-          <p className="mt-3 text-[14px] leading-relaxed text-[#6B7280]">
-            {planStateView.plan === 'free'
-              ? 'Бесплатный старт — перейдите на Pro, когда понадобится больше услуг и записей.'
-              : 'Полный доступ для одного мастера — все разделы кабинета открыты.'}
-          </p>
-        </section>
+  const periodTray = (
+    <div className={billingListTray}>
+      <BillingPeriodSwitch
+        period={billingPeriodView}
+        onPeriod={(p) => void persistPeriod(p)}
+      />
+    </div>
+  );
 
-        <section className={billingLandingPanel}>
-          <p className="text-[13px] font-semibold text-[#6B7280]">Период оплаты</p>
-          <div className="mt-3 flex rounded-full bg-[#F1EFEF] p-1">
-            <button
-              type="button"
-              onClick={() => void persistPeriod('month')}
-              className={`min-h-11 flex-1 rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98] ${
-                billingPeriodView === 'month'
-                  ? 'bg-white text-[#111827] shadow-[0_8px_20px_rgba(17,17,17,0.06)]'
-                  : 'text-[#6B7280]'
-              }`}
-            >
-              Месяц
-            </button>
-            <button
-              type="button"
-              onClick={() => void persistPeriod('year')}
-              className={`min-h-11 flex-1 rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98] ${
-                billingPeriodView === 'year'
-                  ? 'bg-white text-[#111827] shadow-[0_8px_20px_rgba(17,17,17,0.06)]'
-                  : 'text-[#6B7280]'
-              }`}
-            >
-              Год
-            </button>
-          </div>
-          <p className="mt-3 text-center text-[13px] font-medium text-[#9CA3AF]">2 месяца бесплатно при оплате за год</p>
-        </section>
+  const usageBlock = (
+    <BillingUsagePanel
+      plan={planStateView.plan}
+      servicesLen={servicesLen}
+      maxSvc={maxSvc}
+      monthlyCount={monthlyCount}
+      maxAppt={maxAppt}
+      scheduleHorizonDays={limits.scheduleHorizonDays}
+    />
+  );
+
+  const planCards = (
+    <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+      <BillingLandingFreeCard
+        name={PLAN_UI.free.name}
+        priceLine={freePriceLine}
+        tagline={PLAN_UI.free.tagline}
+        includes={PLAN_UI.free.includes}
+        limits={PLAN_UI.free.limits}
+        active={planStateView.plan === 'free'}
+        onSelect={() => void applyPlan('free')}
+      />
+      <BillingLandingProCard
+        priceValue={proPriceParts.value}
+        priceUnit={proPriceParts.unit || '/ месяц'}
+        includes={PLAN_UI.pro.includes}
+        active={planStateView.plan === 'pro'}
+        onSelect={() => {
+          if (useLiveBilling) {
+            void recordBillingCheckoutStarted(billingPeriodView).catch(() => {});
+          }
+          setMockProOpen(true);
+        }}
+      />
+    </div>
+  );
+
+  const demoNote = !isPro ? (
+    <p className={billingSoftNote}>
+      Оплата картой появится позже. Сейчас Pro можно активировать в demo-режиме для проверки кабинета.
+    </p>
+  ) : null;
+
+  return (
+    <>
+      <section className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-8 lg:hidden ${BILLING_PAGE_BG}`}>
+        <BillingMobileHeader plan={planStateView.plan} period={billingPeriodView} />
+        {statusBanners}
+        {!apiLoading && !(useCabinetApi && cabinetLoading) ? (
+          <>
+            {periodTray}
+            {usageBlock}
+            {demoNote}
+            {planCards}
+          </>
+        ) : null}
+      </section>
+
+      <div className={`${billingShellCard} space-y-5`}>
+        <BillingDesktopHero
+          plan={planStateView.plan}
+          period={billingPeriodView}
+          servicesLabel={servicesHeroLabel}
+          appointmentsLabel={appointmentsHeroLabel}
+          scheduleDays={limits.scheduleHorizonDays}
+          isPro={isPro}
+        />
+        <div className="space-y-5 px-4 pb-6 sm:px-5">
+          {statusBanners}
+          {!apiLoading && !(useCabinetApi && cabinetLoading) ? (
+            <>
+              {periodTray}
+              {usageBlock}
+              {demoNote}
+              {planCards}
+            </>
+          ) : null}
+        </div>
       </div>
 
-      {planStateView.plan === 'free' ? (
-        <section className={billingLandingPanel}>
-          <h2 className="text-[18px] font-semibold tracking-tight text-[#111827]">Использование на Free</h2>
-          <UsageRow label="Услуги" value={`${servicesLen} / ${maxSvc}`} />
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F1EFEF]">
-            <div
-              className={`h-full rounded-full transition-all ${progressClass(servicesLen / maxSvc)}`}
-              style={{ width: `${Math.min(100, (servicesLen / maxSvc) * 100)}%` }}
-            />
-          </div>
-          <UsageRow label="Записи в этом месяце" value={`${monthlyCount} / ${maxAppt}`} />
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F1EFEF]">
-            <div
-              className={`h-full rounded-full transition-all ${progressClass(monthlyCount / maxAppt)}`}
-              style={{ width: `${Math.min(100, (monthlyCount / maxAppt) * 100)}%` }}
-            />
-          </div>
-          <UsageRow label="График работы" value={`${limits.scheduleHorizonDays} дней`} />
-        </section>
-      ) : (
-        <section className={billingLandingPanel}>
-          <h2 className="text-[18px] font-semibold tracking-tight text-[#111827]">Ваш Pro</h2>
-          <UsageRow label="Услуги" value="безлимит" />
-          <UsageRow label="Записи" value="безлимит" />
-          <UsageRow label="График работы" value={`${limits.scheduleHorizonDays} дней`} />
-        </section>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <BillingLandingFreeCard
-          name={PLAN_UI.free.name}
-          priceLine={freePriceLine}
-          tagline={PLAN_UI.free.tagline}
-          includes={PLAN_UI.free.includes}
-          limits={PLAN_UI.free.limits}
-          active={planStateView.plan === 'free'}
-          onSelect={() => void applyPlan('free')}
-        />
-        <BillingLandingProCard
-          priceValue={proPriceParts.value}
-          priceUnit={proPriceParts.unit || '/ месяц'}
-          includes={PLAN_UI.pro.includes}
-          active={planStateView.plan === 'pro'}
-          onSelect={() => setMockProOpen(true)}
-        />
-      </div>
-
-      <AdminBottomSheet open={mockProOpen} onClose={() => setMockProOpen(false)} title="Подключить Pro">
+      <AdminBottomSheet
+        open={mockProOpen}
+        onClose={() => setMockProOpen(false)}
+        title="Подключить Pro"
+        variant="catalog"
+      >
         <MockPaymentBody
           billingPeriod={billingPeriodView}
           proPrice={proPriceLine}
@@ -375,16 +381,9 @@ export function AdminBillingTab() {
           onDemo={confirmMock}
         />
       </AdminBottomSheet>
-    </div>
-  );
-}
 
-function UsageRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mt-4 flex items-center justify-between gap-3 text-[15px] first:mt-3">
-      <span className="font-medium text-[#6B7280]">{label}</span>
-      <span className="font-semibold tabular-nums text-[#111827]">{value}</span>
-    </div>
+      <AdminToast toast={toast} onDismiss={clearToast} />
+    </>
   );
 }
 
@@ -424,10 +423,14 @@ function MockPaymentBody({
         Оплата будет подключена позже. Сейчас тариф активируется в demo-режиме.
       </p>
       <div className="flex gap-2 pt-1">
-        <button type="button" onClick={onBack} className={`min-h-12 flex-1 ${homeOutlineBtn}`}>
+        <button type="button" onClick={onBack} className={`min-h-12 flex-1 ${billingOutlineBtn}`}>
           Назад
         </button>
-        <button type="button" onClick={() => void Promise.resolve(onDemo())} className={`min-h-12 flex-[1.15] ${homePinkBtn}`}>
+        <button
+          type="button"
+          onClick={() => void Promise.resolve(onDemo())}
+          className={`min-h-12 flex-[1.15] ${billingPinkBtn}`}
+        >
           Подключить в demo
         </button>
       </div>

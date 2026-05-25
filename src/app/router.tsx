@@ -14,6 +14,7 @@ import {
   SERVICES_PATH,
 } from './paths';
 import { AdminPage } from '../pages/admin/AdminPage';
+import { PlatformAdminPage } from '../pages/platform-admin/PlatformAdminPage';
 import { BookingPage } from '../pages/booking/BookingPage';
 import { Home } from '../pages/Home';
 import { BecomeMasterPage } from '../pages/master-onboarding/BecomeMasterPage';
@@ -31,6 +32,8 @@ import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { MasterLoginPage } from '../pages/auth/MasterLoginPage';
+import { MasterRegisterPage } from '../pages/auth/MasterRegisterPage';
+import { MasterStartPage } from '../pages/auth/MasterStartPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage';
 import { GoogleOAuthDonePage } from '../pages/auth/GoogleOAuthDonePage';
@@ -41,6 +44,8 @@ import {
   GOOGLE_LINK_PATH,
   LOGIN_PATH,
   MASTER_LOGIN_PATH,
+  MASTER_REGISTER_PATH,
+  MASTER_START_PATH,
   RESET_PASSWORD_PATH,
   VERIFY_EMAIL_PATH,
 } from './paths';
@@ -88,8 +93,11 @@ export function AppRouter() {
         </Route>
         <Route path="/catalog" element={<Navigate to={SERVICES_PATH} replace />} />
         <Route path={`${ADMIN_PATH}/*`} element={<AdminPage />} />
+        <Route path="/platform-admin/*" element={<PlatformAdminPage />} />
         <Route path={LOGIN_PATH} element={<LoginPage />} />
+        <Route path={MASTER_START_PATH} element={<MasterStartPage />} />
         <Route path={MASTER_LOGIN_PATH} element={<MasterLoginPage />} />
+        <Route path={MASTER_REGISTER_PATH} element={<MasterRegisterPage />} />
         <Route path={VERIFY_EMAIL_PATH} element={<VerifyEmailPage />} />
         <Route path={GOOGLE_OAUTH_DONE_PATH} element={<GoogleOAuthDonePage />} />
         <Route path={GOOGLE_LINK_PATH} element={<GoogleLinkPage />} />

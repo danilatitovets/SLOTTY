@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
-import { HiEllipsisHorizontal, HiSparkles } from 'react-icons/hi2';
+import { HiSparkles } from 'react-icons/hi2';
 import { ADMIN_DESKTOP_LOGO_SRC } from '../../app/headerLogo';
+import { ADMIN_PATH } from '../../app/paths';
 import { planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../features/billing/useMasterPlanEntitlements';
 import { defaultMasterAvatarUrl } from '../../features/master/model/masterDraftStorage';
@@ -15,6 +16,7 @@ import {
   ADMIN_SETTINGS_NAV,
 } from './adminCabinetNav';
 import { ADMIN_SIDEBAR_WIDTH, adminDesktopNavItemClass } from './adminCabinetLayout';
+import { profileDashboardCard } from './profile/adminProfileDashboardTheme';
 
 function SidebarUnreadBadge({ count }: { count: number }) {
   const label = count > 9 ? '9+' : String(count);
@@ -42,9 +44,16 @@ export function AdminDesktopSidebar() {
     <aside
       className={`${ADMIN_SIDEBAR_WIDTH} sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-[#eef0f5] bg-white lg:flex`}
     >
-      <div className="flex items-center gap-2.5 border-b border-[#eef0f5] px-5 py-5">
-        <Link to={ADMIN_HUB_PATH} className="inline-flex items-center gap-2.5 no-underline">
-          <img src={ADMIN_DESKTOP_LOGO_SRC} alt="SLOTTY" className="h-9 w-auto object-contain" />
+      <div className="relative h-[5rem] shrink-0 overflow-hidden border-b border-[#eef0f5] px-5">
+        <Link
+          to={ADMIN_HUB_PATH}
+          className="inline-flex max-w-full -translate-y-8 no-underline"
+        >
+          <img
+            src={ADMIN_DESKTOP_LOGO_SRC}
+            alt="SLOTTY"
+            className="h-[10rem] w-auto max-w-full object-contain object-left"
+          />
         </Link>
       </div>
 
@@ -129,39 +138,40 @@ export function AdminDesktopSidebar() {
       <div className="border-t border-[#eef0f5] p-4">
         <Link
           to={ADMIN_BILLING_NAV.to}
-          className="mb-4 block rounded-[20px] bg-gradient-to-br from-[#FFF1F4] via-[#FFE8ED] to-[#FFF1F4] p-4 no-underline ring-1 ring-[#FDE8ED]"
+          className={`${profileDashboardCard} mb-3 block p-4 no-underline ring-1 ring-[#eef0f5] transition hover:ring-[#fde8ed]`}
         >
-          <div className="flex items-start gap-2">
-            <HiSparkles className="mt-0.5 h-5 w-5 shrink-0 text-[#ff5f7a]" aria-hidden />
-            <div>
-              <p className="text-[13px] font-bold leading-snug text-[#111827]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
+              <HiSparkles className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold tracking-[-0.02em] text-[#111827]">
                 Тариф {planBadgeLabel(planId)}
               </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-[#6B7280]">
+              <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">
                 Управление подпиской и лимитами
               </p>
             </div>
           </div>
         </Link>
 
-        <div className="flex items-center gap-3 rounded-[16px] bg-[#f6f7fb] px-3 py-2.5 ring-1 ring-[#eef0f5]">
+        <Link
+          to={ADMIN_PATH}
+          className={`${profileDashboardCard} flex items-center gap-3 p-3 no-underline ring-1 ring-[#eef0f5] transition hover:ring-[#fde8ed]`}
+        >
           <img
             src={photoSrc}
             alt=""
-            className="h-10 w-10 shrink-0 rounded-full object-cover object-center"
+            className="h-11 w-11 shrink-0 rounded-full object-cover object-center ring-2 ring-white"
+            style={{ objectFit: 'cover', objectPosition: 'center' }}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-[#111827]">{displayName}</p>
-            <p className="text-[11px] text-[#6B7280]">Кабинет мастера</p>
+            <p className="truncate text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
+              {displayName}
+            </p>
+            <p className="text-[12px] text-[#6B7280]">Кабинет мастера</p>
           </div>
-          <button
-            type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#9CA3AF] transition hover:bg-white hover:text-[#6B7280]"
-            aria-label="Меню профиля"
-          >
-            <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-          </button>
-        </div>
+        </Link>
       </div>
     </aside>
   );

@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  HiCalendarDays,
-  HiClock,
-  HiFunnel,
-  HiMagnifyingGlass,
-  HiRectangleStack,
-  HiUser,
-} from 'react-icons/hi2';
+import { HiCalendarDays, HiFunnel, HiMagnifyingGlass, HiRectangleStack, HiXMark } from 'react-icons/hi2';
 import type { ScheduleSlotsStatusFilter, ScheduleWindowView } from './scheduleTypes';
 import { ScheduleWindowCard } from './ScheduleWindowCard';
 import {
@@ -14,15 +7,16 @@ import {
   ScheduleSlotsFiltersSheet,
   type ScheduleSlotsFilters,
 } from './ScheduleSlotsFiltersSheet';
-import { scheduleListGroupCard, scheduleListToolbar } from './adminScheduleTheme';
-import type { ScheduleTabMetrics } from './scheduleTabMetrics';
 import {
-  scheduleChipActive,
-  scheduleFilterBtnActive,
-  scheduleFilterBtnIdle,
-  scheduleIconCircle,
-  scheduleInput,
-} from './scheduleUi';
+  scheduleListGroupCard,
+  scheduleListToolbar,
+  scheduleSlotsDayHeader,
+  scheduleSlotsFilterBtn,
+  scheduleSlotsFilterBtnActive,
+  scheduleSlotsStatChip,
+} from './adminScheduleTheme';
+import { sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
+import { catalogSheetField, catalogSheetGhostBtn } from '../shared/adminCatalogSheetTheme';
 import { formatGroupHeader, parseIsoDate, startOfLocalDay, windowsCountRu } from './scheduleUtils';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 
@@ -30,7 +24,6 @@ type Props = {
   windows: ScheduleWindowView[];
   loading: boolean;
   focusDayIso?: string | null;
-  slotStats: ScheduleTabMetrics['list'];
   onWindowClick: (w: ScheduleWindowView) => void;
 };
 
@@ -63,60 +56,13 @@ function formatDayChip(iso: string): string {
   return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(d);
 }
 
-function ListStatsStrip({ stats }: { stats: ScheduleTabMetrics['list'] }) {
-  const tiles = [
-    {
-      label: 'Свободно',
-      value: stats.free,
-      hint: 'Можно записать',
-      icon: HiClock,
-      accent: 'from-[#ff6f88] to-[#ff5f7a]',
-    },
-    {
-      label: 'Занято',
-      value: stats.booked,
-      hint: 'С записью',
-      icon: HiUser,
-      accent: 'from-[#111827] to-[#374151]',
-    },
-    {
-      label: 'Всего',
-      value: stats.total,
-      hint: 'В расписании',
-      icon: HiRectangleStack,
-      accent: 'from-[#C9A0DC] to-[#9B7BB8]',
-    },
-  ] as const;
+type FilterChip = {
+  key: string;
+  label: string;
+  onClear: () => void;
+};
 
-  return (
-    <div
-      className="flex gap-2.5 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] lg:hidden"
-      aria-label="Сводка по окнам"
-    >
-      {tiles.map((t) => (
-        <article
-          key={t.label}
-          className="flex min-w-[9.5rem] shrink-0 flex-col justify-between rounded-[20px] border border-[#FDE8ED] bg-white p-3.5 shadow-[0_6px_20px_rgba(255,95,122,0.08)]"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#9CA3AF]">{t.label}</p>
-            <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br ${t.accent} text-white shadow-[0_6px_16px_rgba(255,95,122,0.2)]`}
-            >
-              <t.icon className="h-4 w-4" aria-hidden />
-            </span>
-          </div>
-          <p className="mt-3 text-[28px] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827]">
-            {t.value}
-          </p>
-          <p className="mt-1 text-[11px] font-semibold text-[#6B7280]">{t.hint}</p>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats, onWindowClick }: Props) {
+export function ScheduleSlotsListTab({ windows, loading, focusDayIso, onWindowClick }: Props) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<ScheduleSlotsFilters>(DEFAULT_SLOTS_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -131,15 +77,43 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
     }));
   }, [focusDayIso]);
 
+  const counts = useMemo(
+    () => ({
+      free: windows.filter((w) => w.status === 'free').length,
+      booked: windows.filter((w) => w.status === 'booked').length,
+      blocked: windows.filter((w) => w.status === 'blocked').length,
+      total: windows.length,
+    }),
+    [windows],
+  );
+
   const filtersActive =
     filters.status !== 'all' || filters.dayIso.trim() !== '' || filters.onlyUpcoming;
 
-  const activeFilterLabel = useMemo(() => {
-    const parts: string[] = [];
-    if (filters.status !== 'all') parts.push(STATUS_FILTER_LABELS[filters.status]);
-    if (filters.dayIso) parts.push(formatDayChip(filters.dayIso));
-    if (filters.onlyUpcoming) parts.push('Предстоящие');
-    return parts.length > 0 ? parts.join(' · ') : 'Все окна';
+  const filterChips = useMemo((): FilterChip[] => {
+    const chips: FilterChip[] = [];
+    if (filters.status !== 'all') {
+      chips.push({
+        key: 'status',
+        label: STATUS_FILTER_LABELS[filters.status],
+        onClear: () => setFilters((prev) => ({ ...prev, status: 'all' })),
+      });
+    }
+    if (filters.dayIso) {
+      chips.push({
+        key: 'day',
+        label: formatDayChip(filters.dayIso),
+        onClear: () => setFilters((prev) => ({ ...prev, dayIso: '' })),
+      });
+    }
+    if (filters.onlyUpcoming) {
+      chips.push({
+        key: 'upcoming',
+        label: 'Предстоящие',
+        onClear: () => setFilters((prev) => ({ ...prev, onlyUpcoming: false })),
+      });
+    }
+    return chips;
   }, [filters]);
 
   const filtered = useMemo(() => {
@@ -176,18 +150,26 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
       }));
   }, [filtered]);
 
-  return (
-    <section className="space-y-4 lg:space-y-5">
-      <ListStatsStrip stats={slotStats} />
+  const patchFilters = (patch: Partial<ScheduleSlotsFilters>) => {
+    setFilters((prev) => ({ ...prev, ...patch }));
+  };
 
+  return (
+    <section className="w-full min-w-0 space-y-4 lg:space-y-5">
       <div className={scheduleListToolbar}>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9CA3AF]">Поиск и фильтр</p>
-          {filtersActive ? (
-            <span className="shrink-0 rounded-full bg-[#FFF1F4] px-3 py-1 text-[11px] font-bold text-[#ff5f7a]">
-              {activeFilterLabel}
-            </span>
-          ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={scheduleSlotsStatChip}>
+            <span className="text-[#6B7280]">Своб.</span>
+            <span className="font-bold tabular-nums">{counts.free}</span>
+          </span>
+          <span className={scheduleSlotsStatChip}>
+            <span className="text-[#6B7280]">Зан.</span>
+            <span className="font-bold tabular-nums">{counts.booked}</span>
+          </span>
+          <span className={scheduleSlotsStatChip}>
+            <span className="text-[#6B7280]">Всего</span>
+            <span className="font-bold tabular-nums">{counts.total}</span>
+          </span>
         </div>
 
         <div className="mt-3 flex gap-2">
@@ -202,29 +184,24 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Услуга, клиент, время…"
-              className={`${scheduleInput} border-[#FDE8ED] bg-white pl-11 focus:border-[#ff5f7a] focus:ring-[#FFF1F4]`}
+              className={`${catalogSheetField} pl-11`}
             />
           </label>
           <button
             type="button"
             onClick={() => setFiltersOpen(true)}
-            className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border transition active:scale-[0.96] ${
-              filtersActive ? scheduleFilterBtnActive : scheduleFilterBtnIdle
-            }`}
-            aria-label={`Фильтр: ${activeFilterLabel}`}
+            className={`${scheduleSlotsFilterBtn} ${filtersActive ? scheduleSlotsFilterBtnActive : ''}`}
+            aria-label="Фильтры"
             aria-expanded={filtersOpen}
           >
             <HiFunnel className="h-5 w-5" aria-hidden />
-            {filtersActive ? (
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ff5f7a]" aria-hidden />
-            ) : null}
           </button>
         </div>
 
         <div
-          className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch]"
+          className="mt-3 grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5 sm:grid-cols-4"
           role="tablist"
-          aria-label="Быстрый фильтр по статусу"
+          aria-label="Статус окна"
         >
           {QUICK_STATUS.map((opt) => {
             const selected = filters.status === opt.value;
@@ -234,12 +211,8 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
                 type="button"
                 role="tab"
                 aria-selected={selected}
-                onClick={() => setFilters((prev) => ({ ...prev, status: opt.value }))}
-                className={`shrink-0 rounded-full border px-4 py-2 text-[13px] font-bold transition active:scale-[0.98] ${
-                  selected
-                    ? scheduleChipActive
-                    : 'border-[#EAECEF] bg-white text-[#6B7280] hover:border-[#FDE8ED] hover:text-[#ff5f7a]'
-                }`}
+                onClick={() => patchFilters({ status: opt.value })}
+                className={`min-h-10 ${sheetSegmentClass(selected)}`}
               >
                 {opt.label}
               </button>
@@ -247,38 +220,61 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
           })}
         </div>
 
+        {filterChips.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {filterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onClear}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-[#EBEBEB] py-1.5 pl-3 pr-2 text-[12px] font-semibold text-[#111827] transition hover:bg-[#E4E4E4] active:scale-[0.98]"
+              >
+                <span className="truncate">{chip.label}</span>
+                <HiXMark className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFilters(DEFAULT_SLOTS_FILTERS)}
+              className={`${catalogSheetGhostBtn} shrink-0`}
+            >
+              Сбросить
+            </button>
+          </div>
+        ) : null}
+
         {!loading && filtered.length > 0 ? (
-          <p className="mt-3 text-[13px] font-semibold text-[#6B7280]">
-            Показано:{' '}
-            <span className="font-black text-[#ff5f7a]">{windowsCountRu(filtered.length)}</span>
+          <p className="mt-3 text-[13px] font-medium text-[#6B7280]">
+            Показано{' '}
+            <span className="font-semibold text-[#111827]">{windowsCountRu(filtered.length)}</span>
             {filtered.length !== windows.length ? (
-              <span className="font-medium text-[#9CA3AF]"> из {windows.length}</span>
+              <span> из {windows.length}</span>
             ) : null}
           </p>
         ) : null}
       </div>
 
       {loading ? (
-        <div className={`${scheduleListGroupCard} flex justify-center py-10`}>
+        <div className="flex justify-center rounded-[16px] bg-white py-12 ring-1 ring-[#EEEEEE]">
           <LoadingVideo size="sm" label="Загрузка окон…" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className={`${scheduleListGroupCard} p-8 text-center`}>
-          <span className={scheduleIconCircle}>
-            <HiRectangleStack className="h-8 w-8" aria-hidden />
+        <div className="rounded-[16px] bg-white p-8 text-center ring-1 ring-[#EEEEEE]">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#EBEBEB] text-[#6B7280]">
+            <HiRectangleStack className="h-7 w-7" aria-hidden />
           </span>
-          <h3 className="mt-4 text-[20px] font-black tracking-[-0.04em] text-[#111827]">
+          <h3 className="mt-4 text-[18px] font-bold tracking-[-0.03em] text-[#111827]">
             {windows.length === 0 ? 'Окон пока нет' : 'Ничего не найдено'}
           </h3>
-          <p className="mx-auto mt-2 max-w-[20rem] text-[14px] font-semibold leading-relaxed text-[#6B7280]">
+          <p className="mx-auto mt-2 max-w-[20rem] text-[14px] font-medium leading-relaxed text-[#6B7280]">
             {windows.length === 0
               ? 'Создайте первое окно во вкладке «Создать»'
-              : 'Измените поиск или откройте фильтр'}
+              : 'Измените поиск или сбросьте фильтры'}
           </p>
           {windows.length > 0 && filtersActive ? (
             <button
               type="button"
-              className="mt-5 text-[14px] font-bold text-[#ff5f7a]"
+              className={`${catalogSheetGhostBtn} mt-4`}
               onClick={() => setFilters(DEFAULT_SLOTS_FILTERS)}
             >
               Сбросить фильтры
@@ -286,35 +282,59 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
           ) : null}
         </div>
       ) : (
-        <div className="space-y-4">
-          {grouped.map((group) => (
-            <section key={group.dateIso} className={scheduleListGroupCard}>
-              <div className="mb-4 flex items-center gap-3">
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_8px_20px_rgba(255,95,122,0.28)]"
-                  aria-hidden
-                >
-                  <HiCalendarDays className="h-5 w-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-[17px] font-black tracking-[-0.04em] text-[#111827] lg:text-[18px]">
-                    {group.header}
-                  </h4>
+        <>
+          {/* Мобилка: плоский список по дням */}
+          <div className="space-y-1 lg:hidden">
+            {grouped.map((group) => (
+              <section key={group.dateIso}>
+                <div className={scheduleSlotsDayHeader}>
+                  <h4 className="text-[15px] font-bold text-[#111827]">{group.header}</h4>
+                  <span className="shrink-0 text-[12px] font-semibold text-[#6B7280]">
+                    {windowsCountRu(group.items.length)}
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#FFF1F4] px-3 py-1.5 text-[12px] font-bold text-[#ff5f7a]">
-                  {windowsCountRu(group.items.length)}
-                </span>
-              </div>
-              <ul className="space-y-2.5">
-                {group.items.map((w) => (
-                  <li key={w.id}>
-                    <ScheduleWindowCard window={w} onClick={() => onWindowClick(w)} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
+                <ul className="space-y-2 pb-3">
+                  {group.items.map((w) => (
+                    <li key={w.id}>
+                      <ScheduleWindowCard window={w} onClick={() => onWindowClick(w)} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+
+          {/* Desktop: группы в белых карточках */}
+          <div className="hidden space-y-4 lg:block">
+            {grouped.map((group) => (
+              <section key={group.dateIso} className={scheduleListGroupCard}>
+                <div className={scheduleSlotsDayHeader}>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#6B7280]"
+                      aria-hidden
+                    >
+                      <HiCalendarDays className="h-5 w-5" />
+                    </span>
+                    <h4 className="text-[17px] font-bold tracking-[-0.03em] text-[#111827]">
+                      {group.header}
+                    </h4>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-[#EBEBEB] px-3 py-1 text-[12px] font-semibold text-[#111827]">
+                    {windowsCountRu(group.items.length)}
+                  </span>
+                </div>
+                <ul className="mt-3 space-y-2.5">
+                  {group.items.map((w) => (
+                    <li key={w.id}>
+                      <ScheduleWindowCard window={w} onClick={() => onWindowClick(w)} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </>
       )}
 
       <ScheduleSlotsFiltersSheet
@@ -323,6 +343,7 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, slotStats,
         filters={filters}
         onChange={setFilters}
         onReset={() => setFilters(DEFAULT_SLOTS_FILTERS)}
+        resultCount={filtered.length}
       />
     </section>
   );

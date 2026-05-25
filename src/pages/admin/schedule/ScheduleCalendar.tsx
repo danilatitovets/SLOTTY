@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { HiChevronLeft, HiChevronRight } from 'react-icons/hi2';
 import type { ScheduleWindowView } from './scheduleTypes';
 import { ScheduleWindowCard } from './ScheduleWindowCard';
-import { scheduleCalendarCard, scheduleCalendarTray } from './adminScheduleTheme';
-import type { ScheduleTabMetrics } from './scheduleTabMetrics';
+import {
+  scheduleBusyDayChipClass,
+  scheduleBusyDaysStrip,
+  scheduleCalendarCard,
+  scheduleCalendarDayPanel,
+} from './adminScheduleTheme';
+import { sheetChipClass } from '../profile/adminProfileCabinetTheme';
 import {
   addMonths,
   buildMonthGrid,
@@ -22,13 +27,22 @@ import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 type Props = {
   windows: ScheduleWindowView[];
   loading: boolean;
-  slotStats: ScheduleTabMetrics['calendar'];
   onWindowClick: (w: ScheduleWindowView) => void;
 };
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
 
 const COMPACT_DAY_THRESHOLD = 5;
+const BUSY_DAYS_SECTION_THRESHOLD = 5;
+
+function daysCountRu(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 14) return `${n} дней`;
+  if (mod10 === 1) return `${n} день`;
+  if (mod10 >= 2 && mod10 <= 4) return `${n} дня`;
+  return `${n} дней`;
+}
 
 function todayIso(): string {
   return toIsoDate(new Date());
@@ -167,11 +181,10 @@ function ScheduleWindowRowCompact({ window: w, onClick }: { window: ScheduleWind
   );
 }
 
-export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }: Props) {
+export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
   const [monthAnchor, setMonthAnchor] = useState(() => startOfMonth(new Date()));
   const [selectedIso, setSelectedIso] = useState(todayIso);
   const [dayFilter, setDayFilter] = useState<'all' | ScheduleWindowView['status']>('all');
-
   const monthCells = useMemo(() => buildMonthGrid(monthAnchor), [monthAnchor]);
   const statsByDate = useMemo(() => indexWindowsByDate(windows), [windows]);
 
@@ -247,26 +260,7 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
 
   return (
     <section className="space-y-4 lg:space-y-5">
-      <div className={`${scheduleCalendarTray} lg:hidden`}>
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9CA3AF]">Сводка</p>
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch]">
-          {[
-            { label: 'Свободно', value: slotStats.free },
-            { label: 'Занято', value: slotStats.booked },
-            { label: 'Всего', value: slotStats.total },
-          ].map((t) => (
-            <div
-              key={t.label}
-              className="flex min-w-[6.5rem] shrink-0 flex-col rounded-[16px] border border-[#FDE8ED] bg-white px-3 py-2.5"
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[#9CA3AF]">{t.label}</span>
-              <span className="mt-1 text-[22px] font-black tabular-nums leading-none text-[#ff5f7a]">{t.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
         <div className={`${scheduleCalendarCard} lg:sticky lg:top-[calc(var(--slotty-admin-desktop-topbar-h,4.75rem)+7rem)]`}>
           <div className="flex items-center justify-between gap-2">
             <button
@@ -362,29 +356,41 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
             </span>
           </div>
 
-          {busyDaysInMonth.length > 4 ? (
-            <div className="mt-4 border-t border-[#FDE8ED] pt-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
-                Дни с окнами
-              </p>
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch]">
+          {busyDaysInMonth.length >= BUSY_DAYS_SECTION_THRESHOLD ? (
+            <div className="mt-4 border-t border-[#EEEEEE] pt-4 pb-1 lg:hidden">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+                  Дни с окнами
+                </p>
+                <span className="text-[11px] font-semibold text-[#9CA3AF]">
+                  {daysCountRu(busyDaysInMonth.length)}
+                </span>
+              </div>
+              <div className={scheduleBusyDaysStrip} role="list" aria-label="Быстрый выбор дня">
                 {busyDaysInMonth.map(({ dateIso, stats }) => {
                   const selected = selectedIso === dateIso;
                   const d = parseIsoDate(dateIso);
-                  const label = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(d);
+                  const label = new Intl.DateTimeFormat('ru-RU', {
+                    day: 'numeric',
+                    month: 'short',
+                  }).format(d);
                   return (
                     <button
                       key={dateIso}
                       type="button"
+                      role="listitem"
                       onClick={() => setSelectedIso(dateIso)}
-                      className={`flex shrink-0 flex-col items-center rounded-[14px] border px-3 py-2 transition active:scale-[0.98] ${
-                        selected
-                          ? 'border-[#ff5f7a] bg-[#FFF1F4] text-[#ff5f7a]'
-                          : 'border-[#EAECEF] bg-white text-[#374151] hover:border-[#FDE8ED]'
-                      }`}
+                      className={scheduleBusyDayChipClass(selected)}
+                      aria-pressed={selected}
                     >
-                      <span className="text-[12px] font-bold">{label}</span>
-                      <span className="mt-0.5 text-[11px] font-black tabular-nums">{stats.total}</span>
+                      <span className="text-[11px] font-semibold leading-tight">{label}</span>
+                      <span
+                        className={`mt-0.5 text-[12px] font-bold tabular-nums ${
+                          selected ? 'text-white/90' : 'text-[#6B7280]'
+                        }`}
+                      >
+                        {stats.total}
+                      </span>
                     </button>
                   );
                 })}
@@ -393,10 +399,10 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
           ) : null}
         </div>
 
-        <div className={scheduleCalendarCard}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className={scheduleCalendarDayPanel}>
+          <div className="flex flex-wrap items-start justify-between gap-3 max-lg:pb-1">
             <div className="min-w-0">
-              <h3 className="text-[18px] font-black tracking-[-0.04em] text-[#111827] lg:text-[20px]">
+              <h3 className="text-[18px] font-bold leading-snug tracking-[-0.04em] text-[#111827] lg:text-[20px] lg:font-black">
                 {formatGroupHeader(selectedDate, todayStart)}
               </h3>
               <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
@@ -411,12 +417,12 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
             {selectedDayStats && selectedDayStats.total > 0 ? (
               <div className="flex shrink-0 flex-wrap gap-1.5">
                 {selectedDayStats.free > 0 ? (
-                  <span className="rounded-full bg-[#FFF1F4] px-2.5 py-1 text-[11px] font-bold text-[#ff5f7a]">
+                  <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] max-lg:ring-1 max-lg:ring-[#EEEEEE] lg:bg-[#FFF1F4] lg:font-bold lg:text-[#ff5f7a] lg:ring-0">
                     {selectedDayStats.free} св.
                   </span>
                 ) : null}
                 {selectedDayStats.booked > 0 ? (
-                  <span className="rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-2.5 py-1 text-[11px] font-bold text-white">
+                  <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] max-lg:ring-1 max-lg:ring-[#EEEEEE] lg:bg-gradient-to-r lg:from-[#ff6f88] lg:to-[#ff5f7a] lg:font-bold lg:text-white lg:ring-0">
                     {selectedDayStats.booked} зап.
                   </span>
                 ) : null}
@@ -426,7 +432,7 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
 
           {selectedWindowsAll.length > 2 ? (
             <div
-              className="mt-3 flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch]"
+              className="mt-3 grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:gap-2"
               role="tablist"
               aria-label="Фильтр дня"
             >
@@ -451,11 +457,7 @@ export function ScheduleCalendar({ windows, loading, slotStats, onWindowClick }:
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setDayFilter(opt.id)}
-                    className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12px] font-bold transition active:scale-[0.98] ${
-                      selected
-                        ? 'border-[#FDE8ED] bg-[#FFF1F4] text-[#ff5f7a]'
-                        : 'border-[#EAECEF] bg-white text-[#6B7280]'
-                    }`}
+                    className={`${sheetChipClass(selected)} w-full text-center text-[12px] lg:w-auto lg:shrink-0`}
                   >
                     {opt.label}
                     {count > 0 ? ` · ${count}` : ''}

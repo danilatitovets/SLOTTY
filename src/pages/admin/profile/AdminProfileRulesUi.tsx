@@ -1,15 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
   cabinetCard,
   cabinetCardPad,
   sheetFieldClass,
   sheetHintClass,
-  sheetSectionClass,
+  sheetLabelClass,
   sheetSectionTitleClass,
 } from './adminProfileCabinetTheme';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
 import { decodePaymentNote } from '../../../features/admin/lib/paymentNoteCodec';
+import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import { SheetFooter } from './AdminProfileEditSheets';
 
 export const PAYMENT_OPTIONS = ['Наличные', 'Карта', 'Перевод', 'Онлайн позже'] as const;
@@ -43,27 +44,7 @@ export function hasRulesContent(d: MasterDraft): boolean {
   );
 }
 
-function RulesFieldLabel({
-  iconName,
-  children,
-  hint,
-}: {
-  iconName: CabinetIconName;
-  children: ReactNode;
-  hint?: string;
-}) {
-  return (
-    <div className="mb-2">
-      <span className="flex items-center gap-2 text-[13px] font-semibold text-[#111827]">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#FFF1F4] text-[#F47C8C]">
-          <CabinetIcon name={iconName} size={16} />
-        </span>
-        <span className="min-w-0">{children}</span>
-      </span>
-      {hint ? <p className="mt-1 pl-9 text-[12px] leading-snug text-[#6B7280]">{hint}</p> : null}
-    </div>
-  );
-}
+const rulesFieldLabel = `block ${sheetLabelClass}`;
 
 function RulesReadCard({
   iconName,
@@ -198,7 +179,7 @@ export function RulesSection({
             <button
               type="button"
               onClick={onEditRules}
-              className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-[#F47C8C] px-6 text-[14px] font-semibold text-white shadow-[0_10px_28px_rgba(244,124,140,0.28)] transition active:scale-[0.98]"
+              className="mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] bg-[#F47C8C] px-6 text-[14px] font-semibold text-white transition hover:opacity-95 active:scale-[0.98]"
             >
               <CabinetIcon name="plus" size={16} className="text-white" />
               Добавить правила
@@ -248,51 +229,44 @@ export function SheetRules({
   };
 
   return (
-    <div className="space-y-4 pb-1">
-      <section className={sheetSectionClass}>
+    <div className="space-y-5">
+      <label className="block">
         <p className={sheetSectionTitleClass}>Запись</p>
-        <label className="mt-3 block">
-          <RulesFieldLabel iconName="calendar">
-            Условия записи
-          </RulesFieldLabel>
-          <textarea
-            value={bookingRules}
-            maxLength={RULES_TEXT_MAX}
-            onChange={(e) => setBookingRules(e.target.value)}
-            rows={4}
-            placeholder="Например: запись за сутки. При первом визите — предоплата 30%."
-            className={`${sheetFieldClass} resize-none leading-relaxed`}
-          />
-          <div className="mt-1 flex justify-end">
-            <CharCount value={bookingRules} max={RULES_TEXT_MAX} />
-          </div>
-        </label>
-      </section>
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          <AdminSheetFieldLabel className={rulesFieldLabel}>Условия записи</AdminSheetFieldLabel>
+          <CharCount value={bookingRules} max={RULES_TEXT_MAX} />
+        </div>
+        <textarea
+          value={bookingRules}
+          maxLength={RULES_TEXT_MAX}
+          onChange={(e) => setBookingRules(e.target.value)}
+          rows={4}
+          placeholder="Например: запись за сутки. При первом визите — предоплата 30%."
+          className={`${sheetFieldClass} resize-none leading-relaxed`}
+        />
+      </label>
 
-      <section className={sheetSectionClass}>
+      <label className="block">
         <p className={sheetSectionTitleClass}>Отмена</p>
-        <label className="mt-3 block">
-          <RulesFieldLabel iconName="rules" hint="Отмена, перенос, опоздание">
-            Отмена и перенос
-          </RulesFieldLabel>
-          <textarea
-            value={cancellationPolicy}
-            maxLength={RULES_TEXT_MAX}
-            onChange={(e) => setCancellationPolicy(e.target.value)}
-            rows={4}
-            placeholder="Например: бесплатная отмена за 24 часа. При опоздании более 15 мин — визит сокращается."
-            className={`${sheetFieldClass} resize-none leading-relaxed`}
-          />
-          <div className="mt-1 flex justify-end">
-            <CharCount value={cancellationPolicy} max={RULES_TEXT_MAX} />
-          </div>
-        </label>
-      </section>
+        <div className="mt-3 flex items-baseline justify-between gap-2">
+          <AdminSheetFieldLabel className={rulesFieldLabel}>Отмена и перенос</AdminSheetFieldLabel>
+          <CharCount value={cancellationPolicy} max={RULES_TEXT_MAX} />
+        </div>
+        <p className={`mt-1 ${sheetHintClass}`}>Отмена, перенос, опоздание</p>
+        <textarea
+          value={cancellationPolicy}
+          maxLength={RULES_TEXT_MAX}
+          onChange={(e) => setCancellationPolicy(e.target.value)}
+          rows={4}
+          placeholder="Например: бесплатная отмена за 24 часа. При опоздании более 15 мин — визит сокращается."
+          className={`${sheetFieldClass} resize-none leading-relaxed`}
+        />
+      </label>
 
-      <section className={sheetSectionClass}>
+      <div>
         <p className={sheetSectionTitleClass}>Оплата</p>
-        <p className={`mt-2 ${sheetHintClass}`}>Выберите все подходящие варианты</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <p className={`mt-1 ${sheetHintClass}`}>image.png</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2">
           {PAYMENT_OPTIONS.map((opt) => {
             const on = paymentMethods.includes(opt);
             const meta = PAYMENT_META[opt];
@@ -301,17 +275,19 @@ export function SheetRules({
                 key={opt}
                 type="button"
                 onClick={() => togglePayment(opt)}
-                className={`flex min-h-[4.25rem] flex-col items-start justify-center gap-1 rounded-[16px] px-3 py-2.5 text-left transition active:scale-[0.98] ${
+                className={`flex min-h-[4.25rem] flex-col items-start justify-center gap-1 rounded-[10px] px-3 py-2.5 text-left transition active:scale-[0.98] ${
                   on
-                    ? 'bg-[#F47C8C] text-white shadow-[0_8px_24px_rgba(244,124,140,0.28)]'
-                    : 'bg-white text-[#111827] ring-1 ring-[#EAECEF]'
+                    ? 'bg-[#F47C8C] text-white'
+                    : 'bg-[#EBEBEB] text-[#111827] hover:bg-[#E4E4E4]'
                 }`}
               >
-                <span className={`flex items-center gap-1.5 text-[14px] font-semibold ${on ? 'text-white' : 'text-[#111827]'}`}>
+                <span
+                  className={`flex items-center gap-1.5 text-[14px] font-semibold ${on ? 'text-white' : 'text-[#111827]'}`}
+                >
                   <CabinetIcon name={meta.icon} size={16} className={on ? 'text-white' : 'text-[#F47C8C]'} />
                   {opt}
                 </span>
-                <span className={`text-[11px] font-medium ${on ? 'text-white/85' : 'text-[#9CA3AF]'}`}>
+                <span className={`text-[11px] font-medium ${on ? 'text-white/85' : 'text-[#6B7280]'}`}>
                   {meta.short}
                 </span>
               </button>
@@ -320,9 +296,10 @@ export function SheetRules({
         </div>
 
         <label className="mt-4 block">
-          <RulesFieldLabel iconName="comment" hint="Необязательно">
-            Комментарий
-          </RulesFieldLabel>
+          <div className="flex items-baseline justify-between gap-2">
+            <AdminSheetFieldLabel className={rulesFieldLabel}>Комментарий к оплате</AdminSheetFieldLabel>
+            <CharCount value={paymentNote} max={500} />
+          </div>
           <textarea
             value={paymentNote}
             maxLength={500}
@@ -332,7 +309,7 @@ export function SheetRules({
             className={`${sheetFieldClass} resize-none leading-relaxed`}
           />
         </label>
-      </section>
+      </div>
 
       <SheetFooter onCancel={onCancel} onSave={save} saveLabel="Сохранить" />
     </div>

@@ -1,4 +1,5 @@
 import { query } from '../../config/db.js';
+import { PUBLIC_BOOKABLE_MASTER_ACCOUNT_SQL } from '../../lib/publicMasterAccountSql.js';
 import type {
   CatalogListingsQuery,
   CatalogListingsResult,
@@ -22,6 +23,11 @@ function clampInt(v: number, min: number, max: number): number {
   if (!Number.isFinite(v)) return min;
   return Math.min(max, Math.max(min, Math.trunc(v)));
 }
+
+/** Мастер виден в каталоге: опубликован, аккаунт активен (или снято ограничение по сроку). */
+export const CATALOG_MASTER_ACCOUNT_SQL = PUBLIC_BOOKABLE_MASTER_ACCOUNT_SQL;
+
+export const CATALOG_SERVICE_VISIBLE_SQL = `ms.is_active = true and ms.admin_hidden_at is null`;
 
 /** Условие по свободным слотам (дата в Europe/Minsk + опционально время суток). */
 function slotExistsSql(q: CatalogListingsQuery, paramOffset: number): { sql: string; nextParam: number } {
@@ -143,6 +149,7 @@ export async function suggestMasterLocations(rawQuery: string, limit: number): P
       from public.master_locations ml
       join public.master_profiles mp on mp.master_id = ml.master_id
       where mp.publication_status = 'published'
+        and ${CATALOG_MASTER_ACCOUNT_SQL}
         and ml.is_primary = true
         and (
           ml.public_address ilike $1
@@ -195,7 +202,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
   const params: unknown[] = [];
   let i = 1;
 
-  const whereParts: string[] = [`mp.publication_status = 'published'`];
+  const whereParts: string[] = [`mp.publication_status = 'published'`, CATALOG_MASTER_ACCOUNT_SQL];
 
   const searchFrag = safeIlikeFragment(q.search);
   if (searchFrag) {
@@ -207,7 +214,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
       or exists (
         select 1 from public.master_services ms
         join public.service_categories scs on scs.id = ms.category_id
-        where ms.master_id = mp.master_id and ms.is_active = true
+        where ms.master_id = mp.master_id and ${CATALOG_SERVICE_VISIBLE_SQL}
           and (
             ms.title ilike $${idx}
             or scs.name ilike $${idx}
@@ -337,6 +344,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
         mp.slug,
         mp.rating_avg::text,
         mp.reviews_count,
+        mp.is_verified,
         sc.code as category_code,
         sc.name as category_name,
         ml.public_address,
@@ -368,7 +376,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
       left join lateral (
         select ms.id, ms.title, ms.price_amount
         from public.master_services ms
-        where ms.master_id = mp.master_id and ms.is_active = true
+        where ms.master_id = mp.master_id and ${CATALOG_SERVICE_VISIBLE_SQL}
         order by ms.sort_order asc, ms.price_amount asc nulls last, ms.title asc
         limit 1
       ) ps on true
@@ -389,6 +397,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
       slug: string | null;
       rating_avg: string;
       reviews_count: number;
+      is_verified: boolean;
       category_code: string | null;
       category_name: string | null;
       public_address: string | null;
@@ -426,6 +435,7 @@ export async function searchCatalogListings(q: CatalogListingsQuery): Promise<Ca
       slug: row.slug,
       rating: num(row.rating_avg) ?? 0,
       reviewsCount: row.reviews_count,
+      isVerified: Boolean(row.is_verified),
       category: row.category_code
         ? { code: row.category_code, name: row.category_name ?? row.category_code }
         : null,

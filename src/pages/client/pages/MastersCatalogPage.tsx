@@ -26,9 +26,10 @@ import {
   type CategoryMasterFilters,
 } from '../lib/categoryMasterFilters';
 import { MastersCatalogDesktop } from '../mastersCatalog/MastersCatalogDesktop';
+import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
 import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
 import { catalogCanvasClass } from '../servicesCatalog/servicesCatalogTheme';
-import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../clientNavConstants';
+import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
 
 const QUICK_CHIPS = [
   { id: 'near', label: 'Рядом' },
@@ -110,13 +111,14 @@ export function MastersCatalogPage() {
     <QuickChips chips={[...QUICK_CHIPS]} activeIds={quickChipIds} onToggle={toggleChip} />
   );
 
+  const showGeoPromptMobile = !hasGeo && (quickChipIds.has('near') || !flatMode);
+
+  const geoPromptMobile = showGeoPromptMobile ? (
+    <GeoPromptCard onAllow={requestGeo} />
+  ) : null;
+
   const catalogBody = (
     <>
-      {quickChipIds.has('near') && !hasGeo ? (
-        <GeoPromptCard onAllow={requestGeo} />
-      ) : null}
-      {!hasGeo && !flatMode ? <GeoPromptCard onAllow={requestGeo} /> : null}
-
       {loading ? (
         <div className="space-y-3">
           <SkeletonMasterCard />
@@ -207,10 +209,13 @@ export function MastersCatalogPage() {
         showGeoPrompt={quickChipIds.has('near')}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_HEADER_OFFSET}`}>
-        <div className="mx-auto w-full max-w-lg px-4 pt-1 sm:px-5">
+      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
+        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
+          <CatalogMobilePageToolbar title="Мастера" />
           <CatalogStickyToolbar
             compact
+            belowPageToolbar
+            sticky={false}
             search={search}
             onSearchChange={setSearch}
             searchPlaceholder="Имя мастера, услуга, район…"
@@ -218,6 +223,7 @@ export function MastersCatalogPage() {
             loading={loading}
             onFilterClick={openFilters}
             activeFilterCount={activeFilterCount}
+            afterSticky={geoPromptMobile}
           >
             {quickChipsRow}
           </CatalogStickyToolbar>

@@ -17,15 +17,15 @@ export const adminSheetKpiTile = overviewDesktopKpiTile;
 export const adminSheetInsetTray =
   'rounded-[24px] bg-[#f6f7fb] p-4 shadow-[0_4px_16px_rgba(17,24,39,0.04)] lg:p-5';
 
-export const adminSheetStepperRail =
-  'sticky top-0 z-10 -mx-[18px] border-b border-[#eef0f5] bg-white px-[18px] py-4 shadow-[0_6px_24px_rgba(17,24,39,0.06)] lg:-mx-8 lg:px-8 lg:py-5';
-
 /** Горизонтальные отступы контента в AdminBottomSheet (скролл-область). */
 export const adminSheetScrollPad =
-  'px-[18px] pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] pt-5 lg:px-8 lg:pb-8 lg:pt-6';
+  'px-[18px] pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] pt-0 lg:px-8 lg:pb-8';
 
-/** Вертикальные отступы внутри уже паддинговой области шита. */
-export const adminSheetBodyPad = 'py-5 lg:pb-8 lg:pt-6';
+/** Отступы контента под степпером (без верхнего — степпер вплотную к шапке). */
+export const adminSheetBodyPad = 'pb-5 lg:pb-8';
+
+/** Полные отступы, если степпера нет. */
+export const adminSheetBodyInsetPad = 'pt-5 pb-5 lg:pt-6 lg:pb-8';
 
 export const adminSheetPinkBtn =
   'flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] text-[15px] font-bold text-white shadow-[0_10px_28px_rgba(255,95,122,0.32)] transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50';

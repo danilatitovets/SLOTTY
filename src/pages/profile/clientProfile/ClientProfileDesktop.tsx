@@ -72,7 +72,6 @@ function EmptyAppointments() {
   return (
     <NothingFoundCard
       title="Записей пока нет"
-      text="Выберите мастера и удобное время — запись появится здесь."
       action={
         <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
           Найти услуги
@@ -86,7 +85,6 @@ function EmptyFavorites() {
   return (
     <NothingFoundCard
       title="Избранных пока нет"
-      text="Сохраняйте мастеров, чтобы быстрее записываться снова."
       action={
         <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
           Найти услуги

@@ -710,7 +710,9 @@ export function ServicesPage() {
 
   const activePill = applied.category ?? 'Все';
   const deferredSearch = useDeferredValue(applied.search);
+  const deferredAddress = useDeferredValue(applied.address);
   const searchPending = applied.search !== deferredSearch;
+  const addressPending = applied.address !== deferredAddress;
 
   useEffect(() => {
     if (!getApiBaseUrl()) {
@@ -733,7 +735,7 @@ export function ServicesPage() {
             search: deferredSearch.trim() || undefined,
             category: catCode,
             locationId: applied.locationId ?? undefined,
-            address: applied.locationId ? undefined : applied.address.trim() || undefined,
+            address: applied.locationId ? undefined : deferredAddress.trim() || undefined,
             dateRange: applied.availability === 'any' ? undefined : applied.availability,
             timeOfDay: applied.timeOfDay === 'any' ? undefined : applied.timeOfDay,
             minPrice: applied.minPrice ?? undefined,
@@ -773,7 +775,7 @@ export function ServicesPage() {
     deferredSearch,
     applied.category,
     applied.locationId,
-    applied.address,
+    deferredAddress,
     applied.minRating,
     applied.minPrice,
     applied.maxPrice,
@@ -843,7 +845,7 @@ export function ServicesPage() {
   const showFoundRow =
     hasServicesInDatabase && (hasResults || hasSearchQuery || filtersAreActive(applied));
 
-  const awaitingListData = isLoading || searchPending;
+  const awaitingListData = isLoading || searchPending || addressPending;
 
   const activeFilterLabels = useMemo(() => {
     const labels: string[] = [];

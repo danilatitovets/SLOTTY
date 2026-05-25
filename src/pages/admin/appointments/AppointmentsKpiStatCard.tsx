@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { overviewDesktopKpiCarouselCard } from '../overview/adminOverviewTheme';
-import { apptAccentIcon, apptPriceAccent } from './adminAppointmentsTheme';
+import { apptKpiIcon } from './adminAppointmentsTheme';
 
 type Props = {
   label: string;
@@ -19,12 +19,12 @@ export function AppointmentsKpiStatCard({ label, value, hint, icon, accentValue 
         <p className="min-w-0 flex-1 pt-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
           {label}
         </p>
-        <span className={`${apptAccentIcon} h-11 w-11 rounded-[16px]`}>{icon}</span>
+        <span className={`${apptKpiIcon} h-11 w-11 rounded-[14px]`}>{icon}</span>
       </div>
       <div className="min-w-0">
         <p
           className={`truncate text-[clamp(1.5rem,2.4vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.06em] ${
-            accentValue ? apptPriceAccent : 'text-[#111827]'
+            accentValue ? 'text-[#F47C8C]' : 'text-[#111827]'
           }`}
         >
           {value}

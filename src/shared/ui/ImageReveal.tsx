@@ -32,6 +32,9 @@ export const ImageReveal = forwardRef<HTMLImageElement, ImageRevealProps>(functi
     }
   }, [src]);
 
+  const wantsCover = typeof className === 'string' && className.includes('object-cover');
+  const wantsContain = typeof className === 'string' && className.includes('object-contain');
+
   return (
     <img
       ref={setRefs}
@@ -39,7 +42,12 @@ export const ImageReveal = forwardRef<HTMLImageElement, ImageRevealProps>(functi
       {...rest}
       {...(fetchPriority ? { fetchpriority: fetchPriority } : {})}
       decoding={decoding}
-      style={{ ...style, opacity: shown ? 1 : 0 }}
+      style={{
+        ...style,
+        opacity: shown ? 1 : 0,
+        ...(wantsCover ? { objectFit: 'cover', objectPosition: 'center' } : {}),
+        ...(wantsContain ? { objectFit: 'contain', objectPosition: 'center' } : {}),
+      }}
       className={className}
       onLoad={(e) => {
         setShown(true);

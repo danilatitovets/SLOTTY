@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getProfilePath, getMasterPath, SERVICES_PATH } from '../../app/paths';
+import { ensureClientBookingAuth } from '../../features/auth/lib/requireClientBookingAuth';
 import { createClientAppointment } from '../../features/appointments/api/clientAppointments';
 import { fetchPublicSlots, type PublicSlotDto } from '../../features/booking/api/publicSlotsApi';
 import { buildBookingSlotDaysFromPublicSlots } from '../../features/booking/model/apiBookingSlotGrid';
@@ -14,6 +15,7 @@ import {
   resolveDemoServiceForBooking,
 } from '../../features/services/model/demoMasters';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
@@ -41,8 +43,11 @@ type SuccessPayload = {
 
 export function BookingPage() {
   const [searchParams] = useSearchParams();
-  const { masterId: telegramMasterId } = useTelegram();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { masterId: telegramMasterId, isTelegramWebApp } = useTelegram();
   const { token, isAuthenticated } = useAuth();
+  const accountAccess = useAccountAccess();
 
   const masterIdFromUrl = searchParams.get('master_id')?.trim() || null;
   const serviceIdFromUrl = searchParams.get('service_id')?.trim() || null;
@@ -146,6 +151,8 @@ export function BookingPage() {
 
   const [selectedDateIso, setSelectedDateIso] = useState<string | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
+  const [clientComment, setClientComment] = useState('');
+  const [referencePhotoUrl, setReferencePhotoUrl] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessPayload | null>(null);
   const [bookError, setBookError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -236,8 +243,23 @@ export function BookingPage() {
 
     if (isApiSlotGrid && looksLikeBookingUuid(selectedSlot.slotId)) {
       if (submitting) return;
-      if (!token || !isAuthenticated) {
-        setBookError('Откройте приложение через Telegram, чтобы записаться.');
+      const authGate = ensureClientBookingAuth({
+        isAuthenticated: Boolean(token && isAuthenticated),
+        isTelegramWebApp,
+        navigate,
+        returnPath: `${location.pathname}${location.search}`,
+      });
+      if (!authGate.ok) {
+        if (authGate.message) setBookError(authGate.message);
+        return;
+      }
+      if (!accountAccess.canCreateBooking) {
+        const reason = accountAccess.restrictionReason;
+        setBookError(
+          reason
+            ? `Доступ ограничен. Причина: ${reason}`
+            : 'Доступ ограничен. Новые записи временно недоступны.',
+        );
         return;
       }
       setSubmitting(true);
@@ -247,6 +269,8 @@ export function BookingPage() {
           const res = await createClientAppointment({
             slotId: selectedSlot.slotId,
             serviceId: service.id,
+            clientNote: clientComment.trim() || undefined,
+            clientReferencePhotoUrl: referencePhotoUrl ?? undefined,
           });
           const start = new Date(res.startsAt);
           const timeLabel = start.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -276,7 +300,23 @@ export function BookingPage() {
       timeLabel: selectedSlot.timeLabel,
       locationLine: formatPublicAddress(master.location),
     });
-  }, [isApiSlotGrid, isAuthenticated, master, selectedDay, selectedSlot, service, submitting, token]);
+  }, [
+    accountAccess,
+    clientComment,
+    isApiSlotGrid,
+    isAuthenticated,
+    isTelegramWebApp,
+    location.pathname,
+    location.search,
+    master,
+    navigate,
+    referencePhotoUrl,
+    selectedDay,
+    selectedSlot,
+    service,
+    submitting,
+    token,
+  ]);
 
   const backTo = fromServices
     ? SERVICES_PATH
@@ -396,6 +436,10 @@ export function BookingPage() {
         onCloseCalendar={() => setIsCalendarOpen(false)}
         onPickCalendarDate={onPickCalendarDate}
         onConfirm={confirmBooking}
+        comment={clientComment}
+        onCommentChange={setClientComment}
+        referencePhotoUrl={referencePhotoUrl}
+        onReferencePhotoUrlChange={setReferencePhotoUrl}
       />
     </BookingPageShell>
   );

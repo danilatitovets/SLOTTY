@@ -28,8 +28,10 @@ export const adminDesktopNavItemClass = (active: boolean): string =>
       : 'text-[#6B7280] hover:bg-[#F7F7F8] hover:text-[#111827]'
   }`;
 
+/** Десктоп: сегменты в сером треке (как фильтры в расписании). */
 export const ADMIN_SEGMENT_NAV_DESKTOP =
-  'flex flex-wrap gap-1 rounded-[20px] bg-white p-1.5 ring-1 ring-[#EAECEF] shadow-[0_2px_12px_rgba(17,24,39,0.04)]';
+  'flex w-full flex-wrap gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5';
 
+/** Плавающая белая карточка на сером полотне — на всю ширину контента. */
 export const ADMIN_SEGMENT_NAV_MOBILE =
-  'pointer-events-auto flex h-[72px] w-full max-w-[460px] items-stretch gap-1 rounded-[26px] border border-white/90 bg-white/95 px-1.5 py-1.5 shadow-[0_16px_44px_rgba(17,24,39,0.14)] backdrop-blur-xl';
+  'pointer-events-auto flex h-[4.5rem] w-full items-stretch gap-1 rounded-[16px] bg-white p-1.5 ring-1 ring-[#EEEEEE] shadow-[0_10px_28px_rgba(17,24,39,0.08)]';

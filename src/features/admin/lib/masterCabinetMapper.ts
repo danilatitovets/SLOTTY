@@ -220,7 +220,7 @@ export function draftToPrimaryLocationBody(loc: MasterLocation): PrimaryLocation
     publicAddress,
     lat: loc.lat != null && Number.isFinite(loc.lat) ? loc.lat : null,
     lng: loc.lng != null && Number.isFinite(loc.lng) ? loc.lng : null,
-    showExactAddressAfterBooking: isHome ? loc.showExactAddressAfterBooking === true : undefined,
+    showExactAddressAfterBooking: isHome ? loc.showExactAddressAfterBooking === true : false,
   };
 }
 
@@ -318,13 +318,18 @@ function formatHmLocal(d: Date): string {
 
 export function mapMasterAppointmentRowToDemo(row: {
   id: string;
+  service_id: string;
+  slot_id?: string;
   starts_at: string;
+  ends_at: string;
   status: string;
   price_snapshot: string;
   service_title_snapshot: string;
   client_name: string;
   client_phone?: string | null;
+  client_avatar_url?: string | null;
   client_note: string | null;
+  client_reference_photo_url?: string | null;
 }): DemoMasterAppointment {
   const d = new Date(row.starts_at);
   const date = isoDateLocal(d);
@@ -332,14 +337,22 @@ export function mapMasterAppointmentRowToDemo(row: {
   const price = Number(row.price_snapshot);
   const phone = row.client_phone?.trim();
   const note = row.client_note?.trim();
+  const photoUrl = row.client_reference_photo_url?.trim() || null;
   return {
     id: row.id,
+    serviceId: row.service_id,
+    slotId: row.slot_id,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
     clientName: row.client_name || 'Клиент',
+    clientAvatarUrl: row.client_avatar_url?.trim() || null,
     serviceTitle: row.service_title_snapshot || 'Услуга',
     date,
     time,
     priceByn: Number.isFinite(price) ? price : 0,
-    contact: phone || note || undefined,
+    contact: phone || undefined,
+    clientNote: note || undefined,
+    clientReferencePhotoUrl: photoUrl,
     status: mapDbAppointmentStatus(row.status),
   };
 }

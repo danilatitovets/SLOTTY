@@ -14,6 +14,7 @@ import {
   isoDateLocal,
   type OverviewDayStat,
 } from '../../../features/master/model/demoMasterAppointments';
+import { ADMIN_SCHEDULE_PATH } from '../../../app/paths';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
   overviewCard,
@@ -29,6 +30,7 @@ import {
   OverviewBarChart,
   OverviewHeroEmpty,
   OverviewCompactMetricCard,
+  OverviewLineChart,
   OverviewSectionCard,
   OverviewWideMetricCard,
 } from './OverviewSharedUi';
@@ -93,19 +95,89 @@ function SoftIcon({
   );
 }
 
+function SummaryMobileHeroCard({
+  firstName,
+  totalVisits,
+  totalRevenue,
+  appointmentsPath,
+}: {
+  firstName: string;
+  totalVisits: number;
+  totalRevenue: number;
+  appointmentsPath: string;
+}) {
+  return (
+    <section
+      className={`relative overflow-hidden rounded-[16px] ${SLOTTY_GRADIENT} p-5 text-white`}
+    >
+      <div
+        className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#ff8aa0]/35 blur-3xl"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-16 -left-12 h-32 w-32 rounded-full bg-[#ff5f7a]/20 blur-3xl"
+        aria-hidden
+      />
+
+      <div className="relative min-w-0">
+        <h1 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-white">
+          Привет, {firstName}. Сегодня всё под контролем.
+        </h1>
+
+        <p className="mt-3 text-[14px] font-semibold leading-relaxed text-white/82">
+          Быстрая сводка по записям, доходу, ближайшему клиенту и расписанию.
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="rounded-[14px] bg-white/10 px-3 py-3">
+            <p className="text-[11px] font-bold text-white/60">Записей</p>
+            <p className="mt-1 text-[22px] font-black leading-none tabular-nums tracking-[-0.06em] text-white">
+              {totalVisits}
+            </p>
+          </div>
+
+          <div className="rounded-[14px] bg-white/10 px-3 py-3">
+            <p className="text-[11px] font-bold text-white/60">Доход</p>
+            <p className="mt-1 text-[18px] font-black leading-none tabular-nums tracking-[-0.05em] text-white">
+              {formatBynRu(totalRevenue)}
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to={appointmentsPath}
+          className="mt-4 inline-flex w-full min-h-11 items-center justify-center rounded-[12px] bg-white px-4 text-[14px] font-bold text-[#111827] transition active:scale-[0.98]"
+        >
+          Все записи
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function OverviewSummaryPanelMobile({
   metrics,
   serviceCount,
   appointmentsPath,
   dayStats,
+  draft,
   onOpenNearest,
-}: Omit<SummaryProps, 'draft'>) {
+}: SummaryProps) {
   const { totalRevenue, totalVisits, nearest } = metrics;
   const hasAny = metrics.hasAny || totalRevenue > 0 || totalVisits > 0;
   const avgCheck = totalVisits > 0 ? Math.round(totalRevenue / totalVisits) : 0;
+  const displayName = draft.name?.trim() || 'Мастер';
+  const firstName = displayName.split(/\s+/)[0] || 'Мастер';
 
   return (
     <div className="min-w-0 space-y-4 overflow-x-hidden lg:hidden">
+      <SummaryMobileHeroCard
+        firstName={firstName}
+        totalVisits={totalVisits}
+        totalRevenue={totalRevenue}
+        appointmentsPath={appointmentsPath}
+      />
+
       {!hasAny ? <OverviewHeroEmpty /> : null}
 
       <OverviewWideMetricCard
@@ -115,7 +187,7 @@ function OverviewSummaryPanelMobile({
         sub={hasAny ? 'Общая сумма активных и завершённых записей' : 'Пока данных за период нет'}
       />
 
-      <div className="grid min-w-0 grid-cols-3 gap-2">
+      <div className="flex min-w-0 gap-2">
         <OverviewCompactMetricCard
           icon={<HiCalendar className="h-[18px] w-[18px]" aria-hidden />}
           label="Записей"
@@ -134,6 +206,7 @@ function OverviewSummaryPanelMobile({
           icon={<HiBanknotes className="h-[18px] w-[18px]" aria-hidden />}
           label="Ср. чек"
           value={avgCheck > 0 ? formatBynRu(avgCheck) : '0 BYN'}
+          sub="за период"
         />
       </div>
 
@@ -206,7 +279,23 @@ function OverviewSummaryPanelMobile({
 
       <OverviewSectionCard
         title="Динамика записей"
-        subtitle="Как менялось количество записей за выбранный период"
+        subtitle="Наведите на график — увидите число записей по дням"
+        icon={<HiCalendar className="h-5 w-5" aria-hidden />}
+      >
+        <OverviewLineChart stats={dayStats} mode="visits" size="large" emptyHint="Записей за период нет" />
+      </OverviewSectionCard>
+
+      <OverviewSectionCard
+        title="Динамика дохода"
+        subtitle="Выручка по завершённым записям за каждый день"
+        icon={<HiBanknotes className="h-5 w-5" aria-hidden />}
+      >
+        <OverviewLineChart stats={dayStats} mode="revenue" size="large" emptyHint="Дохода за период нет" />
+      </OverviewSectionCard>
+
+      <OverviewSectionCard
+        title="Записи по дням"
+        subtitle="Столбцы — количество активных и завершённых визитов"
         icon={<HiCalendar className="h-5 w-5" aria-hidden />}
       >
         <OverviewBarChart stats={dayStats} mode="visits" emptyHint="Записей за период нет" />
@@ -383,15 +472,22 @@ function DesktopNearestCard({
   );
 }
 
-function DesktopScheduleCard({ fillPercent }: { fillPercent: number }) {
+function DesktopScheduleCard({
+  fillPercent,
+  schedulePath,
+}: {
+  fillPercent: number;
+  schedulePath: string;
+}) {
   const percent = Math.min(100, Math.max(0, fillPercent));
+  const isEmpty = percent === 0;
 
   return (
     <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <SoftIcon>
-            <HiCalendar className="h-6 w-6" />
+            <HiCalendar className="h-6 w-6" aria-hidden />
           </SoftIcon>
 
           <div>
@@ -404,27 +500,48 @@ function DesktopScheduleCard({ fillPercent }: { fillPercent: number }) {
           </div>
         </div>
 
-        <span className="text-[30px] font-black tracking-[-0.08em] text-[#111827]">
-          {percent}%
-        </span>
+        {!isEmpty ? (
+          <span className="text-[30px] font-black tracking-[-0.08em] text-[#111827]">
+            {percent}%
+          </span>
+        ) : null}
       </div>
 
-      <div className="mt-6 h-3 overflow-hidden rounded-full bg-[#FFE8EE]">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-[#ff8aa0] to-[#ff5f7a] transition-all duration-500"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+      {isEmpty ? (
+        <div className="rounded-[20px] bg-[#f6f7fb] p-6 text-center">
+          <HiCalendar className="mx-auto h-10 w-10 text-[#D1D5DB]" aria-hidden />
 
-      <div className="mt-5 rounded-[24px] bg-[#F9FAFB] p-5 ring-1 ring-[#EEF0F5]">
-        <p className="text-[14px] font-black text-[#111827]">
-          Что это значит?
-        </p>
-        <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
-          Показатель помогает быстро понять, насколько эффективно заполнен день.
-          Чем больше записей, тем выше процент.
-        </p>
-      </div>
+          <p className="mt-4 text-[17px] font-black text-[#111827]">Окон на сегодня нет</p>
+
+          <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
+            Добавьте рабочие окна в расписании — здесь появится заполненность.
+          </p>
+
+          <Link
+            to={schedulePath}
+            className="mt-5 inline-flex items-center justify-center rounded-[18px] bg-[#FFF1F4] px-5 py-3 text-[14px] font-black text-[#ff5f7a] transition hover:bg-[#FFE1E8]"
+          >
+            Перейти к расписанию
+          </Link>
+        </div>
+      ) : (
+        <div className="rounded-[20px] bg-[#f6f7fb] p-5">
+          <div className="h-3 overflow-hidden rounded-full bg-[#FFE8EE]">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#ff8aa0] to-[#ff5f7a] transition-all duration-500"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+
+          <p className="mt-4 text-[13px] font-semibold leading-relaxed text-[#6B7280]">
+            {percent >= 80
+              ? 'Сегодня почти все окна заняты — осталось немного свободного времени.'
+              : percent >= 40
+                ? 'Есть свободные окна — клиенты ещё могут записаться.'
+                : 'Много свободного времени — можно открыть дополнительные окна.'}
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -454,7 +571,7 @@ function DesktopChartCard({
           </h2>
 
           <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
-            Количество активных и завершённых записей по дням
+            Линия и столбцы — наведите курсор, чтобы увидеть детали по дням
           </p>
         </div>
 
@@ -463,7 +580,44 @@ function DesktopChartCard({
         </span>
       </div>
 
-      <OverviewBarChart stats={dayStats} mode="visits" emptyHint="Записей за период нет" />
+      <OverviewLineChart stats={dayStats} mode="visits" size="large" emptyHint="Записей за период нет" />
+
+      <div className="mt-6">
+        <p className="mb-3 text-[13px] font-semibold text-[#6B7280]">По дням (столбцы)</p>
+        <OverviewBarChart stats={dayStats} mode="visits" emptyHint="Записей за период нет" />
+      </div>
+    </section>
+  );
+}
+
+function DesktopRevenueChartCard({
+  dayStats,
+  totalRevenue,
+}: {
+  dayStats: OverviewDayStat[];
+  totalRevenue: number;
+}) {
+  return (
+    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-[22px] font-black tracking-[-0.05em] text-[#111827]">Динамика дохода</h2>
+          <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
+            Выручка по завершённым записям — наведите на график для суммы за день
+          </p>
+        </div>
+
+        <span className="shrink-0 rounded-full bg-[#FFF1F4] px-4 py-2 text-[12px] font-black text-[#ff5f7a]">
+          {formatBynRu(totalRevenue)}
+        </span>
+      </div>
+
+      <OverviewLineChart stats={dayStats} mode="revenue" size="large" emptyHint="Дохода за период нет" />
+
+      <div className="mt-6">
+        <p className="mb-3 text-[13px] font-semibold text-[#6B7280]">По дням (столбцы)</p>
+        <OverviewBarChart stats={dayStats} mode="revenue" emptyHint="Дохода за период нет" />
+      </div>
     </section>
   );
 }
@@ -529,6 +683,8 @@ function OverviewSummaryPanelDesktop({
 
       <DesktopChartCard dayStats={dayStats} totalVisits={totalVisits} />
 
+      <DesktopRevenueChartCard dayStats={dayStats} totalRevenue={totalRevenue} />
+
       <section className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
         <DesktopNearestCard
           nearest={nearest}
@@ -536,7 +692,7 @@ function OverviewSummaryPanelDesktop({
           onOpenNearest={onOpenNearest}
         />
 
-        <DesktopScheduleCard fillPercent={fillPercent} />
+        <DesktopScheduleCard fillPercent={fillPercent} schedulePath={ADMIN_SCHEDULE_PATH} />
       </section>
     </div>
   );

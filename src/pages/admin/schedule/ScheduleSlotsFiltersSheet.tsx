@@ -1,13 +1,10 @@
 import { HiCheck } from 'react-icons/hi2';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
 import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
 import type { ScheduleSlotsStatusFilter } from './scheduleTypes';
-import {
-  labelClass,
-  primaryBtnClass,
-  scheduleChipActive,
-  secondaryBtnClass,
-} from './scheduleUi';
+import { catalogSheetPrimaryBtn, catalogSheetSecondaryBtn } from '../shared/adminCatalogSheetTheme';
+import { sheetChipClass } from '../profile/adminProfileCabinetTheme';
 
 export type ScheduleSlotsFilters = {
   status: ScheduleSlotsStatusFilter;
@@ -27,17 +24,17 @@ type Props = {
   filters: ScheduleSlotsFilters;
   onChange: (next: ScheduleSlotsFilters) => void;
   onReset: () => void;
+  resultCount: number;
 };
 
 const STATUS_OPTIONS: Array<{
   value: ScheduleSlotsStatusFilter;
   label: string;
-  hint: string;
 }> = [
-  { value: 'all', label: 'Все окна', hint: 'Любой статус' },
-  { value: 'free', label: 'Свободные', hint: 'Можно записать клиента' },
-  { value: 'booked', label: 'С записью', hint: 'Уже занято' },
-  { value: 'blocked', label: 'Недоступные', hint: 'Закрыто для записи' },
+  { value: 'all', label: 'Все' },
+  { value: 'free', label: 'Свободные' },
+  { value: 'booked', label: 'С записью' },
+  { value: 'blocked', label: 'Закрытые' },
 ];
 
 function todayIso(): string {
@@ -46,16 +43,22 @@ function todayIso(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export function ScheduleSlotsFiltersSheet({ open, onClose, filters, onChange, onReset }: Props) {
+export function ScheduleSlotsFiltersSheet({
+  open,
+  onClose,
+  filters,
+  onChange,
+  onReset,
+  resultCount,
+}: Props) {
   const hasActive =
     filters.status !== 'all' || filters.dayIso.trim() !== '' || filters.onlyUpcoming;
 
   return (
-    <AdminBottomSheet open={open} onClose={onClose} title="Фильтр окон">
-      <div className="space-y-5">
-        <div>
-          <p className={labelClass}>Статус</p>
-          <div className="mt-2 space-y-2">
+    <AdminBottomSheet variant="catalog" open={open} onClose={onClose} title="Фильтр окон">
+      <div className="space-y-4">
+        <AdminFormSheetSection title="Статус" variant="catalog">
+          <div className="grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5">
             {STATUS_OPTIONS.map((opt) => {
               const selected = filters.status === opt.value;
               return (
@@ -63,44 +66,28 @@ export function ScheduleSlotsFiltersSheet({ open, onClose, filters, onChange, on
                   key={opt.value}
                   type="button"
                   onClick={() => onChange({ ...filters, status: opt.value })}
-                  className={`flex w-full items-center gap-3 rounded-[18px] border px-4 py-3.5 text-left transition active:scale-[0.98] ${
-                    selected
-                      ? scheduleChipActive
-                      : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED] hover:bg-[#FAFAFA]'
-                  }`}
+                  className={`min-h-11 ${sheetChipClass(selected)}`}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-bold text-[#111827]">{opt.label}</span>
-                    <span className="mt-0.5 block text-[12px] font-medium text-[#9CA3AF]">{opt.hint}</span>
-                  </span>
-                  {selected ? (
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E29595] text-white">
-                      <HiCheck className="h-5 w-5" aria-hidden />
-                    </span>
-                  ) : (
-                    <span
-                      className="h-8 w-8 shrink-0 rounded-full border border-[#EAECEF] bg-[#FAFAFA]"
-                      aria-hidden
-                    />
-                  )}
+                  {opt.label}
                 </button>
               );
             })}
           </div>
-        </div>
+        </AdminFormSheetSection>
 
-        <div>
-          <p className={labelClass}>День</p>
+        <AdminFormSheetSection title="День" variant="catalog">
           {filters.dayIso ? (
-            <div className="mt-2 space-y-2">
+            <div className="space-y-2">
               <SlottyDatePicker
                 className="w-full"
+                tone="admin"
                 value={filters.dayIso}
                 onChange={(v) => onChange({ ...filters, dayIso: v })}
+                sheetTitle="День"
               />
               <button
                 type="button"
-                className="text-[13px] font-semibold text-[#C97B7B]"
+                className="text-[13px] font-semibold text-[#111827] underline decoration-[#D1D5DB] underline-offset-2"
                 onClick={() => onChange({ ...filters, dayIso: '' })}
               >
                 Показать все дни
@@ -109,46 +96,52 @@ export function ScheduleSlotsFiltersSheet({ open, onClose, filters, onChange, on
           ) : (
             <button
               type="button"
-              className={`${secondaryBtnClass} mt-2`}
+              className={catalogSheetSecondaryBtn}
               onClick={() => onChange({ ...filters, dayIso: todayIso() })}
             >
-              Выбрать день
+              Выбрать конкретный день
             </button>
           )}
-        </div>
+        </AdminFormSheetSection>
 
-        <button
-          type="button"
-          onClick={() => onChange({ ...filters, onlyUpcoming: !filters.onlyUpcoming })}
-          className={`flex w-full items-center gap-3 rounded-[18px] border px-4 py-3.5 text-left transition active:scale-[0.98] ${
-            filters.onlyUpcoming
-              ? scheduleChipActive
-              : 'border-[#EAECEF] bg-white hover:border-[#FDE8ED] hover:bg-[#FAFAFA]'
-          }`}
-        >
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-bold text-[#111827]">Только предстоящие</span>
-            <span className="mt-0.5 block text-[12px] font-medium text-[#9CA3AF]">
-              Скрыть прошедшие окна
+        <AdminFormSheetSection title="Время" variant="catalog">
+          <button
+            type="button"
+            onClick={() => onChange({ ...filters, onlyUpcoming: !filters.onlyUpcoming })}
+            className={`flex w-full items-center justify-between gap-3 rounded-[10px] px-4 py-3.5 text-left transition active:scale-[0.99] ${
+              filters.onlyUpcoming
+                ? 'bg-[#F47C8C] text-white'
+                : 'bg-[#EBEBEB] text-[#111827] hover:bg-[#E4E4E4]'
+            }`}
+          >
+            <span>
+              <span className="block text-[14px] font-semibold">Только предстоящие</span>
+              <span
+                className={`mt-0.5 block text-[12px] font-medium ${
+                  filters.onlyUpcoming ? 'text-white/85' : 'text-[#6B7280]'
+                }`}
+              >
+                Скрыть прошедшие окна
+              </span>
             </span>
-          </span>
-          {filters.onlyUpcoming ? (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E29595] text-white">
-              <HiCheck className="h-5 w-5" aria-hidden />
-            </span>
-          ) : (
-            <span className="h-8 w-8 shrink-0 rounded-full border border-[#EAECEF] bg-[#FAFAFA]" aria-hidden />
-          )}
-        </button>
+            {filters.onlyUpcoming ? (
+              <HiCheck className="h-5 w-5 shrink-0" aria-hidden />
+            ) : null}
+          </button>
+        </AdminFormSheetSection>
 
-        <div className="flex flex-col gap-2 border-t border-[#F3F4F6] pt-4">
-          <button type="button" className={primaryBtnClass} onClick={onClose}>
-            Готово
+        <p className="rounded-[10px] bg-[#EBEBEB] px-4 py-3 text-center text-[13px] font-medium text-[#6B7280]">
+          Найдено: <span className="font-semibold text-[#111827]">{resultCount}</span>
+        </p>
+
+        <div className="flex flex-col gap-2 pt-1">
+          <button type="button" className={catalogSheetPrimaryBtn} onClick={onClose}>
+            Показать {resultCount > 0 ? `(${resultCount})` : ''}
           </button>
           {hasActive ? (
             <button
               type="button"
-              className="text-[14px] font-semibold text-[#C97B7B]"
+              className={catalogSheetSecondaryBtn}
               onClick={() => {
                 onReset();
                 onClose();

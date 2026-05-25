@@ -5,11 +5,12 @@ import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
-import { adminFormSheetHighlight, adminFormSheetInsetTray } from '../shared/adminFormSheetTheme';
+import { catalogSheetGhostBtn, catalogSheetLabel } from '../shared/adminCatalogSheetTheme';
+import { adminFormSheetHighlight, adminFormSheetMetricCatalog } from '../shared/adminFormSheetTheme';
+import { scheduleSheetErrorBox } from './adminScheduleTheme';
 import type { PlannedSlot, WindowTemplate } from './scheduleTypes';
 import { errorBoxClass } from './scheduleTypes';
 import {
-  addMinutesToTime,
   durationMinutesBetween,
   formatDurationRu,
   serviceTitleById,
@@ -22,7 +23,6 @@ import { SchedulePreview } from './SchedulePreview';
 import { AddWindowFormSummary } from './AddWindowFormSummary';
 import { AddWindowModeSwitch } from './AddWindowModeSwitch';
 import { AddWindowTemplatePicker } from './AddWindowTemplatePicker';
-import { TemplateStartTimesPicker } from './TemplateStartTimesPicker';
 import type { AddWindowFormStep } from './addWindowFormSteps';
 import { isAddWindowTemplateMode } from './addWindowFormSteps';
 import { HiPencilSquare } from 'react-icons/hi2';
@@ -34,8 +34,6 @@ type Props = {
   onDateIsoChange: (v: string) => void;
   startTime: string;
   onStartTimeChange: (v: string) => void;
-  templateStartTimes: string[];
-  onTemplateStartTimesChange: (times: string[]) => void;
   endTime: string;
   onEndTimeChange: (v: string) => void;
   manualMode: boolean;
@@ -63,15 +61,6 @@ type Props = {
   onCancel?: () => void;
 };
 
-function HintCard({ title, children }: { title: string; children: string }) {
-  return (
-    <div className="rounded-[18px] border border-[#FDE8ED] bg-[#FFF9FB] px-4 py-3">
-      <p className="text-[12px] font-bold text-[#ff5f7a]">{title}</p>
-      <p className="mt-1 text-[13px] font-semibold leading-relaxed text-[#6B7280]">{children}</p>
-    </div>
-  );
-}
-
 export function AddWindowForm({
   variant,
   step,
@@ -79,8 +68,6 @@ export function AddWindowForm({
   onDateIsoChange,
   startTime,
   onStartTimeChange,
-  templateStartTimes,
-  onTemplateStartTimesChange,
   endTime,
   onEndTimeChange,
   manualMode,
@@ -109,6 +96,7 @@ export function AddWindowForm({
 }: Props) {
   const timeOptions = mergeScheduleTimeSelectOptions(startTime, endTime);
   const inSheet = variant === 'sheet';
+  const fieldLabel = inSheet ? catalogSheetLabel : labelClass;
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId) ?? null;
   const hasTemplates = templates.length > 0;
   const templateMode = isAddWindowTemplateMode({ manualMode, selectedTemplate });
@@ -121,22 +109,26 @@ export function AddWindowForm({
       : serviceTitleById(services, serviceId && isUuid(serviceId) ? serviceId : null));
 
   const inlineError = stepError ?? createError;
+  const sheetSection = inSheet ? ({ variant: 'catalog' as const }) : {};
+  const metaHintClass = 'mt-2 text-[13px] font-medium text-[#6B7280]';
+  const templateBoxClass = inSheet ? adminFormSheetMetricCatalog : adminFormSheetHighlight;
 
   const stepWhen = (
     <div className="space-y-4">
       <AdminFormSheetSection
         title="День записи"
-        description="Дата, когда слот появится в расписании"
+        description={inSheet ? undefined : 'Дата, когда слот появится в расписании'}
+        {...sheetSection}
       >
         <div>
-          <p className={labelClass}>Дата</p>
+          <p className={fieldLabel}>Дата</p>
           <SlottyDatePicker
             className="mt-1.5 w-full"
             tone="admin"
             value={dateIso}
             onChange={onDateIsoChange}
             sheetTitle="День записи"
-            sheetSubtitle="Дата, когда слот появится в расписании"
+            sheetSubtitle="Дата слота"
           />
         </div>
       </AdminFormSheetSection>
@@ -144,7 +136,8 @@ export function AddWindowForm({
       {hasTemplates ? (
         <AdminFormSheetSection
           title="Как создать"
-          description="Шаблон — быстрее; вручную — своя услуга и длительность"
+          description={inSheet ? undefined : 'Шаблон — быстрее; вручную — своя услуга и длительность'}
+          {...sheetSection}
         >
           <AddWindowModeSwitch
             mode={manualMode ? 'manual' : 'template'}
@@ -158,7 +151,8 @@ export function AddWindowForm({
         <>
           <AdminFormSheetSection
             title="Шаблон"
-            description="Услуга и длительность — из сохранённого шаблона"
+            description={inSheet ? undefined : 'Услуга и длительность — из сохранённого шаблона'}
+            {...sheetSection}
           >
             <AddWindowTemplatePicker
               templates={templates}
@@ -169,47 +163,44 @@ export function AddWindowForm({
 
           {selectedTemplate ? (
             <AdminFormSheetSection
-              title="Время в этот день"
-              description="Можно несколько — на каждое создастся отдельное окно"
+              title="Начало"
+              description={
+                inSheet ? undefined : `Длительность слота — ${formatDurationRu(selectedTemplate.durationMinutes)}`
+              }
+              {...sheetSection}
             >
-              <TemplateStartTimesPicker
-                selected={templateStartTimes}
-                durationMinutes={selectedTemplate.durationMinutes}
-                onChange={onTemplateStartTimesChange}
-              />
-              <div className={`mt-4 ${adminFormSheetHighlight}`}>
-                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
-                  {templateDisplayLabel(selectedTemplate)}
+              <div>
+                <p className={fieldLabel}>Время начала</p>
+                <SlottySelect
+                  className="mt-1.5 w-full"
+                  tone="admin"
+                  value={startTime}
+                  onChange={onStartTimeChange}
+                  options={timeOptions}
+                  aria-label="Время начала"
+                  sheetTitle="Время начала"
+                  sheetSubtitle="Во сколько начинается приём"
+                />
+                <p className={metaHintClass}>
+                  Окончание {endTime}
+                  <span className="text-[#9CA3AF]">
+                    {' '}
+                    ({formatDurationRu(selectedTemplate.durationMinutes)})
+                  </span>
                 </p>
-                <p className="mt-2 text-[14px] font-semibold text-[#374151]">{selectedTemplate.serviceName}</p>
-                {templateStartTimes.length > 0 ? (
-                  <ul className="mt-3 space-y-1.5">
-                    {templateStartTimes.map((t) => (
-                      <li
-                        key={t}
-                        className="text-[13px] font-bold tabular-nums text-[#111827]"
-                      >
-                        {t}–{addMinutesToTime(t, selectedTemplate.durationMinutes)}
-                        <span className="ml-2 font-semibold text-[#9CA3AF]">
-                          · {formatDurationRu(selectedTemplate.durationMinutes)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-[13px] font-semibold text-[#6B7280]">
-                    Длительность {formatDurationRu(selectedTemplate.durationMinutes)}
-                  </p>
-                )}
               </div>
             </AdminFormSheetSection>
           ) : null}
         </>
       ) : (
         <>
-          <AdminFormSheetSection title="Начало" description="Во сколько начинается приём">
+          <AdminFormSheetSection
+            title="Начало"
+            description={inSheet ? undefined : 'Во сколько начинается приём'}
+            {...sheetSection}
+          >
             <div>
-              <p className={labelClass}>Время начала</p>
+              <p className={fieldLabel}>Время начала</p>
               <SlottySelect
                 className="mt-1.5 w-full"
                 tone="admin"
@@ -223,9 +214,13 @@ export function AddWindowForm({
             </div>
           </AdminFormSheetSection>
 
-          <AdminFormSheetSection title="Окончание" description="Когда слот закрывается для новых записей">
+          <AdminFormSheetSection
+            title="Окончание"
+            description={inSheet ? undefined : 'Когда слот закрывается для новых записей'}
+            {...sheetSection}
+          >
             <div>
-              <p className={labelClass}>Время окончания</p>
+              <p className={fieldLabel}>Время окончания</p>
               <SlottySelect
                 className="mt-1.5 w-full"
                 tone="admin"
@@ -237,9 +232,7 @@ export function AddWindowForm({
                 sheetSubtitle="Когда заканчивается приём"
               />
               {startTime && endTime && durationMin > 0 ? (
-                <p className="mt-2 text-[13px] font-bold text-[#ff5f7a]">
-                  Длительность: {formatDurationRu(durationMin)}
-                </p>
+                <p className={metaHintClass}>Длительность: {formatDurationRu(durationMin)}</p>
               ) : startTime && endTime && durationMin <= 0 ? (
                 <p className="mt-2 text-[13px] font-semibold text-[#DC2626]">
                   Окончание должно быть позже начала
@@ -255,40 +248,35 @@ export function AddWindowForm({
   const stepService = (
     <div className="space-y-4">
       {templateMode && selectedTemplate ? (
-        <>
-          <div className={`${adminFormSheetHighlight} border border-[#FDE8ED]`}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Из шаблона</p>
-            <p className="mt-2 text-[18px] font-black tracking-[-0.04em] text-[#111827]">
+        <AdminFormSheetSection title="Из шаблона" {...sheetSection}>
+          <div className={templateBoxClass}>
+            <p className="text-[18px] font-bold tracking-[-0.03em] text-[#111827]">
               {templateDisplayLabel(selectedTemplate)}
             </p>
-            <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
-              {selectedTemplate.serviceName} · {formatDurationRu(selectedTemplate.durationMinutes)}
-            </p>
-            <p className="mt-3 text-[13px] font-semibold text-[#374151]">
-              Услуга и длительность заданы на шаге «Когда». Отдельно выбирать услугу не нужно.
+            <p className="mt-1 text-[14px] font-medium text-[#6B7280]">
+              {selectedTemplate.serviceName}
+              <span className="text-[#9CA3AF]"> — </span>
+              {formatDurationRu(selectedTemplate.durationMinutes)}
             </p>
             <button
               type="button"
               onClick={() => onManualModeChange(true)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[#FDE8ED] bg-white py-2.5 text-[13px] font-bold text-[#ff5f7a] transition hover:bg-[#FFF9FB] active:scale-[0.98]"
+              className={`${catalogSheetGhostBtn} mt-4 flex w-full min-h-11 items-center justify-center gap-2`}
             >
               <HiPencilSquare className="h-4 w-4" aria-hidden />
               Другая услуга или своё время
             </button>
           </div>
-          <HintCard title="Далее — проверка">
-            На следующем шаге можно включить повтор и посмотреть список окон перед сохранением.
-          </HintCard>
-        </>
+        </AdminFormSheetSection>
       ) : (
         <>
-          <HintCard title="Услуга">
-            Показывается клиенту при записи. День и время слота вы уже задали на предыдущем шаге.
-          </HintCard>
-
-          <AdminFormSheetSection title="Услуга" description="Что увидит клиент при записи">
+          <AdminFormSheetSection
+            title="Услуга"
+            description={inSheet ? undefined : 'Что увидит клиент при записи'}
+            {...sheetSection}
+          >
             <div>
-              <p className={labelClass}>Услуга в каталоге</p>
+              <p className={fieldLabel}>Услуга в каталоге</p>
               <SlottySelect
                 className="mt-1.5 w-full"
                 tone="admin"
@@ -297,9 +285,11 @@ export function AddWindowForm({
                 options={serviceOptions}
                 aria-label="Услуга"
               />
-              <p className="mt-2 text-[12px] font-semibold text-[#9CA3AF]">
-                «Любая услуга» — клиент выберет из вашего каталога при записи.
-              </p>
+              {!inSheet ? (
+                <p className="mt-2 text-[12px] font-semibold text-[#9CA3AF]">
+                  «Любая услуга» — клиент выберет из вашего каталога при записи.
+                </p>
+              ) : null}
             </div>
           </AdminFormSheetSection>
 
@@ -307,7 +297,7 @@ export function AddWindowForm({
             <button
               type="button"
               onClick={() => onManualModeChange(false)}
-              className="text-[13px] font-bold text-[#ff5f7a]"
+              className="text-[13px] font-semibold text-[#111827] underline decoration-[#D1D5DB] underline-offset-2"
             >
               ← Вернуться к шаблону
             </button>
@@ -316,11 +306,14 @@ export function AddWindowForm({
       )}
 
       {serviceOptions.length <= 1 ? (
-        <p className="text-[13px] font-semibold text-[#6B7280]">
-          <Link to={ADMIN_SERVICES_PATH} className="font-bold text-[#ff5f7a]">
+        <p className="text-[14px] font-medium text-[#6B7280]">
+          <Link
+            to={ADMIN_SERVICES_PATH}
+            className={inSheet ? 'font-semibold text-[#111827] underline' : 'font-semibold text-[#F47C8C]'}
+          >
             Добавьте услуги
           </Link>
-          , чтобы привязать окно к конкретной позиции в каталоге.
+          , чтобы привязать окно к позиции в каталоге.
         </p>
       ) : null}
     </div>
@@ -342,35 +335,34 @@ export function AddWindowForm({
 
       <AdminFormSheetSection
         title="Повтор"
-        description="Серия окон на несколько недель — необязательно"
+        description={inSheet ? undefined : 'Серия окон на несколько недель'}
+        {...sheetSection}
       >
         <RepeatSettings
           value={repeatSettings}
           onChange={onRepeatSettingsChange}
           dateIso={dateIso}
+          cabinet={inSheet}
         />
       </AdminFormSheetSection>
 
       {plannedSlots.length > 0 ? (
-        <AdminFormSheetSection title="Список окон" description="Такие слоты появятся в расписании">
-          <div className={inSheet ? adminFormSheetInsetTray : undefined}>
-            <SchedulePreview
-              slots={plannedSlots}
-              services={services}
-              creatableCount={creatableCount}
-              serviceName={serviceLabel}
-              beyondHorizon={beyondHorizon}
-              horizonDays={horizonDays}
-            />
-          </div>
+        <AdminFormSheetSection
+          title="Список окон"
+          description={inSheet ? undefined : 'Такие слоты появятся в расписании'}
+          {...sheetSection}
+        >
+          <SchedulePreview
+            slots={plannedSlots}
+            services={services}
+            creatableCount={creatableCount}
+            serviceName={serviceLabel}
+            beyondHorizon={beyondHorizon}
+            horizonDays={horizonDays}
+            cabinet={inSheet}
+          />
         </AdminFormSheetSection>
       ) : null}
-
-      <ul className="space-y-2 rounded-[18px] border border-[#FDE8ED] bg-[#f6f7fb] px-4 py-3 text-[13px] font-semibold text-[#6B7280]">
-        <li>· Окно появится во вкладках «Календарь» и «Окна»</li>
-        <li>· Клиенты смогут записаться, пока статус «Свободно»</li>
-        <li>· Пересечения с другими слотами будут пропущены автоматически</li>
-      </ul>
     </div>
   );
 
@@ -378,10 +370,10 @@ export function AddWindowForm({
 
   if (inSheet) {
     return (
-      <div className="space-y-4">
+      <>
         {stepBody}
-        {inlineError ? <p className={errorBoxClass}>{inlineError}</p> : null}
-      </div>
+        {inlineError ? <p className={scheduleSheetErrorBox}>{inlineError}</p> : null}
+      </>
     );
   }
 

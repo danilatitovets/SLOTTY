@@ -13,10 +13,17 @@ import {
 import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { homeOutlineBtn, homePinkBtn, homeSection } from './homeTheme';
 
-const PHOTO = (name: string) => `/photos/ШАГИ/${name}`;
+const HOW_IT_WORKS_DIR = 'КАК РАБОАТЕТ';
+
+const howItWorksPhoto = (file: string) =>
+  `/photos/${encodeURIComponent(HOW_IT_WORKS_DIR)}/${encodeURIComponent(file)}`;
 
 const BENTO_ROUND = 'overflow-hidden rounded-[20px] sm:rounded-[28px]';
 const BENTO_SURFACE = 'bg-[#FAF7F4]';
+
+/** Высота ряда: фото-блок задаёт минимум, текст подтягивается. */
+const HOW_TEXT_MIN_H = 'sm:min-h-[18rem]';
+const HOW_PHOTO_MIN_H = 'min-h-[30rem] sm:min-h-[36rem] lg:min-h-[42rem]';
 
 type HowTab = {
   id: LandingHowTabId;
@@ -26,7 +33,6 @@ type HowTab = {
   text: string;
   imageSrc: string;
   imageAlt: string;
-  containOnMobile?: boolean;
 };
 
 const HOW_TABS: HowTab[] = [
@@ -36,9 +42,8 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 1',
     title: 'Выберите услугу',
     text: 'Откройте каталог, выберите категорию, мастера или конкретную услугу — всё в одном месте.',
-    imageSrc: PHOTO('4.png'),
-    imageAlt: '',
-    containOnMobile: true,
+    imageSrc: howItWorksPhoto('1.png'),
+    imageAlt: 'Выбор услуги в приложении',
   },
   {
     id: LANDING_HOW_TAB_SLOTS,
@@ -46,8 +51,8 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 2',
     title: 'Выберите время',
     text: 'Смотрите реальные свободные окна мастера и доступные даты без звонков и переписок.',
-    imageSrc: PHOTO('2.png'),
-    imageAlt: 'Выберите время',
+    imageSrc: howItWorksPhoto('2.png'),
+    imageAlt: 'Выбор даты и времени',
   },
   {
     id: LANDING_HOW_TAB_BOOKING,
@@ -55,7 +60,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 3',
     title: 'Запишитесь',
     text: 'Подтвердите визит в пару кликов — мастер сразу увидит заявку в своём кабинете.',
-    imageSrc: PHOTO('2.png'),
+    imageSrc: howItWorksPhoto('3.png'),
     imageAlt: 'Подтверждение записи',
   },
   {
@@ -64,9 +69,8 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 4',
     title: 'Получите напоминание',
     text: 'Подтверждение и напоминание придут в Telegram — меньше неявок и забытых визитов.',
-    imageSrc: PHOTO('4.png'),
-    imageAlt: '',
-    containOnMobile: true,
+    imageSrc: howItWorksPhoto('4.png'),
+    imageAlt: 'Напоминание о записи',
   },
   {
     id: LANDING_HOW_TAB_HISTORY,
@@ -74,7 +78,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 5',
     title: 'Все записи под рукой',
     text: 'Будущие и прошлые визиты хранятся в профиле — удобно перенести, отменить или записаться снова.',
-    imageSrc: PHOTO('2.png'),
+    imageSrc: howItWorksPhoto('5.png'),
     imageAlt: 'История записей',
   },
 ];
@@ -108,10 +112,6 @@ export const HomeHowItWorks: FC = () => {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [location.hash, location.pathname]);
-
-  const fitClass = activeTab.containOnMobile
-    ? 'object-contain object-center p-3 sm:object-cover sm:p-0'
-    : 'object-cover';
 
   return (
     <section id="how-it-works" className={`${homeSection} scroll-mt-28`} aria-labelledby="home-how-heading">
@@ -156,10 +156,10 @@ export const HomeHowItWorks: FC = () => {
         id={activeTab.id}
         role="tabpanel"
         aria-labelledby={`${activeTab.id}-tab`}
-        className="mt-6 grid grid-cols-1 gap-2.5 sm:mt-8 sm:grid-cols-12 sm:items-stretch sm:gap-4"
+        className="mt-6 grid grid-cols-1 gap-2.5 sm:mt-8 sm:grid-cols-12 sm:items-stretch sm:gap-4 lg:gap-5"
       >
         <article
-          className={`${BENTO_ROUND} ${BENTO_SURFACE} flex flex-col justify-center p-5 sm:col-span-7 sm:min-h-[18rem] sm:p-10`}
+          className={`${BENTO_ROUND} ${BENTO_SURFACE} ${HOW_TEXT_MIN_H} flex h-full flex-col justify-center p-5 sm:col-span-5 sm:p-8 lg:col-span-5 lg:p-10`}
         >
           <StepBadge>{activeTab.stepLabel}</StepBadge>
           <h3 className="text-[1.375rem] font-bold leading-[1.1] tracking-[-0.02em] text-[#111827] sm:text-[clamp(1.5rem,4.5vw,2.25rem)] sm:leading-[1.08] sm:tracking-[-0.03em]">
@@ -175,16 +175,18 @@ export const HomeHowItWorks: FC = () => {
           ) : null}
         </article>
 
-        <div className="sm:col-span-5 sm:flex sm:h-full">
+        <div
+          className={`min-w-0 self-stretch sm:col-span-7 sm:h-full lg:col-span-7 ${HOW_PHOTO_MIN_H}`}
+        >
           <article
-            className={`${BENTO_ROUND} ${activeTab.containOnMobile ? 'bg-[#FAF7F4]' : ''} aspect-[4/5] w-full sm:aspect-[4/5] sm:min-h-0`}
+            className={`${BENTO_ROUND} ${BENTO_SURFACE} relative h-full w-full sm:min-h-0`}
           >
             <ImageReveal
               src={activeTab.imageSrc}
               alt={activeTab.imageAlt}
               loading="lazy"
               draggable={false}
-              className={`block h-full w-full ${fitClass}`}
+              className="absolute inset-0 block h-full w-full max-h-full max-w-full object-contain object-center"
             />
           </article>
         </div>

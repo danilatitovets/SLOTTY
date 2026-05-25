@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { loadProfileAuthContext } from '../modules/profiles/profileAccount.service.js';
+import type { ProfileAccountStatus } from '../modules/profiles/profileAccount.service.js';
 import { ApiError } from '../utils/ApiError.js';
 
 export type JwtUserRole = 'client' | 'master' | 'platform_admin';
@@ -8,6 +10,10 @@ export type JwtUserRole = 'client' | 'master' | 'platform_admin';
 export interface AuthUserPayload {
   id: string;
   role: JwtUserRole;
+  accountStatus: ProfileAccountStatus;
+  restrictionReason: string | null;
+  blockedReason: string | null;
+  accessRestrictedUntil: string | null;
 }
 
 interface JwtClaims {
@@ -17,7 +23,20 @@ interface JwtClaims {
   exp?: number;
 }
 
-export function authMiddleware(req: Request, _res: Response, next: NextFunction) {
+function applyBlockedDeleted(ctx: Awaited<ReturnType<typeof loadProfileAuthContext>>): ApiError | null {
+  if (ctx.accountStatus === 'blocked') {
+    const reason = ctx.blockedReason?.trim() || 'Аккаунт заблокирован';
+    const err = ApiError.forbidden(`Аккаунт заблокирован. Причина: ${reason}`, 'ACCOUNT_BLOCKED');
+    err.reason = ctx.blockedReason?.trim() || undefined;
+    return err;
+  }
+  if (ctx.accountStatus === 'deleted') {
+    return ApiError.forbidden('Аккаунт удалён', 'ACCOUNT_DELETED');
+  }
+  return null;
+}
+
+export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return next(ApiError.unauthorized('Missing bearer token', 'NO_TOKEN'));
@@ -28,18 +47,31 @@ export function authMiddleware(req: Request, _res: Response, next: NextFunction)
   }
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtClaims;
-    if (!decoded.sub || !decoded.role) {
+    if (!decoded.sub) {
       return next(ApiError.unauthorized('Invalid token payload', 'BAD_PAYLOAD'));
     }
-    req.user = { id: decoded.sub, role: decoded.role };
+    const ctx = await loadProfileAuthContext(decoded.sub);
+    const blockedErr = applyBlockedDeleted(ctx);
+    if (blockedErr) {
+      return next(blockedErr);
+    }
+    req.user = {
+      id: ctx.id,
+      role: ctx.role,
+      accountStatus: ctx.accountStatus,
+      restrictionReason: ctx.restrictionReason,
+      blockedReason: ctx.blockedReason,
+      accessRestrictedUntil: ctx.accessRestrictedUntil,
+    };
     next();
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError) return next(err);
     next(ApiError.unauthorized('Invalid or expired token', 'INVALID_TOKEN'));
   }
 }
 
 /** Если Bearer валиден — заполняет req.user; иначе продолжает без пользователя. */
-export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
+export async function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return next();
@@ -48,9 +80,19 @@ export function optionalAuthMiddleware(req: Request, _res: Response, next: NextF
   if (!token) return next();
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtClaims;
-    if (decoded.sub && decoded.role) {
-      req.user = { id: decoded.sub, role: decoded.role };
+    if (!decoded.sub) return next();
+    const ctx = await loadProfileAuthContext(decoded.sub);
+    if (ctx.accountStatus === 'blocked' || ctx.accountStatus === 'deleted') {
+      return next();
     }
+    req.user = {
+      id: ctx.id,
+      role: ctx.role,
+      accountStatus: ctx.accountStatus,
+      restrictionReason: ctx.restrictionReason,
+      blockedReason: ctx.blockedReason,
+      accessRestrictedUntil: ctx.accessRestrictedUntil,
+    };
   } catch {
     /* ignore invalid optional token */
   }

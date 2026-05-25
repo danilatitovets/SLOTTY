@@ -1,5 +1,4 @@
 import { AppointmentsDesktopHero, type AppointmentsTabStats } from './AppointmentsDesktopHero';
-import { AppointmentsTabIntro } from './AppointmentsTabIntro';
 import type { AppointmentsTabId } from './appointmentsTypes';
 
 type Props = {
@@ -8,11 +7,15 @@ type Props = {
 };
 
 export function AppointmentsPageHeader({ tab, stats }: Props) {
+  const showMobileHero = tab !== 'history';
+
   return (
     <>
-      <div className="lg:hidden">
-        <AppointmentsTabIntro tab={tab} />
-      </div>
+      {showMobileHero ? (
+        <div className="pb-4 lg:hidden">
+          <AppointmentsDesktopHero tab={tab} stats={stats} />
+        </div>
+      ) : null}
       <div className="hidden lg:block">
         <AppointmentsDesktopHero tab={tab} stats={stats} />
       </div>

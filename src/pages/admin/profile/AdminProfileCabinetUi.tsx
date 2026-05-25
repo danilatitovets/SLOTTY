@@ -1,5 +1,6 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { BY } from 'country-flag-icons/react/1x1';
+import { AboutDescriptionText } from './AboutDescriptionText';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
@@ -8,11 +9,21 @@ import {
   formatScheduleClientPreview,
   WEEKDAY_LABELS_SHORT,
 } from '../../../features/master/model/masterDraftStorage';
-import { contactRowsFromDraft } from '../../../features/master-onboarding/model/masterContacts';
-import { ContactChannelBrandIcon } from '../../master-onboarding/MasterProfileContactsBlock';
-import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { resolveFilledContacts } from '../../../features/master-onboarding/model/masterContacts';
+import { MasterContactsChips } from '../../master-onboarding/MasterContactsChips';
+import { HiCamera } from 'react-icons/hi2';
+import { ProfileAvatarImage, ProfileCoverImage } from './adminProfileMedia';
+import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
+import { MasterVerificationStatusBadge } from '../../../shared/ui/MasterVerificationStatusBadge';
+import { resolveCoverUrl, useMasterCoverUpload } from './masterProfileCover';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
-import { cabinetCard, cabinetCardPad, cabinetIconCircle, cabinetPinkBtn } from './adminProfileCabinetTheme';
+import {
+  cabinetCard,
+  cabinetCardPad,
+  cabinetIconCircle,
+  cabinetInsetTile,
+  cabinetPinkBtn,
+} from './adminProfileCabinetTheme';
 
 /** Иконка секции: мягкий квадрат, единый набор SVG. */
 function CabinetSectionIcon({ name, size = 18 }: { name: CabinetIconName; size?: number }) {
@@ -25,8 +36,8 @@ function CabinetSectionIcon({ name, size = 18 }: { name: CabinetIconName; size?:
 
 export function CabinetPageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[460px] bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827] lg:max-w-none lg:bg-transparent lg:pb-0 lg:shadow-none">
-      {children}
+    <div className="-mx-4 min-w-0 w-auto bg-[#F5F5F5] pb-[calc(2rem+env(safe-area-inset-bottom,0px))] text-[#111827] lg:mx-0 lg:w-full lg:max-w-none lg:bg-transparent lg:pb-0">
+      <div className="px-4 lg:px-0">{children}</div>
     </div>
   );
 }
@@ -100,7 +111,7 @@ function StatMiniCard({ icon, label, value, empty }: StatMiniDisplay & { icon: R
   const compactValue = empty && value.length > 5;
   const compactLabel = label.length > 11;
   return (
-    <div className="flex min-h-[108px] min-w-0 flex-1 flex-col items-center rounded-[20px] bg-[#F7F7F8] px-1.5 py-3.5 shadow-[0_4px_16px_rgba(17,24,39,0.04)]">
+    <div className={`flex min-h-[108px] min-w-0 flex-1 flex-col items-center px-1.5 py-3.5 ${cabinetInsetTile}`}>
       <span className={`${cabinetIconCircle} h-9 w-9`}>{icon}</span>
       <p
         className={`mt-2 flex min-h-[22px] max-w-full items-center justify-center px-0.5 text-center font-semibold tabular-nums leading-tight tracking-[-0.03em] ${
@@ -129,44 +140,71 @@ export function AdminProfileHero({
   stats: ProfileStats;
   bottomSlot?: ReactNode;
 }) {
+  const { coverInputRef, coverBusy, coverError, onCoverFileChange, pickCover } = useMasterCoverUpload();
+  const { verified, pendingSteps } = useAccountVerificationStatus();
   const photoSrc = (draft.photoUrl && draft.photoUrl.trim()) || defaultMasterAvatarUrl(draft.name || 'Мастер');
+  const dedicatedCover = resolveCoverUrl(draft);
+  const coverSrc = dedicatedCover || photoSrc;
   const displayName = draft.name.trim() || 'Мастер';
 
   return (
-    <section className={`${cabinetCard} relative z-0 rounded-t-none border-t-0 shadow-none`}>
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#F7F7F8]">
-        <ImageReveal
-          src={photoSrc}
+    <section className={`${cabinetCard} relative z-0 rounded-t-none`}>
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        aria-hidden
+        tabIndex={-1}
+        onChange={onCoverFileChange}
+      />
+      <div className="group relative">
+        <ProfileCoverImage
+          src={coverSrc}
           alt=""
-          width={640}
-          height={360}
-          className="h-full w-full object-cover"
+          aspectClass="aspect-[16/9] w-full bg-[#F7F7F8]"
           onError={(event) => {
             (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
           }}
         />
+        <button
+          type="button"
+          onClick={pickCover}
+          disabled={coverBusy}
+          aria-label={coverBusy ? 'Загрузка обложки' : 'Изменить обложку'}
+          className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#F47C8C] shadow-sm transition hover:bg-white active:scale-[0.98] disabled:opacity-60"
+        >
+          <HiCamera className="h-5 w-5" aria-hidden />
+        </button>
       </div>
+      {coverError ? (
+        <p className="px-4 pt-2 text-[12px] font-medium text-[#DC2626]">{coverError}</p>
+      ) : null}
 
       <div className="relative px-4 pb-5 pt-0">
         <div className="-mt-11 flex justify-center">
-          <div className="relative h-[88px] w-[88px] overflow-hidden rounded-full bg-white ring-4 ring-white shadow-[0_8px_24px_rgba(17,24,39,0.1)]">
-            <ImageReveal
-              src={photoSrc}
-              alt=""
-              width={176}
-              height={176}
-              className="h-full w-full object-cover"
-              onError={(event) => {
-                (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-              }}
-            />
-          </div>
+          <ProfileAvatarImage
+            src={photoSrc}
+            alt=""
+            sizeClass="h-[88px] w-[88px]"
+            ringClassName="bg-white ring-4 ring-white"
+            onError={(event) => {
+              (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
+            }}
+          />
         </div>
 
         <div className="mt-3 text-center">
-          <h2 className="text-[clamp(18px,4.5vw,22px)] font-semibold leading-tight tracking-[-0.04em] text-balance text-[#111827]">
-            {displayName}
-          </h2>
+          <div className="flex items-center justify-center gap-1.5">
+            <h2 className="text-[clamp(18px,4.5vw,22px)] font-semibold leading-tight tracking-[-0.04em] text-balance text-[#111827]">
+              {displayName}
+            </h2>
+            <MasterVerificationStatusBadge
+              verified={verified}
+              pendingSteps={pendingSteps}
+              className="h-5 w-5 shrink-0"
+            />
+          </div>
           <span className="mt-2 inline-flex rounded-full bg-[#FFF1F4] px-3.5 py-1 text-[12px] font-semibold text-[#F47C8C]">
             Мастер
           </span>
@@ -203,7 +241,7 @@ function InfoGridCell({
   icon: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[18px] bg-[#F7F7F8] p-3">
+    <div className={`flex items-center gap-3 p-3 ${cabinetInsetTile}`}>
       <span className={`${cabinetIconCircle} h-9 w-9`}>{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium leading-tight text-[#6B7280]">{label}</p>
@@ -221,8 +259,7 @@ function valueOrDash(value?: string | null): string {
 }
 
 export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: () => void }) {
-  const telegramRow = contactRowsFromDraft(draft).find((r) => r.type === 'telegram' && r.value.trim());
-  const telegram = telegramRow?.value ?? (draft.contact.trim() && draft.contact.includes('@') ? draft.contact : '');
+  const clientContacts = resolveFilledContacts(draft);
 
   return (
     <section className={`${cabinetCard} ${cabinetCardPad}`}>
@@ -245,39 +282,30 @@ export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: ()
           icon={<CabinetIcon name="user" size={18} />}
         />
         <InfoGridCell
-          label="Категория"
-          value={valueOrDash(draft.category)}
-          icon={<CabinetIcon name="tag" size={18} />}
-        />
-        <InfoGridCell
           label="Телефон"
           value={valueOrDash(draft.phone)}
           icon={
-            draft.phone?.trim() ? (
-              <BY title="Беларусь" className="h-[18px] w-[18px] rounded-full object-cover" />
-            ) : (
-              <CabinetIcon name="phone" size={18} />
-            )
+            <BY title="Беларусь" className="h-[18px] w-[18px] rounded-full object-cover" />
           }
         />
-        <InfoGridCell
-          label="Telegram"
-          value={valueOrDash(telegram)}
-          icon={
-            telegramRow ? (
-              <ContactChannelBrandIcon type="telegram" className="h-[18px] w-[18px]" />
-            ) : (
-              <CabinetIcon name="send" size={18} />
-            )
-          }
-        />
+      </div>
+
+      <div className="mt-4 border-t border-[#EEEEEE] pt-4">
+        <p className="text-[12px] font-medium text-[#9CA3AF]">Контакты для клиентов</p>
+        {clientContacts.length > 0 ? (
+          <div className="mt-2.5">
+            <MasterContactsChips contacts={clientContacts} size="compact" />
+          </div>
+        ) : (
+          <p className="mt-1.5 text-[15px] font-medium text-[#9CA3AF]">—</p>
+        )}
       </div>
     </section>
   );
 }
 
 export function AboutCard({ description }: { description: string }) {
-  const text = valueOrDash(description);
+  const trimmed = description?.trim() ?? '';
   return (
     <section className={`${cabinetCard} ${cabinetCardPad}`}>
       <div className="flex items-start gap-3">
@@ -286,7 +314,14 @@ export function AboutCard({ description }: { description: string }) {
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">О себе</h2>
-          <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-[#6B7280]">{text}</p>
+          <div className="mt-2">
+            <AboutDescriptionText
+              text={trimmed}
+              placeholder="—"
+              emptyClassName="text-[#6B7280]"
+              textClassName="text-[#6B7280]"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -316,7 +351,7 @@ export function ScheduleWorkCard({
       </div>
 
       <div
-        className="mt-3 grid grid-cols-7 gap-1 rounded-xl bg-[#F7F7F8] p-1"
+        className={`mt-3 grid grid-cols-7 gap-1 p-1 ${cabinetInsetTile}`}
         role="list"
         aria-label="Рабочие дни недели"
       >
@@ -328,7 +363,7 @@ export function ScheduleWorkCard({
               role="listitem"
               className={`flex h-8 items-center justify-center rounded-lg text-[11px] font-semibold ${
                 active
-                  ? 'bg-white text-[#111827] shadow-[0_1px_3px_rgba(17,24,39,0.05)]'
+                  ? 'bg-white text-[#111827] ring-1 ring-[#EEEEEE]'
                   : 'text-[#9CA3AF]'
               }`}
             >
@@ -341,7 +376,7 @@ export function ScheduleWorkCard({
       <button
         type="button"
         onClick={onEditSchedule}
-        className={`mt-4 flex min-h-11 w-full items-center justify-center rounded-2xl text-[15px] font-semibold transition ${cabinetPinkBtn}`}
+        className={`mt-4 flex min-h-11 w-full items-center justify-center text-[15px] font-semibold transition ${cabinetPinkBtn}`}
       >
         Изменить график работы
       </button>

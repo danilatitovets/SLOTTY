@@ -13,14 +13,16 @@ type Props = {
 
 export function BookingPageShell({ children, backTo, backLabel = 'Назад' }: Props) {
   return (
-    <main className={`min-h-dvh text-[#111827] ${catalogCanvasClass}`}>
-      <div className="mx-auto w-full max-w-lg px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(5.25rem+env(safe-area-inset-top,0px))] lg:max-w-none lg:px-0 lg:pb-0 lg:pt-6">
-        <div className={`${CLIENT_DESKTOP_SHELL_CLASS} lg:pb-12`}>
+    <main className={`min-h-dvh w-full min-w-0 text-[#111827] ${catalogCanvasClass}`}>
+      <div className="w-full min-w-0 px-4 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-[calc(1rem+env(safe-area-inset-top,0px))] sm:px-5 lg:px-0 lg:pb-0 lg:pt-6">
+        <div
+          className={`w-full min-w-0 lg:pb-12 ${CLIENT_DESKTOP_SHELL_CLASS} max-lg:!mx-0 max-lg:!max-w-none max-lg:!px-0`}
+        >
           <Link to={backTo} className={`${bookingBackLink} mb-4 lg:hidden`}>
             <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
             {backLabel}
           </Link>
-          {children}
+          <div className="w-full min-w-0">{children}</div>
         </div>
       </div>
     </main>

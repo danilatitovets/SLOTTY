@@ -14,14 +14,9 @@ export function SettingsLoginMethodsSection() {
   return (
     <section className={settingsPanel}>
       {isAuthenticated && backendConfigured ? (
-        <LoginMethodsPanel mode="settings" appearance="sheet" />
+        <LoginMethodsPanel mode="settings" appearance="okx" />
       ) : (
-        <>
-          <p className="text-[14px] leading-relaxed text-[#6B7280]">
-            Войдите, чтобы привязать Telegram, Google и email к кабинету.
-          </p>
-          <LoginMethodsPanel mode="login" appearance="page" />
-        </>
+        <LoginMethodsPanel mode="login" appearance="page" />
       )}
     </section>
   );

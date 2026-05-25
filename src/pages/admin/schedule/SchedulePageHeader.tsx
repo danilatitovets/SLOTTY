@@ -1,5 +1,4 @@
 import { ScheduleDesktopHero } from './ScheduleDesktopHero';
-import { ScheduleTabIntro } from './ScheduleTabIntro';
 import type { ScheduleTabMetrics } from './scheduleTabMetrics';
 import type { SchedulePageTab } from './scheduleTypes';
 
@@ -11,8 +10,8 @@ type Props = {
 export function SchedulePageHeader({ activeTab, metrics }: Props) {
   return (
     <>
-      <div className="lg:hidden">
-        <ScheduleTabIntro tab={activeTab} />
+      <div className="pb-4 lg:hidden">
+        <ScheduleDesktopHero tab={activeTab} metrics={metrics} />
       </div>
       <div className="hidden lg:block">
         <ScheduleDesktopHero tab={activeTab} metrics={metrics} />

@@ -79,6 +79,11 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).max(256).optional(),
   ),
+  /** Chat ID админа для уведомлений о модерации (заявки на смену категории и т.п.). */
+  TELEGRAM_ADMIN_CHAT_ID: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
   /** В production: разрешить PATCH .../subscription/mock (только при `true`). В dev/test mock включён по NODE_ENV. */
   ALLOW_SUBSCRIPTION_MOCK: z
     .string()

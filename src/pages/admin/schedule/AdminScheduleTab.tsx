@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
-import { preloadTabIntroImages } from '../useTabIntroImage';
 import { useAdminAppointments } from '../useAdminMasterData';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { AdminToast } from '../shared/AdminToast';
@@ -16,16 +15,16 @@ import { ScheduleBottomTabBar } from './ScheduleBottomTabBar';
 import { ScheduleSectionTabs } from './ScheduleSectionTabs';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { ScheduleCreateTab } from './ScheduleCreateTab';
+import { useMasterPlatformAccess } from '../../../features/auth/context/MasterPlatformAccessContext';
 import { ServicesTabFab } from '../services/ServicesTabFab';
 import { ScheduleSlotsListTab } from './ScheduleSlotsListTab';
 import {
-  SCHEDULE_PAGE_BG,
+  SCHEDULE_MOBILE_CANVAS,
   scheduleDesktopCard,
   scheduleDesktopTabsSticky,
   scheduleShellCard,
   scheduleTabPanelShell,
 } from './adminScheduleTheme';
-import { SCHEDULE_TAB_INTRO_IMAGES } from './ScheduleTabIntro';
 import { SchedulePageHeader } from './SchedulePageHeader';
 import { computeScheduleTabMetrics } from './scheduleTabMetrics';
 import type { PlannedSlot, SchedulePageTab, ScheduleWindowView } from './scheduleTypes';
@@ -34,9 +33,10 @@ import {
   addMinutesToTime,
   buildPlannedSlots,
   evaluatePlannedSlot,
-  filterValidTemplateStartTimes,
   isLocalDateIsoBeforeToday,
+  isScheduleWindowBooked,
   localDateTimeToUtcIso,
+  MSG_SCHEDULE_WINDOW_BOOKED,
   serviceTitleById,
   templateDisplayLabel,
   timeToMinutes,
@@ -76,6 +76,7 @@ type OpenAddSheetOptions = {
 };
 
 export function AdminScheduleTab({ draft }: Props) {
+  const masterWrite = useMasterPlatformAccess();
   const { useCabinetApi } = useAdminMasterCabinet();
   const { appointments } = useAdminAppointments();
   const masterId = draft.masterId ?? 'local';
@@ -100,9 +101,6 @@ export function AdminScheduleTab({ draft }: Props) {
 
   const [pageTab, setPageTab] = useState<SchedulePageTab>('create');
 
-  useEffect(() => {
-    preloadTabIntroImages(SCHEDULE_TAB_INTRO_IMAGES);
-  }, []);
   const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
   const [createError, setCreateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -116,12 +114,16 @@ export function AdminScheduleTab({ draft }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [repeatSettings, setRepeatSettings] = useState<RepeatSettingsValue>(DEFAULT_REPEAT_SETTINGS);
-  const [templateStartTimes, setTemplateStartTimes] = useState<string[]>(['12:00']);
 
   const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const [templateMenuTarget, setTemplateMenuTarget] = useState<WindowTemplate | null>(null);
   const [editWindow, setEditWindow] = useState<ScheduleWindowView | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+
+  const editWindowLive = useMemo(() => {
+    if (!editWindow) return null;
+    return windows.find((w) => w.id === editWindow.id) ?? editWindow;
+  }, [editWindow, windows]);
 
   const dismissSuggestion = useCallback((id: string) => {
     setDismissedSuggestionIds((prev) => {
@@ -167,20 +169,8 @@ export function AdminScheduleTab({ draft }: Props) {
   useEffect(() => {
     if (manualMode || !selectedTemplate) return;
     setServiceId(selectedTemplate.serviceId);
-    const primary = templateStartTimes[0] ?? startTime;
-    if (primary) {
-      setStartTime(primary);
-      setEndTime(addMinutesToTime(primary, selectedTemplate.durationMinutes));
-    }
-  }, [manualMode, selectedTemplate, startTime, templateStartTimes]);
-
-  useEffect(() => {
-    if (manualMode || !selectedTemplate) return;
-    setTemplateStartTimes((prev) => {
-      const valid = filterValidTemplateStartTimes(prev, selectedTemplate.durationMinutes);
-      return valid.length > 0 ? valid : ['12:00'];
-    });
-  }, [manualMode, selectedTemplate?.durationMinutes, selectedTemplate?.id]);
+    setEndTime(addMinutesToTime(startTime, selectedTemplate.durationMinutes));
+  }, [manualMode, selectedTemplate, startTime]);
 
   const effectiveServiceId = useMemo(() => {
     if (selectedTemplate && !manualMode) return selectedTemplate.serviceId;
@@ -192,23 +182,13 @@ export function AdminScheduleTab({ draft }: Props) {
 
   const plannedSlots: PlannedSlot[] = useMemo(() => {
     const sid = effectiveServiceId;
-    if (templateModeActive && selectedTemplate) {
-      return buildPlannedSlots(dateIso, startTime, endTime, sid, repeatSettings, {
-        templateStartTimes,
-        durationMinutes: selectedTemplate.durationMinutes,
-      });
-    }
     return buildPlannedSlots(dateIso, startTime, endTime, sid, repeatSettings);
   }, [
     dateIso,
     effectiveServiceId,
     endTime,
-    manualMode,
     repeatSettings,
-    selectedTemplate,
     startTime,
-    templateModeActive,
-    templateStartTimes,
   ]);
 
   const plannedStats = useMemo(() => {
@@ -228,13 +208,6 @@ export function AdminScheduleTab({ draft }: Props) {
       selectedTemplate && !manualMode
         ? templateDisplayLabel(selectedTemplate)
         : serviceTitleById(visibleServices, effectiveServiceId);
-    if (templateModeActive && templateStartTimes.length > 0) {
-      const timesLabel =
-        templateStartTimes.length === 1
-          ? `${templateStartTimes[0]}–${addMinutesToTime(templateStartTimes[0], selectedTemplate!.durationMinutes)}`
-          : `${templateStartTimes.length} слота в день`;
-      return `${name} · ${timesLabel}`;
-    }
     if (timeToMinutes(endTime) <= timeToMinutes(startTime)) return null;
     return `${name} · ${startTime}–${endTime}`;
   }, [
@@ -243,8 +216,6 @@ export function AdminScheduleTab({ draft }: Props) {
     manualMode,
     selectedTemplate,
     startTime,
-    templateModeActive,
-    templateStartTimes,
     visibleServices,
   ]);
 
@@ -255,11 +226,9 @@ export function AdminScheduleTab({ draft }: Props) {
       const tpl = templates.find((t) => t.id === id);
       if (tpl) {
         setServiceId(tpl.serviceId);
-        setTemplateStartTimes((prev) => {
-          const base = prev.length > 0 ? prev : [startTime || '12:00'];
-          const valid = filterValidTemplateStartTimes(base, tpl.durationMinutes);
-          return valid.length > 0 ? valid : ['12:00'];
-        });
+        const st = startTime || '12:00';
+        setStartTime(st);
+        setEndTime(addMinutesToTime(st, tpl.durationMinutes));
       }
     },
     [startTime, templates],
@@ -290,19 +259,6 @@ export function AdminScheduleTab({ draft }: Props) {
     setCreateError(null);
   }, []);
 
-  const onTemplateStartTimesChange = useCallback(
-    (times: string[]) => {
-      setTemplateStartTimes(times);
-      const first = times[0];
-      if (!first) return;
-      setStartTime(first);
-      if (selectedTemplate) {
-        setEndTime(addMinutesToTime(first, selectedTemplate.durationMinutes));
-      }
-    },
-    [selectedTemplate],
-  );
-
   const useTemplateAddWindow = useCallback(() => {
     setManualMode(false);
     setCreateError(null);
@@ -317,7 +273,10 @@ export function AdminScheduleTab({ draft }: Props) {
     if (!dateIso.trim()) return 'Укажите дату.';
     if (isLocalDateIsoBeforeToday(dateIso)) return 'Нельзя выбрать дату в прошлом.';
     if (templateModeActive) {
-      if (templateStartTimes.length === 0) return 'Выберите хотя бы одно время начала.';
+      if (!startTime.trim() || !endTime.trim()) return 'Укажите время.';
+      if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+        return 'Время окончания должно быть позже начала.';
+      }
     } else {
       if (!startTime.trim() || !endTime.trim()) return 'Укажите время.';
       if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
@@ -343,7 +302,6 @@ export function AdminScheduleTab({ draft }: Props) {
     scheduleHorizonDays,
     startTime,
     templateModeActive,
-    templateStartTimes,
     visibleServices,
   ]);
 
@@ -448,8 +406,8 @@ export function AdminScheduleTab({ draft }: Props) {
     endTime: string;
     serviceId: string | null;
   }) => {
-    if (!editWindow) return;
-    if (editWindow.status === 'booked') {
+    if (!editWindowLive) return;
+    if (isScheduleWindowBooked(editWindowLive, appointments)) {
       showToast('На это окно уже есть запись — изменить нельзя');
       return;
     }
@@ -463,13 +421,13 @@ export function AdminScheduleTab({ draft }: Props) {
     }
     const startsAt = localDateTimeToUtcIso(payload.dateIso, payload.startTime);
     const endsAt = localDateTimeToUtcIso(payload.dateIso, payload.endTime);
-    if (slotOverlaps(startsAt, endsAt, editWindow.id)) {
+    if (slotOverlaps(startsAt, endsAt, editWindowLive.id)) {
       showToast('Время пересекается с другим окном');
       return;
     }
     setEditSaving(true);
     try {
-      await updateSlot(editWindow.id, {
+      await updateSlot(editWindowLive.id, {
         startsAt,
         endsAt,
         serviceId: payload.serviceId,
@@ -489,14 +447,14 @@ export function AdminScheduleTab({ draft }: Props) {
   );
 
   const onEditDelete = async () => {
-    if (!editWindow) return;
-    if (editWindow.status === 'booked') {
-      showToast('На это окно есть запись — удалить нельзя');
+    if (!editWindowLive) return;
+    if (isScheduleWindowBooked(editWindowLive, appointments)) {
+      showToast(MSG_SCHEDULE_WINDOW_BOOKED);
       return;
     }
     setEditSaving(true);
     try {
-      await removeSlot(editWindow.id);
+      await removeSlot(editWindowLive.id);
       showToast('Окно удалено');
       setEditWindow(null);
     } catch (e) {
@@ -541,20 +499,19 @@ export function AdminScheduleTab({ draft }: Props) {
           <>
             {promoStackMobile}
             <div className={scheduleTabPanelShell}>
-              <div className="lg:p-6">
-                <ScheduleCreateTab
-                  templates={templates}
-                  selectedTemplateId={selectedTemplateId}
-                  onTemplateSelect={(id) => {
-                    applyTemplate(id);
-                    openAddSheet({ templateId: id });
-                  }}
-                  onTemplateMenu={setTemplateMenuTarget}
-                  onCreateTemplate={() => setTemplateSheetOpen(true)}
-                  onOpenWithoutTemplate={() => openAddSheet({ withoutTemplate: true })}
-                  aside={promoAside}
-                />
-              </div>
+              <ScheduleCreateTab
+                templates={templates}
+                selectedTemplateId={selectedTemplateId}
+                onTemplateSelect={(id) => {
+                  applyTemplate(id);
+                  openAddSheet({ templateId: id });
+                }}
+                onTemplateMenu={setTemplateMenuTarget}
+                onCreateTemplate={() => setTemplateSheetOpen(true)}
+                onOpenWithoutTemplate={() => openAddSheet({ withoutTemplate: true })}
+                onOpenNewWindow={() => openAddSheet()}
+                aside={promoAside}
+              />
             </div>
           </>
         ) : null}
@@ -565,7 +522,6 @@ export function AdminScheduleTab({ draft }: Props) {
               <ScheduleCalendar
                 windows={windows}
                 loading={loading}
-                slotStats={tabMetrics.calendar}
                 onWindowClick={(w) => setEditWindow(w)}
               />
             </div>
@@ -579,7 +535,6 @@ export function AdminScheduleTab({ draft }: Props) {
                 windows={windows}
                 loading={loading}
                 focusDayIso={listFocusDayIso}
-                slotStats={tabMetrics.list}
                 onWindowClick={(w) => setEditWindow(w)}
               />
             </div>
@@ -594,7 +549,7 @@ export function AdminScheduleTab({ draft }: Props) {
       <ScheduleBottomTabBar active={pageTab} onChange={setPageTab} variant="mobile" />
 
       <section
-        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${SCHEDULE_PAGE_BG}`}
+        className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem+env(safe-area-inset-bottom,0px))] lg:hidden ${SCHEDULE_MOBILE_CANVAS}`}
       >
         <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
         {tabPanels}
@@ -605,7 +560,7 @@ export function AdminScheduleTab({ draft }: Props) {
           <ScheduleSectionTabs active={pageTab} onChange={setPageTab} />
         </div>
 
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 w-full max-w-none space-y-6">
           <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
           {tabPanels}
         </div>
@@ -618,8 +573,6 @@ export function AdminScheduleTab({ draft }: Props) {
         onDateIsoChange={setDateIso}
         startTime={startTime}
         onStartTimeChange={setStartTime}
-        templateStartTimes={templateStartTimes}
-        onTemplateStartTimesChange={onTemplateStartTimesChange}
         endTime={endTime}
         onEndTimeChange={setEndTime}
         manualMode={manualMode}
@@ -663,12 +616,18 @@ export function AdminScheduleTab({ draft }: Props) {
       />
 
       {pageTab === 'create' ? (
-        <ServicesTabFab ariaLabel="Новое окно" onClick={() => openAddSheet()} />
+        <ServicesTabFab
+          ariaLabel="Новое окно"
+          onClick={() => openAddSheet()}
+          disabled={!masterWrite.canMutate}
+          disabledTitle={masterWrite.mutateDisabledTitle}
+        />
       ) : null}
 
       <EditWindowModal
-        open={editWindow != null}
-        window={editWindow}
+        open={editWindowLive != null}
+        window={editWindowLive}
+        appointments={appointments}
         onClose={() => setEditWindow(null)}
         services={visibleServices}
         templates={templates}

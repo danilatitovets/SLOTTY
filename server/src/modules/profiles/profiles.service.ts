@@ -1,5 +1,9 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
+import {
+  effectiveAccountStatusFromRow,
+  type ProfileAccountStatus,
+} from './profileAccount.service.js';
 
 export interface ProfileDto {
   id: string;
@@ -16,11 +20,25 @@ export interface ProfileDto {
   account_email: string | null;
   privacy_consent_accepted_at: string | null;
   terms_accepted_at: string | null;
+  account_status: ProfileAccountStatus;
+  blocked_reason: string | null;
+  access_restriction_reason: string | null;
+  access_restricted_until: string | null;
+  /** Есть строка в master_profiles — можно открыть кабинет мастера (в т.ч. при role=platform_admin). */
+  hasMasterProfile: boolean;
 }
 
 function isOAuthProviderAvatarUrl(url: string): boolean {
   const u = url.toLowerCase();
   return u.includes('googleusercontent.com') || u.includes('ggpht.com');
+}
+
+export async function profileHasMasterProfile(profileId: string): Promise<boolean> {
+  const r = await query<{ ok: number }>(
+    `select 1 as ok from public.master_profiles where master_id = $1 limit 1`,
+    [profileId],
+  );
+  return (r.rowCount ?? 0) > 0;
 }
 
 async function fetchMasterCabinetPhotoUrl(profileId: string): Promise<string | null> {
@@ -202,10 +220,16 @@ export async function getProfileById(profileId: string): Promise<ProfileDto> {
     address: string | null;
     privacy_consent_accepted_at: Date | string | null;
     terms_accepted_at: Date | string | null;
+    account_status: ProfileAccountStatus;
+    blocked_reason: string | null;
+    access_restriction_reason: string | null;
+    access_restricted_until: Date | string | null;
   }>(
     `select id, telegram_user_id::text, telegram_username, full_name, avatar_url, role::text as role,
             phone, address,
-            privacy_consent_accepted_at::text, terms_accepted_at::text
+            privacy_consent_accepted_at::text, terms_accepted_at::text,
+            account_status::text as account_status,
+            blocked_reason, access_restriction_reason, access_restricted_until
      from public.profiles where id = $1`,
     [profileId],
   );
@@ -213,19 +237,16 @@ export async function getProfileById(profileId: string): Promise<ProfileDto> {
   if (!row) {
     throw ApiError.notFound('Profile not found');
   }
+  const has_master_profile = await profileHasMasterProfile(profileId);
+
   const [header_avatar_url, account_email, masterPersonal] = await Promise.all([
     resolveHeaderAvatarUrl(profileId, row.role, row.avatar_url),
     resolveAccountEmail(profileId),
-    row.role === 'master' || row.role === 'platform_admin'
-      ? fetchMasterCabinetPersonalFields(profileId)
-      : Promise.resolve(null),
+    has_master_profile ? fetchMasterCabinetPersonalFields(profileId) : Promise.resolve(null),
   ]);
   const personal = mergeMasterCabinetPersonalFields(row, masterPersonal);
 
-  if (
-    masterPersonal &&
-    (row.role === 'master' || row.role === 'platform_admin')
-  ) {
+  if (masterPersonal && has_master_profile) {
     const backfill: {
       full_name?: string | null;
       phone?: string | null;
@@ -259,6 +280,13 @@ export async function getProfileById(profileId: string): Promise<ProfileDto> {
     privacy_consent_accepted_at:
       row.privacy_consent_accepted_at == null ? null : String(row.privacy_consent_accepted_at),
     terms_accepted_at: row.terms_accepted_at == null ? null : String(row.terms_accepted_at),
+    account_status: effectiveAccountStatusFromRow(row),
+    blocked_reason: row.blocked_reason,
+    access_restriction_reason: row.access_restriction_reason,
+    access_restricted_until: row.access_restricted_until
+      ? new Date(row.access_restricted_until).toISOString()
+      : null,
+    hasMasterProfile: has_master_profile,
   };
 }
 

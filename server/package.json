@@ -8,7 +8,15 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "telegram:setup": "tsx src/scripts/setupTelegramBot.ts"
+    "telegram:setup": "tsx src/scripts/setupTelegramBot.ts",
+    "make:admin": "tsx src/scripts/makeAdmin.ts",
+    "e2e:platform-access": "tsx src/scripts/e2ePlatformAdminAccess.ts",
+    "e2e:booking-concurrency": "tsx src/scripts/e2eBookingConcurrency.ts",
+    "e2e:hardening-verify": "tsx src/scripts/e2eHardeningVerify.ts",
+    "e2e:google-dedup": "tsx src/scripts/e2eGoogleProfileDedup.ts",
+    "diagnose:profile": "tsx src/scripts/diagnoseProfileByEmail.ts",
+    "merge:google-duplicate": "tsx src/scripts/mergeGoogleDuplicateProfile.ts",
+    "test:client-ip": "tsx src/scripts/testClientIpSecurity.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -17,6 +25,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
     "pg": "^8.13.1",

@@ -1,4 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
+import { ADMIN_PATH } from '../../../app/paths';
+import { ProfileBottomTabBar } from './ProfileBottomTabBar';
 import type { ProfileSectionId } from './ProfileSectionTabs';
 
 export type { ProfileSectionId };
@@ -28,7 +31,12 @@ export function useProfileTabs(): ProfileTabContextValue {
   return ctx;
 }
 
-/** Табы встроены в карточку профиля (desktop + mobile). */
+/** Нижняя панель табов профиля на мобиле (как «Услуги» / «Записи»). */
 export function ProfileSectionTabsBar() {
-  return null;
+  const { pathname } = useLocation();
+  const { activeSection, setActiveSection } = useProfileTabs();
+
+  if (pathname !== ADMIN_PATH) return null;
+
+  return <ProfileBottomTabBar active={activeSection} onChange={setActiveSection} />;
 }

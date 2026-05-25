@@ -73,3 +73,11 @@ export async function switchMySubscriptionMock(
   const j = (await res.json()) as { subscription: MasterSubscriptionDto };
   return j.subscription;
 }
+
+export async function recordBillingCheckoutStarted(billingPeriod: 'month' | 'year'): Promise<void> {
+  const res = await apiFetch('/api/masters/me/billing/checkout-started', {
+    method: 'POST',
+    body: JSON.stringify({ billingPeriod }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}

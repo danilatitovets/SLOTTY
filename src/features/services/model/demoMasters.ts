@@ -7,6 +7,7 @@ import { addDays, isSameCalendarDay } from '../../booking/lib/calendar';
 import type { MasterDraft } from '../../profile/lib/demoMasterStorage';
 import { getStoredMasterDraft } from '../../profile/lib/demoMasterStorage';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import type { MasterContact } from '../../master-onboarding/model/masterContacts';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { DEMO_MASTER_LOCATIONS } from './demoMasterLocations';
 import {
@@ -23,6 +24,7 @@ export type ServiceListingRecord = {
   rating: number;
   /** TODO (Supabase): агрегат из таблицы reviews. */
   reviewsCount: number;
+  isVerified?: boolean;
   location: MasterLocation;
   priceFrom: number;
   photoUrl: string;
@@ -86,8 +88,12 @@ export type DemoMasterProfile = {
   bio: string;
   /** Телефон для связи (из черновика мастера). */
   phone?: string;
-  /** Telegram и др. */
+  /** Telegram и др. (legacy-строка). */
   contact?: string;
+  /** Структурированные контакты для клиентов. */
+  contacts?: MasterContact[];
+  /** Telegram + Google + подтверждённый email в настройках входа. */
+  isVerified?: boolean;
   services: DemoMasterService[];
   /**
    * Слоты по id услуги. Пустой массив в значении — нет окон на эту услугу.

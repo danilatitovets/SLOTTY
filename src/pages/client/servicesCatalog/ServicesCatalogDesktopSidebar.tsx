@@ -49,7 +49,7 @@ export function ServicesCatalogDesktopSidebar({
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain p-4 pt-3 scrollbar-hidden">
-        <FilterSection icon={HiSquares2X2} title="Категория" collapsible={false}>
+        <FilterSection icon={HiSquares2X2} title="Категория">
           <ServicesCatalogCategoryMenu
             categories={categories}
             categoryCode={filters.categoryCode}

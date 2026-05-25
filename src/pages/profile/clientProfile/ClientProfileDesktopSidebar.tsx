@@ -192,13 +192,18 @@ export function ClientProfileDesktopSidebar({
               }`}
             >
               <span>{tab.label}</span>
-              {count != null && count > 0 ? (
+              {count != null ? (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[12px] font-bold tabular-nums ${
-                    active ? 'bg-white/20 text-white' : 'bg-[#EBEBEB] text-[#374151]'
+                  className={`min-w-[1.375rem] rounded-full px-2 py-0.5 text-center text-[12px] font-bold tabular-nums ${
+                    count > 0
+                      ? active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[#EBEBEB] text-[#374151]'
+                      : 'invisible'
                   }`}
+                  aria-hidden={count <= 0}
                 >
-                  {count}
+                  {count > 0 ? count : 0}
                 </span>
               ) : null}
             </button>

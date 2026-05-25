@@ -24,3 +24,15 @@ export const adminFormSheetInsetTray = adminSheetInsetTray;
 export const adminFormSheetGhostBtn = adminSheetGhostBtn;
 
 export const adminFormSheetSecondaryBtn = adminSheetSecondaryBtn;
+
+/** Секции формы на сером полотне каталога — без белой карточки с тенью. */
+export const adminFormSheetSectionCatalog = 'space-y-4';
+
+export const adminFormSheetSectionTitleCatalog =
+  'text-[15px] font-bold tracking-[-0.03em] text-[#111827]';
+
+export const adminFormSheetSectionHintCatalog =
+  'mt-1 text-[13px] font-medium leading-relaxed text-[#6B7280]';
+
+export const adminFormSheetMetricCatalog =
+  'rounded-[10px] bg-[#EBEBEB] px-4 py-3.5';

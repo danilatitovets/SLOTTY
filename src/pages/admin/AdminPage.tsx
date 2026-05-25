@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import { ADMIN_PATH, BECOME_MASTER_PATH, HUB_PATH } from '../../app/paths';
+import { ADMIN_PATH, BECOME_MASTER_PATH, HUB_PATH, PLATFORM_ADMIN_PATH } from '../../app/paths';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { hasMasterCabinetAccess } from '../../features/auth/lib/hasMasterCabinetAccess';
 import { isDemoMaster } from '../../features/profile/lib/demoMasterStorage';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { AdminAppointmentsPage } from './appointments/AdminAppointmentsPage';
@@ -20,14 +21,19 @@ import { LoadingScreen } from '../../shared/ui/LoadingVideo';
 
 export function AdminPage() {
   const { profile, isLoading } = useAuth();
-  const apiMaster = Boolean(getApiBaseUrl() && profile?.role === 'master');
-  const allowed = isDemoMaster() || apiMaster;
+  const hasApi = Boolean(getApiBaseUrl());
+  const cabinetAccess = hasMasterCabinetAccess(profile);
+  const apiMaster = hasApi && cabinetAccess;
+  const allowed = apiMaster || (!hasApi && isDemoMaster());
 
   if (isLoading) {
     return <LoadingScreen className="bg-[#F1EFEF]" />;
   }
 
   if (!allowed) {
+    const isPlatformAdminWithoutCabinet =
+      hasApi && profile?.role === 'platform_admin' && !profile.hasMasterProfile;
+
     return (
       <div className="min-h-dvh bg-white pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-[calc(1rem+env(safe-area-inset-top,0px))] text-neutral-900">
         <div className="mx-auto max-w-lg px-4">
@@ -38,16 +44,31 @@ export function AdminPage() {
             На главную
           </Link>
           <div className="mt-8 rounded-[36px] bg-[#F1EFEF] px-6 py-12 text-center shadow-[0_18px_55px_rgba(17,17,17,0.05)]">
-            <h1 className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950">Кабинет мастера</h1>
+            <h1 className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950">
+              {isPlatformAdminWithoutCabinet ? 'Кабинет мастера недоступен' : 'Кабинет мастера'}
+            </h1>
             <p className="mx-auto mt-3 max-w-sm text-[15px] leading-relaxed text-neutral-600">
-              Сначала создайте профиль мастера, чтобы принимать записи.
+              {isPlatformAdminWithoutCabinet
+                ? 'У этого аккаунта ещё нет мастерского профиля.'
+                : hasApi && profile
+                  ? 'Кабинет мастера недоступен для этого аккаунта.'
+                  : 'Сначала создайте профиль мастера, чтобы принимать записи.'}
             </p>
-            <Link
-              to={BECOME_MASTER_PATH}
-              className="mt-8 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#E29595] px-6 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
-            >
-              Стать мастером
-            </Link>
+            {isPlatformAdminWithoutCabinet ? (
+              <Link
+                to={PLATFORM_ADMIN_PATH}
+                className="mt-8 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#111827] px-6 text-[16px] font-semibold text-white transition active:scale-[0.98]"
+              >
+                Платформенная админка
+              </Link>
+            ) : (
+              <Link
+                to={BECOME_MASTER_PATH}
+                className="mt-8 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#E29595] px-6 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
+              >
+                Стать мастером
+              </Link>
+            )}
           </div>
         </div>
       </div>

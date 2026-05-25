@@ -3,6 +3,7 @@ import { withTransaction } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { syncUserProfileFromMasterCabinet } from '../profiles/profiles.service.js';
 import { ensureMasterSubscriptionWithClient } from '../billing/billing.service.js';
+import { recordBillingEvent } from '../billing/billingEvents.service.js';
 import {
   contactsToLegacyContactLine,
   type MasterContactPayload,
@@ -104,9 +105,9 @@ async function upsertPublishedProfile(
   await client.query(
     `insert into public.master_profiles (
        master_id, display_name, slug, primary_category_id, bio, phone, contact, contacts, photo_url, publication_status,
-       master_plan, pro_interested, pro_status, published_at
+       is_profile_active, master_plan, pro_interested, pro_status, published_at
      ) values ($1, $2, null, $3, $4, $5, $6, $7::jsonb, $8, 'published'::public.master_publication_status,
-       $9, $10, $11, now())
+       true, $9, $10, $11, now())
      on conflict (master_id) do update set
        display_name = excluded.display_name,
        slug = coalesce(excluded.slug, public.master_profiles.slug),
@@ -117,6 +118,7 @@ async function upsertPublishedProfile(
        contacts = excluded.contacts,
        photo_url = excluded.photo_url,
        publication_status = 'published'::public.master_publication_status,
+       is_profile_active = true,
        master_plan = excluded.master_plan,
        pro_interested = excluded.pro_interested,
        pro_status = excluded.pro_status,
@@ -490,6 +492,16 @@ export async function completeMyMasterOnboarding(masterId: string, body: Complet
     phone: body.phone == null || body.phone === '' ? null : body.phone.trim(),
     address: body.location.publicAddress.trim() || null,
   });
+
+  if (body.proInterested) {
+    await recordBillingEvent({
+      masterId,
+      eventType: 'pro_interest',
+      planCode: 'pro',
+      status: 'recorded',
+      source: 'onboarding',
+    }).catch(() => {});
+  }
 
   return result;
 }

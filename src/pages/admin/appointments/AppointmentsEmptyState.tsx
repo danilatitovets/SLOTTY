@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { apptCard, apptEmptyIcon } from './adminAppointmentsTheme';
+import { apptCardShell, apptEmptyIcon } from './adminAppointmentsTheme';
 
 type Props = {
   title: string;
@@ -21,9 +21,9 @@ function DefaultIcon() {
 
 export function AppointmentsEmptyState({ title, text, hint, action, icon }: Props) {
   return (
-    <section className={`${apptCard} flex flex-col items-center px-6 py-10 text-center`}>
+    <section className={`${apptCardShell} flex flex-col items-center px-6 py-10 text-center`}>
       {icon ?? <DefaultIcon />}
-      <h3 className="mt-5 text-[18px] font-black tracking-[-0.03em] text-[#111827]">{title}</h3>
+      <h3 className="mt-5 text-[18px] font-bold tracking-[-0.03em] text-[#111827]">{title}</h3>
       <p className="mt-2 max-w-[18rem] text-[15px] leading-relaxed text-[#6B7280]">{text}</p>
       {hint ? <p className="mt-2 max-w-[18rem] text-[13px] leading-relaxed text-[#9CA3AF]">{hint}</p> : null}
       {action ? <div className="mt-6 w-full max-w-[16rem]">{action}</div> : null}

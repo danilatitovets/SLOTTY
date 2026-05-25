@@ -1,6 +1,8 @@
 import type { MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
+import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
+import type { MySlotDto } from '../../../features/admin/api/adminSlotsApi';
 import type { RepeatSettingsValue } from './repeatSettingsConfig';
-import type { PlannedSlot, PlannedSlotRejectReason, WindowTemplate } from './scheduleTypes';
+import type { PlannedSlot, PlannedSlotRejectReason, ScheduleWindowView, WindowTemplate } from './scheduleTypes';
 
 export function pad2(value: number): string {
   return value < 10 ? `0${value}` : String(value);
@@ -90,10 +92,22 @@ export function templateDisplayLabel(template: WindowTemplate): string {
 }
 
 export function formatPreviewLine(dateIso: string, startTime: string, endTime: string): string {
+  const parts = formatPreviewSummaryParts(dateIso, startTime, endTime);
+  return `${parts.dateLine}, ${parts.timeLine}`;
+}
+
+export function formatPreviewSummaryParts(
+  dateIso: string,
+  startTime: string,
+  endTime: string,
+): { dateLine: string; timeLine: string } {
   const d = parseIsoDate(dateIso);
   const wd = formatWeekdayShort(d);
-  const datePart = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(d);
-  return `${wd}, ${datePart} · ${startTime}–${endTime}`;
+  const datePart = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(d);
+  return {
+    dateLine: `${wd}, ${datePart}`,
+    timeLine: `${startTime}–${endTime}`,
+  };
 }
 
 /** Для карточки в превью списка окон (без дубля даты в строке). */
@@ -187,6 +201,33 @@ export function indexWindowsByDate(windows: { dateIso: string; status: string }[
   }
   return map;
 }
+
+export function findActiveAppointmentForSlot(
+  slotId: string,
+  slot: MySlotDto,
+  appointments: DemoMasterAppointment[],
+): DemoMasterAppointment | undefined {
+  const active = appointments.filter((a) => a.status === 'pending' || a.status === 'confirmed');
+  const bySlotId = active.find((a) => a.slotId === slotId);
+  if (bySlotId) return bySlotId;
+
+  const start = new Date(slot.startsAt);
+  const dateIso = toIsoDate(start);
+  const time = formatHmFromDate(start);
+  return active.find((a) => a.date === dateIso && a.time === time);
+}
+
+export function isScheduleWindowBooked(
+  window: Pick<ScheduleWindowView, 'id' | 'status' | 'slot'>,
+  appointments: DemoMasterAppointment[] = [],
+): boolean {
+  if (window.status === 'booked') return true;
+  if (window.slot.status === 'booked') return true;
+  return Boolean(findActiveAppointmentForSlot(window.id, window.slot, appointments));
+}
+
+export const MSG_SCHEDULE_WINDOW_BOOKED =
+  'На это окно есть запись — удалить нельзя. Сначала отмените запись в разделе «Заявки».';
 
 export function windowsCountRu(n: number): string {
   const mod10 = n % 10;
@@ -284,60 +325,13 @@ export function countRepeatDates(anchorIso: string, settings: RepeatSettingsValu
   return expandRepeatDates(anchorIso, settings).length;
 }
 
-export type BuildPlannedSlotsOptions = {
-  /** Несколько времён начала в день (режим шаблона). */
-  templateStartTimes?: string[];
-  durationMinutes?: number;
-};
-
 export function buildPlannedSlots(
   dateIso: string,
   startTime: string,
   endTime: string,
   serviceId: string | null,
   repeat: RepeatSettingsValue,
-  options?: BuildPlannedSlotsOptions,
 ): PlannedSlot[] {
   const dates = expandRepeatDates(dateIso, repeat);
-  const multi = options?.templateStartTimes?.filter(Boolean) ?? [];
-  const duration = options?.durationMinutes ?? 0;
-
-  if (multi.length > 0 && duration > 0) {
-    const times = [...multi].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
-    const slots: PlannedSlot[] = [];
-    for (const d of dates) {
-      for (const st of times) {
-        const et = addMinutesToTime(st, duration);
-        if (timeToMinutes(et) <= timeToMinutes(st)) continue;
-        slots.push({ dateIso: d, startTime: st, endTime: et, serviceId });
-      }
-    }
-    return slots;
-  }
-
   return dates.map((d) => ({ dateIso: d, startTime, endTime, serviceId }));
-}
-
-const TEMPLATE_DAY_START_MIN = 6 * 60;
-const TEMPLATE_DAY_END_MIN = 23 * 60 + 45;
-
-/** Старты с шагом = длительности шаблона (2 ч → 12:00, 14:00, 16:00…). */
-export function buildTemplateStartTimeOptions(durationMinutes: number): string[] {
-  if (durationMinutes <= 0) return [];
-  const out: string[] = [];
-  for (let start = TEMPLATE_DAY_START_MIN; start + durationMinutes <= TEMPLATE_DAY_END_MIN; start += durationMinutes) {
-    out.push(`${pad2(Math.floor(start / 60))}:${pad2(start % 60)}`);
-  }
-  return out;
-}
-
-export function isValidTemplateStartTime(time: string, durationMinutes: number): boolean {
-  return buildTemplateStartTimeOptions(durationMinutes).includes(time);
-}
-
-export function filterValidTemplateStartTimes(times: string[], durationMinutes: number): string[] {
-  const allowed = new Set(buildTemplateStartTimeOptions(durationMinutes));
-  return [...times]
-    .filter((t) => allowed.has(t))
-    .sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
 }

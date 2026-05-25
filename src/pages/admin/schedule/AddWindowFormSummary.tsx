@@ -1,14 +1,15 @@
-import { HiCalendarDays, HiClock, HiSparkles } from 'react-icons/hi2';
+import { HiSparkles } from 'react-icons/hi2';
 import {
   durationMinutesBetween,
   formatDurationRu,
-  formatPreviewLine,
+  formatPreviewSummaryParts,
   templateDisplayLabel,
   windowsCountRu,
 } from './scheduleUtils';
 import type { WindowTemplate } from './scheduleTypes';
-import { adminFormSheetHighlight } from '../shared/adminFormSheetTheme';
-import { formatRepeatSummary, type RepeatSettingsValue } from './repeatSettingsConfig';
+import { adminFormSheetMetricCatalog } from '../shared/adminFormSheetTheme';
+import { scheduleSheetSummaryBox } from './adminScheduleTheme';
+import { formatRepeatSummaryRows, type RepeatSettingsValue } from './repeatSettingsConfig';
 import { countRepeatDates } from './scheduleUtils';
 
 type Props = {
@@ -23,6 +24,17 @@ type Props = {
   totalPlanned: number;
 };
 
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 first:pt-0 last:pb-0">
+      <span className="shrink-0 text-[13px] font-medium text-[#6B7280]">{label}</span>
+      <span className="min-w-0 text-right text-[14px] font-semibold leading-snug text-[#111827]">
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function AddWindowFormSummary({
   dateIso,
   startTime,
@@ -35,45 +47,48 @@ export function AddWindowFormSummary({
   totalPlanned,
 }: Props) {
   const duration = durationMinutesBetween(startTime, endTime);
-  const slotLine = formatPreviewLine(dateIso, startTime, endTime);
+  const { dateLine, timeLine } = formatPreviewSummaryParts(dateIso, startTime, endTime);
   const repeatDateCount = countRepeatDates(dateIso, repeatSettings);
-  const repeatText = formatRepeatSummary(
+  const repeatRows = formatRepeatSummaryRows(
     repeatSettings,
     repeatDateCount > 0 ? repeatDateCount : undefined,
   );
 
+  const createLabel =
+    creatableCount === totalPlanned
+      ? `Будет создано ${windowsCountRu(creatableCount)}`
+      : `Создастся ${windowsCountRu(creatableCount)} из ${totalPlanned}`;
+
   return (
-    <div
-      className={`${adminFormSheetHighlight} border border-[#FDE8ED] bg-gradient-to-br from-[#FFF9FB] to-white`}
-    >
-      <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#ff5f7a]">Итог</p>
-      <p className="mt-2 text-[20px] font-black leading-tight tracking-[-0.04em] text-[#111827] lg:text-[22px]">
+    <div className={scheduleSheetSummaryBox}>
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Итог</p>
+      <p className="mt-2 text-[18px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
         {serviceLabel}
       </p>
-      <p className="mt-1 text-[14px] font-semibold text-[#6B7280]">{slotLine}</p>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <div className="flex items-center gap-2.5 rounded-[14px] bg-white/80 px-3 py-2 ring-1 ring-[#FDE8ED]">
-          <HiCalendarDays className="h-5 w-5 shrink-0 text-[#ff5f7a]" aria-hidden />
-          <span className="text-[13px] font-semibold text-[#374151]">{formatDurationRu(duration)}</span>
-        </div>
-        <div className="flex items-center gap-2.5 rounded-[14px] bg-white/80 px-3 py-2 ring-1 ring-[#FDE8ED]">
-          <HiClock className="h-5 w-5 shrink-0 text-[#ff5f7a]" aria-hidden />
-          <span className="min-w-0 text-[13px] font-semibold leading-snug text-[#374151]">{repeatText}</span>
-        </div>
+      <div className={`mt-4 divide-y divide-[#D8D8D8] px-4 py-1 ${adminFormSheetMetricCatalog}`}>
+        <SummaryRow label="Дата" value={dateLine} />
+        <SummaryRow label="Время" value={timeLine} />
+        <SummaryRow label="Длительность" value={formatDurationRu(duration)} />
+        {repeatRows.map((row) => (
+          <SummaryRow key={row.label} label={row.label} value={row.value} />
+        ))}
       </div>
 
       {selectedTemplate && !manualMode ? (
-        <p className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-[#6B7280]">
-          <HiSparkles className="h-4 w-4 shrink-0 text-[#ff5f7a]" aria-hidden />
-          Шаблон: {templateDisplayLabel(selectedTemplate)}
+        <p className="mt-3 flex items-center gap-2 text-[13px] font-medium text-[#6B7280]">
+          <HiSparkles className="h-4 w-4 shrink-0 text-[#9CA3AF]" aria-hidden />
+          <span>
+            Шаблон{' '}
+            <span className="font-semibold text-[#111827]">
+              {templateDisplayLabel(selectedTemplate)}
+            </span>
+          </span>
         </p>
       ) : null}
 
-      <p className="mt-4 rounded-[14px] bg-[#FFF1F4] px-3 py-2.5 text-[13px] font-bold text-[#ff5f7a]">
-        {creatableCount === totalPlanned
-          ? `Будет создано: ${windowsCountRu(creatableCount)}`
-          : `Создастся ${windowsCountRu(creatableCount)} из ${totalPlanned}`}
+      <p className="mt-4 rounded-[10px] bg-white px-4 py-3 text-center text-[15px] font-semibold text-[#111827] ring-1 ring-[#EEEEEE]">
+        {createLabel}
       </p>
     </div>
   );

@@ -65,6 +65,7 @@ export function ContactChannelBrandIcon({
 }
 
 type Props = {
+  variant?: 'default' | 'catalog';
   rows: MasterContactRow[];
   onAdd: (type: ContactType) => void;
   onChange: (id: string, value: string) => void;
@@ -74,7 +75,22 @@ type Props = {
   showRowError: (id: string) => boolean;
 };
 
+const catalogContactRowClass =
+  'flex min-h-[46px] items-center gap-2 rounded-[10px] bg-[#EBEBEB] px-2.5 py-1.5 transition focus-within:bg-[#E4E4E4]';
+
+const catalogContactInputClass = `
+  min-w-0 flex-1
+  border-0
+  bg-transparent
+  px-1 py-2
+  text-[15px] font-medium
+  text-[#111827]
+  outline-none
+  placeholder:text-[12px] placeholder:font-medium placeholder:text-[#8E8E93]
+`;
+
 export function MasterProfileContactsBlock({
+  variant = 'default',
   rows,
   onAdd,
   onChange,
@@ -83,10 +99,14 @@ export function MasterProfileContactsBlock({
   rowErrors,
   showRowError,
 }: Props) {
+  const isCatalog = variant === 'catalog';
+
   return (
-    <div className="mt-7 space-y-3">
+    <div className={isCatalog ? 'space-y-3' : 'mt-7 space-y-3'}>
       <div>
-        <p className="text-[13px] font-semibold text-neutral-500">Контакты для клиентов</p>
+        <p className={`text-[13px] font-medium ${isCatalog ? 'text-[#6B7280]' : 'font-semibold text-neutral-500'}`}>
+          Контакты для клиентов
+        </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {CONTACT_CHANNEL_META.map((ch) => {
             const present = !canAddContactChannel(rows, ch.type);
@@ -100,10 +120,14 @@ export function MasterProfileContactsBlock({
                   if (!canAddContactChannel(rows, ch.type)) return;
                   onAdd(ch.type);
                 }}
-                className={`flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition active:scale-[0.98] disabled:cursor-default ${
                   present
-                    ? 'bg-[#E29595] text-white shadow-[0_8px_20px_rgba(226,149,149,0.22)]'
-                    : 'bg-[#F1EFEF] text-neutral-600'
+                    ? isCatalog
+                      ? 'bg-[#F47C8C] text-white disabled:opacity-100'
+                      : 'bg-[#E29595] text-white shadow-[0_8px_20px_rgba(226,149,149,0.22)] disabled:opacity-100'
+                    : isCatalog
+                      ? 'bg-[#EBEBEB] text-[#374151] hover:bg-[#E4E4E4] disabled:opacity-40'
+                      : 'bg-[#F1EFEF] text-neutral-600 disabled:opacity-40'
                 }`}
               >
                 <ContactChannelBrandIcon
@@ -119,22 +143,59 @@ export function MasterProfileContactsBlock({
       </div>
 
       {rows.length > 0 ? (
-        <ul className="flex flex-col gap-2">
+        <ul className={`flex flex-col ${isCatalog ? 'gap-2' : 'gap-2'}`}>
           {rows.map((row) => {
             const meta = CONTACT_CHANNEL_META.find((c) => c.type === row.type)!;
             const err = rowErrors[row.id];
             const showErr = showRowError(row.id) && err;
+            if (isCatalog) {
+              return (
+                <li key={row.id}>
+                  <div className={catalogContactRowClass}>
+                    <span className="flex shrink-0 items-center justify-center" aria-hidden>
+                      <ContactChannelBrandIcon type={row.type} className="h-5 w-5" />
+                    </span>
+                    <input
+                      value={row.value}
+                      onChange={(e) => onChange(row.id, e.target.value)}
+                      onBlur={() => onBlurRow(row.id)}
+                      placeholder={meta.placeholder}
+                      maxLength={row.type === 'other' ? 200 : 460}
+                      autoComplete="off"
+                      aria-label={meta.label}
+                      className={catalogContactInputClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onRemove(row.id)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[18px] font-medium leading-none text-[#9CA3AF] transition hover:bg-white/60 hover:text-[#111827] active:scale-[0.96]"
+                      aria-label={`Удалить ${meta.label}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {showErr ? (
+                    <p className="mt-1 px-0.5 text-[12px] font-medium leading-snug text-red-600">{err}</p>
+                  ) : null}
+                </li>
+              );
+            }
             return (
-              <li key={row.id} className="overflow-hidden rounded-[22px] bg-[#F1EFEF] p-2.5 sm:p-2.5">
+              <li
+                key={row.id}
+                className="overflow-hidden rounded-[22px] bg-[#F1EFEF] p-2.5 sm:p-2.5"
+              >
                 <div className="flex items-center gap-2.5">
                   <div
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-[0_2px_10px_rgba(17,17,17,0.06)]"
                     aria-hidden
                   >
-                    <ContactChannelBrandIcon type={row.type} className="h-[22px] w-[22px]" />
+                    <ContactChannelBrandIcon type={row.type} className="h-5 w-5" />
                   </div>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                    <p className="min-w-0 truncate text-[13px] font-semibold leading-tight text-neutral-700">{meta.label}</p>
+                    <p className="min-w-0 truncate text-[13px] font-semibold leading-tight text-neutral-700">
+                      {meta.label}
+                    </p>
                     <button
                       type="button"
                       onClick={() => onRemove(row.id)}

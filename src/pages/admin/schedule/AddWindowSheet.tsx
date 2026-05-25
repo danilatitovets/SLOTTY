@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { AdminFormSheetStepper } from '../shared/AdminFormSheetLayout';
-import { adminSheetBodyPad, adminSheetGhostBtn, adminSheetPinkBtn, adminSheetSecondaryBtn } from '../shared/adminCabinetSheetTheme';
+import { AdminFormSheetLayout, AdminFormSheetStepper } from '../shared/AdminFormSheetLayout';
+import {
+  catalogSheetGhostBtn,
+  catalogSheetPrimaryBtn,
+  catalogSheetSecondaryBtn,
+} from '../shared/adminCatalogSheetTheme';
 import { AddWindowForm } from './AddWindowForm';
 import type { MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
 import type { PlannedSlot, WindowTemplate } from './scheduleTypes';
@@ -9,7 +13,6 @@ import type { RepeatSettingsValue } from './RepeatSettings';
 import { windowsCountRu } from './scheduleUtils';
 import {
   ADD_WINDOW_FORM_STEPS,
-  getAddWindowStepSubtitle,
   isAddWindowTemplateMode,
   validateAddWindowStep,
   type AddWindowFormStep,
@@ -22,8 +25,6 @@ type Props = {
   onDateIsoChange: (v: string) => void;
   startTime: string;
   onStartTimeChange: (v: string) => void;
-  templateStartTimes: string[];
-  onTemplateStartTimesChange: (times: string[]) => void;
   endTime: string;
   onEndTimeChange: (v: string) => void;
   manualMode: boolean;
@@ -65,7 +66,6 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
       dateIso: form.dateIso,
       startTime: form.startTime,
       endTime: form.endTime,
-      templateStartTimes: form.templateStartTimes,
       serviceId: form.serviceId,
       manualMode,
       selectedTemplate,
@@ -77,7 +77,6 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
       form.repeatSettings,
       form.serviceId,
       form.startTime,
-      form.templateStartTimes,
       manualMode,
       selectedTemplate,
     ],
@@ -86,7 +85,6 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
   const templateMode = isAddWindowTemplateMode({ manualMode, selectedTemplate });
   const stepperSteps = templateMode ? (['Когда', 'Проверка'] as const) : ADD_WINDOW_FORM_STEPS;
   const stepperIndex = templateMode ? (step === 2 ? 1 : 0) : step;
-  const stepSubtitle = getAddWindowStepSubtitle(step, stepCtx);
 
   useEffect(() => {
     if (open) {
@@ -102,7 +100,6 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
     form.dateIso,
     form.startTime,
     form.endTime,
-    form.templateStartTimes,
     form.serviceId,
     form.repeatSettings,
     manualMode,
@@ -165,41 +162,31 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
   const footer =
     step < 2 ? (
       <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          className={adminSheetPinkBtn}
-          disabled={saving}
-          onClick={handleNext}
-        >
-          Далее
-        </button>
-        <div className="flex gap-2">
+        <div className="flex w-full gap-3">
           {step > 0 ? (
-            <button type="button" className={`${adminSheetGhostBtn} flex-1`} disabled={saving} onClick={handleBack}>
+            <button type="button" className={catalogSheetSecondaryBtn} disabled={saving} onClick={handleBack}>
               Назад
             </button>
           ) : null}
-          <button
-            type="button"
-            className={`${step > 0 ? adminSheetGhostBtn : adminSheetSecondaryBtn} flex-1`}
-            disabled={saving}
-            onClick={onClose}
-          >
-            Отмена
+          <button type="button" className={catalogSheetPrimaryBtn} disabled={saving} onClick={handleNext}>
+            Далее
           </button>
         </div>
+        <button type="button" className={catalogSheetSecondaryBtn} disabled={saving} onClick={onClose}>
+          Отмена
+        </button>
       </div>
     ) : (
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          className={adminSheetPinkBtn}
+          className={catalogSheetPrimaryBtn}
           disabled={saving || creatableCount === 0}
           onClick={handleSubmit}
         >
           {saving ? 'Сохранение…' : submitLabel}
         </button>
-        <button type="button" className={adminSheetGhostBtn} disabled={saving} onClick={handleBack}>
+        <button type="button" className={catalogSheetGhostBtn} disabled={saving} onClick={handleBack}>
           Назад
         </button>
       </div>
@@ -207,26 +194,16 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
 
   return (
     <AdminBottomSheet
+      variant="catalog"
       open={open}
       onClose={onClose}
       title="Новое окно"
-      headerContent={
-        <div className="space-y-4">
-          <h2
-            id="admin-sheet-title"
-            className="pb-1 text-[20px] font-black leading-tight tracking-[-0.04em] text-[#111827] lg:pb-1.5 lg:text-[22px]"
-          >
-            Новое окно
-          </h2>
-          <AdminFormSheetStepper variant="header" step={stepperIndex} steps={[...stepperSteps]} />
-          <p className="text-[13px] font-semibold leading-relaxed text-[#6B7280] lg:text-[14px]">
-            {stepSubtitle}
-          </p>
-        </div>
+      headerAfter={
+        <AdminFormSheetStepper step={stepperIndex} steps={[...stepperSteps]} variant="catalog" />
       }
       footer={footer}
     >
-      <div className={`${adminSheetBodyPad} space-y-5 lg:space-y-6`}>
+      <AdminFormSheetLayout>
         <AddWindowForm
           {...rest}
           variant="sheet"
@@ -243,7 +220,7 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
           stepError={stepError}
           onSubmit={handleSubmit}
         />
-      </div>
+      </AdminFormSheetLayout>
     </AdminBottomSheet>
   );
 }

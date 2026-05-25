@@ -7,7 +7,7 @@ import {
 } from '../../master-onboarding/model/masterContacts';
 import { isOptionalBelarusPhoneValid } from '../../master-onboarding/model/belarusPhone';
 
-export type MasterPublicationStatus = 'draft' | 'published' | 'hidden' | 'blocked';
+export type MasterPublicationStatus = 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
 
 export type ProfileCompletionActionId =
   | 'main'
@@ -91,26 +91,46 @@ function isMainInfoComplete(draft: MasterDraft): ProfileCompletionMissingItem[] 
   return missing;
 }
 
-function isServiceRowValid(s: MasterOnboardingService): boolean {
-  const title = s.title.trim();
+function parseServicePriceByn(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number.parseFloat(trimmed.replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/** Услуга считается заполненной, если есть название и цена (видимость не важна). */
+export function isCatalogServiceComplete(s: MasterOnboardingService): boolean {
+  const title = (s.title ?? '').trim();
   if (title.length < 2 || title.length > 300) return false;
-  if (!Number.isFinite(s.durationMin) || s.durationMin < 15 || s.durationMin > 1440) return false;
-  if (!Number.isFinite(s.priceByn) || s.priceByn < 0) return false;
+  const legacyPrice = (s as MasterOnboardingService & { price?: unknown }).price;
+  const price = parseServicePriceByn(s.priceByn) ?? parseServicePriceByn(legacyPrice);
+  if (price === null || price < 0) return false;
   return true;
 }
 
+export function hasCompletedServicesCatalog(services: MasterOnboardingService[] | undefined): boolean {
+  const list = services ?? [];
+  if (list.length === 0) return false;
+  return list.some(isCatalogServiceComplete);
+}
+
 function servicesMissing(draft: MasterDraft): ProfileCompletionMissingItem[] {
-  const active = (draft.services ?? []).filter((s) => s.isActive !== false);
+  const list = draft.services ?? [];
   const missing: ProfileCompletionMissingItem[] = [];
-  if (active.length === 0) {
+  if (list.length === 0) {
     missing.push({ id: 'services-empty', label: 'Добавьте хотя бы одну услугу', actionId: 'services' });
     return missing;
   }
-  const hasValid = active.some(isServiceRowValid);
-  if (!hasValid) {
+  if (!hasCompletedServicesCatalog(list)) {
     missing.push({
       id: 'services-invalid',
-      label: 'Укажите цену и длительность у услуги',
+      label: 'Укажите название и цену у услуги',
       actionId: 'services',
     });
   }

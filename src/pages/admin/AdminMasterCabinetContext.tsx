@@ -31,6 +31,7 @@ import {
   mapMasterAppointmentRowToDemo,
 } from '../../features/admin/lib/masterCabinetMapper';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { hasMasterCabinetAccess } from '../../features/auth/lib/hasMasterCabinetAccess';
 import {
   ensureDemoAppointmentsSeeded,
   saveDemoAppointments,
@@ -41,6 +42,7 @@ import { getStoredMasterDraft } from '../../features/profile/lib/demoMasterStora
 import { contactsToLegacyContactLine } from '../../features/master-onboarding/model/masterContacts';
 import type { MasterDraft } from '../../features/profile/lib/demoMasterStorage';
 import type { MasterPublicationStatus } from '../../features/admin/lib/profileCompletion';
+import type { CategoryChangePolicyDto } from '../../features/admin/lib/categoryChangePolicy';
 import {
   clearAdminCabinetSessionCache,
   readAdminCabinetSessionCache,
@@ -48,18 +50,40 @@ import {
 } from './adminCabinetSessionCache';
 import { clearOverviewBundleCache } from './overview/adminOverviewSessionCache';
 
-export type MasterProfilePatch = Pick<
-  MasterDraft,
-  | 'name'
-  | 'description'
-  | 'phone'
-  | 'contact'
-  | 'photoUrl'
-  | 'contacts'
-  | 'category'
-  | 'primaryCategoryId'
-  | 'primaryCategoryCode'
+export type MasterProfilePatch = Partial<
+  Pick<
+    MasterDraft,
+    | 'name'
+    | 'description'
+    | 'phone'
+    | 'contact'
+    | 'photoUrl'
+    | 'contacts'
+    | 'category'
+    | 'primaryCategoryId'
+    | 'primaryCategoryCode'
+  >
 >;
+
+/** Плейсхолдер до первого ответа API — не подмешиваем local demo draft с пустыми услугами. */
+function pendingCabinetDraft(masterId: string): MasterDraft {
+  return {
+    masterId,
+    category: '—',
+    name: '',
+    description: '',
+    contact: '',
+    services: [],
+    schedule: {
+      workDays: [0, 1, 2, 3, 4],
+      startTime: '09:00',
+      endTime: '18:00',
+      gapMinutes: 0,
+    },
+    location: { visitType: 'studio', street: '', building: '' },
+    createdAt: new Date().toISOString(),
+  };
+}
 
 type Ctx = {
   draft: MasterDraft;
@@ -81,6 +105,8 @@ type Ctx = {
   persistAppointments: (rows: DemoMasterAppointment[]) => void | Promise<void>;
   cabinetLoading: boolean;
   cabinetError: string | null;
+  /** Повторная загрузка кабинета с сервера (профиль, услуги, портфолио). */
+  reloadCabinet: () => Promise<void>;
   useCabinetApi: boolean;
   subscription: MasterSubscriptionDto | null;
   refreshSubscription: () => Promise<void>;
@@ -88,6 +114,7 @@ type Ctx = {
   setPublicationStatus: (status: MasterPublicationStatus) => void;
   /** Рейтинг и отзывы из API кабинета (без отдельного запроса). */
   cabinetProfileMeta: { rating: number; reviewsCount: number } | null;
+  categoryChangePolicy: CategoryChangePolicyDto | null;
 };
 
 const AdminCabinetCtx = createContext<Ctx | null>(null);
@@ -113,14 +140,24 @@ function cloneDraft(d: MasterDraft): MasterDraft {
   return JSON.parse(JSON.stringify(d)) as MasterDraft;
 }
 
+const MASTER_CABINET_UNAVAILABLE_MSG =
+  'Кабинет мастера недоступен. У этого аккаунта ещё нет мастерского профиля.';
+
 export function AdminMasterCabinetProvider({ children }: { children: ReactNode }) {
   const { profile, isLoading: authLoading } = useAuth();
-  const useCabinetApi = Boolean(getApiBaseUrl() && profile?.role === 'master');
+  const hasApi = Boolean(getApiBaseUrl());
+  const useCabinetApi = Boolean(hasApi && hasMasterCabinetAccess(profile));
   const masterId = profile?.id ?? null;
 
   const sessionCache = masterId ? readAdminCabinetSessionCache(masterId) : null;
 
-  const [draft, setDraft] = useState<MasterDraft>(() => sessionCache?.draft ?? getMasterDraft());
+  const [draft, setDraft] = useState<MasterDraft>(() => {
+    if (sessionCache?.draft) return cloneDraft(sessionCache.draft);
+    const mid = profile?.id;
+    const apiMode = Boolean(hasApi && hasMasterCabinetAccess(profile));
+    if (apiMode && mid) return pendingCabinetDraft(mid);
+    return getMasterDraft();
+  });
   const [appointments, setAppointments] = useState<DemoMasterAppointment[]>(
     () => sessionCache?.appointments ?? ensureDemoAppointmentsSeeded(),
   );
@@ -138,6 +175,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     rating: number;
     reviewsCount: number;
   } | null>(() => sessionCache?.cabinetProfileMeta ?? null);
+  const [categoryChangePolicy, setCategoryChangePolicy] = useState<CategoryChangePolicyDto | null>(null);
 
   const appointmentsRef = useRef(appointments);
   appointmentsRef.current = appointments;
@@ -197,13 +235,29 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         setDraft(mapped);
         setPublicationStatus(pub);
         setCabinetProfileMeta(meta);
+        setCategoryChangePolicy(cabinet.categoryChangePolicy ?? null);
         lastSyncedSnapshotRef.current = cloneDraft(mapped);
         setAppointments(appts);
         setSubscription(sub);
         persistCabinetSession(masterId, mapped, appts, pub, meta, sub);
       } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Не удалось загрузить кабинет';
+        const notFound =
+          /not found|не найден|404/i.test(msg) ||
+          (e instanceof Error && /404/.test(e.message));
+        if (notFound) {
+          clearAdminCabinetSessionCache();
+          clearOverviewBundleCache();
+          cabinetReadyRef.current = false;
+          lastSyncedSnapshotRef.current = null;
+          setDraft(pendingCabinetDraft(masterId));
+        }
         if (!silent) {
-          setCabinetError(e instanceof Error ? e.message : 'Не удалось загрузить кабинет');
+          setCabinetError(
+            notFound
+              ? 'Профиль мастера не найден для этого входа. Выйдите и войдите через email, с которым регистрировались, или привяжите Google в «Способы входа».'
+              : msg,
+          );
         }
       } finally {
         setCabinetLoading(false);
@@ -254,6 +308,15 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       setSubscription(null);
       setPublicationStatus('draft');
       setCabinetProfileMeta(null);
+      lastSyncedSnapshotRef.current = null;
+
+      if (hasApi && profile) {
+        setCabinetError(MASTER_CABINET_UNAVAILABLE_MSG);
+        setDraft(pendingCabinetDraft(profile.id));
+        setAppointments([]);
+        return undefined;
+      }
+
       if (!getStoredMasterDraft()) {
         persistMasterDraft(getMasterDraft());
         setDraft(getMasterDraft());
@@ -261,7 +324,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         setDraft(getMasterDraft());
       }
       setAppointments(ensureDemoAppointmentsSeeded());
-      lastSyncedSnapshotRef.current = null;
+      setCabinetError(null);
       return undefined;
     }
 
@@ -294,7 +357,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [useCabinetApi, authLoading, loadFromApi, masterId, reloadCabinetFromApiSilent]);
+  }, [useCabinetApi, authLoading, hasApi, profile, loadFromApi, masterId, reloadCabinetFromApiSilent]);
 
   const pushDraftToBackend = useCallback(async (next: MasterDraft) => {
     await patchMasterMe({
@@ -459,7 +522,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       const contactLine =
         contacts && contacts.length > 0
           ? contactsToLegacyContactLine(contacts) ?? ''
-          : patch.contact.trim();
+          : (patch.contact ?? draft.contact).trim();
 
       const next: MasterDraft = {
         ...draft,
@@ -481,15 +544,18 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
 
       setDraft(next);
       try {
-        await patchMasterMe({
+        const apiBody: Parameters<typeof patchMasterMe>[0] = {
           displayName: next.name.trim() || 'Мастер',
           bio: next.description,
           phone: next.phone?.trim() ? next.phone.trim() : null,
           contacts: contacts?.length ? contacts : null,
           contact: contactLine.trim() ? contactLine.trim() : null,
           photoUrl: next.photoUrl?.trim() ? next.photoUrl.trim() : null,
-          primaryCategoryCode: patch.primaryCategoryCode ?? next.primaryCategoryCode ?? null,
-        });
+        };
+        if (patch.primaryCategoryCode !== undefined) {
+          apiBody.primaryCategoryCode = patch.primaryCategoryCode;
+        }
+        await patchMasterMe(apiBody);
         if (lastSyncedSnapshotRef.current) {
           lastSyncedSnapshotRef.current = cloneDraft({
             ...lastSyncedSnapshotRef.current,
@@ -515,9 +581,13 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     [draft, reloadCabinetFromApiSilent, useCabinetApi],
   );
 
+  const reloadCabinet = useCallback(async () => {
+    await loadFromApi({ silent: false });
+  }, [loadFromApi]);
+
   const scheduleSync = useCallback(
     (syncDraft: MasterDraft) => {
-      if (!useCabinetApi) return;
+      if (!useCabinetApi || !cabinetReadyRef.current) return;
       if (syncTimer.current) clearTimeout(syncTimer.current);
       syncTimer.current = setTimeout(() => {
         syncTimer.current = null;
@@ -581,7 +651,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
   }, [useCabinetApi, refreshDraft]);
 
   const persistAppointments = useCallback(
-    async (rows: DemoMasterAppointment[]) => {
+    async (rows: DemoMasterAppointment[], options?: { cancelReason?: string }) => {
       if (!useCabinetApi) {
         saveDemoAppointments(rows);
         setAppointments(rows);
@@ -604,7 +674,12 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
           (before.status === 'pending' || before.status === 'confirmed') &&
           row.status === 'cancelled'
         ) {
-          calls.push(patchMasterAppointmentCancel(row.id));
+          calls.push(
+            patchMasterAppointmentCancel(
+              row.id,
+              options?.cancelReason?.trim() || 'Отменено мастером',
+            ),
+          );
         }
       }
 
@@ -644,12 +719,14 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       persistAppointments,
       cabinetLoading,
       cabinetError,
+      reloadCabinet,
       useCabinetApi,
       subscription,
       refreshSubscription,
       publicationStatus,
       setPublicationStatus,
       cabinetProfileMeta,
+      categoryChangePolicy,
     }),
     [
       draft,
@@ -663,11 +740,13 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       persistAppointments,
       cabinetLoading,
       cabinetError,
+      reloadCabinet,
       useCabinetApi,
       subscription,
       refreshSubscription,
       publicationStatus,
       cabinetProfileMeta,
+      categoryChangePolicy,
     ],
   );
 

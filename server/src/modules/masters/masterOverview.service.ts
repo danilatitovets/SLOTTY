@@ -24,8 +24,16 @@ function padTimeFromDate(d: Date): string {
 }
 
 async function loadOverviewAppointments(masterId: string): Promise<OverviewAppointmentRow[]> {
-  const rows = await listMasterAppointments(masterId);
-  return rows.map((row) => {
+  const { items: rows } = await listMasterAppointments(masterId, { limit: 100, offset: 0 });
+  return rows.map((raw) => {
+    const row = raw as {
+      id: string;
+      starts_at: Date | string;
+      price_snapshot: string;
+      client_name: string;
+      service_title_snapshot: string;
+      status: string;
+    };
     const d = new Date(row.starts_at);
     const price = Number(row.price_snapshot);
     return {

@@ -14,11 +14,13 @@ import {
   ADMIN_SERVICES_PATH,
   HUB_PATH,
 } from '../../app/paths';
+import { NotificationBellBadge, notificationBellLinkClass } from './notifications/notificationBellUi';
 import { AdminNotificationsProvider, useAdminNotifications } from './notifications/AdminNotificationsContext';
 import { planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../features/billing/useMasterPlanEntitlements';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import { ProfileSectionTabsBar, ProfileTabProvider } from './profile/profileTabContext';
+import { SlottyImg } from '../../shared/ui/SlottyImg';
 import { ADMIN_CABINET_SHELL_MAX } from './overview/adminOverviewTheme';
 import { ADMIN_DESKTOP_CANVAS } from './adminCabinetLayout';
 import {
@@ -30,13 +32,19 @@ import {
 import { AdminDesktopSidebar } from './AdminDesktopSidebar';
 import { AdminDesktopTopBar } from './AdminDesktopTopBar';
 import { ProfileCompletionHeaderCard } from './profile/ProfileCompletionHeaderCard';
+import { ADMIN_MOBILE_TAB_BAR_HEIGHT } from './shared/adminMobileTabBarTheme';
 import { SERVICES_TAB_BAR_HEIGHT } from './services/adminServicesTheme';
 import { APPOINTMENTS_TAB_BAR_HEIGHT } from './appointments/adminAppointmentsTheme';
 import { SCHEDULE_TAB_BAR_HEIGHT } from './schedule/adminScheduleTheme';
 import { AdminBottomSheet } from './shared/AdminBottomSheet';
 import { AdminRouteTransitionOutlet } from './shared/AdminRouteTransitionOutlet';
+import { AccountAccessRestrictedBanner } from '../../features/auth/components/AccountAccessBanner';
+import { AccountBlockedScreen } from '../../features/auth/components/AccountBlockedScreen';
+import { MasterPlatformAccessProvider } from '../../features/auth/context/MasterPlatformAccessContext';
+import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
 import { AdminContentLoadingOverlay } from './shared/AdminContentLoadingOverlay';
 import { LOADING_VIDEO_SRC } from '../../shared/ui/loadingVideoSrc';
+import { AdminCabinetStatusBanner } from './AdminCabinetStatusBanner';
 
 function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean }) {
   const label = count > 9 ? '9+' : String(count);
@@ -65,18 +73,6 @@ function navClass(active: boolean): string {
   }`;
 }
 
-export function AdminCabinetStatusBanner() {
-  const { cabinetError, useCabinetApi } = useAdminMasterCabinet();
-  if (!useCabinetApi || !cabinetError) return null;
-  return (
-    <div className={`mx-auto w-full min-w-0 px-4 pb-2 pt-2 lg:max-w-none lg:px-8 ${ADMIN_CABINET_SHELL_MAX}`}>
-      <p className="rounded-2xl bg-[#FFF0F0] px-4 py-2 text-center text-[13px] font-semibold text-[#9B2C2C] shadow-[0_8px_24px_rgba(17,17,17,0.04)]">
-        {cabinetError}
-      </p>
-    </div>
-  );
-}
-
 function AdminCabinetLoadingGate() {
   const { cabinetLoading, useCabinetApi } = useAdminMasterCabinet();
   return <AdminContentLoadingOverlay show={Boolean(useCabinetApi && cabinetLoading)} />;
@@ -84,15 +80,18 @@ function AdminCabinetLoadingGate() {
 
 export function AdminLayout() {
   return (
-    <AdminMasterCabinetProvider>
-      <AdminNotificationsProvider>
-        <AdminLayoutInner />
-      </AdminNotificationsProvider>
-    </AdminMasterCabinetProvider>
+    <MasterPlatformAccessProvider>
+      <AdminMasterCabinetProvider>
+        <AdminNotificationsProvider>
+          <AdminLayoutInner />
+        </AdminNotificationsProvider>
+      </AdminMasterCabinetProvider>
+    </MasterPlatformAccessProvider>
   );
 }
 
 function AdminLayoutInner() {
+  const accountAccess = useAccountAccess();
   const { planId } = useMasterPlanEntitlements();
   const { hasUnread, unreadCount } = useAdminNotifications();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,40 +129,68 @@ function AdminLayoutInner() {
     v.load();
   }, []);
 
-  const shellPadBottom = isProfileHome || isOverview || isProfileCompletion
-    ? 'pb-6 lg:pb-0'
-    : isServices
-        ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
-        : isSchedule
-          ? `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
-          : isAppointments
-            ? `pb-[calc(${APPOINTMENTS_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
-            : 'lg:pb-8';
+  const mobileTabBarPad = `pb-[calc(${ADMIN_MOBILE_TAB_BAR_HEIGHT}+1.25rem+env(safe-area-inset-bottom,0px))] lg:pb-0`;
 
-  const pageShellBg =
-    isOverview || isServices || isSchedule || isAppointments || isProfileCompletion
-      ? 'bg-white'
-      : 'bg-white';
+  const shellPadBottom = isProfileHome || isProfileCompletion
+    ? mobileTabBarPad
+    : isOverview
+      ? 'pb-6 lg:pb-0'
+      : isSettings
+        ? mobileTabBarPad
+        : isServices
+          ? `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
+          : isSchedule
+            ? `pb-[calc(${SCHEDULE_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
+            : isAppointments
+              ? `pb-[calc(${APPOINTMENTS_TAB_BAR_HEIGHT}+env(safe-area-inset-bottom,0px)+1.25rem)] lg:pb-0`
+              : 'lg:pb-8';
+
+  /** Сводка / услуги / расписание / записи — серое полотно на мобиле до самого низа (включая отступ под таббар). */
+  const mobileGrayCanvas =
+    isOverview ||
+    isServices ||
+    isSchedule ||
+    isAppointments ||
+    isNotifications ||
+    isProfileCompletion;
+
+  const pageShellBg = mobileGrayCanvas ? 'bg-[#F5F5F5] lg:bg-white' : 'bg-white';
 
   const desktopCanvasBg =
-    isProfileHome || isOverview || isServices || isSchedule || isAppointments || isNotifications || isSettings
+    isProfileHome ||
+    isOverview ||
+    isProfileCompletion ||
+    isServices ||
+    isSchedule ||
+    isAppointments ||
+    isNotifications ||
+    isSettings ||
+    isBilling
       ? 'lg:bg-[#f6f7fb]'
-      : isProfileCompletion || isBilling
-        ? 'lg:bg-white'
-        : 'lg:bg-[#f6f7fb]';
+      : 'lg:bg-[#f6f7fb]';
 
   const desktopMainCanvasBg =
-    isProfileHome || isOverview || isServices || isSchedule || isAppointments || isNotifications || isSettings
+    isProfileHome ||
+    isOverview ||
+    isProfileCompletion ||
+    isServices ||
+    isSchedule ||
+    isAppointments ||
+    isNotifications ||
+    isSettings ||
+    isBilling
       ? ADMIN_DESKTOP_CANVAS
-      : isProfileCompletion || isBilling
-        ? 'lg:bg-white'
-        : ADMIN_DESKTOP_CANVAS;
+      : ADMIN_DESKTOP_CANVAS;
 
   return (
     <div className={`flex min-h-dvh text-[#111827] ${pageShellBg} ${desktopCanvasBg}`}>
       <AdminDesktopSidebar />
 
-      <div className={`relative flex min-h-dvh min-w-0 flex-1 flex-col ${desktopMainCanvasBg}`}>
+      <div
+        className={`relative flex min-h-dvh min-w-0 flex-1 flex-col ${desktopMainCanvasBg} ${
+          mobileGrayCanvas ? 'max-lg:bg-[#F5F5F5]' : ''
+        }`}
+      >
         <AdminCabinetLoadingGate />
         <ProfileTabProvider>
           <div
@@ -181,38 +208,27 @@ function AdminLayoutInner() {
                 <Link
                   to={HUB_PATH}
                   aria-label="SLOTTY — на главную"
-                  className="inline-flex h-20 min-h-20 shrink-0 items-center overflow-hidden outline-none ring-0 transition hover:opacity-60 active:scale-[0.99] sm:h-[5.5rem] sm:min-h-[5.5rem]"
+                  className="inline-flex h-20 min-h-20 shrink-0 items-center overflow-visible outline-none ring-0 transition hover:opacity-60 active:scale-[0.99] sm:h-[5.5rem] sm:min-h-[5.5rem]"
                 >
-                  <img
+                  <SlottyImg
                     src={HEADER_LOGO_SRC}
                     alt=""
                     decoding="async"
                     fetchPriority="low"
-                    className="h-20 w-auto max-w-[min(20rem,70vw)] object-contain object-left sm:h-[5.5rem] sm:max-w-[22rem]"
+                    className="h-20 w-auto max-w-[min(20rem,70vw)] -translate-x-10 translate-y-[5px] object-contain object-left sm:h-[5.5rem] sm:max-w-[22rem] sm:-translate-x-12 sm:translate-y-[7px]"
                   />
                 </Link>
                 <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                   <ProfileCompletionHeaderCard variant="header" className="hidden min-[380px]:flex" />
                   <Link
                     to={ADMIN_NOTIFICATIONS_PATH}
-                    className={`relative flex h-11 w-11 items-center justify-center rounded-2xl transition active:scale-[0.97] ${
-                      isNotifications
-                        ? 'bg-[#FFF1F4] text-[#F47C8C]'
-                        : 'bg-[#F3F4F6] text-[#111827] hover:bg-[#E4E7EC]'
-                    }`}
+                    className={notificationBellLinkClass(isNotifications, hasUnread, 'mobile')}
                     aria-label={
                       hasUnread ? `Уведомления, ${unreadCount} новых` : 'Уведомления'
                     }
                   >
                     <IconNavNotifications />
-                    {hasUnread ? (
-                      <span
-                        className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F47C8C] px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white"
-                        aria-hidden
-                      >
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    ) : null}
+                    <NotificationBellBadge count={unreadCount} />
                   </Link>
                   <button
                     type="button"
@@ -235,27 +251,43 @@ function AdminLayoutInner() {
 
           {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
 
-          <div className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom}`}>
+          {accountAccess.showBlockedScreen || accountAccess.showDeletedScreen ? (
+            <div className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} px-4 py-6`}>
+              <AccountBlockedScreen access={accountAccess} />
+            </div>
+          ) : (
+          <div
+            className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} ${shellPadBottom} ${
+              mobileGrayCanvas ? 'max-lg:bg-[#F5F5F5]' : ''
+            }`}
+          >
+            {accountAccess.showRestrictedBanner ? (
+              <div className="px-4 pt-3 lg:px-8 lg:pt-4">
+                <AccountAccessRestrictedBanner access={accountAccess} variant="master" />
+              </div>
+            ) : null}
             <div
               className={`w-full min-w-0 px-4 pt-4 lg:pb-8 lg:pt-6 ${
+                mobileGrayCanvas ? 'max-lg:bg-transparent' : ''
+              } ${
+                isOverview ||
+                isProfileHome ||
+                isProfileCompletion ||
+                isServices ||
+                isSchedule ||
+                isAppointments ||
+                isNotifications ||
+                isSettings ||
                 isBilling
-                  ? 'lg:mx-auto lg:max-w-[1100px] lg:bg-transparent lg:px-8 lg:shadow-none lg:ring-0'
-                  : isOverview ||
-                      isProfileHome ||
-                      isProfileCompletion ||
-                      isServices ||
-                      isSchedule ||
-                      isAppointments ||
-                      isNotifications ||
-                      isSettings
-                    ? 'lg:mx-auto lg:max-w-6xl lg:bg-transparent lg:px-8 lg:shadow-none lg:ring-0'
-                    : 'lg:mx-auto lg:max-w-6xl lg:rounded-[24px] lg:bg-white lg:px-8 lg:shadow-[0_4px_24px_rgba(17,24,39,0.06)] lg:ring-1 lg:ring-[#EAECEF]'
+                  ? 'lg:mx-auto lg:max-w-6xl lg:bg-transparent lg:px-8 lg:shadow-none lg:ring-0'
+                  : 'lg:mx-auto lg:max-w-6xl lg:rounded-[24px] lg:bg-white lg:px-8 lg:shadow-[0_4px_24px_rgba(17,24,39,0.06)] lg:ring-1 lg:ring-[#EAECEF]'
               }`}
             >
               <AdminRouteTransitionOutlet />
             </div>
             <ProfileSectionTabsBar />
           </div>
+          )}
         </ProfileTabProvider>
 
         <AdminBottomSheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Разделы">

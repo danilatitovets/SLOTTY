@@ -1,5 +1,5 @@
 import { MasterProRotatingCard } from '../../home/MasterProRotatingCard';
-import { homeOutlineBtn } from './adminBillingLandingTheme';
+import { billingOutlineBtn } from './adminBillingTheme';
 
 type Props = {
   priceValue: string;
@@ -28,7 +28,7 @@ export function BillingLandingProCard({ priceValue, priceUnit, includes, active,
           disabled={active}
           className={`flex min-h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold transition active:scale-[0.98] ${
             active
-              ? `${homeOutlineBtn} cursor-default !bg-white/20 !text-white`
+              ? `${billingOutlineBtn} cursor-default !border-white/30 !bg-white/15 !text-white`
               : 'bg-white text-[#111827] shadow-[0_10px_28px_rgba(0,0,0,0.12)]'
           }`}
         >

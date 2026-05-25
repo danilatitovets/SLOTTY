@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { HiCalendarDays, HiCheckBadge, HiClock, HiHomeModern, HiMapPin, HiStar } from 'react-icons/hi2';
+import { HiCalendarDays, HiClock, HiHomeModern, HiMapPin, HiStar } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
@@ -9,6 +11,7 @@ import {
   formatDistanceKm,
   formatMasterCardSpecialty,
   haversineKm,
+  masterDistanceCoords,
 } from '../lib/catalogFormat';
 import { clientPinkBtn } from '../clientTheme';
 import { catalogDesktopPanel } from './masterProfileTheme';
@@ -93,8 +96,7 @@ export function MasterHeroCard({
   nearestLoading,
   onChooseTime,
 }: Props) {
-  const lat = master.location.lat;
-  const lng = master.location.lng;
+  const { lat, lng } = masterDistanceCoords(master.location);
   const distanceKm =
     userLat != null && userLng != null && lat != null && lng != null
       ? haversineKm(userLat, userLng, lat, lng)
@@ -102,7 +104,7 @@ export function MasterHeroCard({
   const distanceLabel = formatDistanceKm(distanceKm);
   const locationChip = formatProfileLocationChip(master.location);
   const visitChip = visitChipLabel(master.location.visitType);
-  const showVerified = master.rating >= 4.5 && master.reviewsCount >= 10;
+  const showVerified = masterShowsVerifiedBadge(master);
   const isNewMaster = master.reviewsCount <= 0 && master.rating <= 0;
   const bookingsCount = estimatedBookingsCount(master.reviewsCount);
   const hasSlot = Boolean(nearest?.label);
@@ -139,7 +141,7 @@ export function MasterHeroCard({
               {master.masterName}
             </h1>
             {showVerified ? (
-              <HiCheckBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" aria-label="Проверенный мастер" />
+              <MasterVerifiedBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" />
             ) : null}
           </div>
           <p className="mt-0.5 line-clamp-1 text-[13px] font-medium text-[#6B7280]">

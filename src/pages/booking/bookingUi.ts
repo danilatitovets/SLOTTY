@@ -4,7 +4,7 @@ import {
   catalogListCardClass,
 } from '../client/servicesCatalog/servicesCatalogTheme';
 
-export const bookingCard = catalogListCardClass;
+export const bookingCard = `${catalogListCardClass} ring-1 ring-[#EEEEEE]`;
 
 export const bookingMutedPanel = 'rounded-[10px] bg-[#F5F5F5]';
 

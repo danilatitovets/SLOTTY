@@ -43,10 +43,6 @@ export function filterCatalogServices(
 
     if (!matchesDuration(s.durationMin, filters.duration)) return false;
 
-    const hasPhoto = Boolean(s.imageUrl?.trim());
-    if (filters.photo === 'with' && !hasPhoto) return false;
-    if (filters.photo === 'without' && hasPhoto) return false;
-
     if (!q) return true;
     const inTitle = s.title.toLowerCase().includes(q);
     const inDesc = s.description?.toLowerCase().includes(q) ?? false;

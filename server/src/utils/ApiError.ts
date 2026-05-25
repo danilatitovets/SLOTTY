@@ -1,6 +1,7 @@
 export class ApiError extends Error {
   readonly statusCode: number;
   readonly code?: string;
+  reason?: string;
 
   constructor(statusCode: number, message: string, code?: string) {
     super(message);
@@ -39,5 +40,9 @@ export class ApiError extends Error {
 
   static serviceUnavailable(message = 'Service unavailable', code = 'SERVICE_UNAVAILABLE') {
     return new ApiError(503, message, code);
+  }
+
+  static tooManyRequests(message = 'Too many requests', code = 'RATE_LIMITED') {
+    return new ApiError(429, message, code);
   }
 }

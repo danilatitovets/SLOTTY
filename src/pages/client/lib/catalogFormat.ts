@@ -37,13 +37,34 @@ export function formatDistanceKm(km: number | null | undefined): string | null {
   return `${km.toFixed(1)} км`;
 }
 
+/** Точные или приближённые координаты мастера для расчёта расстояния. */
+export function masterDistanceCoords(loc: {
+  lat?: number | null;
+  lng?: number | null;
+  distanceLat?: number | null;
+  distanceLng?: number | null;
+}): { lat: number | null; lng: number | null } {
+  const lat =
+    loc.lat != null && Number.isFinite(loc.lat)
+      ? loc.lat
+      : loc.distanceLat != null && Number.isFinite(loc.distanceLat)
+        ? loc.distanceLat
+        : null;
+  const lng =
+    loc.lng != null && Number.isFinite(loc.lng)
+      ? loc.lng
+      : loc.distanceLng != null && Number.isFinite(loc.distanceLng)
+        ? loc.distanceLng
+        : null;
+  return { lat, lng };
+}
+
 export function listingDistanceKm(
   listing: ServiceListingRecord,
   userLat: number | null,
   userLng: number | null,
 ): number | null {
-  const lat = listing.location.lat;
-  const lng = listing.location.lng;
+  const { lat, lng } = masterDistanceCoords(listing.location);
   if (userLat == null || userLng == null || lat == null || lng == null) return null;
   return haversineKm(userLat, userLng, lat, lng);
 }

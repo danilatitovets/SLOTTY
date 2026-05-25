@@ -13,8 +13,11 @@ import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import type { ScheduleWindowStatus, ScheduleWindowView, WindowTemplate } from './scheduleTypes';
 import {
   formatHmFromDate,
+  findActiveAppointmentForSlot,
   isHorizonLimitErrorMessage,
+  isScheduleWindowBooked,
   localDateTimeToUtcIso,
+  MSG_SCHEDULE_WINDOW_BOOKED,
   rangesOverlapMs,
   serviceTitleById,
   toIsoDate,
@@ -56,16 +59,7 @@ function findAppointmentForSlot(
   slot: MySlotDto,
   appointments: DemoMasterAppointment[],
 ): DemoMasterAppointment | undefined {
-  const start = new Date(slot.startsAt);
-  const dateIso = toIsoDate(start);
-  const time = formatHmFromDate(start);
-  return appointments.find(
-    (a) =>
-      a.date === dateIso &&
-      a.time === time &&
-      a.status !== 'cancelled' &&
-      (slot.status === 'booked' || a.status === 'confirmed' || a.status === 'pending'),
-  );
+  return findActiveAppointmentForSlot(slot.id, slot, appointments);
 }
 
 export function mapSlotToView(
@@ -236,6 +230,13 @@ export function useScheduleData(
 
   const removeSlot = useCallback(
     async (slotId: string) => {
+      const slot = rows.find((s) => s.id === slotId);
+      if (slot) {
+        const view = mapSlotToView(slot, visibleServices, appointments);
+        if (isScheduleWindowBooked(view, appointments)) {
+          throw new Error(MSG_SCHEDULE_WINDOW_BOOKED);
+        }
+      }
       if (!useCabinetApi) {
         setRows((prev) => prev.filter((s) => s.id !== slotId));
         return;
@@ -243,7 +244,7 @@ export function useScheduleData(
       await deleteMySlot(slotId);
       await reloadSlots();
     },
-    [reloadSlots, useCabinetApi],
+    [appointments, reloadSlots, rows, useCabinetApi, visibleServices],
   );
 
   return {

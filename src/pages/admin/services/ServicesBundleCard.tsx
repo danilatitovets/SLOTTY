@@ -1,6 +1,6 @@
 import { HiCheck, HiClock, HiEllipsisHorizontal, HiGift } from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
-import { servicesCard } from './adminServicesTheme';
+import { cabinetIconCircle } from '../profile/adminProfileCabinetTheme';
 import {
   bundleHasDiscount,
   bundleStatusLabel,
@@ -43,20 +43,21 @@ export function ServicesBundleCard({
 
   return (
     <article
-      className={`${servicesCard} overflow-hidden lg:rounded-[24px] lg:border-0 lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] ${className}`}
+      className={`flex w-full overflow-hidden rounded-[16px] bg-white lg:rounded-[24px] lg:border lg:border-[#EAECEF] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] ${className}`}
     >
-      <div className="flex gap-3.5 p-3.5 lg:min-h-[120px] lg:items-center lg:gap-5 lg:p-6">
-        <div className="h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[18px] bg-[#FFF1F4] lg:h-20 lg:w-20 lg:rounded-[20px]">
-          {img ? (
-            <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
-          ) : (
-            <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#FFF5F8] to-[#FFEEF2]">
-              <HiGift className="h-9 w-9 text-[#F47C8C]" aria-hidden />
+      <div className="relative flex w-[6.25rem] shrink-0 self-stretch bg-[#EBEBEB] sm:w-28 lg:w-[5.5rem] lg:min-h-[120px]">
+        {img ? (
+          <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <span className="flex h-full min-h-[7.5rem] w-full items-center justify-center lg:min-h-[120px]">
+            <span className={`${cabinetIconCircle} h-12 w-12 rounded-[12px] lg:h-14 lg:w-14 lg:rounded-[14px]`}>
+              <HiGift className="h-6 w-6 lg:h-7 lg:w-7" aria-hidden />
             </span>
-          )}
-        </div>
+          </span>
+        )}
+      </div>
 
-        <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col p-3.5 lg:justify-center lg:px-6 lg:py-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {showDeal ? (
@@ -74,7 +75,7 @@ export function ServicesBundleCard({
               <button
                 type="button"
                 onClick={onMenu}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7F7F8] text-[#6B7280] transition active:scale-[0.96]"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F5F5F5] text-[#6B7280] transition active:scale-[0.96]"
                 aria-label="Меню набора"
               >
                 <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
@@ -96,7 +97,7 @@ export function ServicesBundleCard({
           </ul>
 
           <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 lg:mt-3">
-            <span className="text-[20px] font-bold tabular-nums text-[#111827] lg:text-[32px] lg:font-black lg:tracking-[-0.06em] lg:text-[#ff5f7a]">
+            <span className="text-[20px] font-bold tabular-nums text-[#111827] lg:text-[32px] lg:font-black lg:tracking-[-0.06em]">
               {bundle.bundlePrice} BYN
             </span>
             {showDeal ? (
@@ -118,7 +119,6 @@ export function ServicesBundleCard({
             <HiClock className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {formatDurationRu(bundle.durationMinutes)}
           </p>
-        </div>
       </div>
     </article>
   );

@@ -1,6 +1,7 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { assertCanCreateMasterService } from '../billing/billing.service.js';
+import { assertProfileCanManageMasterContent } from '../profiles/profileAccount.service.js';
 
 function num(v: string): number {
   return Number(v);
@@ -51,6 +52,8 @@ export async function createMyService(
     sortOrder?: number;
   },
 ) {
+  await assertProfileCanManageMasterContent(masterId);
+
   const cat = await query(`select 1 from public.service_categories where id = $1 and is_active = true`, [
     body.categoryId,
   ]);
@@ -154,6 +157,29 @@ export async function patchMyService(
   return getMyService(masterId, serviceId);
 }
 
+export async function countUpcomingAppointmentsForService(
+  masterId: string,
+  serviceId: string,
+): Promise<number> {
+  const r = await query<{ n: string }>(
+    `select count(*)::text as n
+       from public.appointments a
+      where a.master_id = $1
+        and a.service_id = $2
+        and a.status in ('pending', 'confirmed')
+        and a.ends_at > now()`,
+    [masterId, serviceId],
+  );
+  return Number(r.rows[0]?.n ?? 0);
+}
+
 export async function softDeleteMyService(masterId: string, serviceId: string) {
+  const upcoming = await countUpcomingAppointmentsForService(masterId, serviceId);
+  if (upcoming > 0) {
+    throw ApiError.conflict(
+      'Нельзя удалить услугу: на неё есть будущие записи. Отмените записи в разделе «Записи» или скройте услугу в каталоге.',
+      'SERVICE_HAS_UPCOMING_APPOINTMENTS',
+    );
+  }
   await patchMyService(masterId, serviceId, { isActive: false });
 }

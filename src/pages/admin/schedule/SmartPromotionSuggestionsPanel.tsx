@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HiClock, HiSparkles } from 'react-icons/hi2';
 import { ADMIN_BILLING_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
@@ -253,9 +253,9 @@ export function SmartPromotionSuggestionsPanel({
 
   return (
     <div className="space-y-3">
-      <section className="overflow-hidden rounded-[20px] border border-[#EAECEF] bg-white shadow-[0_4px_20px_rgba(17,24,39,0.05)]">
-        <header className="flex items-start gap-3 border-b border-[#FDE8ED] bg-gradient-to-r from-[#FFF9FB] to-white px-4 py-3.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
+      <section className="overflow-hidden rounded-[16px] bg-white ring-1 ring-[#EEEEEE]">
+        <header className="flex items-start gap-3 border-b border-[#EEEEEE] bg-[#F5F5F5] px-4 py-3.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#F47C8C]">
             <HiSparkles className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
@@ -266,7 +266,7 @@ export function SmartPromotionSuggestionsPanel({
           </div>
         </header>
 
-        <ul className="divide-y divide-[#EAECEF]">
+        <ul className="divide-y divide-[#EEEEEE]">
           {shown.map((suggestion) => (
             <li key={suggestion.id}>
               <SuggestionItem
@@ -281,7 +281,7 @@ export function SmartPromotionSuggestionsPanel({
         </ul>
 
         {hiddenCount > 0 ? (
-          <p className="border-t border-[#EAECEF] bg-[#f6f7fb] px-4 py-2.5 text-center text-[12px] font-semibold text-[#6B7280]">
+          <p className="border-t border-[#EEEEEE] bg-[#F5F5F5] px-4 py-2.5 text-center text-[12px] font-medium text-[#6B7280]">
             {hintsMoreLabel(hiddenCount)}
           </p>
         ) : null}

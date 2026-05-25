@@ -10,7 +10,12 @@ import { MasterProfileDesktopSidebar } from './MasterProfileDesktopSidebar';
 import { MasterReviewsSection } from './MasterReviewsSection';
 import { MasterServicesList } from './MasterServicesList';
 import { MasterTrustStats } from './MasterTrustStats';
-import { catalogCanvasClass, masterProfileDesktopGrid } from './masterProfileTheme';
+import {
+  catalogCanvasClass,
+  masterProfileDesktopLayout,
+  masterProfileDesktopMainCol,
+  masterProfileDesktopSidebarCol,
+} from './masterProfileTheme';
 
 type Props = {
   master: ExtendedMasterProfile;
@@ -66,8 +71,8 @@ export function MasterProfileDesktop({
           nearestLoading={nearestLoading}
         />
 
-        <div className={`grid gap-6 ${masterProfileDesktopGrid}`}>
-          <div className="min-w-0 space-y-4">
+        <div className={masterProfileDesktopLayout}>
+          <div className={`space-y-4 ${masterProfileDesktopMainCol}`}>
             <MasterServicesList
               services={master.services}
               categoryCode={master.categoryCode}
@@ -92,13 +97,15 @@ export function MasterProfileDesktop({
             <MasterExtraSections master={master} layout="desktop" />
           </div>
 
-          <MasterProfileDesktopSidebar
-            master={master}
-            nearest={nearest}
-            nearestLoading={nearestLoading}
-            onChooseTime={() => onChooseTime(nearest?.serviceId)}
-            onPhoneUnavailable={onPhoneUnavailable}
-          />
+          <div className={masterProfileDesktopSidebarCol}>
+            <MasterProfileDesktopSidebar
+              master={master}
+              nearest={nearest}
+              nearestLoading={nearestLoading}
+              onChooseTime={() => onChooseTime(nearest?.serviceId)}
+              onPhoneUnavailable={onPhoneUnavailable}
+            />
+          </div>
         </div>
       </div>
     </div>

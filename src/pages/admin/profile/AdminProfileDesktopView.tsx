@@ -1,33 +1,36 @@
-import type { ReactNode } from 'react';
+import { type ChangeEvent, type ReactNode, type RefObject } from 'react';
+import { HiCamera } from 'react-icons/hi2';
 import type { ProfileCompletionHandlers } from './ProfileCompletionBlock';
 import { ProfileCompletionBlock } from './ProfileCompletionBlock';
 import { Link } from 'react-router-dom';
-import {
-  HiArrowRight,
-  HiBriefcase,
-  HiCheckBadge,
-  HiEnvelope,
-  HiStar,
-} from 'react-icons/hi2';
+import { HiArrowRight, HiBriefcase, HiEnvelope } from 'react-icons/hi2';
 import { BY } from 'country-flag-icons/react/1x1';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
-import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import type { MasterDraft, MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
-import type { MasterPublicationStatus } from '../../../features/admin/lib/profileCompletion';
+import { ProfileAvatarImage } from './adminProfileMedia';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { formatDurationRu, formatServicePrice, type ManagedService } from '../services/servicesFormat';
+import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
 import { useAuth } from '../../../features/auth/AuthProvider';
+import { MasterVerificationStatusBadge } from '../../../shared/ui/MasterVerificationStatusBadge';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { CabinetIcon } from './cabinetIcons';
-import { buildProfileStats, type ProfileStatsRatingMeta } from './AdminProfileCabinetUi';
+import { type ProfileStatsRatingMeta } from './AdminProfileCabinetUi';
+import { MasterCategorySection } from './MasterCategorySection';
+import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
+import { ProfileInformationPanel, ProfileSectionHeading } from './ProfileInformationPanel';
+import { AboutDescriptionText } from './AboutDescriptionText';
 import { ProfileSectionTabs } from './ProfileSectionTabs';
 import { useProfileTabs } from './profileTabContext';
+import { resolveCoverUrl, useMasterCoverUpload } from './masterProfileCover';
 import {
   profileDashboardCard,
   profileDashboardCardPad,
   profileDashboardEditBtn,
+  profileDesktopTabsSticky,
 } from './adminProfileDashboardTheme';
 
 function profileCityDisplay(loc: MasterLocation | undefined): string {
@@ -40,39 +43,6 @@ function valueOrDash(value?: string | null): string {
   return trimmed || '—';
 }
 
-function resolveCoverUrl(draft: MasterDraft): string | null {
-  const coverId = draft.portfolioCoverId?.trim();
-  if (coverId) {
-    const item = draft.portfolio?.find((p) => p.id === coverId);
-    const url = item?.imageUrl?.trim();
-    if (url) return url;
-  }
-  const photo = draft.photoUrl?.trim();
-  return photo || null;
-}
-
-function publicationStatusDisplay(status: MasterPublicationStatus | null): {
-  label: string;
-  tone: 'green' | 'muted' | 'warn';
-} {
-  switch (status) {
-    case 'published':
-      return { label: 'Активен', tone: 'green' };
-    case 'hidden':
-      return { label: 'Скрыт', tone: 'muted' };
-    case 'blocked':
-      return { label: 'Заблокирован', tone: 'warn' };
-    default:
-      return { label: 'Черновик', tone: 'muted' };
-  }
-}
-
-function formatRegistrationDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 function ProfileDashboardHeroWrapper({
   draft,
   onEditMain,
@@ -81,40 +51,95 @@ function ProfileDashboardHeroWrapper({
   onEditMain: () => void;
 }) {
   const tabs = useProfileTabs();
+  const { coverInputRef, coverBusy, coverError, onCoverFileChange, pickCover } = useMasterCoverUpload();
+
   return (
-    <section className={`${profileDashboardCard} overflow-hidden`}>
-      <HeroCoverBlock draft={draft} />
-      <HeroInfoBlock draft={draft} onEditMain={onEditMain} />
-      <ProfileSectionTabs
-        active={tabs.activeSection}
-        onChange={tabs.setActiveSection}
-        className="px-1 md:px-2"
-      />
-    </section>
+    <div className="min-w-0">
+      <section className={`${profileDashboardCard} rounded-b-none`}>
+        <HeroCoverBlock
+          draft={draft}
+          coverBusy={coverBusy}
+          coverError={coverError}
+          coverInputRef={coverInputRef}
+          onPickCover={pickCover}
+          onCoverFileChange={onCoverFileChange}
+        />
+        <HeroInfoBlock draft={draft} onEditMain={onEditMain} />
+      </section>
+      <div
+        className={`${profileDashboardCard} ${profileDesktopTabsSticky} rounded-t-none`}
+      >
+        <ProfileSectionTabs
+          active={tabs.activeSection}
+          onChange={tabs.setActiveSection}
+          className="px-1 md:px-2"
+        />
+      </div>
+    </div>
   );
 }
 
-function HeroCoverBlock({ draft }: { draft: MasterDraft }) {
+function HeroCoverBlock({
+  draft,
+  coverBusy,
+  coverError,
+  coverInputRef,
+  onPickCover,
+  onCoverFileChange,
+}: {
+  draft: MasterDraft;
+  coverBusy: boolean;
+  coverError: string | null;
+  coverInputRef: RefObject<HTMLInputElement>;
+  onPickCover: () => void;
+  onCoverFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
   const photoSrc = draft.photoUrl?.trim() || defaultMasterAvatarUrl(draft.name || 'Мастер');
-  const coverSrc = resolveCoverUrl(draft) || photoSrc;
-  const useBlur = !resolveCoverUrl(draft);
+  const dedicatedCover = resolveCoverUrl(draft);
+  const coverSrc = dedicatedCover || photoSrc;
+  const useBlur = !dedicatedCover;
 
   return (
-    <div className="relative h-[300px] w-full overflow-hidden bg-[#f0f1f5] sm:h-[320px]">
-      <ImageReveal
-        src={coverSrc}
-        alt=""
-        width={1200}
-        height={400}
-        className={`h-full w-full object-cover ${useBlur ? 'scale-110 blur-md' : ''}`}
-        onError={(event) => {
-          (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent"
+    <div className="relative">
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
         aria-hidden
+        tabIndex={-1}
+        onChange={onCoverFileChange}
       />
+      <div className="group relative h-[300px] w-full overflow-hidden bg-[#f0f1f5] sm:h-[320px]">
+        <ImageReveal
+          src={coverSrc}
+          alt=""
+          className={`absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center ${useBlur ? 'scale-110 blur-md' : ''}`}
+          style={{ objectFit: 'cover', objectPosition: 'center' }}
+          onError={(event) => {
+            (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent"
+          aria-hidden
+        />
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPickCover();
+          }}
+          disabled={coverBusy}
+          aria-label={coverBusy ? 'Загрузка обложки' : 'Изменить обложку'}
+          className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#F47C8C] shadow-sm transition hover:bg-white active:scale-[0.98] disabled:opacity-60 sm:top-4 sm:right-4"
+        >
+          <HiCamera className="h-5 w-5" aria-hidden />
+        </button>
+      </div>
+      {coverError ? (
+        <p className="px-6 pb-2 pt-2 text-[13px] font-medium text-[#DC2626]">{coverError}</p>
+      ) : null}
     </div>
   );
 }
@@ -126,54 +151,47 @@ function HeroInfoBlock({
   draft: MasterDraft;
   onEditMain: () => void;
 }) {
-  const { publicationStatus } = useAdminMasterCabinet();
   const { profile: authProfile } = useAuth();
+  const { verified, pendingSteps } = useAccountVerificationStatus();
+
   const photoSrc = draft.photoUrl?.trim() || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const displayName = draft.name.trim() || 'Мастер';
   const city = valueOrDash(profileCityDisplay(draft.location));
   const phone = valueOrDash(draft.phone);
   const email = valueOrDash(authProfile?.account_email);
-  const isPublished = publicationStatus === 'published';
 
   return (
     <div className="relative bg-white px-6 pb-2 pt-0 md:px-8">
       <div className="-mt-[4.5rem] flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-5">
-          <div className="relative h-[120px] w-[120px] shrink-0 overflow-hidden rounded-full bg-white ring-4 ring-white shadow-[0_12px_32px_rgba(17,24,39,0.12)]">
-            <ImageReveal
-              src={photoSrc}
-              alt=""
-              width={224}
-              height={224}
-              className="h-full w-full object-cover"
-              onError={(event) => {
-                (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(
-                  draft.name || 'Мастер',
-                );
-              }}
-            />
-          </div>
+          <ProfileAvatarImage
+            src={photoSrc}
+            alt=""
+            sizeClass="h-[120px] w-[120px]"
+            ringClassName="bg-white ring-4 ring-white"
+            onError={(event) => {
+              (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
+            }}
+          />
           <div className="min-w-0 pt-14 sm:pt-16">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-[clamp(20px,2.2vw,26px)] font-bold tracking-[-0.04em] text-[#111827]">
                 {displayName}
               </h2>
-              {isPublished ? (
-                <HiCheckBadge
-                  className="h-6 w-6 shrink-0 text-[#ff5f7a]"
-                  aria-label="Профиль опубликован"
-                />
-              ) : null}
+              <MasterVerificationStatusBadge
+                verified={verified}
+                pendingSteps={pendingSteps}
+                className="h-6 w-6 shrink-0"
+              />
             </div>
             <p className="mt-1 text-[14px] font-medium text-[#6B7280]">Кабинет мастера</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-[#6B7280]">
               <span className="inline-flex items-center gap-1.5">
-                <CabinetIcon name="phone" size={16} className="text-[#9CA3AF]" />
                 {phone !== '—' ? (
-                  <span className="inline-flex items-center gap-1">
-                    <BY title="Беларусь" className="h-3.5 w-3.5 rounded-full object-cover" />
+                  <>
+                    <BY title="Беларусь" className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
                     {phone}
-                  </span>
+                  </>
                 ) : (
                   phone
                 )}
@@ -198,30 +216,28 @@ function HeroInfoBlock({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-  valueNode,
-}: {
-  label: string;
-  value?: string;
-  valueNode?: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3.5">
-      <span className="text-[13px] font-medium text-[#6B7280]">{label}</span>
-      {valueNode ?? (
-        <span className="text-right text-[14px] font-semibold text-[#111827]">{value}</span>
-      )}
-    </div>
-  );
+function sortServicesForProfilePreview(services: MasterOnboardingService[]): MasterOnboardingService[] {
+  return [...services].sort((a, b) => {
+    const aVisible = a.isActive !== false ? 0 : 1;
+    const bVisible = b.isActive !== false ? 0 : 1;
+    if (aVisible !== bVisible) return aVisible - bVisible;
+    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  });
 }
 
 function ServicePreviewRow({ service }: { service: ManagedService }) {
+  const visible = service.isActive !== false;
   return (
-    <div className="flex items-center justify-between gap-4 rounded-[16px] bg-[#f6f7fb] px-4 py-3.5">
+    <div className="flex items-center justify-between gap-4 rounded-[10px] bg-[#F5F5F5] px-4 py-3.5">
       <div className="min-w-0">
-        <p className="truncate text-[14px] font-semibold text-[#111827]">{service.title}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate text-[14px] font-semibold text-[#111827]">{service.title}</p>
+          {!visible ? (
+            <span className="shrink-0 rounded-full bg-[#EBEBEB] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
+              Скрыта
+            </span>
+          ) : null}
+        </div>
         <p className="mt-0.5 text-[12px] text-[#6B7280]">{formatDurationRu(service.durationMin)}</p>
       </div>
       <p className="shrink-0 text-[14px] font-bold text-[#ff5f7a]">{formatServicePrice(service)}</p>
@@ -238,58 +254,41 @@ export function AdminProfileDesktopMainGrid({
   appointments: DemoMasterAppointment[];
   ratingMeta?: ProfileStatsRatingMeta;
 }) {
-  const { publicationStatus } = useAdminMasterCabinet();
-  const stats = buildProfileStats(appointments, ratingMeta);
-  const completed = appointments.filter((a) => a.status === 'completed').length;
-  const reviews = ratingMeta?.reviewsCount ?? 0;
-  const services = (draft.services ?? []).filter((s) => s.isActive !== false).slice(0, 4);
-  const description = draft.description?.trim() || '—';
+  const { publicationStatus, useCabinetApi } = useAdminMasterCabinet();
+  const allServices = draft.services ?? [];
+  const previewServices = sortServicesForProfilePreview(allServices).slice(0, 4);
+  const visibleServicesCount = allServices.filter((s) => s.isActive !== false).length;
+  const description = draft.description?.trim() ?? '';
 
   return (
     <div className="space-y-6">
+      <MasterProfileActiveToggle
+        publicationStatus={publicationStatus}
+        useCabinetApi={useCabinetApi}
+        masterDisplayName={draft.name}
+      />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
-          <h3 className="text-[17px] font-bold tracking-[-0.03em] text-[#111827]">О себе</h3>
-          <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-[#6B7280]">
-            {description}
-          </p>
-        </section>
-
-        <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
-          <h3 className="text-[17px] font-bold tracking-[-0.03em] text-[#111827]">Информация</h3>
-          <div className="mt-2 space-y-1">
-            <InfoRow label="Дата регистрации" value={formatRegistrationDate(draft.createdAt)} />
-            <InfoRow
-              label="Статус"
-              valueNode={
-                <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-[12px] font-bold ${
-                    publicationStatusDisplay(publicationStatus).tone === 'green'
-                      ? 'bg-[#ECFDF3] text-[#16A34A]'
-                      : 'bg-[#F3F4F6] text-[#6B7280]'
-                  }`}
-                >
-                  {publicationStatusDisplay(publicationStatus).label}
-                </span>
-              }
+          <ProfileSectionHeading
+            title="О себе"
+            subtitle="Текст в публичном профиле"
+            icon={<CabinetIcon name="chat" size={18} />}
+          />
+          <div className="mt-4 rounded-[16px] bg-[#f6f7fb] p-4">
+            <AboutDescriptionText
+              text={description}
+              placeholder="Добавьте описание в профиле — клиенты увидят его перед записью."
             />
-            <InfoRow
-              label="Рейтинг"
-              valueNode={
-                stats.rating.empty ? (
-                  <span className="text-[14px] font-semibold text-[#9CA3AF]">{stats.rating.value}</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[14px] font-bold text-[#111827]">
-                    <HiStar className="h-4 w-4 text-[#E8A317]" aria-hidden />
-                    {stats.rating.value}
-                  </span>
-                )
-              }
-            />
-            <InfoRow label="Выполнено заказов" value={String(completed)} />
-            <InfoRow label="Отзывов" value={String(reviews)} />
           </div>
         </section>
+
+        <ProfileInformationPanel
+          draft={draft}
+          appointments={appointments}
+          ratingMeta={ratingMeta}
+          publicationStatus={publicationStatus}
+        />
       </div>
 
       <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
@@ -307,10 +306,20 @@ export function AdminProfileDesktopMainGrid({
           </Link>
         </div>
         <div className="mt-4 space-y-2.5">
-          {services.length > 0 ? (
-            services.map((s) => <ServicePreviewRow key={s.id} service={s as ManagedService} />)
+          {previewServices.length > 0 ? (
+            <>
+              {visibleServicesCount === 0 ? (
+                <p className="rounded-[10px] bg-[#FFF7ED] px-4 py-3 text-[13px] leading-relaxed text-[#B45309]">
+                  Услуги есть, но скрыты в каталоге. Откройте раздел «Услуги» и нажмите «Показать» у
+                  нужной позиции.
+                </p>
+              ) : null}
+              {previewServices.map((s) => (
+                <ServicePreviewRow key={s.id} service={s as ManagedService} />
+              ))}
+            </>
           ) : (
-            <p className="rounded-[16px] bg-[#f6f7fb] px-4 py-6 text-center text-[14px] text-[#6B7280]">
+            <p className="rounded-[10px] bg-[#F5F5F5] px-4 py-6 text-center text-[14px] text-[#6B7280]">
               Услуги пока не добавлены
             </p>
           )}
@@ -338,6 +347,13 @@ export function AdminProfileDesktopShell({
   completionHandlers,
 }: DesktopShellProps) {
   const { activeSection } = useProfileTabs();
+  const {
+    publicationStatus,
+    categoryChangePolicy,
+    patchProfileToBackend,
+    refreshDraft,
+    useCabinetApi,
+  } = useAdminMasterCabinet();
 
   return (
     <div className="hidden space-y-6 lg:block">
@@ -353,6 +369,14 @@ export function AdminProfileDesktopShell({
             draft={draft}
             handlers={completionHandlers}
             surfaceClassName={`${profileDashboardCard} ${profileDashboardCardPad}`}
+          />
+          <MasterCategorySection
+            draft={draft}
+            publicationStatus={publicationStatus}
+            policy={categoryChangePolicy}
+            useCabinetApi={useCabinetApi}
+            onPatchCategory={patchProfileToBackend}
+            onRefresh={refreshDraft}
           />
         </>
       ) : section ? (

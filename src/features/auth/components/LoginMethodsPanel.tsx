@@ -20,6 +20,7 @@ import { usePublicAppConfig } from '../hooks/usePublicAppConfig';
 import { useTelegramLoginUrl } from '../hooks/useTelegramLoginUrl';
 import { readPublicAppOrigin } from '../../../shared/lib/masterBookingLink';
 import { GOOGLE_LINK_PATH } from '../../../app/paths';
+import { countAccountVerifications } from '../lib/accountVerification';
 import type { AuthIdentityDto, AuthProvider, BackendProfile } from '../types';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
@@ -31,27 +32,29 @@ import {
   sheetHintClass,
   sheetPrimaryBtnClass,
 } from '../../../pages/admin/profile/adminProfileCabinetTheme';
+import {
+  AUTH_DIVIDER_LABEL,
+  AUTH_DIVIDER_LINE,
+  AUTH_DIVIDER_ROW,
+  AUTH_FIELD_CLASS,
+  AUTH_PRIMARY_BTN_CLASS,
+  AUTH_SOCIAL_BTN_CLASS,
+  AUTH_TAB_ROW,
+  authTabClass,
+} from './authFormTheme';
 
 type Props = {
   /** settings = привязка способов входа; login = вход на сайте */
   mode?: 'settings' | 'login';
   /** page = /login; sheet = bottom sheet кабинета; okx = список строк в настройках клиента */
   appearance?: 'default' | 'page' | 'sheet' | 'okx';
+  /** master-login = /master/login; master-register = /master/register */
+  authIntent?: 'master-login' | 'master-register';
   /** Вызывается после успешного входа или привязки; для входа передаётся актуальный profile. */
   onLinked?: (profile?: BackendProfile) => void;
 };
 
-const pageFieldClass =
-  'w-full rounded-2xl border border-[#E5E7EB] bg-[#F7F7F8] px-4 py-3.5 text-[15px] text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#111827] focus:bg-white';
-
-const pagePrimaryBtn =
-  'w-full rounded-2xl bg-[#111827] px-4 py-3.5 text-[15px] font-semibold text-white transition hover:bg-[#1F2937] active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-[#E5E7EB] disabled:text-[#9CA3AF]';
-
-const pageSocialBtn =
-  'relative flex w-full min-h-[52px] items-center justify-center gap-3 rounded-2xl border border-[#E5E7EB] bg-white px-5 text-[15px] font-semibold text-[#111827] transition hover:bg-[#FAFAFA] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50';
-
-const socialOutlineBtn =
-  'flex w-full min-h-12 items-center justify-center gap-3 rounded-full border border-[#E5E7EB] bg-white px-5 text-[15px] font-semibold text-[#111827] transition hover:bg-[#FAFAFA] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50';
+const socialOutlineBtn = AUTH_SOCIAL_BTN_CLASS;
 
 const settingsActionBtn =
   'shrink-0 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-4 py-2 text-[13px] font-semibold text-white shadow-[0_6px_16px_rgba(255,95,122,0.28)] disabled:opacity-50';
@@ -137,9 +140,9 @@ function GoogleLoginPill({
     variant === 'cabinet'
       ? `${sheetPrimaryBtnClass} w-full gap-2`
       : pageStyle
-        ? pageSocialBtn
+        ? AUTH_SOCIAL_BTN_CLASS
         : socialOutlineBtn;
-  const overlayRound = pageStyle ? 'rounded-2xl' : variant === 'cabinet' ? 'rounded-[17px]' : 'rounded-full';
+  const overlayRound = pageStyle ? 'rounded-full' : variant === 'cabinet' ? 'rounded-[17px]' : 'rounded-full';
 
   const publicConfig = usePublicAppConfig();
 
@@ -221,19 +224,26 @@ function GoogleLoginPill({
   );
 }
 
-export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', onLinked }: Props) {
+export function LoginMethodsPanel({
+  mode = 'settings',
+  appearance = 'default',
+  authIntent,
+  onLinked,
+}: Props) {
   const [searchParams] = useSearchParams();
   const loginReturnPath = searchParams.get('from') ?? undefined;
   const { isAuthenticated, applySession, refreshProfile } = useAuth();
   const { initDataRaw, isTelegramWebApp } = useTelegram();
+  const isMasterRegister = authIntent === 'master-register';
   const [identities, setIdentities] = useState<AuthIdentityDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailMode, setEmailMode] = useState<'login' | 'register' | 'link'>('login');
+  const [emailMode, setEmailMode] = useState<'login' | 'register' | 'link'>(
+    isMasterRegister ? 'register' : 'login',
+  );
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [showLoginEmail, setShowLoginEmail] = useState(appearance === 'page');
   const [emailNotice, setEmailNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -418,8 +428,16 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
 
   const linkedEmailLabel = emailIdentity?.email ? maskEmail(emailIdentity.email) : null;
 
-  /* ——— Вход: /login (как в референсе — email, затем «или продолжить с») ——— */
+  /* ——— Пластина входа: /login, /master/login, /master/register (OKX + цвета SLOTTY) ——— */
   if (!isSettings && pageStyle) {
+    const isMasterAuth = authIntent === 'master-login' || authIntent === 'master-register';
+    const primaryLabel =
+      emailMode === 'register'
+        ? 'Зарегистрироваться'
+        : isMasterAuth
+          ? 'Войти'
+          : 'Продолжить';
+
     return (
       <div className="space-y-6">
         {error ? <ErrorBanner message={error} pageStyle /> : null}
@@ -431,26 +449,22 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
         {busy ? <p className="text-[13px] text-[#6B7280]">Подождите…</p> : null}
 
         <div className="space-y-4">
-          <div className="flex gap-8 border-b border-[#E5E7EB]">
+          <div className={AUTH_TAB_ROW} role="tablist" aria-label="Вход или регистрация">
             <button
               type="button"
+              role="tab"
+              aria-selected={emailMode === 'login'}
               onClick={() => setEmailMode('login')}
-              className={`min-w-[4.5rem] border-b-2 pb-3 text-[15px] font-semibold transition ${
-                emailMode === 'login'
-                  ? 'border-[#111827] text-[#111827]'
-                  : 'border-transparent text-[#9CA3AF] hover:text-[#6B7280]'
-              }`}
+              className={authTabClass(emailMode === 'login')}
             >
               Вход
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={emailMode === 'register'}
               onClick={() => setEmailMode('register')}
-              className={`min-w-[6.5rem] border-b-2 pb-3 text-[15px] font-semibold transition ${
-                emailMode === 'register'
-                  ? 'border-[#111827] text-[#111827]'
-                  : 'border-transparent text-[#9CA3AF] hover:text-[#6B7280]'
-              }`}
+              className={authTabClass(emailMode === 'register')}
             >
               Регистрация
             </button>
@@ -462,7 +476,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@example.com"
-            className={pageFieldClass}
+            className={AUTH_FIELD_CLASS}
           />
           <input
             type="password"
@@ -470,20 +484,23 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Пароль (мин. 8 символов)"
-            className={pageFieldClass}
+            className={AUTH_FIELD_CLASS}
           />
           <button
             type="button"
             disabled={busy || !email.trim() || password.length < 8}
             onClick={() => void handleEmailSubmit()}
-            className={`${pagePrimaryBtn} min-h-[52px]`}
+            className={AUTH_PRIMARY_BTN_CLASS}
           >
-            {emailMode === 'register' ? 'Зарегистрироваться' : 'Продолжить'}
+            {primaryLabel}
           </button>
 
           <p className="min-h-[22px] text-[14px] leading-snug text-[#6B7280]">
             {emailMode === 'login' ? (
-              <Link to={FORGOT_PASSWORD_PATH} className="font-semibold text-[#111827] underline-offset-2 hover:underline">
+              <Link
+                to={FORGOT_PASSWORD_PATH}
+                className="font-semibold text-[#111827] underline decoration-[#E29595] decoration-2 underline-offset-4 hover:text-[#E29595]"
+              >
                 Забыли пароль?
               </Link>
             ) : (
@@ -494,10 +511,10 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[#E5E7EB]" />
-          <span className="text-[13px] font-medium text-[#9CA3AF]">или продолжить с</span>
-          <div className="h-px flex-1 bg-[#E5E7EB]" />
+        <div className={AUTH_DIVIDER_ROW}>
+          <div className={AUTH_DIVIDER_LINE} />
+          <span className={AUTH_DIVIDER_LABEL}>или продолжить с</span>
+          <div className={AUTH_DIVIDER_LINE} />
         </div>
 
         <div className="space-y-3">
@@ -513,113 +530,15 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
             onError={(m) => setError(m)}
           />
 
-          {renderTelegramLoginControl(pageSocialBtn, 'Telegram')}
+          {renderTelegramLoginControl(AUTH_SOCIAL_BTN_CLASS, 'Telegram')}
 
           {!initDataRaw || !isTelegramWebApp ? (
             <p className="text-center text-[12px] leading-relaxed text-[#9CA3AF]">
-              Откроется Telegram → бот SLOTTY → кнопка «Открыть SLOTTY» для входа.
+              {isMasterAuth
+                ? 'Откроется Telegram → бот SLOTTY. Новый аккаунт создаётся автоматически.'
+                : 'Откроется Telegram → бот SLOTTY → кнопка «Открыть SLOTTY».'}
             </p>
           ) : null}
-        </div>
-      </div>
-    );
-  }
-
-  /* ——— Вход: /master/login ——— */
-  if (!isSettings) {
-    return (
-      <div className="space-y-4">
-        {error ? <ErrorBanner message={error} pageStyle={false} /> : null}
-        {emailNotice ? (
-          <p className="rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-[13px] leading-relaxed text-[#166534]">
-            {emailNotice}
-          </p>
-        ) : null}
-        {busy ? <p className="text-[13px] text-neutral-500">Подождите…</p> : null}
-
-        <div className="space-y-3">
-          <GoogleLoginPill
-            busy={busy}
-            googleClientId={googleClientId}
-            label="Войти через Google"
-            pageStyle={false}
-            isTelegramWebApp={inTelegramApp}
-            oauthPurpose="login"
-            onCredential={(t) => void handleGoogleCredential(t)}
-            onError={(m) => setError(m)}
-          />
-
-          {renderTelegramLoginControl(socialOutlineBtn, 'Войти через Telegram')}
-
-          {!initDataRaw || !isTelegramWebApp ? (
-            <p className="text-[12px] leading-relaxed text-neutral-500">
-              Нажмите «Войти через Telegram» — откроется приложение Telegram и бот SLOTTY.
-            </p>
-          ) : null}
-
-          {!showLoginEmail ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setShowLoginEmail(true)}
-              className="flex w-full min-h-11 items-center justify-center rounded-full border border-[#E5E7EB] bg-[#F1EFEF] px-5 text-[14px] font-semibold text-neutral-900"
-            >
-              Войти по email
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEmailMode('login')}
-                  className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                    emailMode === 'login' ? 'bg-white text-neutral-950' : 'text-neutral-600'
-                  }`}
-                >
-                  Вход
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEmailMode('register')}
-                  className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                    emailMode === 'register' ? 'bg-white text-neutral-950' : 'text-neutral-600'
-                  }`}
-                >
-                  Регистрация
-                </button>
-              </div>
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="w-full rounded-[14px] border-0 bg-white px-4 py-3 text-[15px] shadow-sm outline-none ring-1 ring-neutral-200/80"
-              />
-              <input
-                type="password"
-                autoComplete={emailMode === 'register' ? 'new-password' : 'current-password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Пароль (мин. 8 символов)"
-                className="w-full rounded-[14px] border-0 bg-white px-4 py-3 text-[15px] shadow-sm outline-none ring-1 ring-neutral-200/80"
-              />
-              <button
-                type="button"
-                disabled={busy || !email.trim() || password.length < 8}
-                onClick={() => void handleEmailSubmit()}
-                className="w-full rounded-full bg-[#E29595] px-4 py-3 text-[14px] font-semibold text-white disabled:opacity-50"
-              >
-                {emailMode === 'register' ? 'Зарегистрироваться' : 'Продолжить'}
-              </button>
-              <Link
-                to={FORGOT_PASSWORD_PATH}
-                className="block text-center text-[13px] font-semibold text-[#F47C8C] no-underline hover:underline"
-              >
-                Забыли пароль?
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -627,11 +546,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
 
   /* ——— Способы входа: OKX-стиль (клиентские настройки) ——— */
   if (isSettings && okxStyle) {
-    const connectedCount = [
-      linked.telegram,
-      linked.google,
-      linked.email && linked.emailVerified,
-    ].filter(Boolean).length;
+    const connectedCount = countAccountVerifications(identities);
     const okxBtn =
       'shrink-0 rounded-[10px] bg-[#F5F5F5] px-4 py-2 text-[14px] font-semibold text-[#111827] transition hover:bg-[#EBEBEB] disabled:opacity-50';
 
@@ -784,11 +699,7 @@ export function LoginMethodsPanel({ mode = 'settings', appearance = 'default', o
 
   /* ——— Способы входа: кабинет (настройки / sheet) ——— */
   if (settingsCardsLayout) {
-    const connectedCount = [
-      linked.telegram,
-      linked.google,
-      linked.email && linked.emailVerified,
-    ].filter(Boolean).length;
+    const connectedCount = countAccountVerifications(identities);
 
     return (
       <div className="space-y-3">

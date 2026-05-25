@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
 import { HiCheck, HiCreditCard } from 'react-icons/hi2';
 import { LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
+import { categorySupportsReferencePhoto } from '../../features/booking/lib/referencePhotoCategories';
 import {
   catalogFieldClass,
   catalogPrimaryBtn,
 } from '../client/servicesCatalog/servicesCatalogTheme';
 import { bookingDesktopSectionTitle } from './bookingDesktopTheme';
 import { bookingMutedPanel } from './bookingUi';
+import { BookingReferencePhotoField } from './BookingReferencePhotoField';
 
 const TRUST_ITEMS = [
   'Бесплатная отмена за 24 часа',
@@ -22,6 +24,9 @@ type Props = {
   onAcceptedTermsChange: (value: boolean) => void;
   comment: string;
   onCommentChange: (value: string) => void;
+  categoryCode?: string | null;
+  referencePhotoUrl: string | null;
+  onReferencePhotoUrlChange: (url: string | null) => void;
   onConfirm: () => void;
   className?: string;
 };
@@ -34,10 +39,14 @@ export function BookingCheckoutExtras({
   onAcceptedTermsChange,
   comment,
   onCommentChange,
+  categoryCode,
+  referencePhotoUrl,
+  onReferencePhotoUrlChange,
   onConfirm,
   className = '',
 }: Props) {
   const canSubmit = canConfirm && acceptedTerms && !submitting;
+  const showReferencePhoto = categorySupportsReferencePhoto(categoryCode);
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -65,6 +74,15 @@ export function BookingCheckoutExtras({
           </li>
         ))}
       </ul>
+
+      {showReferencePhoto ? (
+        <BookingReferencePhotoField
+          categoryCode={categoryCode}
+          photoUrl={referencePhotoUrl}
+          onPhotoUrlChange={onReferencePhotoUrlChange}
+          disabled={submitting}
+        />
+      ) : null}
 
       <label className="block">
         <span className={bookingDesktopSectionTitle}>Комментарий мастеру</span>

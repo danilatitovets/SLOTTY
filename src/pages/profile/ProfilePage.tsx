@@ -38,6 +38,9 @@ import {
 } from '../../features/profile/lib/favoriteMastersStorage';
 import { useMyNotifications } from '../../features/notifications/useMyNotifications';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { AccountAccessRestrictedBanner } from '../../features/auth/components/AccountAccessBanner';
+import { AccountBlockedScreen } from '../../features/auth/components/AccountBlockedScreen';
+import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
 import { openBookingVoucherPrint } from '../../features/booking/lib/bookingConfirmationVoucherPrint';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import { useTelegram } from '../../shared/hooks/useTelegram';
@@ -411,13 +414,13 @@ function EmptyState({
   buttonText,
 }: {
   title: string;
-  text: string;
+  text?: string;
   buttonText: string;
 }) {
   return (
     <NothingFoundCard
       title={title}
-      text={text}
+      {...(text ? { text } : {})}
       action={
         <Link
           to={SERVICES_PATH}
@@ -471,6 +474,7 @@ function AppointmentBottomSheet({
 
 export function ProfilePage() {
   const { profile, isLoading: authLoading, isAuthenticated, backendConfigured, refreshProfile } = useAuth();
+  const accountAccess = useAccountAccess();
   const { isTelegramWebApp, telegramUserPhotoUrl, telegramUserPreview } = useTelegram();
   const isMasterCabinet = useIsMasterUser();
   const outletCtx = useOutletContext<ClientOutletContext | undefined>();
@@ -629,9 +633,11 @@ export function ProfilePage() {
   const [favorites, setFavorites] = useState<FavoriteMasterDto[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
+  const favoritesEverLoadedRef = useRef(false);
 
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [cancelModal, setCancelModal] = useState<CancelModalState>({ open: false });
+  const [cancelReason, setCancelReason] = useState('');
   const [reviewAppointmentId, setReviewAppointmentId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState('');
@@ -670,47 +676,63 @@ export function ProfilePage() {
     }
   }, [isAuthenticated]);
 
-  const loadFavorites = useCallback(async () => {
-    if (hasApiBackend()) {
-      if (!isAuthenticated) {
-        setFavorites([]);
+  const loadFavorites = useCallback(
+    async (opts?: { silent?: boolean; syncLocal?: boolean }) => {
+      const silent = opts?.silent === true;
+      const showSkeleton = !silent && !favoritesEverLoadedRef.current;
+
+      if (hasApiBackend()) {
+        if (!isAuthenticated) {
+          setFavorites([]);
+          setFavoritesError(null);
+          setFavoritesLoading(false);
+          favoritesEverLoadedRef.current = false;
+          return;
+        }
+        if (showSkeleton) setFavoritesLoading(true);
         setFavoritesError(null);
+        try {
+          if (opts?.syncLocal !== false && !silent) {
+            await syncLocalFavoritesToServer();
+          }
+          setFavorites(await fetchFavoritesForDisplay());
+          favoritesEverLoadedRef.current = true;
+        } catch (e) {
+          if (!silent) {
+            setFavorites([]);
+          }
+          setFavoritesError(e instanceof Error ? e.message : 'Не удалось загрузить избранное.');
+        } finally {
+          if (showSkeleton) setFavoritesLoading(false);
+        }
         return;
       }
-      setFavoritesLoading(true);
+
+      if (showSkeleton) setFavoritesLoading(true);
       setFavoritesError(null);
       try {
-        await syncLocalFavoritesToServer();
-        setFavorites(await fetchFavoritesForDisplay());
+        setFavorites(await resolveLocalFavoritesForDisplay());
+        favoritesEverLoadedRef.current = true;
       } catch (e) {
-        setFavorites([]);
+        if (!silent) {
+          setFavorites([]);
+        }
         setFavoritesError(e instanceof Error ? e.message : 'Не удалось загрузить избранное.');
       } finally {
-        setFavoritesLoading(false);
+        if (showSkeleton) setFavoritesLoading(false);
       }
-      return;
-    }
-
-    setFavoritesLoading(true);
-    setFavoritesError(null);
-    try {
-      setFavorites(await resolveLocalFavoritesForDisplay());
-    } catch (e) {
-      setFavorites([]);
-      setFavoritesError(e instanceof Error ? e.message : 'Не удалось загрузить избранное.');
-    } finally {
-      setFavoritesLoading(false);
-    }
-  }, [isAuthenticated]);
+    },
+    [isAuthenticated],
+  );
 
   useEffect(() => {
     void loadClientAppointments();
-    void loadFavorites();
-  }, [loadClientAppointments, loadFavorites, searchParams]);
+  }, [loadClientAppointments, searchParams]);
 
   useEffect(() => {
-    if (mainTab !== 'favorites') return;
-    void loadFavorites();
+    if (mainTab === 'favorites') {
+      void loadFavorites();
+    }
   }, [mainTab, loadFavorites]);
 
   useEffect(() => {
@@ -719,16 +741,21 @@ export function ProfilePage() {
   }, [mainTab, refreshProfile]);
 
   useEffect(() => {
-    if (isAuthenticated) void loadFavorites();
+    if (!isAuthenticated) {
+      setFavorites([]);
+      favoritesEverLoadedRef.current = false;
+      return;
+    }
+    void loadFavorites({ silent: true });
   }, [isAuthenticated, loadFavorites]);
 
   useEffect(() => {
     const onFavoritesChanged = () => {
-      if (mainTab === 'favorites') void loadFavorites();
+      void loadFavorites({ silent: true });
     };
     window.addEventListener(FAVORITE_MASTERS_CHANGED, onFavoritesChanged);
     return () => window.removeEventListener(FAVORITE_MASTERS_CHANGED, onFavoritesChanged);
-  }, [mainTab, loadFavorites]);
+  }, [loadFavorites]);
 
   useEffect(() => {
     if (!apptError) return;
@@ -782,6 +809,7 @@ export function ProfilePage() {
 
   const openCancel = useCallback((row: DemoAppointmentRecord) => {
     setSelectedAppointmentId(null);
+    setCancelReason('');
     setCancelModal({ open: true, phase: 'confirm', row });
   }, []);
 
@@ -802,8 +830,10 @@ export function ProfilePage() {
       const row = m.row;
       void (async () => {
         try {
+          const reason = cancelReason.trim();
           const res = await apiFetch(`/api/me/appointments/${encodeURIComponent(row.id)}/cancel`, {
             method: 'PATCH',
+            body: JSON.stringify({ reason: reason || undefined }),
           });
           if (!res.ok) {
             const msg =
@@ -821,7 +851,7 @@ export function ProfilePage() {
       })();
       return { open: true, phase: 'cancelling', row };
     });
-  }, [loadClientAppointments]);
+  }, [cancelReason, loadClientAppointments]);
 
   const openReview = useCallback((row: DemoAppointmentRecord) => {
     setSelectedAppointmentId(null);
@@ -867,6 +897,20 @@ export function ProfilePage() {
   const apptRows = apptSubTab === 'upcoming' ? apptState.upcoming : apptState.past;
   const showApptList = apptRows.length > 0;
 
+  if (
+    isAuthenticated &&
+    (accountAccess.showBlockedScreen || accountAccess.showDeletedScreen)
+  ) {
+    return (
+      <div className="min-h-dvh bg-white text-neutral-900">
+        {!clientShell ? (
+          <HomeHeader isDemoMaster={isMasterCabinet} onProfileTab={onProfileTab} />
+        ) : null}
+        <AccountBlockedScreen access={accountAccess} />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-dvh overflow-x-hidden text-neutral-900 lg:bg-[#F5F5F5] ${
@@ -875,6 +919,16 @@ export function ProfilePage() {
     >
       {!clientShell ? (
         <HomeHeader isDemoMaster={isMasterCabinet} onProfileTab={onProfileTab} />
+      ) : null}
+
+      {accountAccess.showRestrictedBanner ? (
+        <div
+          className={`mx-auto w-full px-4 pt-3 sm:px-5 ${
+            clientShell ? 'max-w-none lg:max-w-6xl lg:px-8' : 'max-w-lg'
+          }`}
+        >
+          <AccountAccessRestrictedBanner access={accountAccess} variant="client" />
+        </div>
       ) : null}
 
       <ClientProfileDesktop
@@ -1188,11 +1242,7 @@ export function ProfilePage() {
                 ))}
               </ul>
             ) : !showApptList ? (
-              <EmptyState
-                title="Записей пока нет"
-                text="Выберите мастера и удобное время — запись появится здесь."
-                buttonText="Найти услуги"
-              />
+              <EmptyState title="Записей пока нет" buttonText="Найти услуги" />
             ) : (
               <ul className="flex flex-col gap-3">
                 {apptRows.map((row) => (
@@ -1248,11 +1298,7 @@ export function ProfilePage() {
                 ))}
               </ul>
             ) : favorites.length === 0 ? (
-              <EmptyState
-                title="Избранных пока нет"
-                text="Сохраняйте мастеров, чтобы быстрее записываться снова."
-                buttonText="Найти услуги"
-              />
+              <EmptyState title="Избранных пока нет" buttonText="Найти услуги" />
             ) : (
               <ul className="flex flex-col gap-3">
                   {favorites.map((row, i) => (
@@ -1486,6 +1532,17 @@ export function ProfilePage() {
                 Вы действительно хотите отменить запись к мастеру {cancelModal.row.masterName} на{' '}
                 {cancelModal.row.dateLabel}, {cancelModal.row.timeLabel}?
               </p>
+
+              <label className="mt-4 block">
+                <span className="text-[13px] font-semibold text-neutral-700">Причина отмены</span>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={3}
+                  placeholder="Например: изменились планы"
+                  className="mt-1.5 w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[15px] text-neutral-900 outline-none focus:border-[#E29595]"
+                />
+              </label>
 
               {cancelModal.phase === 'confirm' && cancelModal.apiError ? (
                 <p className="mt-2 text-[14px] font-medium text-red-600">{cancelModal.apiError}</p>

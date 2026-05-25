@@ -17,10 +17,11 @@ function chartValues(stats: OverviewDayStat[], mode: 'revenue' | 'visits') {
   return stats.map((s) => (mode === 'revenue' ? s.completedRevenue : s.activeVisits));
 }
 
-function chartAxisIndices(n: number): number[] {
+function chartAxisIndices(n: number, detailed = false): number[] {
   if (n <= 0) return [];
   if (n === 1) return [0];
   if (n === 2) return [0, 1];
+  if (detailed && n <= 8) return Array.from({ length: n }, (_, i) => i);
   return [0, Math.floor((n - 1) / 2), n - 1];
 }
 
@@ -78,7 +79,7 @@ export function OverviewLineChart({
   const hasValues = values.some((v) => v > 0);
   const showChart = hasStats && hasValues;
   const max = Math.max(1, ...values);
-  const axisIdx = chartAxisIndices(stats.length);
+  const axisIdx = chartAxisIndices(stats.length, size === 'large');
 
   const chartHeight = size === 'large' ? 220 : 168;
   const chartBoxClass = size === 'large' ? 'h-[14.5rem]' : 'h-[11.5rem]';

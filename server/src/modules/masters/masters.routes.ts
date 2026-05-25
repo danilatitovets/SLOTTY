@@ -5,6 +5,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { authMiddleware } from '../../middlewares/auth.js';
 import { requireMasterDbAccess } from '../../middlewares/requireMasterAccess.js';
+import { requireMasterPlatformWrite } from '../../middlewares/profileAccountAccess.js';
 import {
   getMasterDetail,
   getMyMasterCabinet,
@@ -45,11 +46,21 @@ import { masterBundlesRouter, masterPromotionsRouter } from '../service-extras/s
 import { smartPromotionSuggestionsRouter } from '../smart-promotions/smartPromotionSuggestions.routes.js';
 import { masterSlotsRouter } from '../slots/slots.routes.js';
 import { masterAppointmentsRouter } from '../appointments/appointments.routes.js';
-import { getMasterSubscriptionWithUsage, switchMasterSubscriptionMock } from '../billing/billing.service.js';
+import {
+  getMasterSubscriptionWithUsage,
+  isSubscriptionMockSwitchAllowed,
+  recordMasterCheckoutStarted,
+  switchMasterSubscriptionMock,
+} from '../billing/billing.service.js';
 import { masterOverviewRouter } from './masterOverview.routes.js';
 import { normalizeBelarusPhone, isOptionalBelarusPhoneValid } from '../../utils/belarusPhone.js';
+import { categoryChangeRouter } from './categoryChange.routes.js';
+import { publicCatalogRateLimit } from '../../middlewares/rateLimit.js';
+import { requireMasterProPlan } from '../../middlewares/requireMasterProPlan.js';
+import { env } from '../../config/env.js';
 
 export const mastersRouter = Router();
+mastersRouter.use(categoryChangeRouter);
 
 const masterImageUpload = multer({
   storage: multer.memoryStorage(),
@@ -142,6 +153,7 @@ const MAX_SERVICE_PRICE_AMOUNT = 10_000_000;
 
 mastersRouter.get(
   '/',
+  publicCatalogRateLimit,
   asyncHandler(async (req, res) => {
     const q = listQuery.parse(req.query);
     const rows = await listPublishedMasters({
@@ -206,7 +218,7 @@ const patchMe = z.object({
     .refine((v) => v == null || v.length >= 1, {
       message: 'Код категории не может быть пустым',
     }),
-  publicationStatus: z.enum(['draft', 'published', 'hidden', 'blocked']).optional(),
+  publicationStatus: z.enum(['draft', 'published', 'hidden', 'blocked', 'paused']).optional(),
   globalBufferMinutes: z.coerce.number().int().finite().min(0).max(240).optional(),
 });
 
@@ -512,6 +524,7 @@ const onboardingBody = z
 mastersRouter.post(
   '/me',
   authMiddleware,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = postMe.parse(req.body);
     const out = await upsertMyMasterProfile(req.user!.id, {
@@ -533,6 +546,7 @@ mastersRouter.post(
 mastersRouter.post(
   '/me/onboarding',
   authMiddleware,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = onboardingBody.parse(req.body);
     const out = await completeMyMasterOnboarding(req.user!.id, {
@@ -596,6 +610,7 @@ mastersRouter.patch(
   '/me',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = patchMe.parse(req.body);
     const out = await patchMyMasterProfile(req.user!.id, {
@@ -606,10 +621,12 @@ mastersRouter.patch(
       contacts: body.contacts === undefined ? undefined : body.contacts?.length ? body.contacts : null,
       photoUrl: body.photoUrl === '' || body.photoUrl == null ? null : body.photoUrl,
       slug: body.slug === '' || body.slug == null ? null : body.slug,
-      primaryCategoryCode:
-        body.primaryCategoryCode === '' || body.primaryCategoryCode == null
-          ? null
-          : body.primaryCategoryCode,
+      ...(body.primaryCategoryCode !== undefined
+        ? {
+            primaryCategoryCode:
+              body.primaryCategoryCode === '' ? null : body.primaryCategoryCode,
+          }
+        : {}),
       publicationStatus: body.publicationStatus,
       globalBufferMinutes: body.globalBufferMinutes,
     });
@@ -636,6 +653,7 @@ mastersRouter.get(
   '/me',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const cabinet = await getMyMasterCabinet(req.user!.id);
     res.json(cabinet);
@@ -646,6 +664,7 @@ mastersRouter.put(
   '/me/primary-location',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = primaryLocationBody.parse(req.body);
     await upsertPrimaryLocation(req.user!.id, {
@@ -676,6 +695,7 @@ mastersRouter.put(
   '/me/schedule-rules',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = scheduleRulesBody.parse(req.body);
     await replaceScheduleRules(req.user!.id, body.rules);
@@ -687,6 +707,7 @@ mastersRouter.get(
   '/me/booking-rules',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const row = await getMyBookingRulesDecoded(req.user!.id);
     res.json({
@@ -702,6 +723,7 @@ mastersRouter.patch(
   '/me/booking-rules',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = bookingRulesPatchBody.parse(req.body);
     await patchMyBookingRules(req.user!.id, {
@@ -724,6 +746,7 @@ mastersRouter.get(
   '/me/career',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const career = await listMyCareer(req.user!.id);
     res.json({ career });
@@ -734,6 +757,7 @@ mastersRouter.post(
   '/me/career',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = careerCreateBody.parse(req.body);
     const row = await createMyCareerItem(req.user!.id, body);
@@ -745,6 +769,7 @@ mastersRouter.patch(
   '/me/career/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     const body = careerPatchBody.parse(req.body);
@@ -757,6 +782,7 @@ mastersRouter.delete(
   '/me/career/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     await deleteMyCareerItem(req.user!.id, id);
@@ -768,6 +794,7 @@ mastersRouter.get(
   '/me/certificates',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const certificates = await listMyCertificates(req.user!.id);
     res.json({ certificates });
@@ -793,6 +820,7 @@ mastersRouter.post(
   '/me/certificates',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = certificateCreateBody.parse(req.body);
     const row = await createMyCertificate(req.user!.id, {
@@ -811,6 +839,7 @@ mastersRouter.patch(
   '/me/certificates/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     const body = certificatePatchBody.parse(req.body);
@@ -837,6 +866,7 @@ mastersRouter.delete(
   '/me/certificates/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     await deleteMyCertificate(req.user!.id, id);
@@ -848,6 +878,7 @@ mastersRouter.post(
   '/me/certificates/batch',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = certificatesBatchBody.parse(req.body);
     await insertCertificates(req.user!.id, body.items);
@@ -859,6 +890,7 @@ mastersRouter.get(
   '/me/portfolio',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const portfolio = await listMyPortfolio(req.user!.id);
     res.json({ portfolio });
@@ -884,6 +916,7 @@ mastersRouter.post(
   '/me/portfolio',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const body = portfolioCreateBody.parse(req.body);
     const row = await createMyPortfolioItem(req.user!.id, {
@@ -900,6 +933,7 @@ mastersRouter.patch(
   '/me/portfolio/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     const body = portfolioPatchBody.parse(req.body);
@@ -922,6 +956,7 @@ mastersRouter.delete(
   '/me/portfolio/:id',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     await deleteMyPortfolioItem(req.user!.id, id);
@@ -929,23 +964,61 @@ mastersRouter.delete(
   }),
 );
 
-mastersRouter.use('/me/services', authMiddleware, requireMasterDbAccess, masterServicesRouter);
-mastersRouter.use('/me/bundles', authMiddleware, requireMasterDbAccess, masterBundlesRouter);
-mastersRouter.use('/me/promotions', authMiddleware, requireMasterDbAccess, masterPromotionsRouter);
+mastersRouter.use(
+  '/me/services',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  masterServicesRouter,
+);
+mastersRouter.use(
+  '/me/bundles',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  masterBundlesRouter,
+);
+mastersRouter.use(
+  '/me/promotions',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  masterPromotionsRouter,
+);
 mastersRouter.use(
   '/me/smart-promotion-suggestions',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  requireMasterProPlan,
   smartPromotionSuggestionsRouter,
 );
-mastersRouter.use('/me/slots', authMiddleware, requireMasterDbAccess, masterSlotsRouter);
-mastersRouter.use('/me/appointments', authMiddleware, requireMasterDbAccess, masterAppointmentsRouter);
-mastersRouter.use('/me/overview', masterOverviewRouter);
+mastersRouter.use(
+  '/me/slots',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  masterSlotsRouter,
+);
+mastersRouter.use(
+  '/me/appointments',
+  authMiddleware,
+  requireMasterDbAccess,
+  masterAppointmentsRouter,
+);
+mastersRouter.use(
+  '/me/overview',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterProPlan,
+  masterOverviewRouter,
+);
 
 mastersRouter.get(
   '/me/subscription',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
     const subscription = await getMasterSubscriptionWithUsage(req.user!.id);
     res.json({ subscription });
@@ -957,11 +1030,39 @@ const subscriptionMockBody = z.object({
   billingPeriod: z.enum(['month', 'year']),
 });
 
+const checkoutStartedBody = z.object({
+  billingPeriod: z.enum(['month', 'year']),
+});
+
+mastersRouter.post(
+  '/me/billing/checkout-started',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  asyncHandler(async (req, res) => {
+    const body = checkoutStartedBody.parse(req.body);
+    await recordMasterCheckoutStarted(req.user!.id, body.billingPeriod);
+    res.json({ ok: true });
+  }),
+);
+
 mastersRouter.patch(
   '/me/subscription/mock',
   authMiddleware,
   requireMasterDbAccess,
+  requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
+    if (!isSubscriptionMockSwitchAllowed()) {
+      if (env.NODE_ENV === 'production') {
+        console.warn('[billing] отклонён mock subscription в production', {
+          profileId: req.user!.id,
+        });
+      }
+      throw ApiError.forbidden(
+        'Переключение тарифа (mock) недоступно в этой среде',
+        'SUBSCRIPTION_MOCK_DISABLED',
+      );
+    }
     const body = subscriptionMockBody.parse(req.body);
     const subscription = await switchMasterSubscriptionMock(req.user!.id, body.planCode, body.billingPeriod);
     res.json({ subscription });

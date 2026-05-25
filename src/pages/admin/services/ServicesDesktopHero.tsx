@@ -22,13 +22,7 @@ type Props = {
   metrics: ServicesTabMetrics;
 };
 
-function HeroShell({
-  children,
-  hero,
-}: {
-  children: ReactNode;
-  hero: ReactNode;
-}) {
+function HeroShell({ children, hero }: { children: ReactNode; hero: ReactNode }) {
   return (
     <div className={`overflow-hidden ${servicesDesktopCard}`}>
       {hero}
@@ -53,27 +47,33 @@ function HeroBlock({
   action?: ReactNode;
 }) {
   return (
-    <section className={`relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`}>
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
+    <section className={`relative overflow-hidden ${SLOTTY_GRADIENT} p-5 text-white lg:p-8`}>
+      <div
+        className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#ff8aa0]/35 blur-3xl lg:-right-20 lg:-top-20 lg:h-72 lg:w-72"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-16 -left-12 h-32 w-32 rounded-full bg-[#ff5f7a]/20 blur-3xl lg:-bottom-24 lg:-left-20 lg:h-64 lg:w-64"
+        aria-hidden
+      />
 
       <div className="relative min-w-0">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
+        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-black text-white lg:px-4 lg:py-2 lg:text-[14px]">
           {badgeIcon}
           {badge}
         </p>
 
-        <p className="mt-8 text-[52px] font-black leading-none tabular-nums tracking-[-0.08em] text-white lg:text-[72px]">
+        <p className="mt-5 text-[32px] font-black leading-none tabular-nums tracking-[-0.08em] text-white lg:mt-8 lg:text-[52px] xl:text-[72px]">
           {value}
         </p>
 
-        <p className="mt-3 text-[15px] font-bold text-white/80">{subtitle}</p>
+        <p className="mt-2 text-[13px] font-bold text-white/80 lg:mt-3 lg:text-[15px]">{subtitle}</p>
 
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
+        <p className="mt-3 max-w-[660px] text-[14px] font-semibold leading-relaxed text-white/82 lg:mt-6 lg:text-[17px] lg:leading-8">
           {description}
         </p>
 
-        {action ? <div className="mt-6">{action}</div> : null}
+        {action ? <div className="mt-4 lg:mt-6">{action}</div> : null}
       </div>
     </section>
   );

@@ -2,13 +2,17 @@ import type { PoolClient } from 'pg';
 import { query } from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { recordBillingEvent } from './billingEvents.service.js';
 
 function num(v: string): number {
   return Number(v);
 }
 
-/** Dev/test или явный флаг в production — переключение тарифа без оплаты (временно). */
+/** Mock Pro в production всегда запрещён. В dev/test — по NODE_ENV или ALLOW_SUBSCRIPTION_MOCK. */
 export function isSubscriptionMockSwitchAllowed(): boolean {
+  if (env.NODE_ENV === 'production') {
+    return false;
+  }
   return env.NODE_ENV === 'development' || env.NODE_ENV === 'test' || env.ALLOW_SUBSCRIPTION_MOCK === true;
 }
 
@@ -214,12 +218,14 @@ export async function switchMasterSubscriptionMock(
     throw ApiError.forbidden('Переключение тарифа (mock) отключено в этой среде', 'SUBSCRIPTION_MOCK_DISABLED');
   }
   await ensureMasterSubscription(masterId);
-  const plan = await query<{ id: string }>(
-    `select id from public.subscription_plans where code = $1 and is_active = true limit 1`,
+  const before = await getMasterSubscriptionWithUsage(masterId);
+  const plan = await query<{ id: string; price_month: string; price_year: string }>(
+    `select id, price_month::text, price_year::text
+       from public.subscription_plans where code = $1 and is_active = true limit 1`,
     [planCode],
   );
-  const planId = plan.rows[0]?.id;
-  if (!planId) {
+  const planRow = plan.rows[0];
+  if (!planRow?.id) {
     throw ApiError.badRequest('Неизвестный тариф', 'UNKNOWN_PLAN');
   }
   await query(
@@ -228,9 +234,84 @@ export async function switchMasterSubscriptionMock(
             billing_period = $2::public.billing_period,
             updated_at = now()
       where master_id = $3`,
-    [planId, billingPeriod, masterId],
+    [planRow.id, billingPeriod, masterId],
   );
+
+  const amount =
+    planCode === 'pro'
+      ? billingPeriod === 'year'
+        ? Number(planRow.price_year)
+        : Number(planRow.price_month)
+      : 0;
+
+  await recordBillingEvent({
+    masterId,
+    eventType: 'plan_changed',
+    planCode,
+    billingPeriod,
+    amount,
+    status: 'succeeded',
+    source: 'mock',
+    metadata: {
+      fromPlan: before.plan.code,
+      toPlan: planCode,
+      fromPeriod: before.billingPeriod,
+      toPeriod: billingPeriod,
+    },
+  });
+
+  if (planCode === 'pro') {
+    await query(
+      `update public.master_profiles
+          set master_plan = 'pro',
+              pro_status = 'active',
+              pro_started_at = coalesce(pro_started_at, now()),
+              pro_expires_at = case
+                when $2::text = 'year' then now() + interval '1 year'
+                else now() + interval '1 month'
+              end,
+              updated_at = now()
+        where master_id = $1`,
+      [masterId, billingPeriod],
+    );
+  } else {
+    await query(
+      `update public.master_profiles
+          set master_plan = 'basic',
+              pro_status = coalesce(pro_status, 'inactive'),
+              updated_at = now()
+        where master_id = $1`,
+      [masterId],
+    );
+  }
+
   return getMasterSubscriptionWithUsage(masterId);
+}
+
+export async function recordMasterCheckoutStarted(
+  masterId: string,
+  billingPeriod: 'month' | 'year',
+): Promise<void> {
+  const plan = await query<{ price_month: string; price_year: string }>(
+    `select price_month::text, price_year::text
+       from public.subscription_plans where code = 'pro' and is_active = true limit 1`,
+  );
+  const row = plan.rows[0];
+  const amount = row
+    ? billingPeriod === 'year'
+      ? Number(row.price_year)
+      : Number(row.price_month)
+    : null;
+  await recordBillingEvent({
+    masterId,
+    eventType: 'checkout_started',
+    planCode: 'pro',
+    billingPeriod,
+    amount,
+    status: 'pending',
+    source: 'mock',
+    metadata: { step: 'pro_checkout_modal' },
+  });
 }
 
 export async function assertCanCreateMasterService(masterId: string): Promise<void> {

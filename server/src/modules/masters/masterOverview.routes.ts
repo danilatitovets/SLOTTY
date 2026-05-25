@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { authMiddleware } from '../../middlewares/auth.js';
-import { requireMasterDbAccess } from '../../middlewares/requireMasterAccess.js';
 import {
   getMasterOverviewBundle,
   getMasterOverviewClients,
@@ -13,8 +11,6 @@ import {
 } from './masterOverview.service.js';
 
 export const masterOverviewRouter = Router();
-
-masterOverviewRouter.use(authMiddleware, requireMasterDbAccess);
 
 const periodQuery = z.object({
   period: z.enum(['today', 'week', 'month', 'all']).default('month'),

@@ -1,5 +1,5 @@
 import { HiMapPin } from 'react-icons/hi2';
-import { clientPinkBtn } from '../clientTheme';
+import { catalogDesktopPanel, catalogPrimaryBtn } from '../servicesCatalog/servicesCatalogTheme';
 
 type Props = {
   onAllow: () => void;
@@ -8,9 +8,9 @@ type Props = {
 
 export function GeoPromptCard({ onAllow, loading }: Props) {
   return (
-    <div className="rounded-[24px] bg-gradient-to-br from-[#FFF1F4] to-white p-4 ring-1 ring-[#FCE7EC]">
+    <div className={`relative max-lg:static ${catalogDesktopPanel} p-4`}>
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#F47C8C] shadow-sm">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#EBEBEB] text-[#F47C8C]">
           <HiMapPin className="h-6 w-6" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
@@ -22,7 +22,7 @@ export function GeoPromptCard({ onAllow, loading }: Props) {
             type="button"
             disabled={loading}
             onClick={onAllow}
-            className={`${clientPinkBtn} mt-3 min-h-10 px-4 text-[13px]`}
+            className={`${catalogPrimaryBtn} mt-3 min-h-10 w-full px-4 text-[13px] sm:w-auto`}
           >
             {loading ? 'Определяем…' : 'Разрешить геолокацию'}
           </button>

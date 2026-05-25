@@ -5,6 +5,7 @@ import type { DemoMasterProfile, DemoMasterService, DemoReview } from '../../ser
 import { normalizeMasterCareerItemType } from '../../profile/lib/demoMasterStorage';
 import type { MasterDraftCareerItem } from '../../profile/lib/demoMasterStorage';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import { resolveFilledContacts } from '../../master-onboarding/model/masterContacts';
 import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 
 async function readApiError(res: Response): Promise<string> {
@@ -19,6 +20,7 @@ export type MasterPublicLocationDto = {
   street: string;
   building: string;
   buildingDetail?: string | null;
+  salonName?: string | null;
   entrance?: string | null;
   floor?: string | null;
   room?: string | null;
@@ -28,8 +30,11 @@ export type MasterPublicLocationDto = {
   clientNote?: string | null;
   publicAddress: string;
   isPrimary: boolean;
+  showExactAddressAfterBooking?: boolean;
   lat?: number | null;
   lng?: number | null;
+  distanceLat?: number | null;
+  distanceLng?: number | null;
 };
 
 export type MasterPublicDetailDto = {
@@ -41,6 +46,7 @@ export type MasterPublicDetailDto = {
     slug: string | null;
     phone: string | null;
     contact: string | null;
+    isVerified: boolean;
     rating: number;
     reviewsCount: number;
     category: { code: string; name: string } | null;
@@ -119,11 +125,22 @@ function locationDtoToModel(loc: MasterPublicLocationDto | undefined): MasterLoc
     city: loc.city?.trim() || '',
     street: loc.street?.trim() || loc.publicAddress?.trim() || '',
     building: loc.building?.trim() || '',
+    showExactAddressAfterBooking: loc.showExactAddressAfterBooking === true,
   };
   if (typeof loc.lat === 'number' && Number.isFinite(loc.lat) && typeof loc.lng === 'number' && Number.isFinite(loc.lng)) {
     base.lat = loc.lat;
     base.lng = loc.lng;
   }
+  if (typeof loc.distanceLat === 'number' && Number.isFinite(loc.distanceLat)) {
+    base.distanceLat = loc.distanceLat;
+  }
+  if (typeof loc.distanceLng === 'number' && Number.isFinite(loc.distanceLng)) {
+    base.distanceLng = loc.distanceLng;
+  }
+  const salon = loc.salonName?.trim();
+  if (salon) base.salonName = salon;
+  const bd = loc.buildingDetail?.trim();
+  if (bd) base.buildingDetail = bd;
   const e = loc.entrance?.trim();
   const f = loc.floor?.trim();
   const r = loc.room?.trim();
@@ -195,6 +212,8 @@ export function mapMasterDetailToDemoProfile(detail: MasterPublicDetailDto): Dem
     bio: master.bio?.trim() ?? '',
     phone: master.phone?.trim() || undefined,
     contact: master.contact?.trim() || undefined,
+    isVerified: Boolean(master.isVerified),
+    contacts: resolveFilledContacts({ contact: master.contact }),
     services,
     availableSlotsByServiceId,
     reviews,

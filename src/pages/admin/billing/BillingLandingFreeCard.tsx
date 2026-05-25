@@ -1,4 +1,10 @@
-import { billingCheckIcon, billingLandingCard, homeOutlineBtn, homePinkBtn } from './adminBillingLandingTheme';
+import {
+  billingCheckIcon,
+  billingOutlineBtn,
+  billingPinkBtn,
+  billingPlanCard,
+  billingPlanCardActive,
+} from './adminBillingTheme';
 
 function IconCheck({ className }: { className?: string }) {
   return (
@@ -37,27 +43,29 @@ export function BillingLandingFreeCard({
   onSelect,
 }: Props) {
   const ctaLabel = active ? 'Текущий тариф' : 'Перейти на Free';
+  const priceMain = priceLine.split(' / ')[0] ?? priceLine;
+  const priceUnit = priceLine.includes(' / ') ? `/ ${priceLine.split(' / ')[1]}` : '';
 
   return (
     <article
-      className={`relative flex min-h-[20rem] flex-col overflow-hidden px-5 pb-6 pt-5 text-[#111827] ${billingLandingCard} ${
-        active ? 'ring-2 ring-[#F47C8C]/35' : ''
-      }`}
+      className={`${billingPlanCard} ${active ? billingPlanCardActive : ''}`}
     >
       {active ? (
-        <span className="absolute right-4 top-4 rounded-full bg-[#F47C8C] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-white">
+        <span className="absolute right-4 top-4 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-3 py-1 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(255,95,122,0.28)]">
           Активен
         </span>
       ) : null}
 
-      <p className="text-[18px] font-semibold tracking-tight">{name}</p>
-      <div className="mt-4 flex items-baseline gap-1">
-        <span className="text-[36px] font-bold tracking-tight">{priceLine.split(' / ')[0] ?? priceLine}</span>
-        {priceLine.includes(' / ') ? (
-          <span className="text-[14px] font-medium text-[#6B7280]">/ {priceLine.split(' / ')[1]}</span>
+      <p className="text-[17px] font-bold tracking-[-0.02em] text-[#111827]">{name}</p>
+      <div className="mt-3 flex items-baseline gap-1">
+        <span className="text-[32px] font-black leading-none tracking-[-0.05em] text-[#111827]">
+          {priceMain}
+        </span>
+        {priceUnit ? (
+          <span className="text-[14px] font-medium text-[#6B7280]">{priceUnit}</span>
         ) : null}
       </div>
-      <p className="mt-3 text-[14px] leading-relaxed text-[#6B7280]">{tagline}</p>
+      <p className="mt-2 text-[14px] leading-relaxed text-[#6B7280]">{tagline}</p>
 
       <ul className="mt-4 flex flex-1 flex-col gap-2">
         {includes.map((feature) => (
@@ -71,8 +79,8 @@ export function BillingLandingFreeCard({
       </ul>
 
       {limits.length > 0 ? (
-        <div className="mt-4 rounded-[18px] bg-[#F9FAFB] px-4 py-3 ring-1 ring-[#F3F4F6]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#9CA3AF]">Ограничения</p>
+        <div className="mt-4 rounded-[16px] bg-[#f6f7fb] px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Ограничения</p>
           <ul className="mt-2 space-y-1 text-[13px] text-[#6B7280]">
             {limits.map((line) => (
               <li key={line}>— {line}</li>
@@ -87,9 +95,7 @@ export function BillingLandingFreeCard({
           if (!active) onSelect();
         }}
         disabled={active}
-        className={`mt-5 flex min-h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold transition active:scale-[0.98] ${
-          active ? `${homeOutlineBtn} cursor-default opacity-80` : homePinkBtn
-        }`}
+        className={`mt-5 ${active ? billingOutlineBtn : billingPinkBtn}`}
       >
         {ctaLabel}
       </button>

@@ -43,6 +43,7 @@ export type CatalogListingItem = {
   slug: string | null;
   rating: number;
   reviewsCount: number;
+  isVerified: boolean;
   category: { code: string; name: string } | null;
   location: {
     publicAddress: string;

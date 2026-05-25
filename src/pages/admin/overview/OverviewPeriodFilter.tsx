@@ -1,9 +1,5 @@
 import type { OverviewPeriodPreset } from './overviewAnalytics';
-import {
-  overviewFilterChip,
-  overviewFilterChipActive,
-  overviewFilterChipIdle,
-} from './adminOverviewTheme';
+import { overviewPeriodSegmentClass, overviewPeriodTrack } from './adminOverviewTheme';
 
 const PRESETS: Array<{ id: OverviewPeriodPreset; label: string }> = [
   { id: 'today', label: 'Сегодня' },
@@ -20,10 +16,7 @@ type Props = {
 export function OverviewPeriodFilter({ value, onChange }: Props) {
   return (
     <div className="min-w-0" role="group" aria-label="Период данных">
-      <p className="mb-2.5 text-[12px] font-bold uppercase tracking-wide text-[#9CA3AF] lg:sr-only">
-        Период
-      </p>
-      <div className="flex flex-wrap gap-2">
+      <div className={`${overviewPeriodTrack} lg:inline-grid lg:max-w-[28rem]`}>
         {PRESETS.map((preset) => {
           const selected = value === preset.id;
           return (
@@ -32,7 +25,7 @@ export function OverviewPeriodFilter({ value, onChange }: Props) {
               type="button"
               onClick={() => onChange(preset.id)}
               aria-pressed={selected}
-              className={`${overviewFilterChip} ${selected ? overviewFilterChipActive : overviewFilterChipIdle}`}
+              className={overviewPeriodSegmentClass(selected)}
             >
               {preset.label}
             </button>

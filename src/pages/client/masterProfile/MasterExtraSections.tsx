@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { HiChevronDown } from 'react-icons/hi2';
+import { resolveFilledContacts } from '../../../features/master-onboarding/model/masterContacts';
+import { MasterContactsChips } from '../../master-onboarding/MasterContactsChips';
 import { MasterAddressBlock } from './MasterAddressBlock';
 import { MasterPaymentMethodsBlock } from './MasterPaymentMethodsBlock';
 import type { ExtendedMasterProfile } from './types';
@@ -56,9 +58,22 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
       master.paymentNote?.trim() ||
       paymentMethods.length > 0,
   );
+  const clientContacts = resolveFilledContacts({
+    contact: master.contact,
+    contacts: master.contacts,
+  });
 
   return (
     <section className={`${isDesktop ? '' : 'mt-0'} space-y-2.5 ${isDesktop ? 'divide-y divide-[#EEEEEE] rounded-[16px] bg-white' : `${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}`}>
+      {clientContacts.length > 0 ? (
+        <Accordion title="Связаться" defaultOpen desktop={isDesktop}>
+          <p className="mb-3 text-[13px] leading-relaxed text-[#6B7280]">
+            Напишите мастеру в удобном мессенджере
+          </p>
+          <MasterContactsChips contacts={clientContacts} />
+        </Accordion>
+      ) : null}
+
       {bio ? (
         <Accordion title="О мастере" desktop={isDesktop}>
           <p

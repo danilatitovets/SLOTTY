@@ -16,6 +16,7 @@ export type ServerClientAppointment = {
   price_snapshot: string;
   service_title_snapshot: string;
   client_note: string | null;
+  client_reference_photo_url: string | null;
   created_at: string;
   master_display_name: string;
   location_visit_type: string | null;
@@ -168,17 +169,32 @@ export type CreateAppointmentResponse = {
   voucherNumber: string;
 };
 
+export async function uploadBookingReferencePhoto(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiFetch('/api/me/appointments/reference-photo', {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error(await readBookingApiError(res));
+  const data = (await res.json()) as { url?: string };
+  if (!data.url?.trim()) throw new Error('Не удалось получить ссылку на фото');
+  return data.url.trim();
+}
+
 export async function createClientAppointment(body: {
   slotId: string;
   serviceId: string;
   clientNote?: string;
+  clientReferencePhotoUrl?: string;
 }): Promise<CreateAppointmentResponse> {
   const res = await apiFetch('/api/appointments', {
     method: 'POST',
     body: JSON.stringify({
       slotId: body.slotId,
       serviceId: body.serviceId,
-      clientNote: body.clientNote,
+      clientNote: body.clientNote?.trim() || undefined,
+      clientReferencePhotoUrl: body.clientReferencePhotoUrl?.trim() || undefined,
     }),
   });
   if (!res.ok) throw new Error(await readBookingApiError(res));

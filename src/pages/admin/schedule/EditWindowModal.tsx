@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
+import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
@@ -8,7 +9,7 @@ import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
 import {
-  adminSheetBodyPad,
+  adminSheetBodyInsetPad,
   adminSheetGhostBtn,
   adminSheetPinkBtn,
   adminSheetSecondaryBtn,
@@ -19,6 +20,7 @@ import {
   addMinutesToTime,
   durationMinutesBetween,
   formatDurationRu,
+  isScheduleWindowBooked,
 } from './scheduleUtils';
 import { mergeScheduleTimeSelectOptions } from './scheduleTimeSelectOptions';
 import { dangerBtnClass, labelClass } from './scheduleUi';
@@ -26,6 +28,7 @@ import { dangerBtnClass, labelClass } from './scheduleUi';
 type Props = {
   open: boolean;
   window: ScheduleWindowView | null;
+  appointments?: DemoMasterAppointment[];
   onClose: () => void;
   services: MasterOnboardingService[];
   templates: WindowTemplate[];
@@ -42,6 +45,7 @@ type Props = {
 export function EditWindowModal({
   open,
   window: w,
+  appointments = [],
   onClose,
   services,
   templates,
@@ -79,7 +83,7 @@ export function EditWindowModal({
 
   if (!w) return null;
 
-  const booked = w.status === 'booked';
+  const booked = isScheduleWindowBooked(w, appointments);
   const locked = booked;
 
   const applyTemplate = (tplId: string) => {
@@ -148,7 +152,7 @@ export function EditWindowModal({
         )
       }
     >
-      <div className={`${adminSheetBodyPad} space-y-5 lg:space-y-6`}>
+      <div className={`${adminSheetBodyInsetPad} space-y-5 lg:space-y-6`}>
         <AdminFormSheetSection title="Текущее окно">
           <div className={adminFormSheetHighlight}>
             <p className="text-[18px] font-black tracking-[-0.04em] text-[#111827] lg:text-[20px]">
@@ -168,7 +172,7 @@ export function EditWindowModal({
 
         {locked ? (
           <p className="rounded-[20px] border border-[#FDE8ED] bg-[#FFF1F4] px-4 py-3 text-[13px] font-semibold leading-relaxed text-[#9B2C2C]">
-            На это окно уже есть запись. Изменить время или услугу нельзя — отмените запись в разделе «Заявки».
+            На это окно уже есть запись. Изменить или удалить окно нельзя — сначала отмените запись в разделе «Заявки».
           </p>
         ) : null}
 

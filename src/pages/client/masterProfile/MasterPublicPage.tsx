@@ -16,7 +16,7 @@ import { MasterStickyActions } from './MasterStickyActions';
 import { MasterTrustStats } from './MasterTrustStats';
 import { PortfolioImagePreview } from './PortfolioImagePreview';
 import { ServiceDetailSheet } from './ServiceDetailSheet';
-import { CLIENT_HEADER_OFFSET, CLIENT_MASTER_PROFILE_PAD_BOTTOM } from '../clientNavConstants';
+import { CLIENT_MASTER_PROFILE_PAD_BOTTOM, CLIENT_MOBILE_PAGE_TOP } from '../clientNavConstants';
 import { SkeletonMasterProfile } from './SkeletonMasterProfile';
 import { MasterProfileDesktop } from './MasterProfileDesktop';
 import { shareMasterProfile } from './masterProfileUtils';
@@ -82,7 +82,7 @@ export function MasterPublicPage() {
 
   if (!masterId) {
     return (
-      <div className={`min-h-dvh ${catalogCanvasClass} px-4 sm:px-5 ${CLIENT_HEADER_OFFSET} ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
+      <div className={`min-h-dvh ${catalogCanvasClass} px-4 sm:px-5 ${CLIENT_MOBILE_PAGE_TOP} ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
         <EmptyState
           title="Мастер не найден"
           description="Попробуйте вернуться к каталогу"
@@ -99,7 +99,7 @@ export function MasterPublicPage() {
         <div className={`hidden min-h-dvh lg:block ${catalogCanvasClass}`}>
           <SkeletonMasterProfile desktop />
         </div>
-        <div className={`min-h-dvh lg:hidden ${catalogCanvasClass} ${CLIENT_HEADER_OFFSET}`}>
+        <div className={`min-h-dvh lg:hidden ${catalogCanvasClass} ${CLIENT_MOBILE_PAGE_TOP}`}>
           <SkeletonMasterProfile />
         </div>
       </>
@@ -108,7 +108,7 @@ export function MasterPublicPage() {
 
   if (error || !master) {
     return (
-      <div className={`min-h-dvh ${catalogCanvasClass} px-4 sm:px-5 ${CLIENT_HEADER_OFFSET} ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
+      <div className={`min-h-dvh ${catalogCanvasClass} px-4 sm:px-5 ${CLIENT_MOBILE_PAGE_TOP} ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
         <EmptyState
           title={error ? 'Не получилось загрузить профиль мастера' : 'Мастер не найден'}
           description={error ? 'Проверьте соединение' : undefined}
@@ -145,7 +145,7 @@ export function MasterPublicPage() {
         portfolioItems={master.portfolio ?? []}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_HEADER_OFFSET} text-[#111827]`}>
+      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_MOBILE_PAGE_TOP} text-[#111827]`}>
         <div className="mx-auto w-full max-w-lg px-4 pt-1">
           <MasterProfileMobileToolbar
             masterName={master.masterName}

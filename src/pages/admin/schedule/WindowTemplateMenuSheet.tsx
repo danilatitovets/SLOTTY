@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
-import { HiTrash, HiXMark } from 'react-icons/hi2';
+import { HiTrash } from 'react-icons/hi2';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { adminSheetGhostBtn, adminSheetPinkBtn } from '../shared/adminCabinetSheetTheme';
+import {
+  catalogSheetPrimaryBtn,
+  catalogSheetSecondaryBtn,
+  catalogSheetTitle,
+} from '../shared/adminCatalogSheetTheme';
+import { sheetSectionClass, sheetSectionTitleClass } from '../profile/adminProfileCabinetTheme';
 import type { WindowTemplate } from './scheduleTypes';
 import { formatDurationRu, templateDisplayLabel } from './scheduleUtils';
+import { WindowTemplateCard } from './WindowTemplateCard';
 
 type Props = {
   open: boolean;
@@ -32,24 +38,18 @@ export function WindowTemplateMenuSheet({ open, template, onClose, onDelete }: P
   if (confirming) {
     return (
       <AdminBottomSheet
+        variant="catalog"
         open={open}
         onClose={handleClose}
         title="Удалить шаблон?"
-        subtitle={`${label} · ${duration}`}
-        badge="Шаблон окна"
-      >
-        <div className="space-y-4 pb-2">
-          <p className="text-[14px] font-semibold leading-relaxed text-[#6B7280]">
-            Быстрый выбор исчезнет из списка. Если форма нового окна уже открыта — услуга и
-            длительность (например, {duration}) останутся как были, ничего не сбросится.
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button type="button" className={adminSheetGhostBtn} onClick={() => setConfirming(false)}>
+        footer={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button type="button" className={catalogSheetSecondaryBtn} onClick={() => setConfirming(false)}>
               Отмена
             </button>
             <button
               type="button"
-              className={`${adminSheetPinkBtn} bg-[#EF4444] from-[#EF4444] to-[#DC2626] shadow-[0_8px_22px_rgba(239,68,68,0.28)]`}
+              className={`${catalogSheetPrimaryBtn} !bg-[#EF4444] hover:!opacity-95`}
               onClick={() => {
                 onDelete();
                 handleClose();
@@ -58,34 +58,58 @@ export function WindowTemplateMenuSheet({ open, template, onClose, onDelete }: P
               Удалить шаблон
             </button>
           </div>
-        </div>
+        }
+      >
+        <p className="text-[14px] font-medium leading-relaxed text-[#6B7280]">
+          Быстрый выбор исчезнет из списка. Если форма нового окна уже открыта — услуга и
+          длительность ({duration}) останутся как были.
+        </p>
       </AdminBottomSheet>
     );
   }
 
   return (
-    <AdminBottomSheet open={open} onClose={handleClose} title={label} subtitle={`${template.serviceName} · ${duration}`} badge="Шаблон окна">
-      <div className="space-y-0.5 pb-2">
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          className="flex w-full items-center gap-3 rounded-[16px] px-2 py-2.5 text-left transition active:scale-[0.98] hover:bg-[#FAFAFA]"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FEF2F2] text-[#EF4444]">
-            <HiTrash className="h-5 w-5" aria-hidden />
-          </span>
-          <span className="text-[15px] font-semibold text-[#EF4444]">Удалить шаблон</span>
+    <AdminBottomSheet
+      variant="catalog"
+      open={open}
+      onClose={handleClose}
+      headerContent={
+        <div className="min-w-0 pr-2">
+          <h2 id="admin-sheet-title" className={`${catalogSheetTitle} min-w-0 break-words`}>
+            {label}
+          </h2>
+          <p className="mt-1 text-[13px] font-medium text-[#6B7280]">
+            {template.serviceName} · {duration}
+          </p>
+        </div>
+      }
+      footer={
+        <button type="button" onClick={handleClose} className={`${catalogSheetSecondaryBtn} w-full`}>
+          Закрыть
         </button>
-        <button
-          type="button"
-          onClick={handleClose}
-          className="flex w-full items-center gap-3 rounded-[16px] px-2 py-2.5 text-left transition active:scale-[0.98] hover:bg-[#FAFAFA]"
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#F47C8C]">
-            <HiXMark className="h-5 w-5" aria-hidden />
-          </span>
-          <span className="text-[15px] font-semibold text-[#111827]">Закрыть</span>
-        </button>
+      }
+    >
+      <div className="space-y-4">
+        <WindowTemplateCard
+          template={template}
+          selected={false}
+          onSelect={() => {}}
+          hideMenu
+        />
+
+        <section className={sheetSectionClass}>
+          <p className={sheetSectionTitleClass}>Управление</p>
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className={`${catalogSheetPrimaryBtn} mt-3 w-full !bg-[#FEF2F2] !text-[#EF4444] hover:!opacity-95`}
+          >
+            <span className="inline-flex items-center justify-center gap-2">
+              <HiTrash className="h-5 w-5" aria-hidden />
+              Удалить шаблон
+            </span>
+          </button>
+        </section>
       </div>
     </AdminBottomSheet>
   );

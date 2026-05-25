@@ -6,6 +6,9 @@ import {
 
 export const SERVICES_PAGE_BG = 'bg-white';
 
+/** Мобилка: серое полотно как в кабинете мастера. */
+export const SERVICES_MOBILE_CANVAS = 'bg-[#F5F5F5]';
+
 /** Desktop: как сводка / кабинет — серое полотно и белые карточки. */
 export const SERVICES_DESKTOP_CANVAS = PROFILE_DESKTOP_PAGE_BG;
 
@@ -19,8 +22,11 @@ export const SERVICES_TAB_BAR_HEIGHT = '5.75rem';
 /** Нижний отступ под FAB: на мобиле — над таббаром, на десктопе FAB снаружи — минимум. */
 export const servicesTabScrollBottomPad = `pb-[calc(${SERVICES_TAB_BAR_HEIGHT}+1rem+env(safe-area-inset-bottom,0px))] lg:pb-6`;
 
-/** Белая карточка контента таба только на lg+ (на мобиле — прозрачная обёртка). */
-export const servicesTabPanelShell = `${servicesDesktopCard} max-lg:!rounded-none max-lg:!bg-transparent max-lg:!shadow-none lg:h-fit lg:w-full lg:self-start`;
+/** Контент таба: мобилка — на всю ширину серого полотна; desktop — белая карточка. */
+export const servicesTabPanelShell =
+  'relative w-full min-w-0 max-lg:space-y-4 lg:h-fit lg:w-full lg:self-start lg:overflow-hidden lg:rounded-[16px] lg:bg-white';
+
+export const servicesTabContentPad = 'space-y-4 max-lg:p-0 lg:space-y-5 lg:p-6';
 
 export const servicesShellCard = 'hidden w-full min-w-0 lg:block';
 
@@ -41,6 +47,18 @@ export const SERVICES_TAB_BAR_SCROLL_PAD = `calc(${SERVICES_TAB_BAR_HEIGHT} + 1.
 
 export const servicesCard =
   'rounded-[22px] border border-[#EAECEF] bg-white shadow-[0_8px_28px_rgba(17,24,39,0.05)]';
+
+/** Карточка услуги в каталоге — мобилка: как панели кабинета. */
+export const servicesCatalogCardMobile = 'w-full overflow-hidden rounded-[16px] bg-white p-4';
+
+export const servicesCatalogSearchInput =
+  'w-full rounded-[10px] border-0 bg-[#EBEBEB] py-3 pl-11 pr-4 text-[15px] font-medium text-[#111827] outline-none transition placeholder:text-[#8E8E93] focus:bg-[#E4E4E4]';
+
+export const servicesCatalogFilterBtn =
+  'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#6B7280] transition active:scale-[0.96] lg:h-[52px] lg:w-[52px] lg:rounded-[18px] lg:border lg:border-[#EAECEF] lg:bg-white';
+
+export const servicesCatalogFilterBtnActive =
+  'bg-[#F47C8C] text-white lg:border-[#FDE8ED] lg:bg-[#FFF1F4] lg:text-[#F47C8C] lg:shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]';
 
 export const servicesCardPad = 'p-4';
 

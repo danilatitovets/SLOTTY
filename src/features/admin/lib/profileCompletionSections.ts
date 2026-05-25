@@ -9,6 +9,7 @@ import {
 import { isOptionalBelarusPhoneValid } from '../../master-onboarding/model/belarusPhone';
 import {
   computeProfileCompletion,
+  hasCompletedServicesCatalog,
   type ProfileCompletionInput,
   type ProfileCompletionResult,
 } from './profileCompletion';
@@ -95,20 +96,7 @@ function isPortfolioDone(draft: MasterDraft): boolean {
 }
 
 function isServicesDone(draft: MasterDraft): boolean {
-  const active = (draft.services ?? []).filter((s) => s.isActive !== false);
-  if (active.length === 0) return false;
-  return active.some((s) => {
-    const title = s.title.trim();
-    return (
-      title.length >= 2 &&
-      title.length <= 300 &&
-      Number.isFinite(s.durationMin) &&
-      s.durationMin >= 15 &&
-      s.durationMin <= 1440 &&
-      Number.isFinite(s.priceByn) &&
-      s.priceByn >= 0
-    );
-  });
+  return hasCompletedServicesCatalog(draft.services);
 }
 
 function isRulesDone(draft: MasterDraft): boolean {
@@ -192,7 +180,7 @@ export function computeProfileCompletionSections(
     {
       id: 'services',
       label: 'Услуги',
-      description: 'Цены и длительность услуг',
+      description: 'Название и цена в каталоге',
       done: isServicesDone(draft),
       target: { kind: 'path', path: ADMIN_SERVICES_PATH },
     },

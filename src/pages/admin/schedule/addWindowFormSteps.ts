@@ -20,7 +20,7 @@ export function getAddWindowStepSubtitle(step: AddWindowFormStep, ctx: AddWindow
     if (ctx.manualMode) {
       return 'День, начало и окончание — окно без шаблона';
     }
-    return 'Шаблон и несколько времён в день — на каждое время своё окно';
+    return 'День и время — услуга и длительность из шаблона';
   }
   if (step === 1) {
     return templateMode
@@ -40,7 +40,6 @@ export type AddWindowStepContext = {
   dateIso: string;
   startTime: string;
   endTime: string;
-  templateStartTimes: string[];
   serviceId: string;
   manualMode: boolean;
   selectedTemplate: WindowTemplate | null;
@@ -56,7 +55,11 @@ export function validateAddWindowStep(step: AddWindowFormStep, ctx: AddWindowSte
     if (isLocalDateIsoBeforeToday(dateIso)) return 'Нельзя выбрать дату в прошлом.';
     if (!manualMode && !selectedTemplate) return 'Выберите шаблон или переключитесь на «Вручную».';
     if (templateMode) {
-      if (ctx.templateStartTimes.length === 0) return 'Выберите хотя бы одно время начала.';
+      if (!startTime.trim()) return 'Укажите время начала.';
+      if (!endTime.trim()) return 'Укажите время окончания.';
+      if (timeToMinutes(endTime) <= timeToMinutes(startTime)) {
+        return 'Время окончания должно быть позже начала.';
+      }
       return null;
     }
     if (!startTime.trim()) return 'Укажите время начала.';

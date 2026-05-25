@@ -1,16 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import {
-  servicesCard,
-  servicesDesktopCardPad,
+  servicesTabContentPad,
   servicesTabPanelShell,
   servicesTabScrollBottomPad,
 } from './adminServicesTheme';
+import { profileDashboardCard } from '../profile/adminProfileDashboardTheme';
 import { ServicesBundleCard } from './ServicesBundleCard';
-import { ServicesBundleFormSheet } from './ServicesBundleFormSheet';
-import { ServicesBundleMenuSheet } from './ServicesBundleMenuSheet';
 import { ServicesExtrasProPreview } from './ServicesExtrasProPreview';
+import { useMasterPlatformAccess } from '../../../features/auth/context/MasterPlatformAccessContext';
 import { ServicesTabFab } from './ServicesTabFab';
 import type { ManagedService } from './servicesFormat';
 import type { ServiceBundle } from './servicesTypes';
@@ -24,8 +23,8 @@ type Props = {
   extrasLocked?: boolean;
   onConnectPro?: () => void;
   onExtrasLocked?: () => void;
-  onSave: (bundle: ServiceBundle) => void | Promise<void>;
-  onDelete: (id: string) => void | Promise<void>;
+  onCreate: () => void;
+  onMenu: (bundle: ServiceBundle) => void;
 };
 
 function bundleCountLabel(n: number): string {
@@ -47,13 +46,10 @@ export function ServicesBundlesTab({
   extrasLocked = false,
   onConnectPro,
   onExtrasLocked,
-  onSave,
-  onDelete,
+  onCreate,
+  onMenu,
 }: Props) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<ServiceBundle | null>(null);
-  const [menuTarget, setMenuTarget] = useState<ServiceBundle | null>(null);
-
+  const masterWrite = useMasterPlatformAccess();
   const connectPro = onConnectPro ?? onExtrasLocked ?? (() => {});
 
   const serviceTitleById = useMemo(() => {
@@ -72,25 +68,7 @@ export function ServicesBundlesTab({
       connectPro();
       return;
     }
-    setEditing(null);
-    setFormOpen(true);
-  };
-
-  const openEdit = (bundle: ServiceBundle) => {
-    setEditing(bundle);
-    setFormOpen(true);
-  };
-
-  const handleSave = (bundle: ServiceBundle) => {
-    void (async () => {
-      await onSave(bundle);
-      setFormOpen(false);
-      setEditing(null);
-    })();
-  };
-
-  const handleDelete = (id: string) => {
-    void onDelete(id);
+    onCreate();
   };
 
   const canCreate = services.length >= 2;
@@ -115,8 +93,8 @@ export function ServicesBundlesTab({
   }
 
   return (
-    <div className={`relative space-y-4 lg:space-y-0 ${servicesTabPanelShell} lg:overflow-hidden`}>
-      <div className={`space-y-4 lg:space-y-5 ${servicesTabScrollBottomPad} ${servicesDesktopCardPad}`}>
+    <div className={servicesTabPanelShell}>
+      <div className={`${servicesTabContentPad} ${servicesTabScrollBottomPad}`}>
         <div>
           <h2 className="text-[18px] font-black tracking-[-0.04em] text-[#111827] lg:text-[22px] lg:tracking-[-0.05em]">
             Ваши наборы
@@ -134,13 +112,13 @@ export function ServicesBundlesTab({
         </div>
 
         {!canCreate ? (
-          <p className="rounded-[16px] bg-[#f6f7fb] px-4 py-3 text-[13px] font-semibold text-[#6B7280]">
+          <p className="rounded-[10px] bg-[#EBEBEB] px-4 py-3 text-[13px] font-medium text-[#6B7280]">
             Добавьте минимум 2 услуги в каталоге, чтобы создать набор.
           </p>
         ) : null}
 
         {sortedBundles.length === 0 ? (
-          <div className={`${servicesCard} p-6 text-center lg:rounded-[24px]`}>
+          <div className={`${profileDashboardCard} p-6 text-center`}>
             <ServiceThumbnailFallback sizeClass="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px]" />
             <h3 className="mt-4 text-[18px] font-bold tracking-[-0.04em] text-[#111827] lg:text-[20px]">
               Наборов пока нет
@@ -152,7 +130,7 @@ export function ServicesBundlesTab({
             </p>
           </div>
         ) : (
-          <ul className="space-y-3.5 lg:space-y-4 lg:rounded-[24px] lg:bg-[#f6f7fb] lg:p-4">
+          <ul className="flex w-full max-w-none flex-col gap-3 lg:gap-4 lg:rounded-[24px] lg:bg-[#f6f7fb] lg:p-4">
             {sortedBundles.map((bundle) => (
               <li key={bundle.id}>
                 <ServicesBundleCard
@@ -160,7 +138,7 @@ export function ServicesBundlesTab({
                   services={services}
                   draft={draft}
                   serviceTitleById={serviceTitleById}
-                  onMenu={() => setMenuTarget(bundle)}
+                  onMenu={() => onMenu(bundle)}
                 />
               </li>
             ))}
@@ -169,34 +147,13 @@ export function ServicesBundlesTab({
       </div>
 
       {canCreate ? (
-        <ServicesTabFab ariaLabel="Создать набор" onClick={openCreate} />
+        <ServicesTabFab
+          ariaLabel="Создать набор"
+          onClick={openCreate}
+          disabled={!masterWrite.canMutate}
+          disabledTitle={masterWrite.mutateDisabledTitle}
+        />
       ) : null}
-
-      <ServicesBundleFormSheet
-        open={formOpen}
-        draft={draft}
-        services={services}
-        initial={editing}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(null);
-        }}
-        onSave={handleSave}
-      />
-
-      <ServicesBundleMenuSheet
-        open={Boolean(menuTarget)}
-        bundle={menuTarget}
-        onClose={() => setMenuTarget(null)}
-        onEdit={() => {
-          if (menuTarget) openEdit(menuTarget);
-          setMenuTarget(null);
-        }}
-        onDelete={() => {
-          if (menuTarget) handleDelete(menuTarget.id);
-          setMenuTarget(null);
-        }}
-      />
     </div>
   );
 }

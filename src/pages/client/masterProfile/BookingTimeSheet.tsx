@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { HiCalendarDays } from 'react-icons/hi2';
+import { ensureClientBookingAuth } from '../../../features/auth/lib/requireClientBookingAuth';
 import { createClientAppointment } from '../../../features/appointments/api/clientAppointments';
 import { fetchPublicSlots } from '../../../features/booking/api/publicSlotsApi';
 import { buildBookingSlotDaysFromPublicSlots } from '../../../features/booking/model/apiBookingSlotGrid';
@@ -10,7 +12,9 @@ import {
   type DemoBookingGridDay,
 } from '../../../features/booking/model/demoBookingSlotGrid';
 import { useAuth } from '../../../features/auth/AuthProvider';
+import { useAccountAccess } from '../../../features/auth/hooks/useAccountAccess';
 import { getApiBaseUrl } from '../../../shared/api/backendClient';
+import { useTelegram } from '../../../shared/hooks/useTelegram';
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { BookingSuccessCelebration } from '../../booking/BookingSuccessModal';
 import { BookingCalendarOverlay } from '../../booking/BookingCalendarOverlay';
@@ -31,7 +35,11 @@ type Props = {
 };
 
 export function BookingTimeSheet({ open, onClose, master, initialServiceId }: Props) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isTelegramWebApp } = useTelegram();
   const { token, isAuthenticated } = useAuth();
+  const accountAccess = useAccountAccess();
   const [serviceId, setServiceId] = useState<string | null>(initialServiceId ?? null);
   const [slotDays, setSlotDays] = useState<DemoBookingGridDay[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -133,8 +141,24 @@ export function BookingTimeSheet({ open, onClose, master, initialServiceId }: Pr
     if (!service || !selectedSlot) return;
     const useApi = Boolean(getApiBaseUrl() && UUID_RE.test(selectedSlot.slotId));
     if (useApi) {
-      if (!token || !isAuthenticated) {
-        setError('Откройте приложение через Telegram, чтобы записаться.');
+      const authGate = ensureClientBookingAuth({
+        isAuthenticated: Boolean(token && isAuthenticated),
+        isTelegramWebApp,
+        navigate,
+        returnPath: `${location.pathname}${location.search}`,
+      });
+      if (!authGate.ok) {
+        if (authGate.redirected) onClose();
+        else if (authGate.message) setError(authGate.message);
+        return;
+      }
+      if (!accountAccess.canCreateBooking) {
+        const reason = accountAccess.restrictionReason;
+        setError(
+          reason
+            ? `Доступ ограничен. Причина: ${reason}`
+            : 'Доступ ограничен. Новые записи временно недоступны.',
+        );
         return;
       }
       setSubmitting(true);
@@ -152,7 +176,18 @@ export function BookingTimeSheet({ open, onClose, master, initialServiceId }: Pr
       return;
     }
     setSuccess(true);
-  }, [isAuthenticated, selectedSlot, service, token]);
+  }, [
+    accountAccess,
+    isAuthenticated,
+    isTelegramWebApp,
+    location.pathname,
+    location.search,
+    navigate,
+    onClose,
+    selectedSlot,
+    service,
+    token,
+  ]);
 
   const pickService = (s: DemoMasterService) => {
     setServiceId(s.id);

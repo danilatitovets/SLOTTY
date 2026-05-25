@@ -1,6 +1,7 @@
 import { env } from '../../../config/env.js';
 import { query } from '../../../config/db.js';
 import { ApiError } from '../../../utils/ApiError.js';
+import { syncMasterAccountVerified } from '../accountVerification.js';
 import {
   findProfileIdByIdentity,
   hashEmailPassword,
@@ -71,6 +72,9 @@ export async function verifyEmailWithToken(rawToken: string): Promise<{ verified
         and lower(email) = lower($2)`,
     [consumed.profile_id, consumed.email],
   );
+  await syncMasterAccountVerified(consumed.profile_id).catch((e) => {
+    console.error('[SLOTTY] sync master is_verified after email verify failed:', e);
+  });
   return { verified: true };
 }
 

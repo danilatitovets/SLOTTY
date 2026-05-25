@@ -3,6 +3,7 @@ import {
   buildLocationDisplayParts,
   catalogLineWithoutVisitPrefix,
   formatHomePublicBeforeBooking,
+  isHomeAddressHiddenUntilBooking,
   masterVisitTypeLabel,
 } from '../../../features/profile/model/masterLocation';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
@@ -30,8 +31,7 @@ type Props = { location: MasterLocation };
 export function MasterAddressBlock({ location }: Props) {
   const parts = buildLocationDisplayParts(location);
   const visitLabel = parts?.visitLabel ?? masterVisitTypeLabel(location.visitType);
-  const hiddenUntilBooking =
-    location.visitType === 'at_home' && location.showExactAddressAfterBooking === true;
+  const hiddenUntilBooking = isHomeAddressHiddenUntilBooking(location);
 
   const mainLine = (() => {
     if (hiddenUntilBooking) {

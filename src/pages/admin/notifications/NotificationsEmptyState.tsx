@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { notifCard, notifEmptyIcon } from './adminNotificationsTheme';
+import { notifCardShell, notifEmptyIcon } from './adminNotificationsTheme';
 
 type Props = {
   title: string;
@@ -9,7 +9,7 @@ type Props = {
 
 export function NotificationsEmptyState({ title, text, icon }: Props) {
   return (
-    <section className={`${notifCard} flex flex-col items-center px-6 py-10 text-center`}>
+    <section className={`${notifCardShell} flex flex-col items-center px-6 py-10 text-center`}>
       {icon ?? (
         <span className={notifEmptyIcon}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
@@ -18,7 +18,7 @@ export function NotificationsEmptyState({ title, text, icon }: Props) {
           </svg>
         </span>
       )}
-      <h3 className="mt-5 text-[18px] font-black tracking-[-0.03em] text-[#111827]">{title}</h3>
+      <h3 className="mt-5 text-[18px] font-bold tracking-[-0.03em] text-[#111827]">{title}</h3>
       <p className="mt-2 max-w-[18rem] text-[15px] leading-relaxed text-[#6B7280]">{text}</p>
     </section>
   );

@@ -7,6 +7,10 @@ export const CLIENT_CONTENT_PAD_BOTTOM =
 export const CLIENT_HEADER_OFFSET =
   'pt-[calc(6.5rem+env(safe-area-inset-top,0px))]';
 
+/** Страницы без pill ClientHeader (профиль мастера, каталог, запись). */
+export const CLIENT_MOBILE_PAGE_TOP =
+  'pt-[max(0.5rem,env(safe-area-inset-top,0px))]';
+
 /** Высота SlottyHeader `variant="bar"` (lg), см. `lg:h-[4.25rem]` в HeaderShell. */
 export const CLIENT_DESKTOP_BAR_REM = '4.25rem';
 
@@ -18,6 +22,10 @@ export const CLIENT_STICKY_BELOW_HEADER = 'top-[var(--slotty-header-height)]';
 /** Sticky toolbar каталога под ClientHeader (мобильный layout). */
 export const CLIENT_STICKY_BELOW_MOBILE_HEADER =
   'top-[calc(6.5rem+env(safe-area-inset-top,0px))]';
+
+/** Sticky поиск/фильтры каталога под CatalogMobilePageToolbar (без pill ClientHeader). */
+export const CLIENT_STICKY_BELOW_CATALOG_PAGE_HEADER =
+  'top-[calc(5.25rem+env(safe-area-inset-top,0px))]';
 
 /** Нижний отступ контента на странице мастера (без таб-бара, только sticky-кнопки). */
 export const CLIENT_MASTER_PROFILE_PAD_BOTTOM =

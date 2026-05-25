@@ -1,10 +1,6 @@
-import {
-  HiCheckBadge,
-  HiClock,
-  HiHomeModern,
-  HiMapPin,
-  HiStar,
-} from 'react-icons/hi2';
+import { HiClock, HiHomeModern, HiMapPin, HiStar } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
 import { formatReviewsCountLabel } from '../../../features/services/model/demoMasters';
 import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
@@ -13,6 +9,7 @@ import {
   formatDistanceKm,
   formatMasterCardSpecialty,
   haversineKm,
+  masterDistanceCoords,
 } from '../lib/catalogFormat';
 import type { ExtendedMasterProfile, NearestSlotInfo } from './types';
 import { visitChipLabel } from './masterProfileUtils';
@@ -39,15 +36,14 @@ export function MasterProfileDesktopHero({
   nearest,
   nearestLoading,
 }: Props) {
-  const lat = master.location.lat;
-  const lng = master.location.lng;
+  const { lat, lng } = masterDistanceCoords(master.location);
   const distanceKm =
     userLat != null && userLng != null && lat != null && lng != null
       ? haversineKm(userLat, userLng, lat, lng)
       : null;
   const distanceLabel = formatDistanceKm(distanceKm);
   const visitChip = visitChipLabel(master.location.visitType);
-  const showVerified = master.rating >= 4.5 && master.reviewsCount >= 10;
+  const showVerified = masterShowsVerifiedBadge(master);
   const isNewMaster = master.reviewsCount <= 0 && master.rating <= 0;
   const bookingsCount = estimatedBookingsCount(master.reviewsCount);
   const hasSlot = Boolean(nearest?.label);
@@ -82,9 +78,7 @@ export function MasterProfileDesktopHero({
             <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
               {master.masterName}
             </h1>
-            {showVerified ? (
-              <HiCheckBadge className="mt-2 h-6 w-6 shrink-0 text-[#F47C8C]" aria-label="Проверенный мастер" />
-            ) : null}
+            {showVerified ? <MasterVerifiedBadge className="mt-2 h-6 w-6 shrink-0 text-[#F47C8C]" /> : null}
           </div>
 
           <div className="mt-5 grid max-w-lg grid-cols-3 gap-3">

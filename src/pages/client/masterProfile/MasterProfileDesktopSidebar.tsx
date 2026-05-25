@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react';
-import { CLIENT_STICKY_BELOW_HEADER } from '../clientNavConstants';
 import { HiCalendarDays, HiPhone } from 'react-icons/hi2';
 import type { ExtendedMasterProfile, NearestSlotInfo } from './types';
 import { openPhoneDial, resolveMasterCallablePhone } from './masterProfileUtils';
@@ -7,6 +6,7 @@ import {
   catalogDesktopPanel,
   catalogPrimaryBtn,
   catalogSecondaryBtn,
+  masterProfileBookingStickyClass,
   masterProfileMutedPanel,
 } from './masterProfileTheme';
 
@@ -37,8 +37,8 @@ export function MasterProfileDesktopSidebar({
   }, [callablePhone, onPhoneUnavailable]);
 
   return (
-    <aside className={`min-w-0 xl:sticky xl:self-start ${CLIENT_STICKY_BELOW_HEADER}`}>
-      <div className={`${catalogDesktopPanel} space-y-4 p-5`}>
+    <aside className={`w-full min-w-0 ${masterProfileBookingStickyClass}`}>
+      <div className={`${catalogDesktopPanel} box-border w-full space-y-4 p-5`}>
         <div>
           <p className="text-[20px] font-bold tracking-[-0.03em] text-[#111827]">Запись</p>
           <p className="mt-0.5 text-[14px] text-[#6B7280]">Выберите услугу и удобное время</p>

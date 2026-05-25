@@ -2,11 +2,15 @@ import { useMemo, type ReactNode } from 'react';
 import { buildYandexMapWidgetUrl } from '../../../features/appointments/model/demoAppointments';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
+  buildLocationAfterBookingPreview,
   buildLocationDisplayParts,
   catalogLineWithoutVisitPrefix,
+  formatHomePublicBeforeBooking,
+  isHomeAddressHiddenUntilBooking,
   masterVisitTypeLabel,
   type MasterVisitType,
 } from '../../../features/profile/model/masterLocation';
+import { FormRequiredMark } from '../shared/AdminFormFieldLabel';
 import { cabinetCard, cabinetCardPad, cabinetIconCircle } from './adminProfileCabinetTheme';
 import {
   addressDetailIconName,
@@ -120,16 +124,21 @@ function AddressCatalogMap({
 export function AddressFieldLabel({
   iconName,
   children,
+  required,
 }: {
   iconName: CabinetIconName;
   children: ReactNode;
+  required?: boolean;
 }) {
   return (
     <span className="mb-1 flex items-center gap-2 text-[13px] font-medium text-[#6B7280]">
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#FFF1F4] text-[#F47C8C]">
         <CabinetIcon name={iconName} size={16} />
       </span>
-      <span className="min-w-0">{children}</span>
+      <span className="min-w-0">
+        {children}
+        {required ? <FormRequiredMark /> : null}
+      </span>
     </span>
   );
 }
@@ -145,20 +154,28 @@ export function AddressSection({
   const parts = buildLocationDisplayParts(loc);
   const visitType = loc?.visitType ?? 'studio';
   const visitLabel = parts?.visitLabel ?? masterVisitTypeLabel(visitType);
+  const hiddenUntilBooking = isHomeAddressHiddenUntilBooking(loc);
 
-  const catalogMain = parts
-    ? catalogLineWithoutVisitPrefix(parts.catalogLine, visitLabel)
-    : '—';
+  const catalogMain = (() => {
+    if (hiddenUntilBooking) {
+      const publicLine = formatHomePublicBeforeBooking(loc);
+      if (publicLine?.trim()) return publicLine.trim();
+    }
+    if (parts) return catalogLineWithoutVisitPrefix(parts.catalogLine, visitLabel);
+    return '—';
+  })();
 
-  const detailRows = parts
-    ? [
-        ...(parts.addressLine && parts.addressLine !== '—'
-          ? [{ label: 'Адрес', value: parts.addressLine }]
-          : []),
-        ...parts.access,
-        ...parts.wayfinding,
-      ].filter((row) => row.value?.trim())
-    : [];
+  const detailRows = hiddenUntilBooking
+    ? buildLocationAfterBookingPreview(loc).filter((row) => row.value?.trim())
+    : parts
+      ? [
+          ...(parts.addressLine && parts.addressLine !== '—'
+            ? [{ label: 'Адрес', value: parts.addressLine }]
+            : []),
+          ...parts.access,
+          ...parts.wayfinding,
+        ].filter((row) => row.value?.trim())
+      : [];
 
   const hasAfterBooking = detailRows.length > 0;
 
@@ -197,7 +214,9 @@ export function AddressSection({
 
           {hasAfterBooking ? (
             <div className="border-t border-[#EAECEF] pt-3">
-              <AddressBlockTitle>После записи</AddressBlockTitle>
+              <AddressBlockTitle>
+                {hiddenUntilBooking ? 'После записи (клиент увидит)' : 'Дополнительно'}
+              </AddressBlockTitle>
               <div className="space-y-2">
                 {detailRows.map((row) => (
                   <AddressInfoRow

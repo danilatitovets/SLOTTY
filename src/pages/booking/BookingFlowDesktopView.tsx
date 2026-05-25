@@ -1,9 +1,10 @@
 import {
   HiCalendarDays,
-  HiCheckBadge,
   HiClock,
   HiStar,
 } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../shared/ui/MasterVerifiedBadge';
 import type { DemoMasterProfile, DemoMasterService } from '../../features/services/model/demoMasters';
 import { formatReviewsCountLabel } from '../../features/services/model/demoMasters';
 import { formatDurationMinutes, formatMasterCardSpecialty } from '../client/lib/catalogFormat';
@@ -44,6 +45,8 @@ type Props = {
   onAcceptedTermsChange: (value: boolean) => void;
   comment: string;
   onCommentChange: (value: string) => void;
+  referencePhotoUrl: string | null;
+  onReferencePhotoUrlChange: (url: string | null) => void;
   onPickDate: (dateIso: string) => void;
   onPickSlot: (slotId: string) => void;
   onOpenCalendar: () => void;
@@ -79,12 +82,14 @@ export function BookingFlowDesktopView({
   onAcceptedTermsChange,
   comment,
   onCommentChange,
+  referencePhotoUrl,
+  onReferencePhotoUrlChange,
   onPickDate,
   onPickSlot,
   onOpenCalendar,
   onConfirm,
 }: Props) {
-  const showVerified = master.rating >= 4.5 && master.reviewsCount >= 10;
+  const showVerified = masterShowsVerifiedBadge(master);
   const slotPromo = selectedSlot?.promotion;
   const displayPrice =
     slotPromo && slotPromo.discountedPrice >= 0 ? slotPromo.discountedPrice : service.price;
@@ -117,7 +122,7 @@ export function BookingFlowDesktopView({
                     {master.masterName}
                   </p>
                   {showVerified ? (
-                    <HiCheckBadge className="mt-1 h-5 w-5 shrink-0 text-[#F47C8C]" aria-hidden />
+                    <MasterVerifiedBadge className="mt-1 h-5 w-5 shrink-0 text-[#F47C8C]" />
                   ) : null}
                 </div>
                 <p className="mt-1 text-[14px] font-medium text-[#6B7280]">
@@ -245,6 +250,9 @@ export function BookingFlowDesktopView({
             onAcceptedTermsChange={onAcceptedTermsChange}
             comment={comment}
             onCommentChange={onCommentChange}
+            referencePhotoUrl={referencePhotoUrl}
+            onReferencePhotoUrlChange={onReferencePhotoUrlChange}
+            categoryCode={master.categoryCode}
             onConfirm={onConfirm}
           />
         </aside>

@@ -6,7 +6,13 @@ import {
   applyPromotionToPrice,
   resolveActivePromotionForSlot,
 } from '../service-extras/promotionSlots.service.js';
+import { assertMasterAcceptsBookings } from '../profiles/profileAccount.service.js';
 import { notifyClientByAppointmentId } from './appointments.clientNotifications.js';
+import {
+  assertBookingReferencePhotoOwnership,
+} from './appointments.storage.js';
+import { categorySupportsReferencePhoto } from './referencePhotoCategories.js';
+import { sanitizeMasterLocationForViewer } from '../../lib/sanitizeMasterLocation.js';
 
 type SlotRow = {
   id: string;
@@ -22,6 +28,7 @@ export async function createAppointmentTx(input: {
   slotId: string;
   serviceId: string;
   clientNote?: string | null;
+  clientReferencePhotoUrl?: string | null;
 }) {
   return withTransaction(async (client: PoolClient) => {
     const slotRes = await client.query<SlotRow>(
@@ -36,14 +43,7 @@ export async function createAppointmentTx(input: {
       throw ApiError.notFound('Slot not found');
     }
 
-    const pub = await client.query(
-      `select 1 from public.master_profiles mp
-        where mp.master_id = $1 and mp.publication_status = 'published'`,
-      [slot.master_id],
-    );
-    if (!pub.rowCount) {
-      throw ApiError.conflict('Master is not published', 'MASTER_NOT_PUBLISHED');
-    }
+    await assertMasterAcceptsBookings(slot.master_id);
 
     if (slot.status !== 'available') {
       throw ApiError.conflict('Slot is not available', 'SLOT_UNAVAILABLE');
@@ -60,21 +60,25 @@ export async function createAppointmentTx(input: {
       id: string;
       master_id: string;
       is_active: boolean;
+      admin_hidden_at: Date | string | null;
       duration_minutes: number;
       price_amount: string;
       price_type: string;
       title: string;
+      category_code: string | null;
     }>(
-      `select id, master_id, is_active, duration_minutes, price_amount::text, price_type::text, title
-         from public.master_services
-        where id = $1`,
+      `select ms.id, ms.master_id, ms.is_active, ms.admin_hidden_at, ms.duration_minutes, ms.price_amount::text, ms.price_type::text, ms.title,
+              sc.code as category_code
+         from public.master_services ms
+         left join public.service_categories sc on sc.id = ms.category_id
+        where ms.id = $1`,
       [input.serviceId],
     );
     const service = svcRes.rows[0];
     if (!service) {
       throw ApiError.notFound('Service not found');
     }
-    if (!service.is_active) {
+    if (!service.is_active || service.admin_hidden_at) {
       throw ApiError.conflict('Service inactive', 'SERVICE_INACTIVE');
     }
     if (service.master_id !== slot.master_id) {
@@ -92,6 +96,17 @@ export async function createAppointmentTx(input: {
 
     if (input.clientId === slot.master_id) {
       throw ApiError.conflict('Cannot book your own slot', 'SELF_BOOKING');
+    }
+
+    const referencePhotoUrl = input.clientReferencePhotoUrl?.trim() || null;
+    if (referencePhotoUrl) {
+      if (!categorySupportsReferencePhoto(service.category_code)) {
+        throw ApiError.badRequest(
+          'Reference photo is not supported for this service category',
+          'REFERENCE_PHOTO_NOT_ALLOWED',
+        );
+      }
+      assertBookingReferencePhotoOwnership(input.clientId, referencePhotoUrl);
     }
 
     const overlapMaster = await client.query(
@@ -138,8 +153,9 @@ export async function createAppointmentTx(input: {
     const insAppt = await client.query<{ id: string }>(
       `insert into public.appointments (
          client_id, master_id, service_id, slot_id, starts_at, ends_at, status,
-         price_snapshot, price_type_snapshot, service_title_snapshot, service_duration_snapshot, client_note
-       ) values ($1, $2, $3, $4, $5, $6, 'pending', $7, $8::public.price_type, $9, $10, $11)
+         price_snapshot, price_type_snapshot, service_title_snapshot, service_duration_snapshot,
+         client_note, client_reference_photo_url
+       ) values ($1, $2, $3, $4, $5, $6, 'pending', $7, $8::public.price_type, $9, $10, $11, $12)
        returning id`,
       [
         input.clientId,
@@ -153,6 +169,7 @@ export async function createAppointmentTx(input: {
         service.title,
         service.duration_minutes,
         input.clientNote ?? null,
+        referencePhotoUrl,
       ],
     );
     const appointmentId = insAppt.rows[0]!.id;
@@ -200,8 +217,116 @@ export async function createAppointmentTx(input: {
   });
 }
 
-export async function listClientAppointments(clientId: string) {
-  const r = await query(
+type ClientAppointmentRow = {
+  id: string;
+  master_id: string;
+  service_id: string;
+  slot_id: string;
+  starts_at: Date | string;
+  ends_at: Date | string;
+  status: string;
+  price_snapshot: string;
+  service_title_snapshot: string;
+  client_note: string | null;
+  client_reference_photo_url: string | null;
+  created_at: Date | string;
+  master_display_name: string;
+  location_visit_type: string | null;
+  location_city: string | null;
+  location_street: string | null;
+  location_building: string | null;
+  location_building_detail: string | null;
+  location_public_address: string | null;
+  location_entrance: string | null;
+  location_floor: string | null;
+  location_room: string | null;
+  location_intercom: string | null;
+  location_landmark: string | null;
+  location_directions: string | null;
+  location_client_note: string | null;
+  location_lat: number | string | null;
+  location_lng: number | string | null;
+  location_show_exact_after_booking: boolean | null;
+  voucher_number: string | null;
+};
+
+function mapClientAppointmentRow(row: ClientAppointmentRow, clientId: string) {
+  const status = row.status;
+  const loc =
+    row.location_visit_type != null
+      ? sanitizeMasterLocationForViewer(
+          {
+            visitType: row.location_visit_type,
+            city: row.location_city ?? '',
+            street: row.location_street ?? '',
+            building: row.location_building ?? '',
+            buildingDetail: row.location_building_detail,
+            entrance: row.location_entrance,
+            floor: row.location_floor,
+            room: row.location_room,
+            intercom: row.location_intercom,
+            landmark: row.location_landmark,
+            directions: row.location_directions,
+            clientNote: row.location_client_note,
+            publicAddress: row.location_public_address ?? '',
+            lat: row.location_lat != null ? Number(row.location_lat) : null,
+            lng: row.location_lng != null ? Number(row.location_lng) : null,
+            showExactAddressAfterBooking: row.location_show_exact_after_booking === true,
+          },
+          {
+            viewerProfileId: clientId,
+            appointmentStatus: status,
+          },
+        )
+      : null;
+
+  return {
+    id: row.id,
+    master_id: row.master_id,
+    service_id: row.service_id,
+    slot_id: row.slot_id,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    status: row.status,
+    price_snapshot: row.price_snapshot,
+    service_title_snapshot: row.service_title_snapshot,
+    client_note: row.client_note,
+    client_reference_photo_url: row.client_reference_photo_url,
+    created_at: row.created_at,
+    master_display_name: row.master_display_name,
+    location_visit_type: loc?.visitType ?? row.location_visit_type,
+    location_city: loc?.city ?? row.location_city,
+    location_street: loc?.street ?? row.location_street,
+    location_building: loc?.building ?? row.location_building,
+    location_public_address: loc?.publicAddress ?? row.location_public_address,
+    location_lat: loc?.lat ?? null,
+    location_lng: loc?.lng ?? null,
+    voucher_number: row.voucher_number,
+  };
+}
+
+const CLIENT_APPOINTMENTS_FROM = `
+     from public.appointments a
+     left join public.master_profiles mp on mp.master_id = a.master_id
+     left join public.master_locations ml
+       on ml.master_id = a.master_id
+      and ml.is_primary = true
+     left join public.booking_vouchers bv on bv.appointment_id = a.id`;
+
+export async function listClientAppointments(
+  clientId: string,
+  params?: { limit?: number; offset?: number },
+) {
+  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 100);
+  const offset = Math.max(params?.offset ?? 0, 0);
+
+  const countR = await query<{ total: string }>(
+    `select count(*)::text as total from public.appointments a where a.client_id = $1`,
+    [clientId],
+  );
+  const total = Number(countR.rows[0]?.total ?? 0);
+
+  const r = await query<ClientAppointmentRow>(
     `select
        a.id,
        a.master_id,
@@ -213,45 +338,78 @@ export async function listClientAppointments(clientId: string) {
        a.price_snapshot::text as price_snapshot,
        a.service_title_snapshot,
        a.client_note,
+       a.client_reference_photo_url,
        a.created_at,
        coalesce(mp.display_name, 'Мастер') as master_display_name,
        ml.visit_type::text as location_visit_type,
        ml.city as location_city,
        ml.street as location_street,
        ml.building as location_building,
+       ml.building_detail as location_building_detail,
        ml.public_address as location_public_address,
+       ml.entrance as location_entrance,
+       ml.floor as location_floor,
+       ml.room as location_room,
+       ml.intercom as location_intercom,
+       ml.landmark as location_landmark,
+       ml.directions as location_directions,
+       ml.client_note as location_client_note,
        ml.lat as location_lat,
        ml.lng as location_lng,
+       ml.show_exact_address_after_booking as location_show_exact_after_booking,
        bv.voucher_number
-     from public.appointments a
-     left join public.master_profiles mp on mp.master_id = a.master_id
-     left join public.master_locations ml
-       on ml.master_id = a.master_id
-      and ml.is_primary = true
-     left join public.booking_vouchers bv on bv.appointment_id = a.id
+     ${CLIENT_APPOINTMENTS_FROM}
     where a.client_id = $1
-    order by a.starts_at desc`,
-    [clientId],
+    order by a.starts_at desc
+    limit $2 offset $3`,
+    [clientId, limit, offset],
   );
-  return r.rows;
+
+  const items = r.rows.map((row) => mapClientAppointmentRow(row, clientId));
+  return { items, appointments: items, total, limit, offset };
 }
 
-export async function listMasterAppointments(masterId: string) {
+export async function listMasterAppointments(
+  masterId: string,
+  params?: { limit?: number; offset?: number },
+) {
+  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 100);
+  const offset = Math.max(params?.offset ?? 0, 0);
+
+  const countR = await query<{ total: string }>(
+    `select count(*)::text as total from public.appointments a where a.master_id = $1`,
+    [masterId],
+  );
+  const total = Number(countR.rows[0]?.total ?? 0);
+
   const r = await query(
     `select a.id, a.client_id, a.service_id, a.slot_id, a.starts_at, a.ends_at, a.status::text,
-            a.price_snapshot::text, a.service_title_snapshot, a.client_note, a.created_at,
+            a.price_snapshot::text, a.service_title_snapshot, a.client_note,
+            a.client_reference_photo_url, a.created_at,
             coalesce(nullif(trim(p.full_name), ''), 'Клиент') as client_name,
-            nullif(trim(p.phone), '') as client_phone
+            nullif(trim(p.phone), '') as client_phone,
+            nullif(trim(p.avatar_url), '') as client_avatar_url
        from public.appointments a
        left join public.profiles p on p.id = a.client_id
       where a.master_id = $1
-      order by a.starts_at desc`,
-    [masterId],
+      order by a.starts_at desc
+      limit $2 offset $3`,
+    [masterId, limit, offset],
   );
-  return r.rows;
+  const items = r.rows;
+  return { items, appointments: items, total, limit, offset };
 }
 
-export async function cancelClientAppointment(clientId: string, appointmentId: string): Promise<{ masterId: string }> {
+function normalizeCancelReason(reason?: string | null): string | null {
+  const t = reason?.trim();
+  return t && t.length > 0 ? t.slice(0, 2000) : null;
+}
+
+export async function cancelClientAppointment(
+  clientId: string,
+  appointmentId: string,
+  reason?: string | null,
+): Promise<{ masterId: string }> {
   const r = await query<{ status: string; master_id: string }>(
     `select status::text, master_id from public.appointments where id = $1 and client_id = $2`,
     [appointmentId, clientId],
@@ -264,8 +422,10 @@ export async function cancelClientAppointment(clientId: string, appointmentId: s
     throw ApiError.conflict('Appointment cannot be cancelled', 'BAD_STATUS');
   }
   await query(
-    `update public.appointments set status = 'cancelled_by_client', updated_at = now() where id = $1`,
-    [appointmentId],
+    `update public.appointments
+        set status = 'cancelled_by_client', cancel_reason = $2, updated_at = now()
+      where id = $1`,
+    [appointmentId, normalizeCancelReason(reason)],
   );
   await query(
     `update public.master_availability_slots s
@@ -322,7 +482,11 @@ export async function masterCompleteAppointment(masterId: string, appointmentId:
   return { clientId: row.client_id };
 }
 
-export async function masterCancelAppointment(masterId: string, appointmentId: string): Promise<{ clientId: string }> {
+export async function masterCancelAppointment(
+  masterId: string,
+  appointmentId: string,
+  reason?: string | null,
+): Promise<{ clientId: string }> {
   const r = await query<{ status: string; client_id: string }>(
     `select status::text, client_id from public.appointments where id = $1 and master_id = $2`,
     [appointmentId, masterId],
@@ -334,9 +498,15 @@ export async function masterCancelAppointment(masterId: string, appointmentId: s
   if (row.status !== 'pending' && row.status !== 'confirmed') {
     throw ApiError.conflict('Appointment cannot be cancelled', 'BAD_STATUS');
   }
+  const cancelReason = normalizeCancelReason(reason);
+  if (!cancelReason) {
+    throw ApiError.badRequest('Укажите причину отмены', 'CANCEL_REASON_REQUIRED');
+  }
   await query(
-    `update public.appointments set status = 'cancelled_by_master', updated_at = now() where id = $1`,
-    [appointmentId],
+    `update public.appointments
+        set status = 'cancelled_by_master', cancel_reason = $2, updated_at = now()
+      where id = $1`,
+    [appointmentId, cancelReason],
   );
   await query(
     `update public.master_availability_slots s

@@ -1,4 +1,4 @@
-import { FilterSheet } from '../components/FilterSheet';
+import { CatalogFilterSheet } from './CatalogFilterSheet';
 import {
   resetCatalogFilters,
   type CatalogFiltersState,
@@ -8,6 +8,7 @@ import { ServicesCatalogFiltersPanel } from './ServicesCatalogFiltersPanel';
 type Props = {
   open: boolean;
   draft: CatalogFiltersState;
+  resultCount: number;
   onChange: (next: CatalogFiltersState) => void;
   onClose: () => void;
   onApply: () => void;
@@ -16,19 +17,22 @@ type Props = {
 export function ServicesCatalogFiltersSheet({
   open,
   draft,
+  resultCount,
   onChange,
   onClose,
   onApply,
 }: Props) {
   return (
-    <FilterSheet
+    <CatalogFilterSheet
       open={open}
-      title="Фильтры услуг"
+      title="Фильтры"
+      resultCount={resultCount}
+      resultNoun="вариантов"
       onClose={onClose}
       onReset={() => onChange(resetCatalogFilters())}
       onApply={onApply}
     >
-      <ServicesCatalogFiltersPanel filters={draft} onChange={onChange} layout="grid" />
-    </FilterSheet>
+      <ServicesCatalogFiltersPanel filters={draft} onChange={onChange} layout="sheet" />
+    </CatalogFilterSheet>
   );
 }

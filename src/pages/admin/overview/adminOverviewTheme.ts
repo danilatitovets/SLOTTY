@@ -23,9 +23,9 @@ export const overviewShellCard = 'hidden w-full min-w-0 lg:block';
 export const overviewDesktopTabsSticky =
   'sticky z-20 overflow-hidden bg-white top-[var(--slotty-admin-desktop-topbar-h,4.75rem)]';
 
-/** Mobile: белая карточка с тенью. Desktop: как profileDashboardCard. */
+/** Mobile: плоская белая панель (как кабинет). Desktop: с лёгкой тенью. */
 export const overviewCard =
-  'rounded-[24px] border border-white/80 bg-white shadow-[0_10px_36px_rgba(17,24,39,0.07)] lg:rounded-[28px] lg:border-0 lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)]';
+  'overflow-hidden rounded-[16px] bg-white lg:rounded-[28px] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)]';
 
 export const overviewDesktopCard = profileDashboardCard;
 
@@ -47,7 +47,7 @@ export const overviewDesktopPanel = 'min-w-0';
 export const overviewCardPad = 'p-[18px] lg:p-6';
 
 export const overviewIconCircle =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-[#FFF1F4] text-[#F47C8C] shadow-[0_8px_20px_rgba(244,124,140,0.10)] lg:h-10 lg:w-10 lg:rounded-[14px] lg:text-[#ff5f7a] lg:shadow-none';
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] bg-[#FFF1F4] text-[#F47C8C] lg:h-10 lg:w-10 lg:rounded-[14px] lg:text-[#ff5f7a]';
 
 export const overviewPinkBtn =
   'rounded-[18px] bg-gradient-to-r from-[#F47C8C] to-[#F26D83] text-white shadow-[0_10px_26px_rgba(244,124,140,0.30)] transition hover:brightness-[0.98] active:scale-[0.98] lg:rounded-[14px] lg:from-[#ff6f88] lg:to-[#ff5f7a] lg:shadow-[0_8px_24px_rgba(255,95,122,0.28)] lg:hover:opacity-95';
@@ -57,7 +57,19 @@ export const overviewPinkOutline =
 
 export const overviewMutedSurface = 'rounded-[16px] bg-[#f6f7fb]';
 
-/** Кнопки-фильтры периода (Сегодня / Неделя / …). */
+/** Сегментный переключатель периода (мобильная сводка). */
+export const overviewPeriodTrack =
+  'grid grid-cols-4 gap-1 overflow-hidden rounded-[12px] bg-[#EBEBEB] p-1';
+
+export function overviewPeriodSegmentClass(active: boolean): string {
+  return `flex min-h-10 min-w-0 items-center justify-center whitespace-nowrap rounded-[10px] px-1 text-[11px] font-semibold leading-none transition active:scale-[0.98] sm:min-h-11 sm:px-2 sm:text-[13px] ${
+    active
+      ? 'bg-[#F47C8C] text-white'
+      : 'bg-transparent text-[#6B7280] hover:text-[#111827]'
+  }`;
+}
+
+/** Кнопки-фильтры (меню источников и т.п.). */
 export const overviewFilterChip =
   'inline-flex shrink-0 items-center justify-center rounded-full border px-4 py-2.5 text-[13px] font-semibold transition active:scale-[0.96]';
 

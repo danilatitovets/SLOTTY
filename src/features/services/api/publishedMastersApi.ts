@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../shared/api/backendClient';
+import { fetchPublicGetCached } from '../../../shared/api/publicGetCache';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
 import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 import type { MasterLocation } from '../../profile/model/masterLocation';
@@ -35,10 +36,13 @@ export async function fetchPublishedMasters(params: {
   if (params.search?.trim()) q.set('search', params.search.trim());
   if (params.limit != null) q.set('limit', String(params.limit));
   const qs = q.toString();
-  const res = await apiFetch(`/api/masters${qs ? `?${qs}` : ''}`, { skipAuth: true });
-  if (!res.ok) throw new Error(await readApiError(res));
-  const j = (await res.json()) as { masters?: PublishedMasterDto[] };
-  return j.masters ?? [];
+  const url = `/api/masters${qs ? `?${qs}` : ''}`;
+  return fetchPublicGetCached(url, async () => {
+    const res = await apiFetch(url, { skipAuth: true });
+    if (!res.ok) throw new Error(await readApiError(res));
+    const j = (await res.json()) as { masters?: PublishedMasterDto[] };
+    return j.masters ?? [];
+  });
 }
 
 export function publishedMasterToListingRecord(m: PublishedMasterDto): ServiceListingRecord {

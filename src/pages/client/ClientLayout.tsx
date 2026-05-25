@@ -6,7 +6,7 @@ import { ClientErrorModalProvider } from './ClientErrorModalContext';
 import type { ClientOutletContext } from './clientOutletContext';
 import { useClientGeo } from './hooks/useClientGeo';
 
-import { BOOKING_PATH } from '../../app/paths';
+import { BOOKING_PATH, MASTERS_PATH, PROFILE_PATH, SERVICES_PATH } from '../../app/paths';
 
 function isMasterPublicPath(pathname: string): boolean {
   return /^\/master\/[^/]+/.test(pathname);
@@ -14,6 +14,15 @@ function isMasterPublicPath(pathname: string): boolean {
 
 function isBookingPath(pathname: string): boolean {
   return pathname === BOOKING_PATH;
+}
+
+function isCatalogPath(pathname: string): boolean {
+  if (pathname === MASTERS_PATH || pathname === SERVICES_PATH) return true;
+  return pathname.startsWith(`${SERVICES_PATH}/category/`);
+}
+
+function isClientProfilePath(pathname: string): boolean {
+  return pathname === PROFILE_PATH || pathname.startsWith(`${PROFILE_PATH}/`);
 }
 
 export function ClientLayout() {
@@ -30,14 +39,26 @@ export function ClientLayout() {
     userLng,
   };
 
+  const hideMobileClientHeader =
+    isBookingPath(pathname) || isCatalogPath(pathname) || isMasterPublicPath(pathname);
+  const profileMobileHeader = isClientProfilePath(pathname);
+
   return (
     <ClientErrorModalProvider>
-      <div className="min-h-dvh bg-white text-neutral-900">
-        <div className="lg:hidden">
-          <ClientHeader cityLabel={cityLabel} onCityClick={hasGeo ? undefined : requestGeo} />
-        </div>
+      <div className="min-h-dvh w-full min-w-0 bg-white text-neutral-900">
+        {hideMobileClientHeader ? null : (
+          <div className="lg:hidden">
+            <ClientHeader
+              cityLabel={cityLabel}
+              onCityClick={hasGeo ? undefined : requestGeo}
+              logoLeading={profileMobileHeader}
+            />
+          </div>
+        )}
         <SlottyHeader variant="bar" />
-        <Outlet context={outletContext} />
+        <div className="w-full min-w-0">
+          <Outlet context={outletContext} />
+        </div>
         {hideBottomNav ? null : <ClientBottomNav />}
       </div>
     </ClientErrorModalProvider>

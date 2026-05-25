@@ -4,8 +4,10 @@ import { HUB_PATH, LOGIN_PATH } from '../../app/paths';
 import { ReturnToTelegramButton } from '../../features/auth/components/ReturnToTelegramButton';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { messageForAuthErrorCode } from '../../features/auth/lib/authApiErrors';
-import { getPostClientLoginPath } from '../../features/auth/lib/postLoginRedirect';
-import { setStoredAuthToken } from '../../shared/api/backendClient';
+import { getPostOAuthLoginPath } from '../../features/auth/lib/postLoginRedirect';
+import { normalizeBackendProfile } from '../../features/auth/types';
+import { sessionRefreshToken, type BackendProfile } from '../../features/auth/types';
+import { apiFetch, setStoredAuthToken } from '../../shared/api/backendClient';
 
 function readTokenFromLocation(): string | null {
   const hash = window.location.hash.replace(/^#/, '');
@@ -51,17 +53,24 @@ export function GoogleOAuthDonePage() {
     }
 
     setStoredAuthToken(token);
-    void refreshProfile()
-      .then(() => {
+    void (async () => {
+      let meProfile: BackendProfile | null = null;
+      try {
+        const res = await apiFetch('/api/me');
+        if (res.ok) {
+          const me = (await res.json()) as BackendProfile;
+          const refreshed = sessionRefreshToken(me);
+          if (refreshed) setStoredAuthToken(refreshed);
+          meProfile = normalizeBackendProfile(me);
+        }
+        await refreshProfile();
         setMessage('Вход через Google выполнен.');
-        const target = from
-          ? getPostClientLoginPath(`?from=${encodeURIComponent(from)}`)
-          : getPostClientLoginPath('');
-        navigate(target, { replace: true });
-      })
-      .catch(() => {
+        const search = from ? `?from=${encodeURIComponent(from)}` : '';
+        navigate(getPostOAuthLoginPath(meProfile, search), { replace: true });
+      } catch {
         setMessage('Токен получен, но не удалось загрузить профиль. Откройте главную страницу.');
-      });
+      }
+    })()
   }, [location.search, navigate, refreshProfile]);
 
   return (

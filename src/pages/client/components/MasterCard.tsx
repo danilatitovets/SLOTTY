@@ -2,13 +2,14 @@ import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   HiCalendarDays,
-  HiCheckBadge,
   HiClock,
   HiHeart,
   HiHomeModern,
   HiMapPin,
   HiStar,
 } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
 import { getBookingPath, getMasterPath } from '../../../app/paths';
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
 import { formatReviewsCountLabel } from '../../../features/services/model/demoMasters';
@@ -26,7 +27,6 @@ import {
   masterLocationChipLine,
   visitFormatChipLabel,
 } from '../lib/catalogFormat';
-import { clientPinkBtn } from '../clientTheme';
 import {
   catalogListCardClass,
   catalogPrimaryBtn,
@@ -40,7 +40,7 @@ type Props = {
   listing: ServiceListingRecord;
   userLat: number | null;
   userLng: number | null;
-  layout?: 'carousel' | 'list' | 'featured' | 'catalog';
+  layout?: 'carousel' | 'list' | 'featured' | 'catalog' | 'home';
 };
 
 function initials(name: string): string {
@@ -62,21 +62,23 @@ function uniquePortfolioUrls(urls: string[] | undefined): string[] {
   return out;
 }
 
+/** Единая типографика метрик в карточке (карусель / список). */
+const CARD_STAT_VALUE = 'text-[15px] font-semibold leading-none tabular-nums';
+const CARD_STAT_LABEL = 'mt-1 text-[11px] font-medium leading-snug text-[#9CA3AF]';
+
 function StatColumn({
   value,
   label,
-  valueClassName = 'text-[17px] font-bold text-[#111827]',
+  valueClassName = `${CARD_STAT_VALUE} text-[#111827]`,
 }: {
   value: ReactNode;
   label: string;
   valueClassName?: string;
 }) {
   return (
-    <div className="min-w-0 flex-1 text-center">
-      <div className={`flex min-h-[1.35rem] items-center justify-center leading-tight ${valueClassName}`}>
-        {value}
-      </div>
-      <p className="mt-0.5 text-[11px] leading-snug text-[#9CA3AF]">{label}</p>
+    <div className="min-w-0 w-full flex-1 text-center">
+      <div className={`flex min-h-[1.125rem] items-center justify-center ${valueClassName}`}>{value}</div>
+      <p className={CARD_STAT_LABEL}>{label}</p>
     </div>
   );
 }
@@ -89,10 +91,11 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
     (message) => showError(message, { title: 'Избранное' }),
   );
   const featured = layout === 'featured';
+  const plainHome = layout === 'home';
 
   const hasSlot = Boolean(listing.nextSlotStartsAt);
   const slotSubline = formatSlotCardSubline(listing.nextSlotStartsAt);
-  const showVerified = listing.rating >= 4.5 && listing.reviewsCount >= 10;
+  const showVerified = masterShowsVerifiedBadge(listing);
   const isNewMaster = listing.reviewsCount <= 0 && listing.rating <= 0;
   const bookingsCount = estimatedBookingsCount(listing.reviewsCount);
   const distanceKm = listingDistanceKm(listing, userLat, userLng);
@@ -161,7 +164,7 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
           onClick={onToggleFav}
           disabled={favoriteDisabled}
           aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
-          className={`absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-[0_2px_8px_rgba(17,24,39,0.08)] transition hover:bg-white hover:text-[#F47C8C] active:scale-95 lg:right-4 lg:top-4 ${
+          className={`absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] transition hover:bg-[#EBEBEB] hover:text-[#F47C8C] active:scale-95 lg:right-4 lg:top-4 ${
             fav ? 'text-[#F47C8C]' : 'text-[#9CA3AF]'
           }`}
         >
@@ -198,7 +201,7 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
                 {listing.masterName}
               </h3>
               {showVerified ? (
-                <HiCheckBadge className="mt-1 h-4 w-4 shrink-0 text-[#F47C8C]" aria-hidden />
+                <MasterVerifiedBadge className="mt-1 h-4 w-4 shrink-0 text-[#F47C8C]" />
               ) : null}
             </div>
 
@@ -274,71 +277,96 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
           openProfile();
         }
       }}
-      className={`flex h-full w-full flex-col overflow-hidden rounded-[26px] bg-white p-4 text-left shadow-[0_10px_36px_rgba(17,24,39,0.07)] ring-1 ring-[#f2f2f2] transition active:scale-[0.99] ${
-        featured ? 'ring-2 ring-[#F47C8C]/20' : ''
-      }`}
+      className={`flex h-full w-full flex-col text-left transition active:scale-[0.99] ${
+        plainHome
+          ? 'min-h-[26.5rem] overflow-visible rounded-[16px] bg-[#F6F6F7] p-4'
+          : 'overflow-hidden rounded-[16px] bg-white p-4'
+      } ${featured && !plainHome ? 'ring-1 ring-[#F47C8C]/25' : ''}`}
     >
-      <div className="flex gap-3.5">
+      <div className={`flex gap-3.5 ${plainHome ? 'shrink-0' : ''}`}>
         <div className="relative h-[8.5rem] w-[7rem] shrink-0">
           {listing.photoUrl ? (
             <ImageReveal
               src={listing.photoUrl}
               alt=""
-              className="h-full w-full rounded-[22px] object-cover"
+              className="h-full w-full rounded-[14px] object-cover"
               loading="lazy"
             />
           ) : (
-            <span className="flex h-full w-full items-center justify-center rounded-[22px] bg-gradient-to-br from-[#FFF1F4] to-[#FFE4EA] text-[22px] font-bold text-[#F47C8C]">
+            <span
+              className={`flex h-full w-full items-center justify-center rounded-[14px] text-[22px] font-bold text-[#F47C8C] ${
+                plainHome ? 'bg-transparent' : 'bg-[#F5F5F5]'
+              }`}
+            >
               {initials(listing.masterName)}
             </span>
           )}
-          {hasSlot ? (
-            <span className="absolute bottom-2 left-1.5 right-1.5 flex items-center justify-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#15803D] shadow-sm">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
-              Свободна
-            </span>
-          ) : null}
-        </div>
-
-        <div className="relative min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={onToggleFav}
-            disabled={favoriteDisabled}
-            aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
-            className={`absolute -right-0.5 -top-0.5 z-10 flex h-9 w-9 items-center justify-center rounded-[14px] bg-white shadow-[0_4px_14px_rgba(17,24,39,0.08)] transition active:scale-95 ${
-              fav ? 'text-[#F47C8C]' : 'text-[#9CA3AF]'
+          <span
+            className={`absolute bottom-2 left-1.5 right-1.5 flex items-center justify-center gap-1 text-[11px] font-semibold text-[#15803D] ${
+              plainHome
+                ? hasSlot
+                  ? ''
+                  : 'pointer-events-none opacity-0'
+                : hasSlot
+                  ? 'rounded-full bg-white px-2 py-1 ring-1 ring-[#E5E7EB]'
+                  : 'hidden'
             }`}
           >
-            <HiHeart className={`h-5 w-5 ${fav ? 'fill-current' : ''}`} />
-          </button>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
+            Свободна
+          </span>
+        </div>
 
-          <div className="pr-9">
-            <div className="flex items-start gap-1">
-              <h3 className="line-clamp-2 text-[17px] font-semibold leading-snug tracking-tight text-[#111827]">
-                {listing.masterName}
-              </h3>
-              {showVerified ? (
-                <HiCheckBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" aria-hidden />
-              ) : null}
+        <div className={`min-w-0 flex-1 ${plainHome ? 'flex min-h-[8.5rem] flex-col' : ''}`}>
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-1">
+                <h3 className="min-w-0 truncate text-[16px] font-semibold leading-snug tracking-[-0.02em] text-[#111827]">
+                  {listing.masterName}
+                </h3>
+                {showVerified ? (
+                  <MasterVerifiedBadge className="h-4 w-4 shrink-0 text-[#F47C8C]" />
+                ) : null}
+              </div>
+              <p className="mt-0.5 truncate text-[12px] font-medium leading-snug text-[#8E8E93]">
+                {formatMasterCardSpecialty(listing.category)}
+              </p>
             </div>
-            <p className="mt-0.5 line-clamp-1 text-[13px] font-medium text-[#6B7280]">
-              {formatMasterCardSpecialty(listing.category)}
-            </p>
+            <button
+              type="button"
+              onClick={onToggleFav}
+              disabled={favoriteDisabled}
+              aria-label={fav ? 'Убрать из избранного' : 'В избранное'}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center transition active:scale-95 ${
+                plainHome
+                  ? fav
+                    ? 'text-[#F47C8C]'
+                    : 'text-[#9CA3AF] hover:text-[#F47C8C]'
+                  : `rounded-full bg-[#F5F5F5] hover:bg-[#EBEBEB] ${fav ? 'text-[#F47C8C]' : 'text-[#9CA3AF]'}`
+              }`}
+            >
+              <HiHeart className={`h-5 w-5 ${fav ? 'fill-current' : ''}`} />
+            </button>
           </div>
 
-          <div className="mt-3 flex items-start border-t border-[#F3F4F6] pt-2.5">
+          <div
+            className={`${
+              plainHome
+                ? 'mt-3 grid w-full min-h-[2.75rem] shrink-0 grid-cols-3 gap-1 pt-0.5'
+                : 'mt-3 flex w-full items-start border-t border-[#F3F4F6] pt-3'
+            }`}
+          >
             {isNewMaster ? (
               <StatColumn
                 value="Новый"
-                label="мастер"
-                valueClassName="text-[15px] font-bold text-[#F47C8C]"
+                label="рейтинг"
+                valueClassName={`${CARD_STAT_VALUE} text-[#F47C8C]`}
               />
             ) : (
               <StatColumn
                 value={
                   <span className="inline-flex items-center justify-center gap-0.5">
-                    <HiStar className="h-4 w-4 text-amber-400" aria-hidden />
+                    <HiStar className="h-3.5 w-3.5 text-[#F59E0B]" aria-hidden />
                     {listing.rating > 0 ? listing.rating.toFixed(1) : '—'}
                   </span>
                 }
@@ -347,32 +375,59 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
                     ? formatReviewsCountLabel(listing.reviewsCount)
                     : 'нет отзывов'
                 }
+                valueClassName={
+                  listing.rating > 0
+                    ? `${CARD_STAT_VALUE} text-[#111827]`
+                    : `${CARD_STAT_VALUE} text-[#D1D5DB]`
+                }
               />
             )}
-            <div className="mx-1 w-px self-stretch bg-[#F3F4F6]" aria-hidden />
+            {plainHome ? null : (
+              <div className="mx-1.5 w-px self-stretch min-h-[2.25rem] bg-[#F3F4F6]" aria-hidden />
+            )}
             {bookingsCount != null ? (
               <StatColumn value={String(bookingsCount)} label="записей" />
             ) : (
-              <StatColumn value="—" label="записей" valueClassName="text-[17px] font-bold text-[#D1D5DB]" />
+              <StatColumn value="—" label="записей" valueClassName={`${CARD_STAT_VALUE} text-[#D1D5DB]`} />
             )}
-            <div className="mx-1 w-px self-stretch bg-[#F3F4F6]" aria-hidden />
+            {plainHome ? null : (
+              <div className="mx-1.5 w-px self-stretch min-h-[2.25rem] bg-[#F3F4F6]" aria-hidden />
+            )}
             <StatColumn
               value={distanceLabel ?? '—'}
               label={distanceLabel ? 'от вас' : 'расстояние'}
               valueClassName={
                 distanceLabel
-                  ? 'text-[17px] font-bold text-[#111827]'
-                  : 'text-[17px] font-bold text-[#D1D5DB]'
+                  ? `${CARD_STAT_VALUE} text-[#111827]`
+                  : `${CARD_STAT_VALUE} text-[#9CA3AF]`
               }
             />
           </div>
 
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-medium text-[#4B5563]">
+          <div
+            className={`flex flex-wrap gap-x-3 gap-y-1 ${
+              plainHome
+                ? 'mt-auto min-h-[2.25rem] shrink-0 content-end text-[12px] font-medium text-[#6B7280]'
+                : 'mt-2.5 gap-1.5'
+            }`}
+          >
+            <span
+              className={
+                plainHome
+                  ? 'inline-flex max-w-full items-center gap-1'
+                  : 'inline-flex max-w-full items-center gap-1 rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[12px] font-medium text-[#4B5563]'
+              }
+            >
               <HiMapPin className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
               <span className="truncate">{locationChip}</span>
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-medium text-[#4B5563]">
+            <span
+              className={
+                plainHome
+                  ? 'inline-flex items-center gap-1'
+                  : 'inline-flex items-center gap-1 rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[12px] font-medium text-[#4B5563]'
+              }
+            >
               <HiHomeModern className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
               {visitChip}
             </span>
@@ -381,51 +436,94 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
       </div>
 
       <div
-        className={`mt-3.5 flex items-center gap-2.5 rounded-[18px] px-3 py-2.5 ${
-          hasSlot ? 'bg-gradient-to-r from-[#FFF5F7] to-[#FFEEF2]' : 'bg-[#FAFAFA]'
+        className={`flex shrink-0 items-center gap-2.5 ${
+          plainHome
+            ? 'mt-3.5 h-[4.5rem]'
+            : 'mt-3.5 min-h-[3.75rem] rounded-[12px] bg-[#F5F5F5] px-3 py-2.5'
         }`}
       >
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] ${
-            hasSlot ? 'bg-white text-[#F47C8C] shadow-sm' : 'bg-[#F1EFEF] text-[#9CA3AF]'
+          className={`flex h-9 w-9 shrink-0 items-center justify-center ${
+            plainHome
+              ? 'text-[#F47C8C]'
+              : `rounded-[10px] ${hasSlot ? 'bg-white text-[#F47C8C]' : 'bg-[#EBEBEB] text-[#9CA3AF]'}`
           }`}
         >
-          <HiClock className="h-5 w-5" aria-hidden />
+          <HiClock className="h-[18px] w-[18px]" aria-hidden />
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-            Ближайшее окно
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <p className="text-[11px] font-medium leading-none text-[#9CA3AF]">Ближайшее окно</p>
+          <p
+            className={`mt-1 min-h-[2.5rem] text-[14px] leading-snug ${
+              hasSlot && slotSubline
+                ? 'font-semibold text-[#F47C8C]'
+                : 'font-medium text-[#6B7280]'
+            }`}
+          >
+            {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
           </p>
-          {hasSlot && slotSubline ? (
-            <p className="mt-0.5 text-[14px] font-semibold lowercase text-[#F47C8C]">{slotSubline}</p>
-          ) : (
-            <p className="mt-0.5 text-[13px] font-medium text-[#6B7280]">Свободных окон пока нет</p>
-          )}
         </div>
-        {hasSlot && priceLabel ? (
+        {plainHome || (hasSlot && priceLabel) ? (
           <>
-            <div className="h-9 w-px shrink-0 bg-[#F47C8C]/15" aria-hidden />
-            <div className="max-w-[5.25rem] shrink-0 text-right">
-              <p className="text-[14px] font-bold leading-tight text-[#111827]">{priceLabel}</p>
-              <p className="mt-0.5 line-clamp-2 text-[10px] leading-tight text-[#9CA3AF]">
-                {serviceShort}
-              </p>
+            {plainHome ? null : <div className="h-8 w-px shrink-0 bg-[#F47C8C]/12" aria-hidden />}
+            <div className="flex w-[5.5rem] shrink-0 flex-col justify-center text-right">
+              {hasSlot && priceLabel ? (
+                <>
+                  <p className="text-[13px] font-semibold leading-snug text-[#111827]">{priceLabel}</p>
+                  <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] font-medium leading-snug text-[#9CA3AF]">
+                    {serviceShort}
+                  </p>
+                </>
+              ) : plainHome ? (
+                <>
+                  <p className="invisible text-[13px] font-semibold leading-snug" aria-hidden>
+                    —
+                  </p>
+                  <p className="invisible mt-0.5 min-h-[2rem] text-[11px]" aria-hidden>
+                    —
+                  </p>
+                </>
+              ) : null}
             </div>
           </>
         ) : null}
-        {hasSlot ? (
+        {plainHome ? (
+          hasSlot ? (
+            <button
+              type="button"
+              onClick={openBooking}
+              aria-label="Выбрать время"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F47C8C] text-white active:scale-95"
+            >
+              <HiCalendarDays className="h-[18px] w-[18px]" aria-hidden />
+            </button>
+          ) : (
+            <span className="h-9 w-9 shrink-0" aria-hidden />
+          )
+        ) : hasSlot ? (
           <button
             type="button"
             onClick={openBooking}
             aria-label="Выбрать время"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#F47C8C] text-white shadow-sm active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F47C8C] text-white active:scale-95"
           >
-            <HiCalendarDays className="h-5 w-5" aria-hidden />
+            <HiCalendarDays className="h-[18px] w-[18px]" aria-hidden />
           </button>
         ) : null}
       </div>
 
-      {previewPhotos.length > 0 ? (
+      {plainHome ? (
+        <div className="mt-3 flex h-[3.75rem] shrink-0">
+          <div className="h-full w-[5.5rem] shrink-0 overflow-hidden rounded-[10px] bg-[#FAFAFA]">
+            <ImageReveal
+              src={previewPhotos[0] ?? getCategoryWorkPhotoUrl(resolveCategoryWorkCode(listing.category))}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      ) : previewPhotos.length > 0 ? (
         <div className="mt-3 flex gap-1.5">
           {previewPhotos.map((url, i) => (
             <div
@@ -438,9 +536,9 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
             </div>
           ))}
           {extraWorks > 0 ? (
-            <div className="flex h-[3.75rem] w-[3.75rem] shrink-0 flex-col items-center justify-center rounded-[14px] bg-[#FFF1F4] px-1 text-center text-[11px] font-bold leading-tight text-[#F47C8C]">
+            <div className="flex h-[3.75rem] w-[3.75rem] shrink-0 flex-col items-center justify-center rounded-[14px] bg-[#FFF1F4] px-1 text-center text-[12px] font-semibold leading-tight text-[#F47C8C]">
               +{extraWorks}
-              <span className="text-[10px] font-semibold">работы</span>
+              <span className="text-[11px] font-medium">работы</span>
             </div>
           ) : null}
         </div>
@@ -449,10 +547,12 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
       <button
         type="button"
         onClick={openBooking}
-        className={`${clientPinkBtn} mt-3.5 min-h-[52px] w-full flex-col gap-0 py-2.5`}
+        className={`${catalogPrimaryBtn} flex w-full flex-col items-center justify-center gap-0.5 !rounded-[12px] py-2.5 ${
+          plainHome ? 'mt-auto min-h-[3.25rem] shrink-0' : 'mt-3.5 min-h-11'
+        }`}
       >
-        <span className="text-[16px] font-semibold leading-tight">Записаться</span>
-        <span className="text-[12px] font-medium leading-tight text-white/90">
+        <span className="text-[14px] font-semibold leading-none">Записаться</span>
+        <span className="text-[11px] font-medium leading-none text-white/90">
           {hasSlot ? 'Выбрать время' : 'Открыть профиль'}
         </span>
       </button>

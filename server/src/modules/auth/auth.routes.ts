@@ -21,6 +21,7 @@ import {
   verifyGoogleLinkHandoff,
   verifyGoogleOAuthState,
 } from './googleOAuth.service.js';
+import { syncMasterAccountVerified } from './accountVerification.js';
 import { listAuthIdentitiesForProfile } from './authIdentities.service.js';
 import {
   requestPasswordReset,
@@ -29,6 +30,7 @@ import {
   sendVerificationEmailForProfile,
   verifyEmailWithToken,
 } from './email/emailAuth.service.js';
+import { authCredentialLimiter, authEmailSendLimiter } from '../../middlewares/rateLimit.js';
 
 export const authRouter = Router();
 
@@ -75,6 +77,7 @@ const googleOAuthStartBody = z.object({
 
 authRouter.post(
   '/telegram',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = telegramBody.parse(req.body);
     const out = await loginWithTelegram(body.initDataRaw);
@@ -84,6 +87,7 @@ authRouter.post(
 
 authRouter.post(
   '/google',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = googleBody.parse(req.body);
     const out = await loginWithGoogle(body.idToken);
@@ -93,6 +97,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/login',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = emailLoginBody.parse(req.body);
     const out = await loginWithEmail(body.email, body.password);
@@ -102,6 +107,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/register',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = emailLoginBody.parse(req.body);
     const out = await registerWithEmail(body.email, body.password);
@@ -113,7 +119,11 @@ authRouter.get(
   '/identities',
   authMiddleware,
   asyncHandler(async (req, res) => {
-    const identities = await listAuthIdentitiesForProfile(req.user!.id);
+    const profileId = req.user!.id;
+    const identities = await listAuthIdentitiesForProfile(profileId);
+    await syncMasterAccountVerified(profileId).catch((e) => {
+      console.error('[SLOTTY] sync master is_verified on identities list failed:', e);
+    });
     res.json({ identities });
   }),
 );
@@ -239,6 +249,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/send-verification',
+  authEmailSendLimiter,
   optionalAuthMiddleware,
   asyncHandler(async (req, res) => {
     const body = sendVerificationBody.parse(req.body ?? {});
@@ -257,6 +268,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/verify',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = tokenBody.parse(req.body);
     await verifyEmailWithToken(body.token);
@@ -266,6 +278,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/forgot-password',
+  authEmailSendLimiter,
   asyncHandler(async (req, res) => {
     const body = forgotPasswordBody.parse(req.body);
     await requestPasswordReset(body.email);
@@ -278,6 +291,7 @@ authRouter.post(
 
 authRouter.post(
   '/email/reset-password',
+  authCredentialLimiter,
   asyncHandler(async (req, res) => {
     const body = resetPasswordBody.parse(req.body);
     await resetPasswordWithToken(body.token, body.password);

@@ -114,6 +114,63 @@ export function formatRepeatSummary(settings: RepeatSettingsValue, dateCount?: n
   return `${kindLabel} · ${detail}${countSuffix}`;
 }
 
+export type RepeatSummaryRow = { label: string; value: string };
+
+/** Строки для карточки «Итог» — без разделителей «·». */
+export function formatRepeatSummaryRows(
+  settings: RepeatSettingsValue,
+  dateCount?: number,
+): RepeatSummaryRow[] {
+  if (settings.kind === 'none') {
+    return [{ label: 'Повтор', value: 'Только на выбранную дату' }];
+  }
+
+  const kindLabel = REPEAT_KIND_OPTIONS.find((o) => o.value === settings.kind)?.label ?? '';
+  const rows: RepeatSummaryRow[] = [{ label: 'Повтор', value: kindLabel }];
+
+  switch (settings.kind) {
+    case 'weekly':
+      rows.push({
+        label: 'Период',
+        value: `${settings.weeklyCount} ${weeksLabel(settings.weeklyCount)}`,
+      });
+      break;
+    case 'biweekly':
+      rows.push({
+        label: 'Серия',
+        value: `${settings.biweeklyCount} ${timesLabel(settings.biweeklyCount)}`,
+      });
+      break;
+    case 'weekdays':
+      rows.push({
+        label: 'Период',
+        value: `${settings.weekdaySpanWeeks} ${weeksLabel(settings.weekdaySpanWeeks)}`,
+      });
+      rows.push({ label: 'Дни', value: 'Пн–Пт' });
+      break;
+    case 'pick_weekdays': {
+      const days = settings.pickWeekdayMask
+        .map((on, i) => (on ? WEEKDAY_SHORT[i] : null))
+        .filter(Boolean)
+        .join(', ');
+      rows.push({ label: 'Дни', value: days || 'Не выбраны' });
+      rows.push({
+        label: 'Период',
+        value: `${settings.pickWeekdaysSpanWeeks} ${weeksLabel(settings.pickWeekdaysSpanWeeks)}`,
+      });
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (dateCount != null && dateCount > 0) {
+    rows.push({ label: 'Дат в серии', value: `${dateCount} ${datesLabel(dateCount)}` });
+  }
+
+  return rows;
+}
+
 function weeksLabel(n: number): string {
   const mod10 = n % 10;
   const mod100 = n % 100;

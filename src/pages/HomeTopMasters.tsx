@@ -1,5 +1,6 @@
-import type { FC } from 'react';
+import { useEffect, type FC } from 'react';
 import { Link } from 'react-router-dom';
+import { useClientGeo } from './client/hooks/useClientGeo';
 import { MASTERS_PATH } from '../app/paths';
 import type { ServiceListingRecord } from '../features/services/model/demoMasters';
 import { NothingFoundCard } from '../shared/ui/NothingFoundCard';
@@ -14,6 +15,12 @@ export type HomeTopMastersProps = {
 };
 
 export const HomeTopMasters: FC<HomeTopMastersProps> = ({ masters, isLoading }) => {
+  const { userLat, userLng, hasGeo, requestGeo } = useClientGeo();
+
+  useEffect(() => {
+    if (!hasGeo) requestGeo();
+  }, [hasGeo, requestGeo]);
+
   return (
     <section
       className={homeSection}
@@ -33,7 +40,7 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({ masters, isLoading }) 
       </div>
 
       <ClientErrorModalProvider>
-        <div className={`${homeScrollRow} mt-10 bg-transparent sm:mt-14`}>
+        <div className={`${homeScrollRow} mt-10 items-stretch bg-transparent sm:mt-14`}>
           {isLoading ? (
             <div className="flex min-h-[14rem] w-full min-w-0 shrink-0 items-center justify-center py-8">
               <LoadingVideo size="lg" label="Загрузка мастеров…" />
@@ -54,9 +61,9 @@ export const HomeTopMasters: FC<HomeTopMastersProps> = ({ masters, isLoading }) 
             masters.map((listing) => (
               <div
                 key={listing.masterId}
-                className="w-[min(88vw,21.25rem)] shrink-0 snap-start sm:w-[21.25rem]"
+                className="flex w-[min(88vw,21.25rem)] shrink-0 snap-start sm:w-[21.25rem]"
               >
-                <MasterCard listing={listing} userLat={null} userLng={null} layout="carousel" />
+                <MasterCard listing={listing} userLat={userLat} userLng={userLng} layout="home" />
               </div>
             ))
           )}

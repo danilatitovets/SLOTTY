@@ -1,5 +1,6 @@
 import { apiFetch } from '../../../shared/api/backendClient';
 import { readSlottyApiErrorMessage } from '../../../shared/api/slottyApiErrorMessage';
+import type { CategoryChangePolicyDto } from '../lib/categoryChangePolicy';
 import type { PrimaryLocationBody, ScheduleRuleDto } from '../../master-onboarding/api/becomeMasterApi';
 
 async function readApiError(res: Response): Promise<string> {
@@ -69,6 +70,7 @@ export type MasterCabinetServiceDto = {
 export type MasterCabinetDto = {
   profile: MasterCabinetProfileDto;
   primaryCategory: MasterCabinetCategoryDto;
+  categoryChangePolicy?: CategoryChangePolicyDto;
   primaryLocation: MasterCabinetLocationDto;
   scheduleRules: MasterCabinetScheduleRuleDto[];
   services: MasterCabinetServiceDto[];
@@ -125,7 +127,7 @@ export async function patchMasterMe(body: {
   contacts?: MasterContactPatch[] | null;
   photoUrl?: string | null;
   primaryCategoryCode?: string | null;
-  publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked';
+  publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
 }): Promise<void> {
   const res = await apiFetch('/api/masters/me', { method: 'PATCH', body: JSON.stringify(body) });
   if (!res.ok) throw new Error(await readApiError(res));
@@ -215,9 +217,11 @@ export type MasterAppointmentListRow = {
   price_snapshot: string;
   service_title_snapshot: string;
   client_note: string | null;
+  client_reference_photo_url: string | null;
   created_at: string;
   client_name: string;
   client_phone: string | null;
+  client_avatar_url?: string | null;
 };
 
 export async function fetchMasterAppointments(): Promise<MasterAppointmentListRow[]> {
@@ -237,8 +241,14 @@ export async function patchMasterAppointmentComplete(appointmentId: string): Pro
   if (!res.ok) throw new Error(await readApiError(res));
 }
 
-export async function patchMasterAppointmentCancel(appointmentId: string): Promise<void> {
-  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/cancel`, { method: 'PATCH' });
+export async function patchMasterAppointmentCancel(
+  appointmentId: string,
+  reason: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/cancel`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  });
   if (!res.ok) throw new Error(await readApiError(res));
 }
 

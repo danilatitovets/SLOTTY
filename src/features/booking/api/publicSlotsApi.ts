@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../shared/api/backendClient';
+import { fetchPublicGetCached } from '../../../shared/api/publicGetCache';
 
 async function readApiError(res: Response): Promise<string> {
   const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -47,8 +48,11 @@ export async function fetchPublicSlots(params: {
   if (params.to) q.set('to', params.to);
   if (params.limit != null) q.set('limit', String(params.limit));
   const qs = q.toString();
-  const res = await apiFetch(`/api/slots${qs ? `?${qs}` : ''}`, { skipAuth: true });
-  if (!res.ok) throw new Error(await readApiError(res));
-  const j = (await res.json()) as { slots?: PublicSlotDto[] };
-  return j.slots ?? [];
+  const url = `/api/slots${qs ? `?${qs}` : ''}`;
+  return fetchPublicGetCached(url, async () => {
+    const res = await apiFetch(url, { skipAuth: true });
+    if (!res.ok) throw new Error(await readApiError(res));
+    const j = (await res.json()) as { slots?: PublicSlotDto[] };
+    return j.slots ?? [];
+  });
 }

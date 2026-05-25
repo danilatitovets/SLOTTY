@@ -1,5 +1,10 @@
 import { CLIENT_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
-import { catalogDesktopPanel } from './masterProfileTheme';
+import {
+  catalogDesktopPanel,
+  masterProfileDesktopLayout,
+  masterProfileDesktopMainCol,
+  masterProfileDesktopSidebarCol,
+} from './masterProfileTheme';
 
 type Props = {
   desktop?: boolean;
@@ -10,13 +15,15 @@ export function SkeletonMasterProfile({ desktop = false }: Props) {
     return (
       <div className={`${CLIENT_DESKTOP_SHELL_CLASS} animate-pulse space-y-4 pb-12 pt-6`}>
         <div className={`${catalogDesktopPanel} h-64 bg-[#EBEBEB]`} />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-4">
+        <div className={masterProfileDesktopLayout}>
+          <div className={`space-y-4 ${masterProfileDesktopMainCol}`}>
             <div className={`${catalogDesktopPanel} h-40 bg-[#EBEBEB]`} />
             <div className={`${catalogDesktopPanel} h-72 bg-[#EBEBEB]`} />
             <div className={`${catalogDesktopPanel} h-28 bg-[#EBEBEB]`} />
           </div>
-          <div className={`${catalogDesktopPanel} h-72 bg-[#EBEBEB]`} />
+          <div className={masterProfileDesktopSidebarCol}>
+            <div className={`${catalogDesktopPanel} h-72 w-full bg-[#EBEBEB]`} />
+          </div>
         </div>
       </div>
     );

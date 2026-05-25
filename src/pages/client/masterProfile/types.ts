@@ -1,4 +1,5 @@
 import type { MasterDraftCareerItem } from '../../../features/profile/lib/demoMasterStorage';
+import type { MasterContact } from '../../../features/master-onboarding/model/masterContacts';
 import type { DemoMasterProfile } from '../../../features/services/model/demoMasters';
 
 export type MasterCertificate = {
@@ -18,6 +19,7 @@ export type MasterPortfolioItem = {
 };
 
 export type ExtendedMasterProfile = DemoMasterProfile & {
+  contacts?: MasterContact[];
   careerItems?: MasterDraftCareerItem[];
   experience?: string;
   certificates?: MasterCertificate[];

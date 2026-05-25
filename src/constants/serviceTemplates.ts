@@ -1,3 +1,5 @@
+import { normalizeCategoryCode } from '../features/catalog/serviceCategoryLabels';
+
 /**
  * Шаблоны услуг для онбординга мастера (по коду категории из каталога).
  * priceType: exact — фиксированная цена (в форме → fixed), from — «от».
@@ -112,10 +114,30 @@ export const SERVICE_TEMPLATES_BY_CATEGORY: Record<ServiceCategorySlug, ServiceT
 };
 
 export function getServiceTemplatesForCategoryCode(categoryCode: string): ServiceTemplate[] {
-  if (categoryCode in SERVICE_TEMPLATES_BY_CATEGORY) {
-    return SERVICE_TEMPLATES_BY_CATEGORY[categoryCode as ServiceCategorySlug];
+  const slug = normalizeCategoryCode(categoryCode);
+  if (slug in SERVICE_TEMPLATES_BY_CATEGORY) {
+    return SERVICE_TEMPLATES_BY_CATEGORY[slug as ServiceCategorySlug];
   }
   return [];
+}
+
+/** Пример названия услуги в поле ввода — по категории из профиля мастера. */
+const DEFAULT_SERVICE_TITLE_PLACEHOLDER: Record<ServiceCategorySlug, string> = {
+  manicure: 'Маникюр с покрытием',
+  barbers: 'Мужская стрижка',
+  'brows-lashes': 'Коррекция и окрашивание бровей',
+  massage: 'Классический массаж',
+  fitness: 'Персональная тренировка',
+  tattoo: 'Мини-тату',
+};
+
+export function getServiceTitlePlaceholder(categoryCode: string | null | undefined): string {
+  const slug = normalizeCategoryCode(categoryCode ?? '');
+  if (slug in DEFAULT_SERVICE_TITLE_PLACEHOLDER) {
+    return DEFAULT_SERVICE_TITLE_PLACEHOLDER[slug as ServiceCategorySlug];
+  }
+  const templates = getServiceTemplatesForCategoryCode(slug);
+  return templates[0]?.title ?? 'Название услуги';
 }
 
 /** exact → fixed в модели приложения */

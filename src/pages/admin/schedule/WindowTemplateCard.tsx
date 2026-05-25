@@ -1,4 +1,5 @@
 import { HiEllipsisVertical } from 'react-icons/hi2';
+import { scheduleTemplateCardClass } from './adminScheduleTheme';
 import type { WindowTemplate } from './scheduleTypes';
 import { formatDurationRu, templateDisplayLabel } from './scheduleUtils';
 
@@ -16,7 +17,6 @@ export function WindowTemplateCard({
   selected,
   onSelect,
   onOpenMenu,
-  compact = false,
   hideMenu = false,
 }: Props) {
   const label = templateDisplayLabel(template);
@@ -26,32 +26,30 @@ export function WindowTemplateCard({
     template.serviceName !== label;
 
   return (
-    <div
-      className={`relative rounded-[20px] border-2 bg-white shadow-[0_4px_14px_rgba(17,24,39,0.04)] transition hover:border-[#FDE8ED] ${
-        compact ? 'min-h-[5.5rem] lg:min-h-[6.25rem]' : 'min-h-[5.75rem]'
-      } ${
-        selected
-          ? 'border-[#ff5f7a] bg-[#FFF9FB] shadow-[0_8px_24px_rgba(255,95,122,0.18)] ring-2 ring-[#ff5f7a]/15'
-          : 'border-[#EAECEF]'
-      }`}
-    >
+    <div className={`h-full w-full ${scheduleTemplateCardClass(selected)}`}>
       <button
         type="button"
         onClick={onSelect}
-        className={`flex h-full w-full flex-col gap-1.5 rounded-[18px] p-3 text-left active:scale-[0.98] ${hideMenu ? '' : 'pr-10'}`}
+        className={`flex h-full w-full flex-col p-3 text-left lg:min-h-[8.5rem] lg:p-4 ${
+          hideMenu ? '' : 'pr-10'
+        }`}
       >
         <span
-          className="h-1.5 w-8 rounded-full"
+          className="h-1 w-10 shrink-0 rounded-full lg:h-1.5 lg:w-12"
           style={{ backgroundColor: template.accent }}
           aria-hidden
         />
-        <span className="line-clamp-2 text-[13px] font-bold leading-snug text-[#111827] lg:text-[14px]">
+        <span className="mt-2.5 line-clamp-2 text-[13px] font-bold leading-snug tracking-[-0.02em] text-[#111827] lg:mt-3 lg:text-[15px]">
           {label}
         </span>
         {showServiceSubtitle ? (
-          <span className="line-clamp-1 text-[11px] font-semibold text-[#6B7280]">{template.serviceName}</span>
+          <span className="mt-1 line-clamp-1 text-[11px] font-medium text-[#6B7280] lg:text-[12px]">
+            {template.serviceName}
+          </span>
         ) : null}
-        <span className="text-[11px] font-bold text-[#ff5f7a]">{formatDurationRu(template.durationMinutes)}</span>
+        <span className="mt-auto pt-2.5 text-[12px] font-semibold tabular-nums text-[#6B7280] lg:text-[13px]">
+          {formatDurationRu(template.durationMinutes)}
+        </span>
       </button>
       {!hideMenu && onOpenMenu ? (
         <button
@@ -61,7 +59,7 @@ export function WindowTemplateCard({
             e.stopPropagation();
             onOpenMenu();
           }}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-[12px] text-[#9CA3AF] transition hover:bg-[#f6f7fb] hover:text-[#6B7280] active:scale-[0.95]"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#F5F5F5] text-[#6B7280] ring-1 ring-[#EEEEEE] transition hover:bg-[#EBEBEB] hover:text-[#111827] active:scale-[0.95] lg:right-2.5 lg:top-2.5"
           aria-label={`Действия: ${label}`}
         >
           <HiEllipsisVertical className="h-5 w-5" aria-hidden />

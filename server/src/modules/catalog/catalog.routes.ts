@@ -4,6 +4,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { listActiveServiceCategories } from './catalog.service.js';
 import { searchCatalogListings, suggestMasterLocations } from './catalogListings.service.js';
 import type { CatalogListingsQuery } from './catalogSearch.types.js';
+import { publicCatalogRateLimit } from '../../middlewares/rateLimit.js';
 
 export const catalogRouter = Router();
 
@@ -46,6 +47,7 @@ const listingsQuery = z.object({
 
 catalogRouter.get(
   '/listings',
+  publicCatalogRateLimit,
   asyncHandler(async (req, res) => {
     const q = listingsQuery.parse(req.query);
     const body: CatalogListingsQuery = {

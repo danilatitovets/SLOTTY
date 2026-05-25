@@ -3,15 +3,17 @@ import { HiCheck } from 'react-icons/hi2';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import {
   AdminFormSheetLayout,
+  AdminFormSheetStepper,
   AdminFormSheetMetrics,
   AdminFormSheetSection,
 } from '../shared/AdminFormSheetLayout';
 import {
-  adminSheetPinkBtn,
-  adminSheetGhostBtn,
-  adminSheetSecondaryBtn,
-} from '../shared/adminCabinetSheetTheme';
-import { adminFormSheetInsetTray } from '../shared/adminFormSheetTheme';
+  catalogSheetField,
+  catalogSheetGhostBtn,
+  catalogSheetPrimaryBtn,
+  catalogSheetSecondaryBtn,
+} from '../shared/adminCatalogSheetTheme';
+import { sheetChipClass, sheetLabelClass, sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
 import { PromotionBannerCard } from './PromotionBannerCard';
 import {
   PROMOTION_TEMPLATES,
@@ -23,9 +25,8 @@ import {
 import type { PromotionTemplateId } from './promotionTemplates';
 import { SlottyDatePicker } from '../../../shared/ui/SlottyDatePicker';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
-import { servicesInput } from './adminServicesTheme';
 import type { ManagedService } from './servicesFormat';
-import { derivePromotionStatus, formatDurationRu, formatServicePrice, isoDateLocal } from './servicesFormat';
+import { derivePromotionStatus, formatServicePrice, isoDateLocal } from './servicesFormat';
 import { newPromotionId } from './servicesStorage';
 import type { ServicePromotion, ServicePromotionDiscountType } from './servicesTypes';
 
@@ -116,7 +117,7 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
     setDiscountValue(first.defaultDiscountValue);
     setTitle(first.title);
     setDescription(first.description);
-  }, [open, initial, services, today, defaultEnd]);
+  }, [open, initial?.id]);
 
   useEffect(() => {
     if (!open || initial) return;
@@ -218,40 +219,40 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
   const footer = (
     <div className="flex flex-col gap-2">
       {step < STEPS.length - 1 ? (
-        <>
+        <div className="flex w-full gap-3">
+          {step > 0 ? (
+            <button type="button" onClick={handleBack} className={catalogSheetSecondaryBtn}>
+              Назад
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={!canNext}
             onClick={handleNext}
-            className={adminSheetPinkBtn}
+            className={catalogSheetPrimaryBtn}
           >
             Далее
           </button>
-          {step > 0 ? (
-            <button type="button" onClick={handleBack} className={adminSheetGhostBtn}>
-              Назад
-            </button>
-          ) : null}
-        </>
+        </div>
       ) : (
         <>
           <button
             type="button"
             disabled={!serviceId || startsAt > endsAt}
             onClick={() => onSave(buildPromo(true), true)}
-            className={adminSheetPinkBtn}
+            className={catalogSheetPrimaryBtn}
           >
             Опубликовать
           </button>
           <button
             type="button"
             onClick={() => onSave(buildPromo(false), false)}
-            className={adminSheetSecondaryBtn}
+            className={catalogSheetSecondaryBtn}
           >
             Сохранить черновик
           </button>
           {step > 0 ? (
-            <button type="button" onClick={handleBack} className={adminSheetGhostBtn}>
+            <button type="button" onClick={handleBack} className={catalogSheetGhostBtn}>
               Назад
             </button>
           ) : null}
@@ -262,19 +263,16 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
 
   return (
     <AdminBottomSheet
+      variant="catalog"
       open={open}
       onClose={onClose}
       title={initial ? 'Редактирование акции' : 'Создание акции'}
-      subtitle="Шаблон, срок и скидка — баннер появится в каталоге"
-      badge={`${STEPS[step]} · шаг ${step + 1} из ${STEPS.length}`}
+      headerAfter={<AdminFormSheetStepper step={step} steps={STEPS} variant="catalog" />}
       footer={footer}
     >
-      <AdminFormSheetLayout step={step} steps={STEPS}>
+      <AdminFormSheetLayout>
         {step === 0 ? (
-          <AdminFormSheetSection
-            title="Шаблон акции"
-            description="Готовый дизайн и текст — можно подправить на последнем шаге"
-          >
+          <AdminFormSheetSection title="Шаблон акции" variant="catalog">
             <div className="grid grid-cols-2 gap-2.5 lg:gap-4">
               {PROMOTION_TEMPLATES.map((tpl) => {
                 const selected = templateId === tpl.id;
@@ -317,9 +315,9 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
         ) : null}
 
         {step === 1 ? (
-          <AdminFormSheetSection title="Услуга" description="Акция привязывается к одной позиции в каталоге">
+          <AdminFormSheetSection title="Услуга" variant="catalog">
             <label className="block">
-              <span className="text-[13px] font-semibold text-[#6B7280]">Услуга</span>
+              <span className={sheetLabelClass}>Услуга</span>
               <SlottySelect
                 className="mt-1.5 w-full"
                 tone="admin"
@@ -336,20 +334,17 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
                   {selectedService.title}
                 </p>
                 <AdminFormSheetMetrics
+                  variant="catalog"
                   items={[
-                    {
-                      label: 'Длительность',
-                      value: formatDurationRu(selectedService.durationMin),
-                    },
                     { label: 'Было', value: formatServicePrice(selectedService) },
                     {
                       label: 'С акцией',
                       value:
                         discountedPrice(selectedService, discountType, discountValue) != null ? (
-                          <span className="text-[#ff5f7a]">
+                          <>
                             {selectedService.priceType === 'from' ? 'от ' : ''}
                             {discountedPrice(selectedService, discountType, discountValue)} BYN
-                          </span>
+                          </>
                         ) : (
                           '—'
                         ),
@@ -357,27 +352,31 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
                   ]}
                 />
               </div>
-            ) : (
-              <p className="rounded-[16px] bg-[#FFF1F4] px-4 py-3 text-[13px] font-medium text-[#F47C8C]">
+            ) : services.length === 0 ? (
+              <p className="rounded-[10px] bg-[#EBEBEB] px-4 py-3 text-[13px] font-medium text-[#6B7280]">
                 Сначала добавьте услуги в каталоге
               </p>
-            )}
+            ) : null}
           </AdminFormSheetSection>
         ) : null}
 
         {step === 2 ? (
-          <AdminFormSheetSection title="Срок действия" description="Быстрые пресеты или свои даты">
+          <AdminFormSheetSection title="Срок действия" variant="catalog">
             <div className="flex flex-wrap gap-2">
-              {PERIOD_PRESETS.map((p) => (
-                <button
-                  key={p.days}
-                  type="button"
-                  onClick={() => applyPeriod(p.days)}
-                  className="rounded-full border border-[#EAECEF] bg-white px-3.5 py-2 text-[13px] font-semibold text-[#374151] transition active:scale-[0.98] hover:border-[#FDE8ED] hover:bg-[#FFF1F4]"
-                >
-                  {p.label}
-                </button>
-              ))}
+              {PERIOD_PRESETS.map((p) => {
+                const ends = addDaysIso(startsAt, p.days);
+                const selected = endsAt === ends;
+                return (
+                  <button
+                    key={p.days}
+                    type="button"
+                    onClick={() => applyPeriod(p.days)}
+                    className={sheetChipClass(selected)}
+                  >
+                    {p.label}
+                  </button>
+                );
+              })}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
@@ -412,8 +411,8 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
         ) : null}
 
         {step === 3 ? (
-          <AdminFormSheetSection title="Скидка" description="Значение из шаблона — меняется при выборе шаблона">
-            <div className="flex gap-2">
+          <AdminFormSheetSection title="Скидка">
+            <div className="grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5">
               {(
                 [
                   { id: 'percent' as const, label: '%' },
@@ -424,34 +423,27 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
                   key={opt.id}
                   type="button"
                   onClick={() => setDiscountType(opt.id)}
-                  className={`flex-1 rounded-[14px] py-2.5 text-[14px] font-bold transition ${
-                    discountType === opt.id
-                      ? 'bg-[#FFF1F4] text-[#F47C8C] ring-1 ring-[#FDE8ED]'
-                      : 'bg-[#F3F4F6] text-[#6B7280]'
-                  }`}
+                  className={sheetSegmentClass(discountType === opt.id)}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
             <div className="block">
-              <span className="text-[13px] font-semibold text-[#6B7280]">
+              <span className={sheetLabelClass}>
                 {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
               </span>
               <div
-                className={`${servicesInput} mt-1.5 cursor-default bg-[#FAFAFA] text-[#111827]`}
+                className={`${catalogSheetField} mt-1.5 cursor-default bg-[#FAFAFA] text-[#111827]`}
                 aria-readonly
               >
                 {discountType === 'percent'
                   ? `${Math.round(discountValue)}%`
                   : `${discountValue} BYN`}
               </div>
-              <p className="mt-1.5 text-[12px] text-[#9CA3AF]">
-                Значение из шаблона — меняется на шаге «Шаблон»
-              </p>
             </div>
             <div className="flex justify-center py-2">
-              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-[20px] font-black text-white shadow-[0_14px_36px_rgba(255,95,122,0.4)] lg:h-28 lg:w-28 lg:text-[22px]">
+              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#EBEBEB] text-[18px] font-bold text-[#F47C8C] lg:h-28 lg:w-28 lg:text-[20px]">
                 {discountLabel}
               </div>
             </div>
@@ -459,16 +451,14 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
         ) : null}
 
         {step === 4 ? (
-          <AdminFormSheetSection title="Превью для клиентов" description="Баннер в каталоге и запись">
-            <div className={adminFormSheetInsetTray}>
+          <AdminFormSheetSection title="Превью для клиентов" variant="catalog">
             <PromotionBannerCard promo={previewPromo} />
-            </div>
             <label className="mt-4 block">
-              <span className="text-[12px] font-semibold text-[#6B7280]">Заголовок (необязательно)</span>
+              <span className="text-[12px] font-semibold text-[#6B7280]">Заголовок</span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className={`${servicesInput} mt-1`}
+                className={`${catalogSheetField} mt-1`}
               />
             </label>
           </AdminFormSheetSection>

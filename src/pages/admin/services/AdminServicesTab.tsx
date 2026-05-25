@@ -15,26 +15,34 @@ import {
 } from '../../../features/admin/api/masterCabinetApi';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
+import {
+  SERVICE_DELETE_BLOCKED_MESSAGE,
+  serviceHasUpcomingAppointments,
+} from './serviceDeleteGuard';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
+import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
 import {
-  adminSheetBodyPad,
-  adminSheetPinkBtn,
-  adminSheetSegmentActive,
-  adminSheetSegmentIdle,
-  adminSheetSegmentWrap,
-} from '../shared/adminCabinetSheetTheme';
+  catalogSheetPrimaryBtn,
+  catalogSheetSecondaryBtn,
+} from '../shared/adminCatalogSheetTheme';
+import {
+  sheetFieldClass,
+  sheetLabelClass,
+  sheetSegmentClass,
+} from '../profile/adminProfileCabinetTheme';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import {
-  SERVICES_PAGE_BG,
+  SERVICES_MOBILE_CANVAS,
   servicesDesktopCard,
   servicesDesktopTabsSticky,
-  servicesInput,
   servicesShellCard,
 } from './adminServicesTheme';
 import { ServicesSectionTabs } from './ServicesSectionTabs';
 import { computeServicesTabMetrics } from './servicesTabMetrics';
+import { ServicesBundleFormSheet } from './ServicesBundleFormSheet';
+import { ServicesBundleMenuSheet } from './ServicesBundleMenuSheet';
 import { ServicesBundlesTab } from './ServicesBundlesTab';
 import { ServicesCatalogTab } from './ServicesCatalogTab';
 import { ServicesPageHeader } from './ServicesPageHeader';
@@ -54,12 +62,16 @@ import {
   postMasterBundle,
   postMasterPromotion,
 } from '../../../features/admin/api/masterServiceExtrasApi';
+import { getServiceTitlePlaceholder } from '../../../constants/serviceTemplates';
 import { loadServiceBundles, loadServicePromotions, saveServiceBundles, saveServicePromotions } from './servicesStorage';
 import type { ServiceBundle, ServicePromotion, ServicesTabId } from './servicesTypes';
 
 type PriceType = 'fixed' | 'from';
 
-type ServiceSheetMode = 'create' | 'full' | 'price' | 'duration';
+type ServiceSheetMode = 'create' | 'full' | 'price';
+
+/** API требует длительность; в кабинете задаётся только в расписании (окошки). */
+const DEFAULT_SERVICE_DURATION_MIN = 60;
 
 type ManagedService = MasterOnboardingService & {
   priceType?: PriceType;
@@ -81,8 +93,10 @@ function newServiceId(): string {
 }
 
 function fieldClass(): string {
-  return `${servicesInput} mt-1.5`;
+  return sheetFieldClass;
 }
+
+const sheetSegmentWrap = 'grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5';
 
 function normalizeService(service: MasterOnboardingService, index: number): ManagedService {
   const item = service as ManagedService;
@@ -109,7 +123,7 @@ function reindexServices(list: ManagedService[]): ManagedService[] {
 
 export function AdminServicesTab({ draft, onPersist }: Props) {
   const navigate = useNavigate();
-  const { useCabinetApi, refreshDraft, commitDraftBaseline } = useAdminMasterCabinet();
+  const { useCabinetApi, refreshDraft, commitDraftBaseline, appointments } = useAdminMasterCabinet();
   const { canUseBundlesAndPromotions, freeServiceLimitReached } = useMasterPlanEntitlements();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<ServiceSheetMode>('full');
@@ -130,6 +144,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const [extrasError, setExtrasError] = useState<string | null>(null);
   const [promoFormOpen, setPromoFormOpen] = useState(false);
   const [editingPromo, setEditingPromo] = useState<ServicePromotion | null>(null);
+  const [bundleFormOpen, setBundleFormOpen] = useState(false);
+  const [editingBundle, setEditingBundle] = useState<ServiceBundle | null>(null);
+  const [bundleMenuTarget, setBundleMenuTarget] = useState<ServiceBundle | null>(null);
 
   useEffect(() => {
     preloadTabIntroImages(SERVICES_TAB_INTRO_IMAGES);
@@ -162,7 +179,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   }, [reloadServiceExtras]);
 
   const [title, setTitle] = useState('');
-  const [dur, setDur] = useState('');
   const [price, setPrice] = useState('');
   const [priceType, setPriceType] = useState<PriceType>('fixed');
   const [isActive, setIsActive] = useState(true);
@@ -176,6 +192,11 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         .map((service, index) => normalizeService(service, index))
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     [draft.services],
+  );
+
+  const serviceTitlePlaceholder = useMemo(
+    () => getServiceTitlePlaceholder(draft.primaryCategoryCode ?? draft.category),
+    [draft.primaryCategoryCode, draft.category],
   );
 
   const persistServices = useCallback(
@@ -201,7 +222,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const resetForm = useCallback(() => {
     setEditingId(null);
     setTitle('');
-    setDur('');
     setPrice('');
     setPriceType('fixed');
     setIsActive(true);
@@ -212,7 +232,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const loadServiceIntoForm = useCallback((service: ManagedService) => {
     setEditingId(service.id);
     setTitle(service.title);
-    setDur(String(service.durationMin));
     setPrice(String(service.priceByn));
     setPriceType(service.priceType ?? 'fixed');
     setIsActive(service.isActive ?? true);
@@ -246,11 +265,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     [openEdit],
   );
 
-  const openEditDuration = useCallback(
-    (service: ManagedService) => openEdit(service, 'duration'),
-    [openEdit],
-  );
-
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
     resetForm();
@@ -259,11 +273,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const saveService = useCallback(async () => {
     const existing = editingId ? services.find((service) => service.id === editingId) : undefined;
     const quickPrice = sheetMode === 'price' && Boolean(existing);
-    const quickDuration = sheetMode === 'duration' && Boolean(existing);
 
     let preparedTitle = title.trim();
     let preparedDescription = desc.trim();
-    let durationNumber = Number.parseInt(dur, 10);
+    const durationNumber = existing?.durationMin ?? DEFAULT_SERVICE_DURATION_MIN;
     let priceNumber = Number.parseFloat(price.replace(',', '.').trim());
     let activeFlag = isActive;
     let priceTypeValue = priceType;
@@ -271,30 +284,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     if (quickPrice && existing) {
       preparedTitle = existing.title;
       preparedDescription = existing.description ?? '';
-      durationNumber = existing.durationMin;
       activeFlag = existing.isActive ?? true;
       if (!Number.isFinite(priceNumber) || priceNumber < 0) {
         setFormError('Укажите цену. Можно 0.');
         return;
       }
-    } else if (quickDuration && existing) {
-      preparedTitle = existing.title;
-      preparedDescription = existing.description ?? '';
-      priceNumber = existing.priceByn;
-      priceTypeValue = existing.priceType ?? 'fixed';
-      activeFlag = existing.isActive ?? true;
-      if (!Number.isInteger(durationNumber) || durationNumber <= 0) {
-        setFormError('Укажите длительность в минутах.');
-        return;
-      }
     } else {
       if (!preparedTitle) {
         setFormError('Укажите название услуги.');
-        return;
-      }
-
-      if (!Number.isInteger(durationNumber) || durationNumber <= 0) {
-        setFormError('Укажите длительность в минутах.');
         return;
       }
 
@@ -331,11 +328,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     if (!useCabinetApi) {
       const okMsg = quickPrice
         ? 'Цена обновлена'
-        : quickDuration
-          ? 'Длительность обновлена'
-          : editingId
-            ? 'Услуга обновлена'
-            : 'Услуга добавлена';
+        : editingId
+          ? 'Услуга обновлена'
+          : 'Услуга добавлена';
       persistServices(nextServices, okMsg);
       closeSheet();
       return;
@@ -349,11 +344,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
     const okMsg = quickPrice
       ? 'Цена обновлена'
-      : quickDuration
-        ? 'Длительность обновлена'
-        : editingId
-          ? 'Услуга обновлена'
-          : 'Услуга добавлена';
+      : editingId
+        ? 'Услуга обновлена'
+        : 'Услуга добавлена';
 
     setFormError(null);
     try {
@@ -393,7 +386,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     closeSheet,
     desc,
     draft.primaryCategoryId,
-    dur,
     editingId,
     isActive,
     persistServices,
@@ -530,8 +522,31 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     [persistServices, refreshDraft, services, showSuccessToast, useCabinetApi],
   );
 
+  const isServiceDeleteBlocked = useCallback(
+    (service: ManagedService) => serviceHasUpcomingAppointments(appointments, service),
+    [appointments],
+  );
+
+  const requestDeleteService = useCallback(
+    (service: ManagedService) => {
+      if (isServiceDeleteBlocked(service)) {
+        setDeleteError(SERVICE_DELETE_BLOCKED_MESSAGE);
+        setDeleteTarget(service);
+        return;
+      }
+      setDeleteError(null);
+      setDeleteTarget(service);
+    },
+    [isServiceDeleteBlocked],
+  );
+
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
+
+    if (isServiceDeleteBlocked(deleteTarget)) {
+      setDeleteError(SERVICE_DELETE_BLOCKED_MESSAGE);
+      return;
+    }
 
     await runServiceAction(async () => {
     if (!useCabinetApi) {
@@ -563,7 +578,18 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       setDeleteError(e instanceof Error ? e.message : 'Не удалось удалить');
     }
     });
-  }, [commitDraftBaseline, deleteTarget, draft, persistServices, refreshDraft, runServiceAction, services, showSuccessToast, useCabinetApi]);
+  }, [
+    commitDraftBaseline,
+    deleteTarget,
+    draft,
+    isServiceDeleteBlocked,
+    persistServices,
+    refreshDraft,
+    runServiceAction,
+    services,
+    showSuccessToast,
+    useCabinetApi,
+  ]);
 
   const persistPromotionsLocal = useCallback((rows: ServicePromotion[]) => {
     setPromotions(rows);
@@ -682,6 +708,30 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setPromoFormOpen(true);
   }, [extrasLocked]);
 
+  const openBundleCreate = useCallback(() => {
+    if (extrasLocked) {
+      setExtrasProOpen(true);
+      return;
+    }
+    setEditingBundle(null);
+    setBundleFormOpen(true);
+  }, [extrasLocked]);
+
+  const openBundleEdit = useCallback((bundle: ServiceBundle) => {
+    if (extrasLocked) {
+      setExtrasProOpen(true);
+      return;
+    }
+    setEditingBundle(bundle);
+    setBundleFormOpen(true);
+  }, [extrasLocked]);
+
+  const serviceTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    services.forEach((s) => m.set(s.id, s.title));
+    return m;
+  }, [services]);
+
   const savePromo = useCallback(
     async (promo: ServicePromotion, publish: boolean) => {
       if (extrasLocked) {
@@ -782,7 +832,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             draft={draft}
             services={services}
             onEditPrice={openEditPrice}
-            onEditDuration={openEditDuration}
           />
       ) : null}
       {activeTab === 'bundles' ? (
@@ -793,8 +842,8 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           loading={useCabinetApi && extrasLoading}
           extrasLocked={extrasLocked}
           onConnectPro={() => setExtrasProOpen(true)}
-          onSave={saveBundle}
-          onDelete={deleteBundle}
+          onCreate={openBundleCreate}
+          onMenu={setBundleMenuTarget}
         />
       ) : null}
       {activeTab === 'promotions' ? (
@@ -823,7 +872,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       <ServicesTabBar active={activeTab} onChange={setActiveTab} variant="mobile" />
 
       <section
-        className={`-mx-4 min-w-0 space-y-4 overflow-x-hidden px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${SERVICES_PAGE_BG}`}
+        className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${SERVICES_MOBILE_CANVAS}`}
       >
         <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} />
         {statusAlerts}
@@ -847,6 +896,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       <ServicesServiceMenuSheet
         open={Boolean(menuTarget)}
         service={menuTarget}
+        deleteBlocked={menuTarget ? isServiceDeleteBlocked(menuTarget) : false}
         canMoveUp={menuIndex > 0}
         canMoveDown={menuIndex >= 0 && menuIndex < services.length - 1}
         onClose={() => setMenuTarget(null)}
@@ -875,10 +925,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           setMenuTarget(null);
         }}
         onDelete={() => {
-          if (menuTarget) {
-            setDeleteError(null);
-            setDeleteTarget(menuTarget);
-          }
+          if (menuTarget) requestDeleteService(menuTarget);
           setMenuTarget(null);
         }}
       />
@@ -894,7 +941,43 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         onSave={savePromo}
       />
 
+      <ServicesBundleFormSheet
+        open={bundleFormOpen}
+        draft={draft}
+        services={services}
+        initial={editingBundle}
+        onClose={() => {
+          setBundleFormOpen(false);
+          setEditingBundle(null);
+        }}
+        onSave={async (bundle) => {
+          await saveBundle(bundle);
+          setBundleFormOpen(false);
+          setEditingBundle(null);
+        }}
+      />
+
+      <ServicesBundleMenuSheet
+        open={Boolean(bundleMenuTarget)}
+        bundle={bundleMenuTarget}
+        serviceLabels={
+          bundleMenuTarget
+            ? bundleMenuTarget.serviceIds.map((id) => serviceTitleById.get(id) ?? 'Услуга')
+            : []
+        }
+        onClose={() => setBundleMenuTarget(null)}
+        onEdit={() => {
+          if (bundleMenuTarget) openBundleEdit(bundleMenuTarget);
+          setBundleMenuTarget(null);
+        }}
+        onDelete={() => {
+          if (bundleMenuTarget) void deleteBundle(bundleMenuTarget.id);
+          setBundleMenuTarget(null);
+        }}
+      />
+
       <AdminBottomSheet
+        variant="catalog"
         open={sheetOpen}
         onClose={closeSheet}
         title={
@@ -902,49 +985,42 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             ? 'Новая услуга'
             : sheetMode === 'price'
               ? 'Изменить цену'
-              : sheetMode === 'duration'
-                ? 'Изменить длительность'
-                : editingId
+              : editingId
                   ? 'Редактировать услугу'
                   : 'Новая услуга'
         }
         subtitle={
-          sheetMode === 'price'
-            ? 'Быстрое изменение — сразу попадёт в каталог и запись'
-            : sheetMode === 'duration'
-              ? 'Длительность влияет на свободные слоты в календаре'
-              : sheetMode === 'create'
-                ? 'Заполните основное — карточку можно донастроить позже'
-                : 'Изменения сразу отобразятся в каталоге'
-        }
-        badge={
-          sheetMode === 'price'
-            ? 'Прайс'
-            : sheetMode === 'duration'
-              ? 'Время'
-              : sheetMode === 'create'
-                ? 'Новая услуга'
-                : 'Каталог'
+          sheetMode === 'create' || sheetMode === 'price'
+            ? undefined
+            : 'Изменения сразу отобразятся в каталоге'
         }
         footer={
-          <button
-            type="button"
-            disabled={serviceActionBusy}
-            onClick={() => void saveService()}
-            className={adminSheetPinkBtn}
-          >
-            {serviceActionBusy
-              ? 'Сохранение…'
-              : sheetMode === 'price'
-                ? 'Сохранить цену'
-                : sheetMode === 'duration'
-                  ? 'Сохранить длительность'
+          <div className="flex w-full gap-3">
+            <button
+              type="button"
+              onClick={closeSheet}
+              disabled={serviceActionBusy}
+              className={catalogSheetSecondaryBtn}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              disabled={serviceActionBusy}
+              onClick={() => void saveService()}
+              className={catalogSheetPrimaryBtn}
+            >
+              {serviceActionBusy
+                ? 'Сохранение…'
+                : sheetMode === 'price'
+                  ? 'Сохранить цену'
                   : 'Сохранить'}
-          </button>
+            </button>
+          </div>
         }
       >
-        <div className={`${adminSheetBodyPad} space-y-5 lg:space-y-6`}>
-          {sheetMode === 'price' || sheetMode === 'duration' ? (
+        <div className="space-y-4">
+          {sheetMode === 'price' ? (
             <AdminFormSheetSection title="Услуга">
               <p className="text-[20px] font-black tracking-[-0.05em] text-[#111827] lg:text-[24px]">
                 {title}
@@ -953,72 +1029,42 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           ) : null}
 
           {sheetMode === 'full' || sheetMode === 'create' ? (
-          <AdminFormSheetSection title="Основное" description="Название и параметры для клиентов">
+          <AdminFormSheetSection title="Основное" description="Название и цена для каталога">
           <label className="block">
-            <span className="text-[13px] font-semibold text-neutral-500">
-              Название услуги *
-            </span>
+            <AdminSheetFieldLabel required className={sheetLabelClass}>
+              Название услуги
+            </AdminSheetFieldLabel>
 
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               className={fieldClass()}
-              placeholder="Маникюр с покрытием"
+              placeholder={serviceTitlePlaceholder}
             />
           </label>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-[13px] font-semibold text-neutral-500">
-                Длительность *
-              </span>
+          <label className="mt-4 block">
+            <AdminSheetFieldLabel required className={sheetLabelClass}>
+              Цена, BYN
+            </AdminSheetFieldLabel>
 
-              <input
-                value={dur}
-                onChange={(event) => setDur(event.target.value)}
-                inputMode="numeric"
-                className={fieldClass()}
-                placeholder="60"
-              />
-            </label>
-
-            <label className="block">
-              <span className="text-[13px] font-semibold text-neutral-500">
-                Цена, BYN *
-              </span>
-
-              <input
-                value={price}
-                onChange={(event) => setPrice(event.target.value)}
-                inputMode="decimal"
-                className={fieldClass()}
-                placeholder="45"
-              />
-            </label>
-          </div>
+            <input
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+              inputMode="decimal"
+              className={fieldClass()}
+              placeholder="45"
+            />
+          </label>
           </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'duration' ? (
-            <AdminFormSheetSection title="Длительность">
-            <label className="block">
-              <span className="text-[13px] font-semibold text-neutral-500">Длительность, мин *</span>
-              <input
-                value={dur}
-                onChange={(event) => setDur(event.target.value)}
-                inputMode="numeric"
-                className={fieldClass()}
-                placeholder="60"
-                autoFocus
-              />
-            </label>
-            </AdminFormSheetSection>
           ) : null}
 
           {sheetMode === 'price' ? (
             <AdminFormSheetSection title="Цена">
             <label className="block">
-              <span className="text-[13px] font-semibold text-neutral-500">Цена, BYN *</span>
+              <AdminSheetFieldLabel required className={sheetLabelClass}>
+                Цена, BYN
+              </AdminSheetFieldLabel>
               <input
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}
@@ -1036,7 +1082,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             title="Тип цены"
             description={sheetMode === 'price' ? 'Как показывать цену в каталоге' : undefined}
           >
-            <div className={adminSheetSegmentWrap}>
+            <div className={sheetSegmentWrap}>
               {(
                 [
                   { id: 'fixed' as const, label: 'Точная цена' },
@@ -1047,9 +1093,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
                   key={item.id}
                   type="button"
                   onClick={() => setPriceType(item.id)}
-                  className={
-                    priceType === item.id ? adminSheetSegmentActive : adminSheetSegmentIdle
-                  }
+                  className={sheetSegmentClass(priceType === item.id)}
                 >
                   {item.label}
                 </button>
@@ -1060,11 +1104,11 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
           {sheetMode === 'full' || sheetMode === 'create' ? (
           <AdminFormSheetSection title="Видимость" description="Скрытые услуги не попадают в запись">
-            <div className={adminSheetSegmentWrap}>
+            <div className={sheetSegmentWrap}>
               <button
                 type="button"
                 onClick={() => setIsActive(true)}
-                className={isActive ? adminSheetSegmentActive : adminSheetSegmentIdle}
+                className={sheetSegmentClass(isActive)}
               >
                 Видна
               </button>
@@ -1072,7 +1116,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               <button
                 type="button"
                 onClick={() => setIsActive(false)}
-                className={!isActive ? adminSheetSegmentActive : adminSheetSegmentIdle}
+                className={sheetSegmentClass(!isActive)}
               >
                 Скрыта
               </button>
@@ -1081,7 +1125,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           ) : null}
 
           {sheetMode === 'full' || sheetMode === 'create' ? (
-          <AdminFormSheetSection title="Описание" description="Необязательно — помогает клиенту выбрать услугу">
+          <AdminFormSheetSection title="Описание">
           <label className="block">
             <span className="sr-only">Описание</span>
 
@@ -1105,23 +1149,23 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       </AdminBottomSheet>
 
       <AdminBottomSheet
+        variant="catalog"
         open={Boolean(previewTarget)}
         onClose={() => setPreviewTarget(null)}
         title="Как увидит клиент"
         subtitle="Так карточка выглядит в поиске и при записи"
-        badge="Превью"
         footer={
           <button
             type="button"
             onClick={() => setPreviewTarget(null)}
-            className={adminSheetPinkBtn}
+            className={`${catalogSheetPrimaryBtn} w-full`}
           >
             Понятно
           </button>
         }
       >
         {previewTarget ? (
-          <div className={adminSheetBodyPad}>
+          <div>
           <AdminFormSheetSection>
             <div className="rounded-[24px] bg-[#f6f7fb] p-4 lg:p-5">
             <div className="rounded-[22px] bg-white p-5 shadow-[0_8px_28px_rgba(17,24,39,0.06)] lg:p-6">
@@ -1129,10 +1173,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
                   <div>
                     <p className="text-[20px] font-semibold tracking-[-0.045em] text-neutral-950">
                       {previewTarget.title}
-                    </p>
-
-                    <p className="mt-1 text-[14px] font-medium text-neutral-400">
-                      {previewTarget.durationMin} мин
                     </p>
                   </div>
 
@@ -1167,92 +1207,120 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       </AdminBottomSheet>
 
       <AdminBottomSheet
+        variant="catalog"
         open={Boolean(deleteTarget)}
         onClose={() => {
           setDeleteTarget(null);
           setDeleteError(null);
         }}
-        title="Удалить услугу?"
+        title={
+          deleteTarget && isServiceDeleteBlocked(deleteTarget)
+            ? 'Удаление недоступно'
+            : 'Удалить услугу?'
+        }
+        footer={
+          deleteTarget && isServiceDeleteBlocked(deleteTarget) ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteTarget(null);
+                setDeleteError(null);
+              }}
+              className={`${catalogSheetSecondaryBtn} w-full`}
+            >
+              Понятно
+            </button>
+          ) : (
+            <div className="flex w-full gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                }}
+                className={catalogSheetSecondaryBtn}
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={serviceActionBusy}
+                onClick={() => void confirmDelete()}
+                className={catalogSheetPrimaryBtn}
+              >
+                {serviceActionBusy ? 'Удаление…' : 'Удалить'}
+              </button>
+            </div>
+          )
+        }
       >
-        <p className="text-[15px] leading-relaxed text-neutral-600">
-          Если на услугу уже есть будущие записи, они останутся в календаре. Новые клиенты больше не смогут выбрать эту услугу.
-        </p>
+        {deleteTarget && isServiceDeleteBlocked(deleteTarget) ? (
+          <p className="text-[15px] leading-relaxed text-[#6B7280]">{SERVICE_DELETE_BLOCKED_MESSAGE}</p>
+        ) : (
+          <p className="text-[15px] leading-relaxed text-[#6B7280]">
+            Услуга исчезнет из каталога. Прошлые записи останутся в истории.
+          </p>
+        )}
 
-        {deleteError ? (
-          <p className="mt-4 rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">{deleteError}</p>
+        {deleteError && deleteTarget && !isServiceDeleteBlocked(deleteTarget) ? (
+          <p className="mt-4 rounded-[10px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">{deleteError}</p>
         ) : null}
-
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setDeleteTarget(null);
-              setDeleteError(null);
-            }}
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-          >
-            Отмена
-          </button>
-
-          <button
-            type="button"
-            disabled={serviceActionBusy}
-            onClick={() => void confirmDelete()}
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {serviceActionBusy ? 'Удаление…' : 'Удалить'}
-          </button>
-        </div>
       </AdminBottomSheet>
 
-      <AdminBottomSheet open={extrasProOpen} onClose={() => setExtrasProOpen(false)} title="Наборы и акции в Pro">
-        <p className="text-[15px] leading-relaxed text-neutral-600">
+      <AdminBottomSheet
+        variant="catalog"
+        open={extrasProOpen}
+        onClose={() => setExtrasProOpen(false)}
+        title="Наборы и акции в Pro"
+        footer={
+          <div className="flex w-full gap-3">
+            <button type="button" onClick={() => setExtrasProOpen(false)} className={catalogSheetSecondaryBtn}>
+              Позже
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setExtrasProOpen(false);
+                navigate(ADMIN_BILLING_PATH);
+              }}
+              className={catalogSheetPrimaryBtn}
+            >
+              Подключить Pro
+            </button>
+          </div>
+        }
+      >
+        <p className="text-[15px] leading-relaxed text-[#6B7280]">
           На тарифе Free доступны каталог и прайс. Наборы услуг и акции открываются после подключения Pro.
         </p>
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setExtrasProOpen(false)}
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-          >
-            Позже
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setExtrasProOpen(false);
-              navigate(ADMIN_BILLING_PATH);
-            }}
-            className="flex min-h-12 flex-[1.15] items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-          >
-            Подключить Pro
-          </button>
-        </div>
       </AdminBottomSheet>
 
-      <AdminBottomSheet open={freeLimitOpen} onClose={() => setFreeLimitOpen(false)} title="Лимит Free">
-        <p className="text-[15px] leading-relaxed text-neutral-600">
+      <AdminBottomSheet
+        variant="catalog"
+        open={freeLimitOpen}
+        onClose={() => setFreeLimitOpen(false)}
+        title="Лимит Free"
+        footer={
+          <div className="flex w-full gap-3">
+            <button type="button" onClick={() => setFreeLimitOpen(false)} className={catalogSheetSecondaryBtn}>
+              Позже
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFreeLimitOpen(false);
+                navigate(ADMIN_BILLING_PATH);
+              }}
+              className={catalogSheetPrimaryBtn}
+            >
+              Открыть Pro
+            </button>
+          </div>
+        }
+      >
+        <p className="text-[15px] leading-relaxed text-[#6B7280]">
           На бесплатном тарифе можно добавить до 3 услуг. Откройте Pro, чтобы добавить больше.
         </p>
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setFreeLimitOpen(false)}
-            className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#F1EFEF] text-[15px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-          >
-            Позже
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFreeLimitOpen(false);
-              navigate(ADMIN_BILLING_PATH);
-            }}
-            className="flex min-h-12 flex-[1.15] items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-          >
-            Открыть Pro
-          </button>
-        </div>
       </AdminBottomSheet>
     </>
   );

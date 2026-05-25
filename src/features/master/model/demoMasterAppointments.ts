@@ -11,11 +11,20 @@ export type DemoMasterAppointment = {
   id: string;
   clientName: string;
   serviceTitle: string;
+  /** UUID услуги (из API), для проверок удаления. */
+  serviceId?: string;
+  /** UUID окна записи (из API). */
+  slotId?: string;
+  /** ISO с сервера — точнее, чем date+time. */
+  startsAt?: string;
+  endsAt?: string;
   /** ISO YYYY-MM-DD */
   date: string;
   time: string;
   priceByn: number;
   contact?: string;
+  clientNote?: string;
+  clientReferencePhotoUrl?: string | null;
   status: DemoAppointmentStatus;
   /** Короткий адрес для сводки / деталей. */
   addressShort?: string;
@@ -23,6 +32,8 @@ export type DemoMasterAppointment = {
   timeLabel?: string;
   /** Алиас из спецификации; при загрузке маппится в priceByn. */
   price?: number;
+  /** Фото клиента из профиля (Telegram / загрузка). */
+  clientAvatarUrl?: string | null;
 };
 
 function normalizeTime(t: string): string {

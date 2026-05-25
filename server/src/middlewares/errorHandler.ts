@@ -1,8 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { env } from '../config/env.js';
+import { redactBodyForLog } from './requestId.js';
 import { ApiError } from '../utils/ApiError.js';
 
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
+  const requestId = req.requestId ?? 'unknown';
   if (err instanceof ZodError) {
     const msg = err.issues.map((e) => e.message).join('; ') || 'Validation failed';
     return res.status(400).json({
@@ -18,11 +21,20 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
       error: {
         message: err.message,
         ...(err.code ? { code: err.code } : {}),
+        ...(err.reason ? { reason: err.reason } : {}),
       },
     });
   }
 
-  console.error(err);
+  const logPayload: Record<string, unknown> = {
+    requestId,
+    method: req.method,
+    path: req.originalUrl,
+  };
+  if (env.NODE_ENV !== 'production' && req.body && typeof req.body === 'object') {
+    logPayload.body = redactBodyForLog(req.body);
+  }
+  console.error('[api-error]', logPayload, err instanceof Error ? err.message : err);
   return res.status(500).json({
     error: {
       message: 'Internal server error',

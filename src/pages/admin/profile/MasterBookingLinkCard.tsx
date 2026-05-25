@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
+import { cabinetCard, cabinetCardPad } from './adminProfileCabinetTheme';
 import { readPublicAppOrigin, resolveMasterBookingLink } from '../../../shared/lib/masterBookingLink';
 import { openTelegramShareUrlPicker } from '../../../shared/lib/telegramWebApp';
 
@@ -151,7 +152,7 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
   const showSkeleton = Boolean(useCabinetApi && cabinetLoading);
 
   return (
-    <section className="rounded-[18px] bg-white px-3 py-2.5 shadow-[0_4px_20px_rgba(17,24,39,0.05)]">
+    <section className={`${cabinetCard} ${cabinetCardPad} !py-4`}>
       <div className="flex items-center gap-2">
         <span
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[#F47C8C]"
@@ -175,7 +176,7 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
         <>
           <div className="mt-2 flex items-center gap-1.5">
             <div
-              className="flex h-9 min-w-0 flex-1 items-center rounded-xl bg-[#F7F7F8] px-2.5 ring-1 ring-[#EAECEF]"
+              className="flex h-9 min-w-0 flex-1 items-center rounded-[10px] bg-[#EBEBEB] px-2.5"
               title={resolved.href}
             >
               <p className="truncate text-[12px] font-medium leading-none text-[#111827]">{resolved.href}</p>
@@ -187,7 +188,7 @@ export function MasterBookingLinkCard({ draft, cabinetLoading, useCabinetApi }: 
               className={`${iconBtn} ${
                 copied
                   ? 'bg-emerald-50 text-emerald-600'
-                  : 'bg-[#F47C8C] text-white shadow-[0_4px_12px_rgba(244,124,140,0.28)] hover:bg-[#F26D83]'
+                  : 'bg-[#F47C8C] text-white hover:opacity-95'
               }`}
             >
               {copied ? <IconCheck /> : <IconCopy />}

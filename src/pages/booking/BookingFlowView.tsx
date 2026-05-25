@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { HiCalendarDays, HiCheckBadge, HiClock, HiStar } from 'react-icons/hi2';
+import { HiCalendarDays, HiClock, HiStar } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../shared/ui/MasterVerifiedBadge';
 import type { DemoMasterProfile } from '../../features/services/model/demoMasters';
 import { formatReviewsCountLabel } from '../../features/services/model/demoMasters';
 import type { DemoMasterService } from '../../features/services/model/demoMasters';
@@ -50,6 +52,10 @@ type Props = {
   onCloseCalendar: () => void;
   onPickCalendarDate: (dateIso: string) => void;
   onConfirm: () => void;
+  comment: string;
+  onCommentChange: (value: string) => void;
+  referencePhotoUrl: string | null;
+  onReferencePhotoUrlChange: (url: string | null) => void;
 };
 
 function ReviewStars({ rating }: { rating: number }) {
@@ -86,8 +92,12 @@ export function BookingFlowView({
   onCloseCalendar,
   onPickCalendarDate,
   onConfirm,
+  comment,
+  onCommentChange,
+  referencePhotoUrl,
+  onReferencePhotoUrlChange,
 }: Props) {
-  const showVerified = master.rating >= 4.5 && master.reviewsCount >= 10;
+  const showVerified = masterShowsVerifiedBadge(master);
   const slotPromo = selectedSlot?.promotion;
   const displayPrice =
     slotPromo && slotPromo.discountedPrice >= 0
@@ -95,7 +105,6 @@ export function BookingFlowView({
       : service.price;
   const pricePrefix = service.priceType === 'from' ? 'от ' : '';
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [clientComment, setClientComment] = useState('');
 
   return (
     <>
@@ -112,15 +121,17 @@ export function BookingFlowView({
         canConfirm={canConfirm}
         acceptedTerms={acceptedTerms}
         onAcceptedTermsChange={setAcceptedTerms}
-        comment={clientComment}
-        onCommentChange={setClientComment}
+        comment={comment}
+        onCommentChange={onCommentChange}
+        referencePhotoUrl={referencePhotoUrl}
+        onReferencePhotoUrlChange={onReferencePhotoUrlChange}
         onPickDate={onPickDate}
         onPickSlot={onPickSlot}
         onOpenCalendar={onOpenCalendar}
         onConfirm={onConfirm}
       />
 
-      <div className="lg:hidden">
+      <div className="w-full min-w-0 lg:hidden">
       <header className="mt-4">
         <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-[#111827]">Запись</h1>
         <p className="mt-1.5 text-[15px] text-[#6B7280]">Выберите удобную дату и время</p>
@@ -142,7 +153,7 @@ export function BookingFlowView({
                 {master.masterName}
               </p>
               {showVerified ? (
-                <HiCheckBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" aria-hidden />
+                <MasterVerifiedBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" />
               ) : null}
             </div>
             <p className="mt-0.5 text-[13px] font-medium text-[#6B7280]">
@@ -172,7 +183,7 @@ export function BookingFlowView({
         </div>
       </section>
 
-      <section className="mt-6">
+      <section className={`${bookingCard} mt-4 p-4`}>
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className={bookingSectionLabel}>Дата</p>
           <button
@@ -213,7 +224,7 @@ export function BookingFlowView({
         </div>
       </section>
 
-      <section className="mt-6">
+      <section className={`${bookingCard} mt-3 p-4`}>
         <p className={`${bookingSectionLabel} mb-3`}>Время</p>
         {selectedDay && selectedDay.times.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -307,8 +318,11 @@ export function BookingFlowView({
           canConfirm={canConfirm}
           acceptedTerms={acceptedTerms}
           onAcceptedTermsChange={setAcceptedTerms}
-          comment={clientComment}
-          onCommentChange={setClientComment}
+          comment={comment}
+          onCommentChange={onCommentChange}
+          categoryCode={master.categoryCode}
+          referencePhotoUrl={referencePhotoUrl}
+          onReferencePhotoUrlChange={onReferencePhotoUrlChange}
           onConfirm={onConfirm}
         />
       </section>

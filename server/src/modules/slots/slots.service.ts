@@ -1,6 +1,8 @@
 import { query } from '../../config/db.js';
+import { PUBLIC_BOOKABLE_MASTER_ACCOUNT_SQL } from '../../lib/publicMasterAccountSql.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { assertSlotWithinPlanHorizon } from '../billing/billing.service.js';
+import { assertProfileCanManageMasterContent } from '../profiles/profileAccount.service.js';
 import { mapPromotionFields } from '../service-extras/promotionSlots.service.js';
 
 function num(v: string | null | undefined): number | null {
@@ -95,9 +97,23 @@ export async function listPublicSlots(filters: {
     s.status = 'available'
     and s.starts_at > now()
     and mp.publication_status = 'published'
+    and mp.is_profile_active = true
+    and ${PUBLIC_BOOKABLE_MASTER_ACCOUNT_SQL}
     and exists (
       select 1 from public.master_services msz
-      where msz.master_id = s.master_id and msz.is_active = true
+      where msz.master_id = s.master_id
+        and msz.is_active = true
+        and msz.admin_hidden_at is null
+    )
+    and (
+      s.service_id is null
+      or exists (
+        select 1 from public.master_services ms_vis
+        where ms_vis.id = s.service_id
+          and ms_vis.master_id = s.master_id
+          and ms_vis.is_active = true
+          and ms_vis.admin_hidden_at is null
+      )
     )
   `;
   if (filters.masterId) {
@@ -112,6 +128,7 @@ export async function listPublicSlots(filters: {
         where ms.id = $${i}
           and ms.master_id = s.master_id
           and ms.is_active = true
+          and ms.admin_hidden_at is null
       )
     )`;
     params.push(filters.serviceId);
@@ -275,6 +292,8 @@ export async function createMySlot(
   masterId: string,
   body: { startsAt: Date; endsAt: Date; serviceId?: string | null },
 ) {
+  await assertProfileCanManageMasterContent(masterId);
+
   if (body.endsAt <= body.startsAt) {
     throw ApiError.badRequest('Время окончания должно быть позже начала', 'BAD_SLOT_RANGE');
   }

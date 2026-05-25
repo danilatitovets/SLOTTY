@@ -19,26 +19,44 @@ import {
 } from 'react-icons/hi2';
 import type { CatalogSortBy } from './catalogFiltersState';
 import {
+  catalogFilterSheetChipClass,
+  catalogFilterSheetSectionLabel,
+  catalogFilterSheetToggleRow,
+} from './catalogFilterSheetTheme';
+import {
   catalogFilterChipActive,
   catalogFilterChipIdle,
   catalogFilterSectionIconClass,
   catalogFilterSectionTitleClass,
 } from './servicesCatalogTheme';
 
+export type CatalogFilterUiVariant = 'default' | 'sheet';
+
 export function FilterSection({
   icon: Icon,
   title,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
   collapsible = true,
+  variant = 'default',
 }: {
   icon: IconType;
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
   collapsible?: boolean;
+  variant?: CatalogFilterUiVariant;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  if (variant === 'sheet') {
+    return (
+      <section className="min-w-0">
+        <p className={`mb-2.5 ${catalogFilterSheetSectionLabel}`}>{title}</p>
+        <div className="min-w-0">{children}</div>
+      </section>
+    );
+  }
 
   if (!collapsible) {
     return (
@@ -84,13 +102,28 @@ export function FilterChip({
   label,
   onClick,
   className = '',
+  variant = 'default',
 }: {
   active: boolean;
   icon?: IconType;
   label: string;
   onClick: () => void;
   className?: string;
+  variant?: CatalogFilterUiVariant;
 }) {
+  if (variant === 'sheet') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={`${catalogFilterSheetChipClass(active)} ${className}`}
+      >
+        {label}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -115,23 +148,42 @@ export function FilterSwitch({
   active,
   label,
   onChange,
+  variant = 'default',
 }: {
   active: boolean;
   label: string;
   onChange: (next: boolean) => void;
+  variant?: CatalogFilterUiVariant;
 }) {
+  const rowClass =
+    variant === 'sheet'
+      ? catalogFilterSheetToggleRow
+      : 'flex cursor-pointer items-center justify-between gap-3 rounded-[10px] bg-[#FAFAFA] px-3.5 py-3';
+
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[10px] bg-[#FAFAFA] px-3.5 py-3">
-      <span className="text-[13px] font-semibold text-[#111827]">{label}</span>
+    <label className={rowClass}>
+      <span
+        className={
+          variant === 'sheet'
+            ? 'text-[15px] font-medium text-[#111827]'
+            : 'text-[13px] font-semibold text-[#111827]'
+        }
+      >
+        {label}
+      </span>
       <button
         type="button"
         role="switch"
         aria-checked={active}
         onClick={() => onChange(!active)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${active ? 'bg-[#F47C8C]' : 'bg-[#E5E7EB]'}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+          active ? 'bg-[#F47C8C]' : 'bg-[#D1D5DB]'
+        }`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${active ? 'left-[22px]' : 'left-0.5'}`}
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+            active ? 'left-[22px]' : 'left-0.5'
+          }`}
         />
       </button>
     </label>

@@ -1,6 +1,8 @@
 /** Сообщения для кодов ошибок API auth (см. server ApiError). */
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   GOOGLE_ALREADY_LINKED: 'Этот Google уже привязан к другому аккаунту.',
+  GOOGLE_EMAIL_CONFLICT:
+    'Этот email уже связан с другим аккаунтом. Войдите через email или Telegram и привяжите Google в «Способы входа».',
   TELEGRAM_ALREADY_LINKED: 'Этот Telegram уже привязан к другому аккаунту.',
   EMAIL_ALREADY_LINKED: 'Этот email уже привязан к другому аккаунту.',
   GOOGLE_NOT_CONFIGURED: 'Google Sign-In пока не настроен.',

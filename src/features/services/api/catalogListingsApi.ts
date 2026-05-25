@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../shared/api/backendClient';
+import { fetchPublicGetCached } from '../../../shared/api/publicGetCache';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import type { ServiceListingRecord } from '../../services/model/demoMasters';
 import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
@@ -17,6 +18,7 @@ export type CatalogListingItemDto = {
   slug: string | null;
   rating: number;
   reviewsCount: number;
+  isVerified: boolean;
   category: { code: string; name: string } | null;
   location: {
     publicAddress: string;
@@ -87,9 +89,12 @@ export async function fetchCatalogListings(params: CatalogListingsParams): Promi
   if (params.page != null) qs.set('page', String(params.page));
   if (params.limit != null) qs.set('limit', String(params.limit));
 
-  const res = await apiFetch(`/api/catalog/listings?${qs.toString()}`, { skipAuth: true });
-  if (!res.ok) throw new Error(await readApiError(res));
-  return (await res.json()) as CatalogListingsResponseDto;
+  const url = `/api/catalog/listings?${qs.toString()}`;
+  return fetchPublicGetCached(url, async () => {
+    const res = await apiFetch(url, { skipAuth: true });
+    if (!res.ok) throw new Error(await readApiError(res));
+    return (await res.json()) as CatalogListingsResponseDto;
+  });
 }
 
 export function catalogItemToListingRecord(item: CatalogListingItemDto): ServiceListingRecord {
@@ -123,6 +128,7 @@ export function catalogItemToListingRecord(item: CatalogListingItemDto): Service
     serviceName,
     rating: item.rating,
     reviewsCount: item.reviewsCount,
+    isVerified: item.isVerified,
     location: baseLoc,
     priceFrom: price,
     photoUrl: optimizeAvatarUrl((item.photoUrl && item.photoUrl.trim()) || defaultMasterAvatarUrl(name), 256),

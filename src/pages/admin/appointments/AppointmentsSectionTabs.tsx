@@ -42,19 +42,19 @@ export function AppointmentsSectionTabs({ active, onChange, counts, className = 
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-h-[3.25rem] min-w-0 flex-1 items-center justify-center gap-2 px-3 text-[14px] font-bold transition lg:min-h-[3.5rem] lg:px-5 lg:text-[15px] ${
-              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#ff5f7a]/80'
+            className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-3.5 transition active:scale-[0.98] ${
+              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
             }`}
           >
             <Icon
-              className={`h-5 w-5 shrink-0 transition ${selected ? 'text-[#ff5f7a]' : ''}`}
+              className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}`}
               aria-hidden
             />
-            <span className="truncate">{tab.label}</span>
+            <span className="truncate text-[13px] font-semibold sm:text-[14px]">{tab.label}</span>
             {n != null && n > 0 ? (
               <span
                 className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-[11px] font-black tabular-nums ${
-                  selected ? 'bg-[#ff5f7a] text-white' : 'bg-[#EAECEF] text-[#6B7280]'
+                  selected ? 'bg-[#F47C8C] text-white' : 'bg-[#EBEBEB] text-[#6B7280]'
                 }`}
               >
                 {n > 99 ? '99+' : n}
@@ -62,7 +62,7 @@ export function AppointmentsSectionTabs({ active, onChange, counts, className = 
             ) : null}
             {selected ? (
               <span
-                className="absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-[#ff5f7a] lg:inset-x-5"
+                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
                 aria-hidden
               />
             ) : null}

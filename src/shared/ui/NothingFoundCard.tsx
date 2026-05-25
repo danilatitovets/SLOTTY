@@ -3,7 +3,7 @@ import { NOTHING_FOUND_ILLUSTRATION_SRC } from './nothingFoundIllustrationSrc';
 
 type Props = {
   title: string;
-  text: string;
+  text?: string;
   /** Дополнительная строка мелким шрифтом под основным текстом */
   hint?: string;
   /** Кнопка или ссылка под текстом */
@@ -25,7 +25,9 @@ export function NothingFoundCard({ title, text, hint, action, className = '' }: 
         className="mx-auto mb-6 w-full max-w-[17.5rem] select-none object-contain"
       />
       <h2 className="text-[22px] font-semibold tracking-[-0.05em] text-neutral-950">{title}</h2>
-      <p className="mx-auto mt-3 max-w-[21rem] text-[15px] leading-relaxed text-neutral-500">{text}</p>
+      {text ? (
+        <p className="mx-auto mt-3 max-w-[21rem] text-[15px] leading-relaxed text-neutral-500">{text}</p>
+      ) : null}
       {hint ? (
         <p className="mx-auto mt-2 max-w-[21rem] text-[13px] leading-relaxed text-neutral-400">{hint}</p>
       ) : null}

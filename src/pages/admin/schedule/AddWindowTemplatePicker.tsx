@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { HiMagnifyingGlass } from 'react-icons/hi2';
-import { scheduleInput } from './scheduleUi';
+import { catalogSheetField } from '../shared/adminCatalogSheetTheme';
 import type { WindowTemplate } from './scheduleTypes';
 import { templateDisplayLabel } from './scheduleUtils';
 import { WindowTemplateCard } from './WindowTemplateCard';
@@ -27,8 +27,8 @@ export function AddWindowTemplatePicker({ templates, selectedId, onSelect }: Pro
 
   if (templates.length === 0) {
     return (
-      <p className="rounded-[16px] border border-dashed border-[#FDE8ED] bg-[#FFF9FB] px-4 py-3 text-[13px] font-semibold text-[#6B7280]">
-        Нет шаблонов — укажите время и услугу вручную или создайте шаблон на вкладке «Создать».
+      <p className="rounded-[10px] bg-[#EBEBEB] px-4 py-3 text-[14px] font-medium text-[#6B7280]">
+        Нет шаблонов — создайте вручную или добавьте шаблон на вкладке «Создать».
       </p>
     );
   }
@@ -46,7 +46,7 @@ export function AddWindowTemplatePicker({ templates, selectedId, onSelect }: Pro
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Найти шаблон…"
-            className={`${scheduleInput} pl-11`}
+            className={`${catalogSheetField} pl-11`}
           />
         </label>
       ) : null}

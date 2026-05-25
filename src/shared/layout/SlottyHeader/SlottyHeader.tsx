@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type LegacyRef, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type LegacyRef,
+  type MutableRefObject,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -12,6 +23,7 @@ import {
   ADMIN_SETTINGS_PATH,
   ADMIN_NOTIFICATIONS_PATH,
   ADMIN_PATH,
+  PLATFORM_ADMIN_PATH,
   BECOME_MASTER_PATH,
   getLoginPath,
   getProfilePath,
@@ -21,6 +33,7 @@ import {
   SERVICES_PATH,
 } from '../../../app/paths';
 import { useAuth } from '../../../features/auth/AuthProvider';
+import { isPlatformAdmin } from '../../../features/auth/lib/isPlatformAdmin';
 import { resolveMasterEntryPath } from '../../../features/auth/lib/resolveMasterEntryPath';
 import { useIsMasterUser } from '../../../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../../../features/profile/lib/setProfileRole';
@@ -41,6 +54,7 @@ import {
   SLOTTY_NAV_CATALOG,
   SLOTTY_NAV_MASTERS,
 } from './headerNav';
+import { SlottyImg } from '../../ui/SlottyImg';
 import { resolveMegaMenuGroup, type MegaMenuKey, type MegaMenuGroup, type MegaMenuItem } from './megaMenuConfig';
 
 const iconBtn =
@@ -53,7 +67,11 @@ const HEADER_LOGO_IMG_CLASS = 'block h-[72px] w-auto object-contain object-cente
 const HEADER_LOGO_COMPACT_CLASS = 'block h-10 w-auto object-contain object-center lg:h-11';
 
 const HEADER_LANDING_ROW_CLASS =
-  'relative flex h-20 items-center justify-between gap-4 px-4 sm:px-5 lg:h-[5.5rem] lg:px-5 xl:px-6';
+  'relative flex h-20 items-center justify-between gap-3 pl-2 pr-3 sm:pl-3 sm:pr-4 lg:h-[5.5rem] lg:gap-4 lg:px-5 xl:px-6';
+
+/** Логотип на лендинге — крупнее на мобиле, ближе к левому краю pill. */
+const HEADER_LANDING_LOGO_CLASS =
+  'relative z-[1] shrink-0 -ml-1.5 max-lg:-translate-x-1.5 sm:-ml-2 sm:max-lg:-translate-x-2 lg:ml-0 lg:translate-x-0';
 
 const HEADER_BAR_ROW_CLASS =
   'relative flex h-14 items-center justify-between gap-4 px-4 sm:px-5 lg:h-[4.25rem] lg:px-0';
@@ -74,7 +92,7 @@ function HeaderLogoLink({
       className={`inline-flex shrink-0 items-center justify-center outline-none transition hover:opacity-60 ${className}`}
       onClick={onClick}
     >
-      <img
+      <SlottyImg
         src={HEADER_LOGO_SRC}
         alt=""
         decoding="async"
@@ -102,13 +120,7 @@ function useSyncHeaderHeight(headerRef: RefObject<HTMLElement | null>) {
     const el = headerRef.current;
     if (!el) return;
 
-    const mq = window.matchMedia('(min-width: 1024px)');
-
     const sync = () => {
-      if (!mq.matches) {
-        document.documentElement.style.removeProperty('--slotty-header-height');
-        return;
-      }
       document.documentElement.style.setProperty(
         '--slotty-header-height',
         `${Math.ceil(el.getBoundingClientRect().height)}px`,
@@ -118,11 +130,10 @@ function useSyncHeaderHeight(headerRef: RefObject<HTMLElement | null>) {
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
-    mq.addEventListener('change', sync);
 
     return () => {
       ro.disconnect();
-      mq.removeEventListener('change', sync);
+      document.documentElement.style.removeProperty('--slotty-header-height');
     };
   }, [headerRef]);
 }
@@ -180,9 +191,13 @@ function HeaderShell({
       ref={headerElementRef}
       className="fixed inset-x-0 top-0 z-50 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]"
     >
-      <div className={CLIENT_DESKTOP_SHELL_CLASS}>
+      <div className={`${CLIENT_DESKTOP_SHELL_CLASS} max-lg:px-4`}>
         <div
-          className={`overflow-visible rounded-[30px] bg-[#F1EFEF]/95 shadow-[0_1px_3px_rgba(0,0,0,0.06)] backdrop-blur-xl transition-all duration-300 ${innerClassName}`}
+          className={`overflow-visible rounded-[30px] border border-[#D5D3D3]/80 bg-[#E4E2E2]/96 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 ${
+            innerClassName.includes('mega-open')
+              ? '!bg-[#E8E6E6] shadow-[0_24px_70px_rgba(244,124,140,0.14),0_12px_40px_rgba(17,24,39,0.08)]'
+              : ''
+          } ${innerClassName}`}
         >
           {children}
         </div>
@@ -197,6 +212,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const { isTelegramWebApp } = useTelegram();
   const { isAuthenticated, profile, logout } = useAuth();
   const isMasterUser = useIsMasterUser();
+  const showPlatformAdmin = isPlatformAdmin(profile);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -205,6 +221,8 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
   const profileRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const megaHostRef = useRef<HTMLDivElement>(null);
+  const megaPanelRef = useRef<HTMLDivElement>(null);
   const megaCloseTimerRef = useRef<number | null>(null);
 
   useSyncHeaderHeight(headerRef);
@@ -237,10 +255,24 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const scheduleMegaClose = useCallback(() => {
     cancelMegaClose();
     megaCloseTimerRef.current = window.setTimeout(() => {
-      setMegaOpenKey(null);
+      closeMegaMenu();
       megaCloseTimerRef.current = null;
-    }, 180);
-  }, [cancelMegaClose]);
+    }, MEGA_CLOSE_DELAY_MS);
+  }, [cancelMegaClose, closeMegaMenu]);
+
+  const isPointerInsideMegaZone = useCallback((clientX: number, clientY: number) => {
+    const nodes = [megaHostRef.current, megaPanelRef.current];
+    return nodes.some((el) => {
+      if (!el) return false;
+      const rect = el.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+    });
+  }, []);
 
   const scrollToLandingAnchor = useCallback(
     (anchor: string) => {
@@ -335,10 +367,26 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       setMegaPanelKey(megaOpenKey);
       return;
     }
-
-    const timer = window.setTimeout(() => setMegaPanelKey(null), MEGA_PANEL_CLOSE_MS);
-    return () => window.clearTimeout(timer);
+    setMegaPanelKey(null);
   }, [megaOpenKey]);
+
+  useEffect(() => {
+    if (!megaOpenKey) return;
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (isPointerInsideMegaZone(e.clientX, e.clientY)) {
+        cancelMegaClose();
+        return;
+      }
+      scheduleMegaClose();
+    };
+
+    document.addEventListener('pointermove', onPointerMove, { passive: true });
+
+    return () => {
+      document.removeEventListener('pointermove', onPointerMove);
+    };
+  }, [megaOpenKey, cancelMegaClose, isPointerInsideMegaZone, scheduleMegaClose]);
 
   const megaMenuOpen = megaOpenKey !== null;
   const megaHostProps = {
@@ -447,6 +495,12 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
                 </ProfileMenuItem>
               )}
 
+              {showPlatformAdmin ? (
+                <ProfileMenuItem to={PLATFORM_ADMIN_PATH} onNavigate={() => setProfileOpen(false)}>
+                  Админ
+                </ProfileMenuItem>
+              ) : null}
+
               <div className="my-1 border-t border-[#F3F4F6]" />
 
               <button
@@ -473,6 +527,15 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
         </Link>
       )}
 
+      {showPlatformAdmin ? (
+        <Link
+          to={PLATFORM_ADMIN_PATH}
+          className="inline-flex h-10 shrink-0 items-center rounded-full border border-[#e5e7eb] bg-white px-4 text-[14px] font-semibold text-[#374151] transition hover:border-[#ff5f7a]/40 hover:text-[#ff5f7a]"
+        >
+          Админ
+        </Link>
+      ) : null}
+
       <Link to={masterHref} className={`${masterCtaClass} shrink-0 self-center`}>
         {masterCtaLabel}
       </Link>
@@ -481,14 +544,16 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
   const topBar = (
     <div className={HEADER_LANDING_ROW_CLASS}>
-      <div className="relative flex min-w-0 flex-1 items-center gap-5 xl:gap-8 lg:flex-initial">
-        <HeaderLogoLink
-          onClick={closeMegaMenu}
-          className="absolute left-1/2 top-1/2 z-[1] -translate-x-1/2 -translate-y-1/2 lg:relative lg:left-auto lg:top-auto lg:translate-x-0 lg:translate-y-0"
-        />
+      <HeaderLogoLink
+        onClick={closeMegaMenu}
+        className={`${HEADER_LANDING_LOGO_CLASS} [&>img]:h-14 [&>img]:w-auto sm:[&>img]:h-16 lg:[&>img]:h-20`}
+      />
 
+      <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:gap-8 lg:flex">
         {showLandingDesktop || showDesktopChrome ? desktopCenterNav : null}
       </div>
+
+      <div className="min-w-0 flex-1 lg:hidden" aria-hidden />
 
       {showLandingDesktop || showDesktopChrome ? desktopActions : null}
 
@@ -655,7 +720,16 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
           </ul>
         </nav>
 
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
+          {showPlatformAdmin ? (
+            <Link
+              to={PLATFORM_ADMIN_PATH}
+              onClick={closeMobileMenu}
+              className="block w-full rounded-2xl border border-[#e5e7eb] py-3 text-center text-[15px] font-semibold text-[#374151]"
+            >
+              Админ
+            </Link>
+          ) : null}
           <Link
             to={masterHref}
             onClick={closeMobileMenu}
@@ -671,7 +745,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   if (variant === 'bar') {
     return (
       <HeaderShell variant="bar" shellRef={headerRef} innerClassName={megaMenuOpen ? 'mega-open' : ''}>
-        <div className="relative" {...megaHostProps}>
+        <div ref={megaHostRef} className="relative" {...megaHostProps}>
           <div className={`${HEADER_BAR_ROW_CLASS} lg:px-0`}>
             <div className="flex min-w-0 items-center gap-5 xl:gap-8">
               <HeaderLogoLink onClick={closeMegaMenu} size="compact" />
@@ -686,9 +760,12 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             variant="bar"
             isOpen={megaMenuOpen}
             panelKey={megaPanelKey}
+            panelRef={megaPanelRef}
             isMasterUser={isMasterUser}
             onAnchorClick={scrollToLandingAnchor}
             onForceClose={closeMegaMenu}
+            onScheduleClose={scheduleMegaClose}
+            onCancelClose={cancelMegaClose}
           />
         </div>
       </HeaderShell>
@@ -716,15 +793,18 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             : ''
         }
       >
-        <div className="relative" {...megaHostProps}>
+        <div ref={megaHostRef} className="relative" {...megaHostProps}>
           {topBar}
           <HeaderMegaDropdown
             variant="landing"
             isOpen={megaMenuOpen}
             panelKey={megaPanelKey}
+            panelRef={megaPanelRef}
             isMasterUser={isMasterUser}
             onAnchorClick={scrollToLandingAnchor}
             onForceClose={closeMegaMenu}
+            onScheduleClose={scheduleMegaClose}
+            onCancelClose={cancelMegaClose}
           />
           {mobileMenu}
         </div>
@@ -805,7 +885,7 @@ function DesktopMegaNav({
   );
 }
 
-const MEGA_PANEL_CLOSE_MS = 520;
+const MEGA_CLOSE_DELAY_MS = 80;
 
 function useMegaCardReveal(animateIn: boolean) {
   const [revealed, setRevealed] = useState(false);
@@ -830,22 +910,28 @@ function HeaderMegaDropdown({
   variant,
   isOpen,
   panelKey,
+  panelRef,
   isMasterUser,
   onAnchorClick,
   onForceClose,
+  onScheduleClose,
+  onCancelClose,
 }: {
   variant: Variant;
   isOpen: boolean;
   panelKey: MegaMenuKey | null;
+  panelRef: MutableRefObject<HTMLDivElement | null>;
   isMasterUser: boolean;
   onAnchorClick: (anchor: string) => void;
   onForceClose: () => void;
+  onScheduleClose: () => void;
+  onCancelClose: () => void;
 }) {
   const group = panelKey ? resolveMegaMenuGroup(panelKey, isMasterUser) : null;
   const panelSurfaceClass =
     variant === 'landing'
-      ? 'bg-[#F1EFEF]/98 shadow-[0_24px_60px_rgba(17,24,39,0.10)] backdrop-blur-xl rounded-b-[30px]'
-      : 'bg-[#FFFCFC]/98 shadow-[0_24px_60px_rgba(17,24,39,0.10)] backdrop-blur-md';
+      ? 'overflow-hidden rounded-b-[30px] bg-[#F1EFEF]/98 shadow-[0_24px_60px_rgba(17,24,39,0.10)] backdrop-blur-xl'
+      : 'overflow-hidden rounded-b-[30px] bg-[#FFFCFC]/98 shadow-[0_24px_60px_rgba(17,24,39,0.10)] backdrop-blur-md';
 
   const backdrop =
     typeof document !== 'undefined'
@@ -869,12 +955,17 @@ function HeaderMegaDropdown({
       {backdrop}
 
       <div
-        className={`absolute inset-x-0 top-full z-[60] -mt-px hidden overflow-hidden transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:block ${
+        ref={panelRef}
+        className={`absolute inset-x-0 top-full z-[60] -mt-px hidden overflow-visible transition-[opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:block ${
+          isOpen ? 'duration-300' : 'duration-150'
+        } ${
           isOpen
             ? 'pointer-events-auto opacity-100 translate-y-0'
             : 'pointer-events-none opacity-0 -translate-y-2'
         }`}
         aria-hidden={!isOpen}
+        onMouseEnter={onCancelClose}
+        onMouseLeave={onScheduleClose}
       >
         <div className={panelSurfaceClass}>
           {group ? (
@@ -959,12 +1050,10 @@ function MegaPanel({
   onForceClose: () => void;
 }) {
   return (
-    <div className="relative px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
-      <div className="pointer-events-none absolute -bottom-16 left-1/2 h-32 w-[70%] -translate-x-1/2 rounded-full bg-[#F47C8C]/10 blur-3xl" />
-
+    <div className="relative px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
       <div
-        className={`relative grid gap-3 ${
-          group.items.length <= 2 ? 'mx-auto max-w-[680px] grid-cols-2' : 'grid-cols-5'
+        className={`relative grid gap-4 ${
+          group.items.length <= 2 ? 'mx-auto max-w-[700px] grid-cols-2' : 'grid-cols-5'
         }`}
       >
         {group.items.map((item, index) => (
@@ -1005,7 +1094,12 @@ function MegaCard({
 
   const content = (
     <>
-      <LightMegaCardDecor accent={item.accent ?? 'pink'} index={index} />
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-[24px]"
+        aria-hidden
+      >
+        <LightMegaCardDecor accent={item.accent ?? 'pink'} index={index} />
+      </div>
 
       <div className="relative z-10 flex flex-1 flex-col items-start justify-start text-left">
         <div className="mb-4 flex items-start gap-2">
@@ -1034,7 +1128,7 @@ function MegaCard({
 
   const cardMotionClass = revealed ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0';
 
-  const className = `group relative flex min-h-[19.5rem] overflow-hidden rounded-[24px] border border-white/75 bg-[#FFFBFC] p-5 transition-[transform,opacity,border-color,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:border-[#F47C8C]/35 hover:bg-white hover:shadow-[0_24px_60px_rgba(244,124,140,0.16)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F47C8C] motion-reduce:transition-none ${cardMotionClass}`;
+  const className = `group relative isolate flex min-h-[19.5rem] overflow-hidden rounded-[24px] border border-white/75 bg-[#FFFBFC] p-5 transition-[transform,opacity,border-color,background-color,box-shadow] duration-300 ease-out hover:-translate-y-0.5 hover:border-[#F47C8C]/30 hover:bg-white hover:shadow-[0_10px_28px_rgba(244,124,140,0.14)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F47C8C] motion-reduce:transition-none ${cardMotionClass}`;
 
   const to =
     item.to ??
@@ -1093,9 +1187,9 @@ function LightMegaCardDecor({
     return (
       <>
         <div
-          className="absolute inset-x-0 bottom-0 h-[70%] opacity-80 transition duration-300 group-hover:opacity-100"
+          className="absolute inset-x-0 bottom-0 h-[65%] opacity-80"
           style={{
-            background: `radial-gradient(circle at 50% 100%, rgba(${color},0.22), transparent 58%)`,
+            background: `radial-gradient(circle at 50% 100%, rgba(${color},0.18), transparent 62%)`,
           }}
         />
         <div className="absolute bottom-0 left-1/2 h-[14rem] w-px -translate-x-1/2 bg-[#F47C8C]/12" />
@@ -1114,8 +1208,8 @@ function LightMegaCardDecor({
     return (
       <>
         <div
-          className="absolute left-1/2 top-[58%] h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl"
-          style={{ background: `rgba(${color},0.18)` }}
+          className="absolute left-1/2 top-[58%] h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl"
+          style={{ background: `rgba(${color},0.14)` }}
         />
         <div className="absolute left-1/2 top-[58%] h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#F47C8C]/15 bg-white/60" />
         <div className="absolute left-1/2 top-[58%] h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#F47C8C]/12" />
@@ -1135,9 +1229,9 @@ function LightMegaCardDecor({
     return (
       <>
         <div
-          className="absolute bottom-0 left-0 h-48 w-full blur-xl"
+          className="absolute inset-x-0 bottom-0 h-40"
           style={{
-            background: `linear-gradient(to top, rgba(${color},0.22), transparent)`,
+            background: `linear-gradient(to top, rgba(${color},0.16), transparent)`,
           }}
         />
         <svg className="absolute bottom-8 left-0 h-52 w-full text-[#F47C8C]/35" viewBox="0 0 260 220" fill="none">
@@ -1160,8 +1254,8 @@ function LightMegaCardDecor({
     return (
       <>
         <div
-          className="absolute bottom-8 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full blur-2xl"
-          style={{ background: `rgba(${color},0.18)` }}
+          className="absolute bottom-8 left-1/2 h-44 w-44 -translate-x-1/2 rounded-full blur-xl"
+          style={{ background: `rgba(${color},0.14)` }}
         />
         {Array.from({ length: 12 }).map((_, i) => (
           <span
@@ -1177,8 +1271,8 @@ function LightMegaCardDecor({
   return (
     <>
       <div
-        className="absolute bottom-8 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full blur-2xl"
-        style={{ background: `rgba(${color},0.18)` }}
+        className="absolute bottom-8 left-1/2 h-44 w-44 -translate-x-1/2 rounded-full blur-xl"
+        style={{ background: `rgba(${color},0.14)` }}
       />
       <div className="absolute bottom-24 left-1/2 h-20 w-32 -translate-x-1/2 rotate-45 rounded-[22px] border border-[#F47C8C]/18 bg-white/70" />
       <div className="absolute bottom-20 left-1/2 h-20 w-32 -translate-x-1/2 rotate-45 rounded-[22px] border border-[#F47C8C]/14 bg-white/50" />

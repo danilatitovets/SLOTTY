@@ -1,9 +1,11 @@
-import { apptAccentIconSoft } from './adminAppointmentsTheme';
+import { apptAvatarFallback } from './adminAppointmentsTheme';
 import { clientInitials } from './appointmentsFormat';
 
 type Props = {
   name: string;
+  photoUrl?: string | null;
   size?: 'md' | 'lg';
+  /** @deprecated — все аватары в сером стиле кабинета */
   variant?: 'soft' | 'gradient';
 };
 
@@ -12,22 +14,22 @@ const SIZE = {
   lg: 'h-14 w-14 text-[16px]',
 } as const;
 
-export function AppointmentsClientAvatar({ name, size = 'md', variant = 'soft' }: Props) {
+export function AppointmentsClientAvatar({ name, photoUrl, size = 'md' }: Props) {
   const sizeClass = SIZE[size];
+  const src = photoUrl?.trim();
 
-  if (variant === 'gradient') {
+  if (src) {
     return (
-      <div
-        className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] font-bold text-white shadow-[0_6px_16px_rgba(255,95,122,0.28)] ${sizeClass}`}
-        aria-hidden
-      >
-        {clientInitials(name)}
-      </div>
+      <img
+        src={src}
+        alt=""
+        className={`shrink-0 rounded-full object-cover ${sizeClass}`}
+      />
     );
   }
 
   return (
-    <div className={`${apptAccentIconSoft} ${sizeClass}`} aria-hidden>
+    <div className={`${apptAvatarFallback} ${sizeClass}`} aria-hidden>
       {clientInitials(name)}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { preloadTabIntroImages } from '../useTabIntroImage';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
@@ -11,7 +11,7 @@ import {
 } from './adminOverviewTheme';
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
-import { OVERVIEW_TAB_INTRO_IMAGES, OverviewTabIntro } from './OverviewTabIntro';
+import { OVERVIEW_TAB_INTRO_IMAGES } from './OverviewTabIntro';
 import type { OverviewAnalyticsTab, OverviewPeriodPreset } from './overviewAnalytics';
 import { OverviewClientsPanel } from './OverviewClientsPanel';
 import { OverviewReputationPanel } from './OverviewReputationPanel';
@@ -31,6 +31,7 @@ type Props = {
 
 function OverviewPanelContent({
   loading,
+  tabRefreshing,
   error,
   activeTab,
   draft,
@@ -51,6 +52,7 @@ function OverviewPanelContent({
   refreshReputation,
 }: {
   loading: boolean;
+  tabRefreshing?: boolean;
   error: string | null;
   activeTab: OverviewAnalyticsTab;
   draft: MasterDraft;
@@ -79,52 +81,71 @@ function OverviewPanelContent({
     );
   }
 
+  let content: ReactNode;
+
   if (error) {
-    return (
+    content = (
       <div className="rounded-[24px] border border-[#FEE2E2] bg-[#FEF2F2] p-5">
         <p className="text-[14px] font-semibold text-[#B91C1C]">{error}</p>
       </div>
     );
+  } else {
+    switch (activeTab) {
+      case 'revenue':
+        content = (
+          <OverviewRevenuePanel
+            data={revenue}
+            periodPreset={periodPreset}
+            onPeriodChange={onPeriodChange}
+            appointments={appointments}
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+          />
+        );
+        break;
+      case 'clients':
+        content = <OverviewClientsPanel data={clients} />;
+        break;
+      case 'reputation':
+        content = (
+          <OverviewReputationPanel
+            data={reputation}
+            useApi={useCabinetApi}
+            onReplied={refreshReputation}
+            onReply={async (reviewId, text) => {
+              await postOverviewReviewReply(reviewId, text);
+              refreshReputation();
+            }}
+          />
+        );
+        break;
+      default:
+        content = (
+          <OverviewSummaryPanel
+            draft={draft}
+            metrics={summary}
+            serviceCount={serviceCount}
+            appointmentsPath={appointmentsPath}
+            dayStats={dayStats}
+            onOpenNearest={onOpenNearest}
+          />
+        );
+    }
   }
 
-  switch (activeTab) {
-    case 'revenue':
-      return (
-        <OverviewRevenuePanel
-          data={revenue}
-          periodPreset={periodPreset}
-          onPeriodChange={onPeriodChange}
-          appointments={appointments}
-          periodStart={periodStart}
-          periodEnd={periodEnd}
-        />
-      );
-    case 'clients':
-      return <OverviewClientsPanel data={clients} />;
-    case 'reputation':
-      return (
-        <OverviewReputationPanel
-          data={reputation}
-          useApi={useCabinetApi}
-          onReplied={refreshReputation}
-          onReply={async (reviewId, text) => {
-            await postOverviewReviewReply(reviewId, text);
-            refreshReputation();
-          }}
-        />
-      );
-    default:
-      return (
-        <OverviewSummaryPanel
-          draft={draft}
-          metrics={summary}
-          serviceCount={serviceCount}
-          appointmentsPath={appointmentsPath}
-          dayStats={dayStats}
-          onOpenNearest={onOpenNearest}
-        />
-      );
-  }
+  return (
+    <div className="relative min-w-0">
+      {tabRefreshing ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-0.5 overflow-hidden rounded-full bg-[#F3F4F6] lg:block"
+          aria-hidden
+        >
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-[#F47C8C]" />
+        </div>
+      ) : null}
+      {content}
+    </div>
+  );
 }
 
 export function AdminOverviewTab({
@@ -143,6 +164,7 @@ export function AdminOverviewTab({
 
   const {
     loading,
+    tabRefreshing,
     error,
     summary,
     dayStats,
@@ -164,6 +186,7 @@ export function AdminOverviewTab({
     () => (
       <OverviewPanelContent
         loading={loading}
+        tabRefreshing={tabRefreshing}
         error={error}
         activeTab={activeTab}
         draft={draft}
@@ -195,6 +218,7 @@ export function AdminOverviewTab({
       draft,
       error,
       loading,
+      tabRefreshing,
       onOpenAppointment,
       periodPreset,
       setPeriodPreset,
@@ -213,13 +237,11 @@ export function AdminOverviewTab({
 
   return (
     <>
-      {/* Mobile: как раньше — фильтр сверху, интро, контент, таббар снизу */}
+      {/* Mobile: период, контент, таббар снизу */}
       <section
-        className="w-full min-w-0 space-y-4 overflow-x-hidden lg:hidden"
-        style={{ paddingBottom: `calc(${OVERVIEW_TAB_BAR_HEIGHT} + 1.25rem)` }}
+        className={`min-w-0 space-y-4 overflow-x-hidden pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+1.25rem)] lg:hidden`}
       >
         <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
-        {!error ? <OverviewTabIntro tab={activeTab} /> : null}
         <AdminTabContentTransition activeKey={transitionKey} className="min-w-0 space-y-4">
           {panel}
         </AdminTabContentTransition>

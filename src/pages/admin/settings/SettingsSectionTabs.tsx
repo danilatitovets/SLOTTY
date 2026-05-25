@@ -19,7 +19,7 @@ type Props = {
 export function SettingsSectionTabs({ className = '' }: Props) {
   return (
     <nav
-      className={`flex w-full gap-1 overflow-x-auto rounded-[20px] bg-[#f6f7fb] p-1.5 ring-1 ring-[#EAECEF] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`.trim()}
+      className={`hidden w-full border-b border-[#eef0f5] lg:flex ${className}`.trim()}
       aria-label="Разделы настроек"
     >
       {TABS.map((tab) => (
@@ -27,15 +27,26 @@ export function SettingsSectionTabs({ className = '' }: Props) {
           key={tab.to}
           to={tab.to}
           className={({ isActive }) =>
-            `flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-[14px] px-3 text-[13px] font-bold transition sm:text-[14px] ${
-              isActive
-                ? 'bg-white text-[#ff5f7a] shadow-[0_4px_14px_rgba(255,95,122,0.12)] ring-1 ring-[#FDE8ED]'
-                : 'text-[#6B7280] hover:text-[#374151]'
+            `relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-1 transition active:scale-[0.98] ${
+              isActive ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
             }`
           }
         >
-          <tab.Icon className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="truncate">{tab.label}</span>
+          {({ isActive }) => (
+            <>
+              <tab.Icon
+                className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}`}
+                aria-hidden
+              />
+              <span className="truncate text-[13px] font-semibold sm:text-[14px]">{tab.label}</span>
+              {isActive ? (
+                <span
+                  className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
+                  aria-hidden
+                />
+              ) : null}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>

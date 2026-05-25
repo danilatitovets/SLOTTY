@@ -19,7 +19,7 @@ type Props = {
 export function ProfileSectionTabs({ active, onChange, className = '' }: Props) {
   return (
     <nav
-      className={`flex w-full border-t border-[#eef0f5] ${className}`.trim()}
+      className={`hidden w-full border-t border-[#eef0f5] lg:flex ${className}`.trim()}
       aria-label="Разделы профиля"
     >
       {TABS.map((tab) => {

@@ -27,5 +27,8 @@ export const primaryBtnClass =
 export const secondaryBtnClass =
   'flex min-h-11 w-full items-center justify-center rounded-[18px] border border-[#EAECEF] bg-white px-4 text-[15px] font-semibold text-[#374151] transition hover:border-[#FDE8ED] hover:bg-[#FAFAFA] active:scale-[0.98]';
 
+export const scheduleCabinetSecondaryBtn =
+  'flex min-h-11 w-full items-center justify-center rounded-[10px] bg-[#EBEBEB] px-4 text-[15px] font-semibold text-[#111827] transition hover:bg-[#E4E4E4] active:scale-[0.98]';
+
 export const dangerBtnClass =
   'flex min-h-11 w-full items-center justify-center rounded-[18px] border border-[#FECACA] bg-[#FEF2F2] px-4 text-[15px] font-bold text-[#DC2626] transition hover:bg-[#FEE2E2] active:scale-[0.98]';

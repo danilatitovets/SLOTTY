@@ -107,9 +107,9 @@ export type AdminNavItem = {
 
 export const ADMIN_MAIN_NAV: AdminNavItem[] = [
   { to: ADMIN_PATH, label: 'Профиль мастера', end: true, icon: IconNavProfile },
-  { to: ADMIN_OVERVIEW_PATH, label: 'Сводка', icon: IconNavOverview },
   { to: ADMIN_SERVICES_PATH, label: 'Услуги', icon: IconNavServices },
   { to: ADMIN_SCHEDULE_PATH, label: 'Окна', icon: IconNavSchedule },
+  { to: ADMIN_OVERVIEW_PATH, label: 'Сводка', icon: IconNavOverview },
   { to: ADMIN_APPOINTMENTS_PATH, label: 'Записи', icon: IconNavAppointments },
 ];
 

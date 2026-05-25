@@ -1,62 +1,32 @@
 import type { ReactNode } from 'react';
 import { HiArrowLeft, HiArrowRight, HiOutlineDocumentText, HiOutlineEnvelope, HiOutlineShieldCheck } from 'react-icons/hi2';
 import type { LegalDocId } from '../../../constants/legalDocuments';
-
-export function SettingsSectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <h2 className="text-[18px] font-bold tracking-[-0.03em] text-[#111827] lg:text-[20px]">{title}</h2>
-      {description ? (
-        <p className="mt-1.5 text-[14px] leading-relaxed text-[#6B7280]">{description}</p>
-      ) : null}
-    </div>
-  );
-}
-
-export function SettingsHelpIntro() {
-  return (
-    <div className="rounded-[20px] bg-gradient-to-br from-[#FFF0F3] via-white to-white p-5 ring-1 ring-[#FDE8ED]">
-      <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-[#ff5f7a]">Справка</p>
-      <p className="mt-2 text-[15px] leading-relaxed text-[#374151]">
-        Напишите в поддержку по вопросам кабинета и записей — ниже юридические документы SLOTTY.
-      </p>
-    </div>
-  );
-}
+import {
+  settingsBackBtn,
+  settingsLegalArticle,
+  settingsRow,
+  settingsRowIcon,
+} from './adminSettingsTheme';
 
 export function SettingsBackButton({ onClick, label = 'Назад' }: { onClick: () => void; label?: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#f6f7fb] px-4 text-[14px] font-semibold text-[#374151] ring-1 ring-[#EAECEF] transition hover:bg-white hover:text-[#ff5f7a] hover:ring-[#FDE8ED] active:scale-[0.98]"
-    >
+    <button type="button" onClick={onClick} className={settingsBackBtn}>
       <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
       {label}
     </button>
   );
 }
 
-function SettingsIconWrap({ children, tone = 'default' }: { children: ReactNode; tone?: 'default' | 'telegram' | 'email' | 'doc' }) {
-  const bg =
+function SettingsIconWrap({ children, tone = 'doc' }: { children: ReactNode; tone?: 'telegram' | 'email' | 'doc' }) {
+  const toneClass =
     tone === 'telegram'
-      ? 'bg-[#E8F6FD] ring-[#BAE6FD]'
+      ? 'bg-[#E8F6FD] text-[#0284C7] ring-[#BAE6FD]'
       : tone === 'email'
-        ? 'bg-[#FFF0F3] ring-[#FDE8ED]'
-        : tone === 'doc'
-          ? 'bg-[#f6f7fb] ring-[#EAECEF]'
-          : 'bg-[#f6f7fb] ring-[#EAECEF]';
+        ? 'bg-[#FFF1F4] text-[#ff5f7a] ring-[#FDE8ED]'
+        : 'bg-white text-[#ff5f7a] ring-[#EAECEF]';
+
   return (
-    <span
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ring-1 ${bg}`}
-      aria-hidden
-    >
+    <span className={`${settingsRowIcon} ${toneClass}`} aria-hidden>
       {children}
     </span>
   );
@@ -67,7 +37,6 @@ export function SettingsContactCard({
   tone,
   title,
   value,
-  hint,
   href,
   external,
 }: {
@@ -75,7 +44,6 @@ export function SettingsContactCard({
   tone: 'telegram' | 'email';
   title: string;
   value: string;
-  hint?: string;
   href?: string | null;
   external?: boolean;
 }) {
@@ -83,26 +51,22 @@ export function SettingsContactCard({
     <>
       <SettingsIconWrap tone={tone}>{icon}</SettingsIconWrap>
       <div className="min-w-0 flex-1">
-        <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">{title}</p>
-        <p className="mt-1 truncate text-[16px] font-semibold text-[#111827]">{value}</p>
-        {hint ? <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{hint}</p> : null}
+        <p className="text-[15px] font-bold text-[#111827]">{title}</p>
+        <p className="mt-0.5 truncate text-[14px] font-medium text-[#6B7280]">{value}</p>
       </div>
       {href ? (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7fb] text-[#9CA3AF] ring-1 ring-[#EAECEF]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#9CA3AF]">
           <HiArrowRight className="h-4 w-4" aria-hidden />
         </span>
       ) : null}
     </>
   );
 
-  const cardClass =
-    'flex w-full items-center gap-3 rounded-[20px] bg-white p-4 text-left shadow-[0_6px_22px_rgba(17,24,39,0.05)] ring-1 ring-[#EAECEF] transition hover:ring-[#FDE8ED] active:scale-[0.99]';
-
   if (href) {
     return (
       <a
         href={href}
-        className={cardClass}
+        className={settingsRow}
         {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       >
         {inner}
@@ -110,15 +74,15 @@ export function SettingsContactCard({
     );
   }
 
-  return <div className={cardClass}>{inner}</div>;
+  return <div className={settingsRow}>{inner}</div>;
 }
 
-const DOC_META: Record<LegalDocId, { hint: string; Icon: typeof HiOutlineDocumentText }> = {
-  terms: { hint: 'Правила пользования сервисом', Icon: HiOutlineDocumentText },
-  privacy: { hint: 'Сбор и использование данных', Icon: HiOutlineShieldCheck },
-  personal_data_policy: { hint: 'Обработка персональных данных', Icon: HiOutlineShieldCheck },
-  consent: { hint: 'Согласие на обработку данных', Icon: HiOutlineDocumentText },
-  service_rules: { hint: 'Правила для мастеров и клиентов', Icon: HiOutlineDocumentText },
+const DOC_META: Record<LegalDocId, { Icon: typeof HiOutlineDocumentText }> = {
+  terms: { Icon: HiOutlineDocumentText },
+  privacy: { Icon: HiOutlineShieldCheck },
+  personal_data_policy: { Icon: HiOutlineShieldCheck },
+  consent: { Icon: HiOutlineDocumentText },
+  service_rules: { Icon: HiOutlineDocumentText },
 };
 
 export function SettingsDocCard({
@@ -132,24 +96,18 @@ export function SettingsDocCard({
   updatedLabel: string;
   onOpen: () => void;
 }) {
-  const meta = DOC_META[id];
-  const Icon = meta.Icon;
+  const Icon = DOC_META[id].Icon;
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 rounded-[20px] bg-white p-4 text-left shadow-[0_6px_22px_rgba(17,24,39,0.05)] ring-1 ring-[#EAECEF] transition hover:bg-[#FFF9FB] hover:ring-[#FDE8ED] active:scale-[0.99]"
-    >
+    <button type="button" onClick={onOpen} className={settingsRow}>
       <SettingsIconWrap tone="doc">
-        <Icon className="h-5 w-5 text-[#ff5f7a]" aria-hidden />
+        <Icon className="h-5 w-5" aria-hidden />
       </SettingsIconWrap>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 text-left">
         <p className="text-[15px] font-bold leading-snug text-[#111827]">{title}</p>
-        <p className="mt-1 text-[13px] leading-snug text-[#6B7280]">{meta.hint}</p>
-        <p className="mt-1.5 text-[11px] font-semibold text-[#9CA3AF]">{updatedLabel}</p>
+        <p className="mt-0.5 text-[12px] font-medium text-[#9CA3AF]">{updatedLabel}</p>
       </div>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f6f7fb] text-[#9CA3AF] ring-1 ring-[#EAECEF]">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#9CA3AF]">
         <HiArrowRight className="h-4 w-4" aria-hidden />
       </span>
     </button>
@@ -168,12 +126,12 @@ export function SettingsLegalReader({
   const blocks = body.split(/\n\n+/).filter(Boolean);
 
   return (
-    <article className="rounded-[20px] bg-white p-5 shadow-[0_6px_22px_rgba(17,24,39,0.05)] ring-1 ring-[#EAECEF] sm:p-6">
-      <header className="border-b border-[#F3F4F6] pb-4">
-        <h2 className="text-[20px] font-bold tracking-[-0.04em] text-[#111827] sm:text-[22px]">{title}</h2>
-        <p className="mt-2 text-[13px] font-semibold text-[#9CA3AF]">{updatedLabel}</p>
+    <article className={settingsLegalArticle}>
+      <header className="border-b border-[#EEEEEE] pb-4">
+        <h2 className="text-[20px] font-bold tracking-[-0.04em] text-[#111827]">{title}</h2>
+        <p className="mt-1.5 text-[13px] font-medium text-[#9CA3AF]">{updatedLabel}</p>
       </header>
-      <div className="mt-5 space-y-4 text-[15px] leading-[1.65] text-[#374151]">
+      <div className="space-y-4 text-[15px] leading-[1.65] text-[#374151]">
         {blocks.map((block, i) => (
           <p key={i} className="whitespace-pre-wrap">
             {block}
@@ -186,7 +144,7 @@ export function SettingsLegalReader({
 
 export function TelegramSupportIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
       <circle cx="12" cy="12" r="12" fill="#2AABEE" />
       <path
         fill="#fff"
@@ -197,5 +155,5 @@ export function TelegramSupportIcon() {
 }
 
 export function EmailSupportIcon() {
-  return <HiOutlineEnvelope className="h-5 w-5 text-[#ff5f7a]" aria-hidden />;
+  return <HiOutlineEnvelope className="h-5 w-5" aria-hidden />;
 }

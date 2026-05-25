@@ -1,3 +1,5 @@
+import { sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
+
 type Mode = 'template' | 'manual';
 
 type Props = {
@@ -9,7 +11,7 @@ type Props = {
 export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
   return (
     <div
-      className="grid grid-cols-2 gap-1 rounded-[18px] border border-[#EAECEF] bg-[#f6f7fb] p-1"
+      className="grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5"
       role="tablist"
       aria-label="Способ создания окна"
     >
@@ -18,11 +20,7 @@ export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
         role="tab"
         aria-selected={mode === 'template'}
         onClick={onTemplate}
-        className={`rounded-[14px] px-3 py-2.5 text-[13px] font-bold transition active:scale-[0.98] ${
-          mode === 'template'
-            ? 'bg-white text-[#ff5f7a] shadow-[0_4px_14px_rgba(255,95,122,0.15)] ring-1 ring-[#FDE8ED]'
-            : 'text-[#6B7280] hover:text-[#374151]'
-        }`}
+        className={`flex min-h-11 items-center justify-center ${sheetSegmentClass(mode === 'template')}`}
       >
         По шаблону
       </button>
@@ -31,11 +29,7 @@ export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
         role="tab"
         aria-selected={mode === 'manual'}
         onClick={onManual}
-        className={`rounded-[14px] px-3 py-2.5 text-[13px] font-bold transition active:scale-[0.98] ${
-          mode === 'manual'
-            ? 'bg-white text-[#ff5f7a] shadow-[0_4px_14px_rgba(255,95,122,0.15)] ring-1 ring-[#FDE8ED]'
-            : 'text-[#6B7280] hover:text-[#374151]'
-        }`}
+        className={`flex min-h-11 items-center justify-center ${sheetSegmentClass(mode === 'manual')}`}
       >
         Вручную
       </button>

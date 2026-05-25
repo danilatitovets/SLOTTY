@@ -50,10 +50,12 @@ export function OverviewRatingChart({
   stats,
   emptyHint = 'Недостаточно данных для графика',
   tone: toneProp,
+  size = 'default',
 }: {
   stats: RatingDayStat[];
   emptyHint?: string;
   tone?: RatingTone;
+  size?: 'default' | 'large';
 }) {
   const gradientId = useId();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -62,8 +64,8 @@ export function OverviewRatingChart({
 
   const values = stats.map((s) => s.averageRating);
   const hasData = stats.length > 0;
-  const chartHeight = 168;
-  const chartBoxClass = 'h-[11.5rem]';
+  const chartHeight = size === 'large' ? 220 : 168;
+  const chartBoxClass = size === 'large' ? 'h-[14.5rem]' : 'h-[11.5rem]';
   const padX = 4;
   const padY = 20;
   const baseline = chartHeight - padY;

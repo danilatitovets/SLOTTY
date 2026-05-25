@@ -5,7 +5,9 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ReactNode,
 } from 'react';
+import { AdminSheetFixedFooter } from '../shared/adminSheetFooterSlot';
 import type {
   MasterCertificate,
   MasterDraft,
@@ -18,6 +20,7 @@ import {
   WEEKDAY_LABELS_SHORT,
 } from '../../../features/master/model/masterDraftStorage';
 import { mergeScheduleTimeSelectOptions } from '../schedule/scheduleTimeSelectOptions';
+import { validateMasterAddressForm } from '../../../features/profile/lib/masterAddressValidation';
 import type { MasterVisitType } from '../../../features/profile/model/masterLocation';
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
 import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
@@ -38,7 +41,6 @@ import {
 import { getMasterDisplayNameQualityError } from '../../../shared/lib/masterDisplayNamePolicy';
 import { SlottySelect } from '../../../shared/ui/SlottySelect';
 import { uploadMasterHeroPhotoFromRemoteUrl } from '../../../features/admin/api/masterCabinetApi';
-import { fetchServiceCategories, type ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
 import { MasterProfileContactsBlock } from '../../master-onboarding/MasterProfileContactsBlock';
 import {
@@ -55,21 +57,12 @@ import {
   sheetOutlineBtnClass,
   sheetPinkPillBtnClass,
   sheetPrimaryBtnClass,
-  sheetSectionClass,
   sheetSectionTitleClass,
   sheetSegmentClass,
 } from './adminProfileCabinetTheme';
-import { AddressFieldLabel } from './AdminProfileAddressUi';
-import { addressDetailIconName, CabinetIcon, type CabinetIconName } from './cabinetIcons';
-
-const FALLBACK_CATEGORIES = [
-  'Маникюр',
-  'Барберы',
-  'Брови и ресницы',
-  'Массаж',
-  'Фитнес',
-  'Тату',
-] as const;
+import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
+import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
+import { ProfilePreviewImage } from './adminProfileMedia';
 
 const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
@@ -111,6 +104,90 @@ function validatePortfolioFields(
   return errs;
 }
 
+/** Блок загрузки фото — как в «Редактировать профиль»: превью + кнопка в углу. */
+function SheetImageUploadField({
+  label,
+  required = false,
+  imageUrl,
+  aspectClass = 'aspect-square',
+  imageClass = 'h-full w-full object-cover',
+  onFileChange,
+  disabled = false,
+  pickLabel = 'Загрузить фото',
+  replaceLabel = 'Сменить',
+  uploadErr,
+  fieldError,
+}: {
+  label: string;
+  required?: boolean;
+  imageUrl: string;
+  aspectClass?: string;
+  imageClass?: string;
+  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  pickLabel?: string;
+  replaceLabel?: string;
+  uploadErr?: string | null;
+  fieldError?: string;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasError = Boolean(uploadErr || fieldError);
+  const preview = imageUrl.trim();
+
+  return (
+    <div className={hasError ? 'rounded-[12px] ring-2 ring-red-300/80' : undefined}>
+      <AdminSheetFieldLabel required={required} className={`block ${sheetLabelClass}`}>
+        {label}
+      </AdminSheetFieldLabel>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={onFileChange}
+        disabled={disabled}
+      />
+      <div className="relative mx-auto mt-1.5 w-full max-w-[320px]">
+        <div className={`relative ${aspectClass} overflow-hidden rounded-[12px] bg-[#EBEBEB]`}>
+          {preview ? (
+            <img
+              src={preview}
+              alt=""
+              className={`absolute inset-0 h-full w-full max-h-full max-w-full object-center ${imageClass}`}
+              style={
+                imageClass.includes('object-contain')
+                  ? { objectFit: 'contain', objectPosition: 'center' }
+                  : { objectFit: 'cover', objectPosition: 'center' }
+              }
+              decoding="async"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[#9CA3AF]">
+              <CabinetIcon name="photo" size={40} />
+            </div>
+          )}
+        </div>
+        <div className="absolute bottom-2 right-2 flex max-w-[calc(100%-0.5rem)] flex-wrap justify-end gap-1.5">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+            className={sheetPinkPillBtnClass}
+          >
+            {disabled ? 'Загрузка…' : preview ? replaceLabel : pickLabel}
+          </button>
+        </div>
+      </div>
+      {uploadErr ? (
+        <p className="mt-2 text-center text-[12px] font-medium text-red-600">{uploadErr}</p>
+      ) : null}
+      {fieldError ? (
+        <p className="mt-2 text-center text-[12px] font-medium text-red-600">{fieldError}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function SheetFooter({
   onCancel,
   onSave,
@@ -149,14 +226,16 @@ export function SheetFooter({
   };
 
   return (
-    <div className="mt-8 flex gap-3 pb-1">
-      <button type="button" onClick={onCancel} disabled={isSaving} className={sheetCancelBtnClass}>
-        Отмена
-      </button>
-      <button type="button" disabled={isSaving} onClick={handleSave} className={sheetPrimaryBtnClass}>
-        {isSaving ? savingLabel : saveLabel}
-      </button>
-    </div>
+    <AdminSheetFixedFooter>
+      <div className="flex w-full gap-3">
+        <button type="button" onClick={onCancel} disabled={isSaving} className={sheetCancelBtnClass}>
+          Отмена
+        </button>
+        <button type="button" disabled={isSaving} onClick={handleSave} className={sheetPrimaryBtnClass}>
+          {isSaving ? savingLabel : saveLabel}
+        </button>
+      </div>
+    </AdminSheetFixedFooter>
   );
 }
 
@@ -182,8 +261,6 @@ export function SheetMainInfo({
   const [photoUrl, setPhotoUrl] = useState(draft.photoUrl ?? '');
   const [tgPhotoLoading, setTgPhotoLoading] = useState(false);
   const [name, setName] = useState(draft.name);
-  const [catalogCategories, setCatalogCategories] = useState<ServiceCategoryDto[]>([]);
-  const [categoryId, setCategoryId] = useState(() => draft.primaryCategoryId ?? '');
   const [phone, setPhone] = useState(draft.phone ?? '');
   const [clientContacts, setClientContacts] = useState<MasterContactRow[]>(() => contactRowsFromDraft(draft));
   const [description, setDescription] = useState(draft.description);
@@ -193,57 +270,15 @@ export function SheetMainInfo({
   const [photoUploadErr, setPhotoUploadErr] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetchServiceCategories()
-      .then((list) => {
-        if (!cancelled) setCatalogCategories(list);
-      })
-      .catch(() => {
-        if (!cancelled) setCatalogCategories([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const resolveCategoryId = useCallback(
-    (d: MasterDraft, list: ServiceCategoryDto[]) => {
-      if (d.primaryCategoryId && list.some((c) => c.id === d.primaryCategoryId)) {
-        return d.primaryCategoryId;
-      }
-      const byCode = d.primaryCategoryCode
-        ? list.find((c) => c.code === d.primaryCategoryCode)?.id
-        : undefined;
-      if (byCode) return byCode;
-      const byName = list.find((c) => c.name === d.category)?.id;
-      if (byName) return byName;
-      return list[0]?.id ?? '';
-    },
-    [],
-  );
-
-  useEffect(() => {
     setPhotoUrl(draft.photoUrl ?? '');
     setName(draft.name);
-    setCategoryId(resolveCategoryId(draft, catalogCategories));
     setPhone(draft.phone ?? '');
     setClientContacts(contactRowsFromDraft(draft));
     setDescription(draft.description);
     setFieldErrors({});
     setSubmitAttempted(false);
     setPhotoUploadErr(null);
-  }, [draft, catalogCategories, resolveCategoryId]);
-
-  const categoryOptions = useMemo(() => {
-    if (catalogCategories.length) {
-      return catalogCategories.map((c) => ({ value: c.id, label: c.name }));
-    }
-    const legacy = draft.category === 'Другое' ? FALLBACK_CATEGORIES[0] : draft.category;
-    return Array.from(new Set([legacy, ...FALLBACK_CATEGORIES])).map((c) => ({
-      value: c,
-      label: c,
-    }));
-  }, [catalogCategories, draft.category]);
+  }, [draft]);
 
   const onPhotoChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -318,13 +353,6 @@ export function SheetMainInfo({
       const fmt = validateContactValue(row.type, row.value);
       if (fmt) errs[row.id] = fmt;
     }
-    const picked =
-      catalogCategories.find((c) => c.id === categoryId) ??
-      catalogCategories.find((c) => c.name === categoryId);
-    if (catalogCategories.length && !picked) {
-      errs.category = 'Выберите категорию';
-    }
-
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
       return;
@@ -340,9 +368,6 @@ export function SheetMainInfo({
     try {
       await onSave({
         name: trimmedName,
-        category: picked?.name ?? (typeof categoryId === 'string' ? categoryId : draft.category),
-        primaryCategoryId: picked?.id,
-        primaryCategoryCode: picked?.code,
         phone: normalizeBelarusPhone(phone) ?? undefined,
         contact: contactLine,
         contacts,
@@ -356,7 +381,7 @@ export function SheetMainInfo({
 
   return (
     <div className="space-y-4">
-      <div className={sheetSectionClass}>
+      <div>
         <input
           ref={photoInputRef}
           type="file"
@@ -364,18 +389,15 @@ export function SheetMainInfo({
           className="sr-only"
           onChange={onPhotoChange}
         />
-        <div className="relative mx-auto mt-3 w-full max-w-[320px]">
-          <div className="relative aspect-[16/10] overflow-hidden rounded-[22px] bg-white shadow-[0_8px_24px_rgba(17,17,17,0.06)]">
-            <img
-              src={preview}
-              alt=""
-              className="h-full w-full object-cover"
-              decoding="async"
-              onError={(ev) => {
-                (ev.target as HTMLImageElement).src = defaultMasterAvatarUrl(name || 'Мастер');
-              }}
-            />
-          </div>
+        <div className="relative mx-auto w-full max-w-[320px]">
+          <ProfilePreviewImage
+            src={preview}
+            alt=""
+            aspectClass="aspect-[16/10]"
+            onError={(ev) => {
+              (ev.target as HTMLImageElement).src = defaultMasterAvatarUrl(name || 'Мастер');
+            }}
+          />
           <div className="absolute bottom-2 right-2 flex max-w-[calc(100%-0.5rem)] flex-wrap justify-end gap-1.5">
             {telegramUserPhotoUrl ? (
               <button
@@ -397,115 +419,105 @@ export function SheetMainInfo({
             </button>
           </div>
         </div>
-        <div className="mt-2 space-y-1">
-          {photoUploadErr ? <p className="text-center text-[12px] font-medium text-red-600">{photoUploadErr}</p> : null}
-          {uploadHeroPhoto && !telegramUserPhotoUrl ? (
-            <p className={sheetHintClass}>
-              Чтобы подставить фото из Telegram, откройте кабинет мастера внутри мини-приложения Telegram.
-            </p>
-          ) : null}
-        </div>
+        {photoUploadErr ? (
+          <p className="mt-2 text-center text-[12px] font-medium text-red-600">{photoUploadErr}</p>
+        ) : null}
       </div>
 
       <label className="block">
-        <span className={sheetLabelClass}>Имя / название мастера *</span>
-        <input
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            setFieldErrors((prev) => {
-              const next = { ...prev };
-              delete next.name;
-              return next;
-            });
-          }}
-          className={sheetFieldClass}
-        />
-        {submitAttempted && fieldErrors.name ? (
-          <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.name}</p>
-        ) : null}
-      </label>
+          <AdminSheetFieldLabel required>Имя / название мастера</AdminSheetFieldLabel>
+          <input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.name;
+                return next;
+              });
+            }}
+            className={sheetFieldClass}
+          />
+          {submitAttempted && fieldErrors.name ? (
+            <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.name}</p>
+          ) : null}
+        </label>
 
-      <label className="block">
-        <span id="sheet-main-cat" className={sheetLabelClass}>
-          Категория
-        </span>
-        <SlottySelect
-          className="mt-1.5 w-full"
-          value={categoryId || categoryOptions[0]?.value || ''}
-          onChange={setCategoryId}
-          options={categoryOptions}
-          aria-labelledby="sheet-main-cat"
-        />
-      </label>
-
-      <label className="block">
-        <span className={`flex items-center gap-2 ${sheetLabelClass}`}>
-          Телефон
-          <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white"
-            aria-hidden
-          >
-            <BY title="Беларусь" className="h-full w-full object-cover" />
+        <label className="mt-4 block">
+          <span className={`flex items-center gap-2 ${sheetLabelClass}`}>
+            Телефон
+            <span
+              className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EBEBEB]"
+              aria-hidden
+            >
+              <BY title="Беларусь" className="h-full w-full object-cover" />
+            </span>
           </span>
-        </span>
-        <input
-          value={phone}
-          onChange={(e) => {
-            setPhone(sanitizeBelarusPhoneInput(e.target.value));
-            setFieldErrors((prev) => {
-              const next = { ...prev };
-              delete next.phone;
-              delete next.contactReachability;
-              return next;
-            });
-          }}
-          className={sheetFieldClass}
-          placeholder="+375 29 000-00-00"
-          inputMode="tel"
-          autoComplete="tel"
-          maxLength={19}
-        />
-        {submitAttempted && fieldErrors.phone ? (
-          <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.phone}</p>
-        ) : null}
-      </label>
+          <input
+            value={phone}
+            onChange={(e) => {
+              setPhone(sanitizeBelarusPhoneInput(e.target.value));
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.phone;
+                delete next.contactReachability;
+                return next;
+              });
+            }}
+            className={sheetFieldClass}
+            placeholder="+375 29 000-00-00"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={19}
+          />
+          {submitAttempted && fieldErrors.phone ? (
+            <p className="mt-1.5 text-[12px] font-medium text-red-600">{fieldErrors.phone}</p>
+          ) : null}
+        </label>
 
-      <MasterProfileContactsBlock
-        rows={clientContacts}
-        onAdd={(type: ContactType) => {
-          if (!canAddContactChannel(clientContacts, type)) return;
-          setClientContacts((prev) => [
-            ...prev,
-            { id: newEntityId(), type, value: '' },
-          ]);
-        }}
-        onChange={(id, value) => {
-          setClientContacts((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
-          setFieldErrors((prev) => {
-            const next = { ...prev };
-            delete next[id];
-            delete next.contactReachability;
-            return next;
-          });
-        }}
-        onRemove={(id) => {
-          setClientContacts((prev) => prev.filter((r) => r.id !== id));
-        }}
-        onBlurRow={() => {}}
-        rowErrors={fieldErrors}
-        showRowError={(id) => submitAttempted && Boolean(fieldErrors[id])}
-      />
-      {submitAttempted && fieldErrors.contactReachability ? (
-        <p className="rounded-[18px] bg-[#FFF4E8] px-3 py-2 text-[12px] font-semibold leading-snug text-[#B66A24]">
-          {fieldErrors.contactReachability}
-        </p>
-      ) : null}
+        <div className="mt-4">
+          <MasterProfileContactsBlock
+            variant="catalog"
+            rows={clientContacts}
+            onAdd={(type: ContactType) => {
+              if (!canAddContactChannel(clientContacts, type)) return;
+              setClientContacts((prev) => [
+                ...prev,
+                { id: newEntityId(), type, value: '' },
+              ]);
+            }}
+            onChange={(id, value) => {
+              setClientContacts((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                delete next.contactReachability;
+                return next;
+              });
+            }}
+            onRemove={(id) => {
+              setClientContacts((prev) => prev.filter((r) => r.id !== id));
+            }}
+            onBlurRow={() => {}}
+            rowErrors={fieldErrors}
+            showRowError={(id) => submitAttempted && Boolean(fieldErrors[id])}
+          />
+          {submitAttempted && fieldErrors.contactReachability ? (
+            <p className="mt-2 rounded-[10px] bg-[#FFF4E8] px-3 py-2 text-[12px] font-semibold leading-snug text-[#B66A24]">
+              {fieldErrors.contactReachability}
+            </p>
+          ) : null}
+        </div>
 
-      <label className="block">
-        <span className={sheetLabelClass}>О себе</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={sheetFieldClass} />
-      </label>
+        <label className="mt-4 block">
+          <span className={sheetLabelClass}>О себе</span>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            className={`${sheetFieldClass} resize-none leading-relaxed`}
+          />
+        </label>
 
       <SheetFooter onCancel={onCancel} onSave={save} saving={saving} />
     </div>
@@ -549,6 +561,15 @@ export function SheetExperience({
 
 /** В кабинете город зафиксирован (MVP по Беларуси). */
 const MASTER_CABINET_CITY = 'Минск';
+
+function SheetFieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1.5 text-[12px] font-medium text-red-600">{message}</p>;
+}
+
+function SheetAddressSectionTitle({ children }: { children: ReactNode }) {
+  return <p className={`block ${sheetSectionTitleClass}`}>{children}</p>;
+}
 
 export function SheetAddress({
   draft,
@@ -600,6 +621,25 @@ export function SheetAddress({
   const [clientNote, setClientNote] = useState(loc.clientNote ?? '');
   const [lat, setLat] = useState<number | undefined>(loc.lat);
   const [lng, setLng] = useState<number | undefined>(loc.lng);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [mapScriptOk, setMapScriptOk] = useState(false);
+  const [addressPinnedToMap, setAddressPinnedToMap] = useState(
+    () =>
+      typeof loc.lat === 'number' &&
+      Number.isFinite(loc.lat) &&
+      typeof loc.lng === 'number' &&
+      Number.isFinite(loc.lng),
+  );
+
+  const clearFieldError = useCallback((key: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const l = draft.location;
@@ -618,21 +658,58 @@ export function SheetAddress({
     setClientNote(l.clientNote ?? '');
     setLat(l.lat);
     setLng(l.lng);
+    setFieldErrors({});
+    setSubmitAttempted(false);
+    setAddressPinnedToMap(
+      typeof l.lat === 'number' &&
+        Number.isFinite(l.lat) &&
+        typeof l.lng === 'number' &&
+        Number.isFinite(l.lng),
+    );
   }, [locationSyncFingerprint]);
 
-  const onStreetLineChange = useCallback((value: string) => {
-    if (value === '') {
-      setStreet('');
-      setBuilding('б/н');
-      return;
-    }
-    const { street: s, building: b } = splitReferenceLabelToStreetBuildingLenient(value);
-    setStreet(s);
-    setBuilding(b);
-  }, []);
+  const onStreetLineChange = useCallback(
+    (value: string) => {
+      setAddressPinnedToMap(false);
+      clearFieldError('street');
+      clearFieldError('coords');
+      if (value === '') {
+        setStreet('');
+        setBuilding('б/н');
+        return;
+      }
+      const { street: s, building: b } = splitReferenceLabelToStreetBuildingLenient(value);
+      setStreet(s);
+      setBuilding(b);
+    },
+    [clearFieldError],
+  );
+
+  const showErr = (key: string) => (submitAttempted ? fieldErrors[key] : undefined);
 
   const save = () => {
-    const isHome = visitType === 'at_home';
+    setSubmitAttempted(true);
+    const errs = validateMasterAddressForm(
+      {
+        visitType,
+        street,
+        salonName,
+        buildingDetail,
+        entrance,
+        floor,
+        room,
+        intercom,
+        landmark,
+        directions,
+        clientNote,
+        lat,
+        lng,
+      },
+      { mapScriptOk, addressPinnedToMap },
+    );
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     onSave({
       ...draft.location,
       visitType,
@@ -642,7 +719,7 @@ export function SheetAddress({
       salonName: !isHome ? salonName.trim() || undefined : undefined,
       buildingDetail: isHome ? buildingDetail.trim() || undefined : undefined,
       district: undefined,
-      showExactAddressAfterBooking: isHome ? showExactAddressAfterBooking : undefined,
+      showExactAddressAfterBooking: isHome ? showExactAddressAfterBooking === true : false,
       entrance: entrance.trim() || undefined,
       floor: floor.trim() || undefined,
       room: room.trim() || undefined,
@@ -661,17 +738,24 @@ export function SheetAddress({
 
   const roomLabel = visitType === 'at_home' ? 'Квартира / офис' : 'Кабинет';
   const visitTypeIconName = (vt: MasterVisitType): CabinetIconName => (vt === 'at_home' ? 'home' : 'building');
+  const isHome = visitType === 'at_home';
+
+  const addressFieldLabel = `block ${sheetLabelClass}`;
 
   return (
-    <div className="space-y-4">
-      <div className={sheetSectionClass}>
-        <AddressFieldLabel iconName={visitTypeIconName(visitType)}>Тип приёма</AddressFieldLabel>
-        <div className="mt-2 grid grid-cols-2 gap-2">
+    <div className="space-y-5">
+      <div>
+        <AdminSheetFieldLabel className={addressFieldLabel}>Тип приёма</AdminSheetFieldLabel>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5">
           {VISIT_TYPES.map((vt) => (
             <button
               key={vt}
               type="button"
-              onClick={() => setVisitType(vt)}
+              onClick={() => {
+                setVisitType(vt);
+                setFieldErrors({});
+                setSubmitAttempted(false);
+              }}
               className={`flex min-h-11 items-center justify-center gap-1.5 ${sheetSegmentClass(visitType === vt)}`}
             >
               <span className={visitType === vt ? 'text-white' : 'text-[#F47C8C]'}>
@@ -681,186 +765,237 @@ export function SheetAddress({
             </button>
           ))}
         </div>
-        <p className={`mt-2 ${sheetHintClass}`}>
-          {visitType === 'studio'
-            ? 'Салон или студия: название точки и метка у входа.'
-            : 'На дому: улица в каталоге, детали — после записи.'}
-        </p>
       </div>
 
-      <div className={`${sheetSectionClass} flex items-center gap-3`}>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF1F4] text-[#F47C8C]">
+      <div className="flex items-center gap-3 rounded-[12px] bg-[#EBEBEB] px-4 py-3.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF1F4] text-[#F47C8C]">
           <CabinetIcon name="map-pin" size={18} />
         </span>
-        <div className="min-w-0">
-          <p className={sheetSectionTitleClass}>Город</p>
+        <div className="min-w-0 flex-1">
+          <p className={sheetLabelClass}>Город</p>
           <p className="mt-0.5 text-[15px] font-semibold text-[#111827]">{MASTER_CABINET_CITY}</p>
         </div>
       </div>
 
       {visitType === 'studio' ? (
         <label className="block">
-          <AddressFieldLabel iconName="building">Название салона или студии</AddressFieldLabel>
+          <AdminSheetFieldLabel required className={addressFieldLabel}>
+            Название салона или студии
+          </AdminSheetFieldLabel>
           <input
             value={salonName}
-            onChange={(e) => setSalonName(e.target.value)}
+            onChange={(e) => {
+              setSalonName(e.target.value);
+              clearFieldError('salonName');
+            }}
             className={sheetFieldClass}
             placeholder="Например, Nail Studio"
           />
+          <SheetFieldError message={showErr('salonName')} />
         </label>
       ) : null}
 
-      <div className={`${sheetSectionClass} space-y-2 overflow-visible`}>
-        <AddressFieldLabel iconName="map-pin">Адрес на карте</AddressFieldLabel>
+      <div className="space-y-1.5 overflow-visible">
+        <AdminSheetFieldLabel required className={addressFieldLabel}>
+          Адрес на карте
+        </AdminSheetFieldLabel>
         {visitType === 'studio' ? (
           <p className={sheetHintClass}>Метка у входа в салон — так проще найти вас на месте.</p>
         ) : null}
-        <OnboardingAddressMap
-          key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
-          city={MASTER_CABINET_CITY}
-          visitType={visitType}
-          street={street}
-          onStreetChange={onStreetLineChange}
-          inputLabel="Адрес"
-          inputPlaceholder="Начните вводить — подсказки под полем. Точку можно уточнить на карте."
-          inputClassName={sheetFieldClass}
-          suppressSuggestUntilFocus
-          initialLat={lat ?? null}
-          initialLng={lng ?? null}
-          onPick={(res) => {
-            const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
-            setStreet(s);
-            setBuilding(b);
-            setLat(res.lat);
-            setLng(res.lng);
-          }}
-        />
+        <div className="overflow-hidden rounded-[12px]">
+          <OnboardingAddressMap
+            key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
+            city={MASTER_CABINET_CITY}
+            visitType={visitType}
+            street={street}
+            onStreetChange={onStreetLineChange}
+            inputLabel="Адрес"
+            inputPlaceholder="Начните вводить — подсказки под полем. Точку можно уточнить на карте."
+            inputClassName={sheetFieldClass}
+            suppressSuggestUntilFocus
+            initialLat={lat ?? null}
+            initialLng={lng ?? null}
+            inputError={showErr('street')}
+            coordsError={showErr('coords')}
+            onMapAvailabilityChange={setMapScriptOk}
+            onPick={(res) => {
+              const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
+              setStreet(s);
+              setBuilding(b);
+              setLat(res.lat);
+              setLng(res.lng);
+              setAddressPinnedToMap(true);
+              clearFieldError('street');
+              clearFieldError('coords');
+            }}
+          />
+        </div>
       </div>
 
       {visitType === 'at_home' ? (
-        <div className={sheetSectionClass}>
-          <AddressFieldLabel iconName="map-pin">Адрес в каталоге до записи</AddressFieldLabel>
-          <p className={sheetHintClass}>
-            Улица из поля выше видна всем. Корпус, подъезд, этаж и квартира — только в деталях ниже.
-          </p>
+        <div>
+          <AdminSheetFieldLabel className={addressFieldLabel}>Адрес в каталоге до записи</AdminSheetFieldLabel>
+
           <div
-            className="mt-3 grid grid-cols-2 gap-2"
+            className="mt-1.5 grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5"
             role="radiogroup"
             aria-label="Когда показывать полный адрес"
           >
-              <button
-                type="button"
-                role="radio"
-                aria-checked={!showExactAddressAfterBooking}
-                onClick={() => setShowExactAddressAfterBooking(false)}
-                className={sheetSegmentClass(!showExactAddressAfterBooking)}
-              >
-                Видно сразу
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={showExactAddressAfterBooking}
-                onClick={() => setShowExactAddressAfterBooking(true)}
-                className={sheetSegmentClass(showExactAddressAfterBooking)}
-              >
-                Только после записи
-              </button>
-            </div>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={!showExactAddressAfterBooking}
+              onClick={() => setShowExactAddressAfterBooking(false)}
+              className={sheetSegmentClass(!showExactAddressAfterBooking)}
+            >
+              Видно сразу
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={showExactAddressAfterBooking}
+              onClick={() => setShowExactAddressAfterBooking(true)}
+              className={sheetSegmentClass(showExactAddressAfterBooking)}
+            >
+              Только после записи
+            </button>
           </div>
+        </div>
       ) : null}
 
-      <div className={sheetSectionClass}>
-        <p className="text-[13px] font-semibold text-[#111827]">Как найти вас</p>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="space-y-3">
+        <div>
+          <SheetAddressSectionTitle>Как найти вас</SheetAddressSectionTitle>
+          {visitType === 'at_home' && showExactAddressAfterBooking ? (
+            <p className={`mt-1 ${sheetHintClass}`}>
+              Эти поля клиент увидит только после подтверждения записи.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {visitType === 'at_home' ? (
             <label className="block sm:col-span-2">
-              <AddressFieldLabel iconName={addressDetailIconName('корпус', visitType)}>
-                Корпус / строение
-              </AddressFieldLabel>
+              <AdminSheetFieldLabel className={addressFieldLabel}>Корпус / строение</AdminSheetFieldLabel>
               <input
                 value={buildingDetail}
-                onChange={(e) => setBuildingDetail(e.target.value)}
+                onChange={(e) => {
+                  setBuildingDetail(e.target.value);
+                  clearFieldError('buildingDetail');
+                }}
                 className={sheetFieldClass}
                 placeholder="При необходимости"
               />
+              <SheetFieldError message={showErr('buildingDetail')} />
             </label>
           ) : null}
 
           <label className="block">
-            <AddressFieldLabel iconName={addressDetailIconName('подъезд', visitType)}>Вход / подъезд</AddressFieldLabel>
+            <AdminSheetFieldLabel required={isHome} className={addressFieldLabel}>
+              Вход / подъезд
+            </AdminSheetFieldLabel>
             <input
               value={entrance}
-              onChange={(e) => setEntrance(e.target.value)}
+              onChange={(e) => {
+                setEntrance(e.target.value);
+                clearFieldError('entrance');
+              }}
               className={sheetFieldClass}
               placeholder="Например, 2"
             />
+            <SheetFieldError message={showErr('entrance')} />
           </label>
 
           <label className="block">
-            <AddressFieldLabel iconName={addressDetailIconName('этаж', visitType)}>Этаж</AddressFieldLabel>
+            <AdminSheetFieldLabel required={isHome} className={addressFieldLabel}>
+              Этаж
+            </AdminSheetFieldLabel>
             <input
               value={floor}
-              onChange={(e) => setFloor(e.target.value)}
+              onChange={(e) => {
+                setFloor(e.target.value);
+                clearFieldError('floor');
+              }}
               className={sheetFieldClass}
               placeholder="Например, 5"
             />
+            <SheetFieldError message={showErr('floor')} />
           </label>
 
           <label className="block">
-            <AddressFieldLabel iconName={addressDetailIconName(roomLabel, visitType)}>{roomLabel}</AddressFieldLabel>
+            <AdminSheetFieldLabel required={isHome} className={addressFieldLabel}>
+              {roomLabel}
+            </AdminSheetFieldLabel>
             <input
               value={room}
-              onChange={(e) => setRoom(e.target.value)}
+              onChange={(e) => {
+                setRoom(e.target.value);
+                clearFieldError('room');
+              }}
               className={sheetFieldClass}
               placeholder={visitType === 'at_home' ? 'Например, 42' : 'Например, 3'}
             />
+            <SheetFieldError message={showErr('room')} />
           </label>
 
           <label className="block">
-            <AddressFieldLabel iconName={addressDetailIconName('домофон', visitType)}>
+            <AdminSheetFieldLabel required={isHome} className={addressFieldLabel}>
               Домофон / ресепшен
-            </AddressFieldLabel>
+            </AdminSheetFieldLabel>
             <input
               value={intercom}
-              onChange={(e) => setIntercom(e.target.value)}
+              onChange={(e) => {
+                setIntercom(e.target.value);
+                clearFieldError('intercom');
+              }}
               className={sheetFieldClass}
               placeholder="Код или «на ресепшене»"
             />
+            <SheetFieldError message={showErr('intercom')} />
           </label>
 
           <label className="block sm:col-span-2">
-            <AddressFieldLabel iconName={addressDetailIconName('ориентир', visitType)}>Ориентир</AddressFieldLabel>
+            <AdminSheetFieldLabel className={addressFieldLabel}>Ориентир</AdminSheetFieldLabel>
             <input
               value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
+              onChange={(e) => {
+                setLandmark(e.target.value);
+                clearFieldError('landmark');
+              }}
               className={sheetFieldClass}
               placeholder="Рядом с метро, ТЦ…"
             />
+            <SheetFieldError message={showErr('landmark')} />
           </label>
 
           <label className="block sm:col-span-2">
-            <AddressFieldLabel iconName={addressDetailIconName('как пройти', visitType)}>Как пройти</AddressFieldLabel>
+            <AdminSheetFieldLabel className={addressFieldLabel}>Как пройти</AdminSheetFieldLabel>
             <textarea
               value={directions}
-              onChange={(e) => setDirections(e.target.value)}
+              onChange={(e) => {
+                setDirections(e.target.value);
+                clearFieldError('directions');
+              }}
               rows={3}
               className={`${sheetFieldClass} resize-none leading-relaxed`}
               placeholder="От метро налево, второй подъезд…"
             />
+            <SheetFieldError message={showErr('directions')} />
           </label>
 
           <label className="block sm:col-span-2">
-            <AddressFieldLabel iconName={addressDetailIconName('комментарий', visitType)}>
-              Комментарий для клиента
-            </AddressFieldLabel>
+            <AdminSheetFieldLabel className={addressFieldLabel}>Комментарий для клиента</AdminSheetFieldLabel>
             <textarea
               value={clientNote}
-              onChange={(e) => setClientNote(e.target.value)}
+              onChange={(e) => {
+                setClientNote(e.target.value);
+                clearFieldError('clientNote');
+              }}
               rows={2}
               className={`${sheetFieldClass} resize-none leading-relaxed`}
-              placeholder="Необязательно"
+              placeholder="Например: домофон не работает — позвоните заранее"
             />
+            <SheetFieldError message={showErr('clientNote')} />
           </label>
         </div>
       </div>
@@ -984,7 +1119,6 @@ export function SheetCertificate({
   onCancel: () => void;
   uploadImage?: (file: File) => Promise<string>;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const list = draft.certificates ?? [];
   const existing = certificateId ? list.find((c) => c.id === certificateId) : undefined;
   const [title, setTitle] = useState(existing?.title ?? '');
@@ -1064,11 +1198,11 @@ export function SheetCertificate({
   return (
     <div className="space-y-4">
       <label className="block">
-        <span className={sheetLabelClass}>Название сертификата *</span>
+        <AdminSheetFieldLabel required>Название сертификата</AdminSheetFieldLabel>
         <input value={title} onChange={(e) => setTitle(e.target.value)} className={sheetFieldClass} />
       </label>
       <label className="block">
-        <span className={sheetLabelClass}>Школа / организация *</span>
+        <AdminSheetFieldLabel required>Школа / организация</AdminSheetFieldLabel>
         <input value={issuer} onChange={(e) => setIssuer(e.target.value)} className={sheetFieldClass} />
       </label>
       <label className="block">
@@ -1080,24 +1214,17 @@ export function SheetCertificate({
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={sheetFieldClass} />
       </label>
 
-      <div className={sheetSectionClass}>
-        <p className={sheetLabelClass}>Фото сертификата</p>
-        <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={uploadingImage} />
-        {imageUrl ? (
-          <div className="mt-3 overflow-hidden rounded-[22px] bg-white">
-            <img src={imageUrl} alt="" className="max-h-48 w-full object-contain" decoding="async" />
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadingImage}
-          className={`mt-3 ${sheetOutlineBtnClass}`}
-        >
-          {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
-        </button>
-        {uploadErr ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{uploadErr}</p> : null}
-      </div>
+      <SheetImageUploadField
+        label="Фото сертификата"
+        imageUrl={imageUrl}
+        aspectClass="aspect-[4/3]"
+        imageClass="h-full w-full object-contain p-2"
+        onFileChange={onFile}
+        disabled={uploadingImage}
+        pickLabel="Загрузить фото"
+        replaceLabel="Сменить"
+        uploadErr={uploadErr}
+      />
 
       <SheetFooter
         onCancel={onCancel}
@@ -1122,7 +1249,6 @@ export function SheetPortfolio({
   onCancel: () => void;
   uploadImage?: (file: File) => Promise<string>;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const list = draft.portfolio ?? [];
   const existing = itemId ? list.find((p) => p.id === itemId) : undefined;
   const [title, setTitle] = useState(existing?.title ?? '');
@@ -1202,25 +1328,17 @@ export function SheetPortfolio({
 
   return (
     <div className="space-y-4">
-      <div className={`${sheetSectionClass} ${fieldErrors.image ? 'ring-2 ring-red-300/80' : ''}`}>
-        <p className={sheetLabelClass}>Фото работы *</p>
-        <input ref={fileInputRef} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={uploadingImage} />
-        {imageUrl ? (
-          <div className="mt-3 overflow-hidden rounded-[22px] bg-white">
-            <img src={imageUrl} alt="" className="aspect-square w-full object-cover" decoding="async" />
-          </div>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadingImage}
-          className={`mt-3 ${sheetOutlineBtnClass}`}
-        >
-          {imageUrl ? 'Заменить фото' : 'Загрузить фото'}
-        </button>
-        {uploadErr ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{uploadErr}</p> : null}
-        {fieldErrors.image ? <p className="mt-2 text-center text-[12px] font-medium text-red-600">{fieldErrors.image}</p> : null}
-      </div>
+      <SheetImageUploadField
+        label="Фото работы"
+        required
+        imageUrl={imageUrl}
+        onFileChange={onFile}
+        disabled={uploadingImage}
+        pickLabel="Загрузить фото"
+        replaceLabel="Сменить"
+        uploadErr={uploadErr}
+        fieldError={fieldErrors.image}
+      />
 
       <label className="block">
         <span className={`flex items-baseline justify-between gap-2 ${sheetLabelClass}`}>
@@ -1314,21 +1432,23 @@ export function SheetDeleteConfirm({
   };
 
   return (
-    <div className="space-y-4 pb-1">
+    <div className="space-y-4">
       <p className="text-[15px] leading-relaxed text-[#6B7280]">{text}</p>
-      <div className="flex gap-3">
-        <button type="button" onClick={onBack} disabled={submitting} className={sheetCancelBtnClass}>
-          Назад
-        </button>
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={handleDelete}
-          className="flex min-h-12 flex-1 items-center justify-center rounded-[17px] bg-red-500 px-4 text-[15px] font-semibold text-white shadow-[0_8px_24px_rgba(239,68,68,0.28)] transition hover:bg-red-600 active:scale-[0.99] disabled:opacity-50"
-        >
-          {submitting ? 'Удаление…' : deleteLabel}
-        </button>
-      </div>
+      <AdminSheetFixedFooter>
+        <div className="flex w-full gap-3">
+          <button type="button" onClick={onBack} disabled={submitting} className={sheetCancelBtnClass}>
+            Назад
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleDelete}
+            className="flex min-h-11 flex-1 items-center justify-center rounded-[10px] bg-red-500 px-4 text-[15px] font-semibold text-white transition hover:bg-red-600 active:scale-[0.98] disabled:opacity-50"
+          >
+            {submitting ? 'Удаление…' : deleteLabel}
+          </button>
+        </div>
+      </AdminSheetFixedFooter>
     </div>
   );
 }

@@ -1,11 +1,12 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ADMIN_SCHEDULE_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import type { MasterCareerItemType, MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { normalizeMasterCareerItemType } from '../../../features/profile/lib/demoMasterStorage';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { AdminCabinetStatusBanner } from '../AdminLayout';
+import { AdminSheetFooterSlotProvider } from '../shared/adminSheetFooterSlot';
+import { AdminCabinetStatusBanner } from '../AdminCabinetStatusBanner';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { AdminNotificationsBanner } from '../notifications/AdminNotificationsBanner';
 import { useAdminMasterDraft } from '../useAdminMasterData';
@@ -38,8 +39,12 @@ import { RulesSection, SheetRules } from './AdminProfileRulesUi';
 import { useSingleFlight } from '../shared/useSingleFlight';
 import { AddressSection } from './AdminProfileAddressUi';
 import { MasterBookingLinkCard } from './MasterBookingLinkCard';
+import { MasterCategorySection } from './MasterCategorySection';
+import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
 import { TrustSection } from './AdminProfilePortfolioUi';
+import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import {
+  cabinetCard,
   sheetChipClass,
   sheetFieldClass,
   sheetLabelClass,
@@ -53,7 +58,6 @@ import {
   ScheduleWorkCard,
 } from './AdminProfileCabinetUi';
 import { ProfileCompletionBlock } from './ProfileCompletionBlock';
-import { ProfileSectionTabs } from './ProfileSectionTabs';
 import { useProfileTabs } from './profileTabContext';
 import { AdminProfileDesktopShell } from './AdminProfileDesktopView';
 
@@ -162,15 +166,19 @@ function MainSection({
 }) {
   const navigate = useNavigate();
   const { setActiveSection } = useProfileTabs();
+  const {
+    publicationStatus,
+    categoryChangePolicy,
+    patchProfileToBackend,
+    refreshDraft,
+    useCabinetApi: cabinetApi,
+  } = useAdminMasterCabinet();
 
   return (
     <div className="space-y-4">
-      <MasterBookingLinkCard draft={draft} cabinetLoading={cabinetLoading} useCabinetApi={useCabinetApi} />
-      <MainInfoCard draft={draft} onEdit={onEditMain} />
-      <AboutCard description={draft.description} />
-      <ScheduleWorkCard draft={draft} onEditSchedule={onEditSchedule} />
       <ProfileCompletionBlock
         draft={draft}
+        surfaceClassName={`${cabinetCard} p-4 sm:p-5 lg:p-[18px]`}
         handlers={{
           onEditMain,
           onGoServices,
@@ -179,6 +187,23 @@ function MainSection({
           onGoPortfolio: () => setActiveSection('portfolio'),
           onGoRules: () => setActiveSection('rules'),
         }}
+      />
+      <MasterBookingLinkCard draft={draft} cabinetLoading={cabinetLoading} useCabinetApi={useCabinetApi} />
+      <MasterProfileActiveToggle
+        publicationStatus={publicationStatus}
+        useCabinetApi={Boolean(cabinetApi)}
+        masterDisplayName={draft.name}
+      />
+      <MainInfoCard draft={draft} onEdit={onEditMain} />
+      <AboutCard description={draft.description} />
+      <ScheduleWorkCard draft={draft} onEditSchedule={onEditSchedule} />
+      <MasterCategorySection
+        draft={draft}
+        publicationStatus={publicationStatus}
+        policy={categoryChangePolicy}
+        useCabinetApi={Boolean(cabinetApi)}
+        onPatchCategory={patchProfileToBackend}
+        onRefresh={refreshDraft}
       />
     </div>
   );
@@ -257,7 +282,7 @@ function CareerSheet({
       </div>
 
       <label className="block">
-        <span className={sheetLabelClass}>Название *</span>
+        <AdminSheetFieldLabel required>Название</AdminSheetFieldLabel>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
@@ -267,7 +292,7 @@ function CareerSheet({
       </label>
 
       <label className="block">
-        <span className={sheetLabelClass}>Место / организация *</span>
+        <AdminSheetFieldLabel required>Место / организация</AdminSheetFieldLabel>
         <input
           value={place}
           onChange={(event) => setPlace(event.target.value)}
@@ -435,15 +460,9 @@ function AdminProfileReadView({
   return (
     <>
       <div className="lg:hidden">
-        <CabinetProfileHero
-          draft={draft}
-          stats={stats}
-          bottomSlot={
-            <ProfileSectionTabs active={activeSection} onChange={setActiveSection} />
-          }
-        />
+        <CabinetProfileHero draft={draft} stats={stats} />
         <AdminCabinetStatusBanner />
-        <div className="space-y-4 px-4 pt-4">{section}</div>
+        <div className="space-y-4 pt-4">{section}</div>
       </div>
 
       <AdminProfileDesktopShell
@@ -498,6 +517,7 @@ export function AdminProfileSection() {
   const { setActiveSection } = useProfileTabs();
   const { useCabinetApi, cabinetLoading, appointments } = useAdminMasterCabinet();
   const [sheet, setSheet] = useState<ProfileSheet>(null);
+  const [sheetFooter, setSheetFooter] = useState<ReactNode>(null);
   const [sheetApiError, setSheetApiError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
 
@@ -566,9 +586,6 @@ export function AdminProfileSection() {
           contact: next.contact,
           contacts: next.contacts,
           photoUrl: next.photoUrl,
-          category: next.category,
-          primaryCategoryId: next.primaryCategoryId,
-          primaryCategoryCode: next.primaryCategoryCode,
         });
         if (useCabinetApi) await refreshDraft();
         closeSheet();
@@ -1024,13 +1041,21 @@ export function AdminProfileSection() {
           </div>
         ) : null}
 
-        <AdminBottomSheet open={sheet != null} onClose={closeSheet} title={sheetTitle(sheet)}>
-          {sheetApiError ? (
-            <p className="mb-3 rounded-[16px] bg-red-50 px-3 py-2 text-[14px] font-medium text-red-600 ring-1 ring-red-100">
-              {sheetApiError}
-            </p>
-          ) : null}
-          {sheetBody}
+        <AdminBottomSheet
+          open={sheet != null}
+          onClose={closeSheet}
+          variant="catalog"
+          title={sheetTitle(sheet)}
+          footer={sheetFooter}
+        >
+          <AdminSheetFooterSlotProvider onSlotChange={setSheetFooter}>
+            {sheetApiError ? (
+              <p className="mb-3 rounded-[16px] bg-red-50 px-3 py-2 text-[14px] font-medium text-red-600 ring-1 ring-red-100">
+                {sheetApiError}
+              </p>
+            ) : null}
+            {sheetBody}
+          </AdminSheetFooterSlotProvider>
         </AdminBottomSheet>
       </section>
     </CabinetPageShell>

@@ -1,29 +1,81 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import {
   adminFormSheetSection,
+  adminFormSheetSectionCatalog,
   adminFormSheetSectionHint,
+  adminFormSheetSectionHintCatalog,
   adminFormSheetSectionTitle,
+  adminFormSheetSectionTitleCatalog,
   adminFormSheetHighlight,
+  adminFormSheetMetricCatalog,
 } from './adminFormSheetTheme';
-import { adminSheetBodyPad, adminSheetStepperRail } from './adminCabinetSheetTheme';
+import { adminSheetBodyPad } from './adminCabinetSheetTheme';
+
+const STEPPER_CIRCLE =
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition sm:h-10 sm:w-10';
+
+function stepperCircleClass(active: boolean, done: boolean): string {
+  if (active || done) return 'bg-[#F47C8C] text-white';
+  return 'bg-[#EBEBEB] text-[#6B7280]';
+}
+
+function stepperLabelClass(active: boolean, done: boolean): string {
+  if (active) return 'font-bold text-[#111827]';
+  if (done) return 'font-semibold text-[#6B7280]';
+  return 'font-medium text-[#9CA3AF]';
+}
 
 type StepperProps = {
   step: number;
   steps: readonly string[];
-  /** `header` — в шапке модалки, подписи шагов всегда видны, без «шаг N из M». */
-  variant?: 'rail' | 'header';
+  /** `catalog` — розовый/серый степпер с пунктиром и подписями (кабинет). */
+  variant?: 'rail' | 'header' | 'catalog';
 };
 
 export function AdminFormSheetStepper({ step, steps, variant = 'rail' }: StepperProps) {
-  const inHeader = variant === 'header';
+  const isCatalog = variant === 'catalog';
+  const inHeader = variant === 'header' || isCatalog;
+
+  if (isCatalog) {
+    return (
+      <div className="w-full" role="navigation" aria-label="Шаги формы">
+        <div className="flex w-full items-start">
+          {steps.map((label, index) => {
+            const done = index < step;
+            const active = index === step;
+
+            return (
+              <Fragment key={label}>
+                {index > 0 ? (
+                  <div
+                    className="mt-[18px] h-px min-w-2 flex-1 border-t border-dashed border-[#D1D5DB] sm:mt-5"
+                    aria-hidden
+                  />
+                ) : null}
+                <div className="flex min-w-0 max-w-[4.75rem] shrink-0 flex-col items-center gap-1.5 sm:max-w-none sm:flex-1">
+                  <div
+                    className={`${STEPPER_CIRCLE} ${stepperCircleClass(active, done)}`}
+                    aria-current={active ? 'step' : undefined}
+                  >
+                    {done ? '✓' : index + 1}
+                  </div>
+                  <span
+                    className={`w-full text-center text-[10px] leading-tight sm:text-[11px] ${stepperLabelClass(active, done)}`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={inHeader ? 'w-full' : undefined}
-      role="navigation"
-      aria-label="Шаги формы"
-    >
-      <div className={`flex gap-2 ${inHeader ? 'gap-3' : 'lg:gap-3'}`}>
+    <div className="w-full" role="navigation" aria-label="Шаги формы">
+      <div className={`flex w-full items-start ${inHeader ? 'gap-3' : 'gap-2 lg:gap-3'}`}>
         {steps.map((label, index) => {
           const done = index < step;
           const active = index === step;
@@ -32,59 +84,58 @@ export function AdminFormSheetStepper({ step, steps, variant = 'rail' }: Stepper
           return (
             <div key={label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
               <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-black transition sm:h-10 sm:w-10 ${
-                  inHeader ? 'lg:h-11 lg:w-11 lg:text-[14px]' : 'lg:h-11 lg:w-11 lg:text-[14px]'
-                } ${
-                  reached
-                    ? 'bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_8px_22px_rgba(255,95,122,0.38)]'
-                    : 'bg-[#EAECEF] text-[#9CA3AF]'
-                } ${active ? 'ring-2 ring-[#ff5f7a]/30 ring-offset-2 ring-offset-white' : ''}`}
+                className={`${STEPPER_CIRCLE} lg:h-11 lg:w-11 lg:text-[14px] ${reached ? 'bg-[#F47C8C] text-white' : 'bg-[#EBEBEB] text-[#9CA3AF]'}`}
                 aria-current={active ? 'step' : undefined}
                 title={label}
               >
                 {done ? '✓' : index + 1}
               </div>
               <span
-                className={`w-full truncate text-center text-[11px] font-bold leading-tight ${
+                className={`w-full truncate text-center text-[11px] font-semibold leading-tight ${
                   inHeader ? 'block' : 'hidden lg:block'
-                } ${active ? 'text-[#ff5f7a]' : reached ? 'text-[#374151]' : 'text-[#9CA3AF]'}`}
+                } ${active ? 'text-[#F47C8C]' : reached ? 'text-[#374151]' : 'text-[#9CA3AF]'}`}
               >
                 {label}
               </span>
-              {!inHeader ? (
-                <div
-                  className={`h-1 w-full rounded-full transition lg:hidden ${
-                    reached ? 'bg-[#ff5f7a]' : 'bg-[#EAECEF]'
-                  }`}
-                  aria-hidden
-                />
-              ) : null}
             </div>
           );
         })}
       </div>
-      {!inHeader ? (
-        <p className="mt-3 text-center text-[12px] font-semibold text-[#9CA3AF] lg:mt-4 lg:text-left lg:text-[13px]">
-          <span className="font-bold text-[#111827]">{steps[step]}</span>
-          <span className="text-[#D1D5DB]"> · </span>
-          шаг {step + 1} из {steps.length}
-        </p>
-      ) : null}
     </div>
   );
 }
 
 type Metric = { label: string; value: ReactNode };
 
-export function AdminFormSheetMetrics({ items }: { items: Metric[] }) {
+export function AdminFormSheetMetrics({
+  items,
+  variant = 'default',
+}: {
+  items: Metric[];
+  variant?: 'default' | 'catalog';
+}) {
+  const isCatalog = variant === 'catalog';
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3">
       {items.map((item) => (
-        <div key={item.label} className={adminFormSheetHighlight}>
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+        <div key={item.label} className={isCatalog ? adminFormSheetMetricCatalog : adminFormSheetHighlight}>
+          <p
+            className={
+              isCatalog
+                ? 'text-[12px] font-medium text-[#6B7280]'
+                : 'text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]'
+            }
+          >
             {item.label}
           </p>
-          <div className="mt-2 text-[clamp(1.25rem,2.2vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827]">
+          <div
+            className={
+              isCatalog
+                ? 'mt-1 text-[18px] font-bold tabular-nums leading-none tracking-[-0.04em] text-[#111827]'
+                : 'mt-2 text-[clamp(1.25rem,2.2vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827]'
+            }
+          >
             {item.value}
           </div>
         </div>
@@ -98,15 +149,27 @@ type SectionProps = {
   description?: string;
   children: ReactNode;
   className?: string;
+  variant?: 'default' | 'catalog';
 };
 
-export function AdminFormSheetSection({ title, description, children, className = '' }: SectionProps) {
+export function AdminFormSheetSection({
+  title,
+  description,
+  children,
+  className = '',
+  variant = 'default',
+}: SectionProps) {
+  const isCatalog = variant === 'catalog';
+  const shell = isCatalog ? adminFormSheetSectionCatalog : adminFormSheetSection;
+  const titleClass = isCatalog ? adminFormSheetSectionTitleCatalog : adminFormSheetSectionTitle;
+  const hintClass = isCatalog ? adminFormSheetSectionHintCatalog : adminFormSheetSectionHint;
+
   return (
-    <section className={`${adminFormSheetSection} ${className}`.trim()}>
+    <section className={`${shell} ${className}`.trim()}>
       {title || description ? (
-        <header className="mb-4 lg:mb-5">
-          {title ? <h3 className={adminFormSheetSectionTitle}>{title}</h3> : null}
-          {description ? <p className={adminFormSheetSectionHint}>{description}</p> : null}
+        <header className={isCatalog ? 'mb-3' : 'mb-4 lg:mb-5'}>
+          {title ? <h3 className={titleClass}>{title}</h3> : null}
+          {description ? <p className={hintClass}>{description}</p> : null}
         </header>
       ) : null}
       {children}
@@ -115,21 +178,11 @@ export function AdminFormSheetSection({ title, description, children, className 
 }
 
 type LayoutProps = {
-  step?: number;
-  steps?: readonly string[];
   children: ReactNode;
 };
 
-export function AdminFormSheetLayout({ step, steps, children }: LayoutProps) {
+export function AdminFormSheetLayout({ children }: LayoutProps) {
   return (
-    <div className="flex min-h-0 flex-col">
-      {steps != null && step != null ? (
-        <div className={adminSheetStepperRail}>
-          <AdminFormSheetStepper step={step} steps={steps} />
-        </div>
-      ) : null}
-
-      <div className={`${adminSheetBodyPad} space-y-5 lg:space-y-6`}>{children}</div>
-    </div>
+    <div className={`${adminSheetBodyPad} space-y-5 lg:space-y-6`}>{children}</div>
   );
 }

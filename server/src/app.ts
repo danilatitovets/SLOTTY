@@ -3,6 +3,7 @@ import cors from 'cors';
 import { corsOptions } from './config/cors.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFound } from './middlewares/notFound.js';
+import { requestIdMiddleware } from './middlewares/requestId.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { profilesRouter } from './modules/profiles/profiles.routes.js';
@@ -16,10 +17,14 @@ import { reviewsRouter } from './modules/reviews/reviews.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { telegramWebhookRouter } from './modules/telegram/telegram.webhook.routes.js';
 import { publicRouter } from './modules/public/public.routes.js';
+import { platformAdminRouter } from './modules/platform-admin/platformAdmin.routes.js';
+import { resolveTrustProxySetting } from './lib/clientIp.js';
 
 export function createApp() {
   const app = express();
-  app.set('trust proxy', 1);
+  const trustProxy = resolveTrustProxySetting();
+  app.set('trust proxy', trustProxy);
+  app.use(requestIdMiddleware);
   app.use(cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
 
@@ -37,6 +42,7 @@ export function createApp() {
   api.use('/masters', mastersRouter);
   api.use('/slots', slotsPublicRouter);
   api.use('/billing', billingRouter);
+  api.use('/platform-admin', platformAdminRouter);
   api.use('/telegram/webhook', telegramWebhookRouter);
 
   app.use('/api', api);

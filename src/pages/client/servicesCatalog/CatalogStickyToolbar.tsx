@@ -8,7 +8,10 @@ import {
   catalogStickyToolbarClass,
 } from './servicesCatalogTheme';
 import { CatalogSectionTabs } from './CatalogSectionTabs';
-import { CLIENT_STICKY_BELOW_MOBILE_HEADER } from '../clientNavConstants';
+import {
+  CLIENT_STICKY_BELOW_CATALOG_PAGE_HEADER,
+  CLIENT_STICKY_BELOW_MOBILE_HEADER,
+} from '../clientNavConstants';
 
 type Props = {
   search: string;
@@ -22,6 +25,10 @@ type Props = {
   activeFilterCount?: number;
   /** false на десктопе — sticky на внешней обёртке */
   sticky?: boolean;
+  /** true — каталог без pill ClientHeader, sticky под CatalogMobilePageToolbar */
+  belowPageToolbar?: boolean;
+  /** Контент под панелью поиска — вне sticky (гео-баннер и т.п.) */
+  afterSticky?: ReactNode;
   /** Компактнее padding — страница категории и т.п. */
   compact?: boolean;
   showResultCount?: boolean;
@@ -39,13 +46,22 @@ export function CatalogStickyToolbar({
   onFilterClick,
   activeFilterCount = 0,
   sticky = true,
+  belowPageToolbar = false,
+  afterSticky,
   compact = false,
   showResultCount = true,
   showSearchButton = false,
 }: Props) {
-  const stickyClass = sticky
-    ? `${catalogStickyToolbarClass} ${CLIENT_STICKY_BELOW_MOBILE_HEADER} z-30 ${compact ? 'pb-2 pt-0' : 'pb-3 pt-1'}`
-    : compact ? 'pb-2 pt-0' : 'pb-3 pt-0';
+  /** С belowPageToolbar поиск/чипы не липнут — только шапка страницы sticky. */
+  const effectiveSticky = sticky && !belowPageToolbar;
+  const stickyTop = belowPageToolbar
+    ? CLIENT_STICKY_BELOW_CATALOG_PAGE_HEADER
+    : CLIENT_STICKY_BELOW_MOBILE_HEADER;
+  const stickyClass = effectiveSticky
+    ? `${catalogStickyToolbarClass} ${stickyTop} z-30 ${compact ? 'pb-2 pt-0' : 'pb-3 pt-1'}`
+    : compact
+      ? 'pb-2 pt-0'
+      : 'pb-3 pt-0';
 
   const panelPad = compact ? 'px-3.5 py-2.5 lg:px-4 lg:py-3' : 'px-4 py-4 lg:px-6 lg:pt-5 lg:pb-5';
   const searchH = compact ? 'h-9' : 'h-11';
@@ -55,13 +71,14 @@ export function CatalogStickyToolbar({
   const searchPl = compact ? 'pl-9' : 'pl-11';
 
   return (
-    <div className={`${stickyClass} ${className}`}>
-      <header className={`${catalogDesktopPanel} ${panelPad}`}>
-        <CatalogSectionTabs className="hidden lg:flex" compact={compact} />
+    <div className={`${belowPageToolbar ? 'mt-2' : ''} ${className}`.trim()}>
+      <div className={stickyClass}>
+        <header className={`${catalogDesktopPanel} ${panelPad}`}>
+          <CatalogSectionTabs className="hidden lg:flex" compact={compact} />
 
-        {children ? <div className={compact ? 'mt-1.5 lg:mt-2' : 'mt-0 lg:mt-3'}>{children}</div> : null}
+          {children ? <div className={compact ? 'mt-1.5 lg:mt-2' : 'mt-0 lg:mt-3'}>{children}</div> : null}
 
-        <div className={`flex w-full items-center gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
+          <div className={`flex w-full items-center gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Поиск</span>
             <HiMagnifyingGlass
@@ -118,8 +135,13 @@ export function CatalogStickyToolbar({
               ) : null}
             </button>
           ) : null}
-        </div>
-      </header>
+          </div>
+        </header>
+      </div>
+
+      {afterSticky ? (
+        <div className="relative z-0 mt-3 max-lg:static lg:mt-4">{afterSticky}</div>
+      ) : null}
     </div>
   );
 }

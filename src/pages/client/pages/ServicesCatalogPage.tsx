@@ -18,10 +18,11 @@ import {
 import { ServicesCatalogDesktop } from '../servicesCatalog/ServicesCatalogDesktop';
 import { ServicesCatalogFiltersSheet } from '../servicesCatalog/ServicesCatalogFiltersSheet';
 import { ServicesCatalogResults } from '../servicesCatalog/ServicesCatalogResults';
+import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
 import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
 import { ServicesCatalogViewTabs } from '../servicesCatalog/ServicesCatalogViewTabs';
 import { catalogCanvasClass, catalogDesktopPanel } from '../servicesCatalog/servicesCatalogTheme';
-import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../clientNavConstants';
+import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
 
 export function ServicesCatalogPage() {
   const [searchParams] = useSearchParams();
@@ -113,10 +114,13 @@ export function ServicesCatalogPage() {
         {...resultsProps}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_HEADER_OFFSET}`}>
-        <div className="mx-auto w-full max-w-lg px-4 pt-1 sm:px-5">
+      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
+        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
+          <CatalogMobilePageToolbar title="Услуги" />
           <CatalogStickyToolbar
             compact
+            belowPageToolbar
+            sticky={false}
             search={search}
             onSearchChange={setSearch}
             searchPlaceholder="Маникюр, стрижка, брови, массаж…"
@@ -148,6 +152,7 @@ export function ServicesCatalogPage() {
       <ServicesCatalogFiltersSheet
         open={filterOpen}
         draft={filterDraft}
+        resultCount={filtered.length}
         onChange={setFilterDraft}
         onClose={() => setFilterOpen(false)}
         onApply={() => {

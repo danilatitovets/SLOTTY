@@ -19,7 +19,7 @@ type MasterCareerItem = {
   description?: string;
 };
 
-const trustSectionCard = `${cabinetCard} p-[18px] shadow-[0_8px_32px_rgba(17,24,39,0.05)]`;
+const trustSectionCard = `${cabinetCard} p-5 sm:p-[18px]`;
 
 const trustAddBtn =
   'mt-4 flex min-h-12 w-full items-center justify-center gap-1.5 rounded-[17px] border border-[#FDE8ED] bg-white text-[15px] font-semibold text-[#F47C8C] transition hover:bg-[#FFF1F4] active:bg-[#FFF1F4] active:scale-[0.99]';
@@ -122,8 +122,8 @@ function SheetActionRow({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex min-h-12 w-full items-center gap-3 rounded-[17px] px-3.5 transition active:scale-[0.99] disabled:opacity-45 ${
-        isDanger ? 'bg-[#FFF1F4] active:bg-[#FFE4EA]' : 'bg-[#F7F7F8] active:bg-[#F3F4F6]'
+      className={`flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3.5 transition active:scale-[0.99] disabled:opacity-45 ${
+        isDanger ? 'bg-[#FFF1F4] active:bg-[#FFE4EA]' : 'bg-[#EBEBEB] active:bg-[#E4E4E4]'
       }`}
     >
       <span
@@ -165,11 +165,11 @@ function CardOverflowMenu({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#111827] shadow-[0_4px_14px_rgba(17,24,39,0.12)] transition active:scale-[0.95]"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-[#111827] transition hover:bg-[#EBEBEB] active:scale-[0.95]"
       >
         <CabinetIcon name="more" size={20} />
       </button>
-      <AdminBottomSheet open={open} onClose={close} title={sheetTitle}>
+      <AdminBottomSheet open={open} onClose={close} variant="catalog" title={sheetTitle}>
         <div className="flex flex-col gap-2 pb-1" role="menu" aria-label={sheetTitle}>
           {items.map((item) => (
             <SheetActionRow
@@ -313,11 +313,19 @@ function PortfolioWorkDetailSheet({
   const description = item.description?.trim() ?? '';
 
   return (
-    <AdminBottomSheet open={open} onClose={onClose} title="Работа">
+    <AdminBottomSheet open={open} onClose={onClose} variant="catalog" title="Работа">
       <div className="space-y-4 pb-1">
-        <div className="overflow-hidden rounded-[20px] bg-[#F3F4F6]">
+        <div className="overflow-hidden rounded-[12px] bg-[#EBEBEB]">
           {imageUrl ? (
-            <img src={imageUrl} alt="" className="aspect-[4/5] w-full object-cover" decoding="async" />
+            <div className="relative aspect-[4/5] w-full">
+              <img
+                src={imageUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+                decoding="async"
+              />
+            </div>
           ) : (
             <div className="flex aspect-[4/5] w-full items-center justify-center text-[#9CA3AF]">
               <CabinetIcon name="photo" size={48} />
@@ -402,7 +410,7 @@ function PortfolioWorkCard({
   const title = item.title?.trim() || 'Без названия';
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[20px] bg-[#FAFAFA] shadow-[0_4px_16px_rgba(17,24,39,0.05)]">
+    <article className="flex h-full flex-col overflow-hidden rounded-[16px] bg-[#F5F5F5]">
       <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-t-[20px] bg-[#F3F4F6]">
         <button
           type="button"
@@ -414,7 +422,7 @@ function PortfolioWorkCard({
             <ImageReveal
               src={imageUrl}
               alt=""
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center"
               loading={index < 4 ? 'eager' : 'lazy'}
               fetchPriority={index < 2 ? 'high' : 'low'}
             />
@@ -600,7 +608,7 @@ export function TrustSection({
                 return (
                   <article
                     key={certificate.id}
-                    className="relative flex w-[min(72vw,11.5rem)] shrink-0 snap-start flex-col rounded-[20px] bg-[#FAFAFA] p-3 shadow-[0_4px_16px_rgba(17,24,39,0.05)]"
+                    className="relative flex w-[min(72vw,11.5rem)] shrink-0 snap-start flex-col rounded-[16px] bg-[#F5F5F5] p-3"
                   >
                     <div className="absolute right-2 top-2 z-10">
                       <CardOverflowMenu
@@ -628,7 +636,7 @@ export function TrustSection({
                         <ImageReveal
                           src={certificate.imageUrl}
                           alt=""
-                          className="h-full w-full object-cover"
+                          className="absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center"
                           loading={i === 0 ? 'eager' : 'lazy'}
                         />
                       ) : (

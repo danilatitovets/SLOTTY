@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { clearAdminCabinetSessionCache } from '../../pages/admin/adminCabinetSessionCache';
+import { clearOverviewBundleCache } from '../../pages/admin/overview/adminOverviewSessionCache';
 import { syncMasterFlagFromProfile } from '../profile/lib/demoMasterStorage';
 import {
   preloadFavoriteMasterIds,
@@ -15,6 +17,7 @@ import {
 import { apiFetch, getApiBaseUrl, getStoredAuthToken, setStoredAuthToken } from '../../shared/api/backendClient';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import type { AuthSessionResponse, BackendProfile } from './types';
+import { normalizeBackendProfile, sessionRefreshToken } from './types';
 
 type AuthContextValue = {
   profile: BackendProfile | null;
@@ -39,16 +42,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const backendConfigured = Boolean(getApiBaseUrl());
 
   const logout = useCallback(() => {
+    clearAdminCabinetSessionCache();
+    clearOverviewBundleCache();
     setStoredAuthToken(null);
     setToken(null);
     setProfile(null);
   }, []);
 
   const applySession = useCallback((session: AuthSessionResponse) => {
+    clearAdminCabinetSessionCache();
+    clearOverviewBundleCache();
     setStoredAuthToken(session.token);
     setToken(session.token);
     setProfile(session.profile);
     void syncLocalFavoritesToServer().then(() => preloadFavoriteMasterIds());
+  }, []);
+
+  const applyMePayload = useCallback((payload: BackendProfile) => {
+    const refresh = sessionRefreshToken(payload);
+    const profile = normalizeBackendProfile(payload);
+    if (refresh) {
+      clearAdminCabinetSessionCache();
+      clearOverviewBundleCache();
+      setStoredAuthToken(refresh);
+      setToken(refresh);
+    }
+    setProfile(profile);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -62,18 +81,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await apiFetch('/api/me');
       if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           logout();
         }
         return;
       }
       const next = (await res.json()) as BackendProfile;
-      setProfile(next);
-      setToken(getStoredAuthToken());
+      applyMePayload(next);
     } catch {
       /* keep previous profile if any */
     }
-  }, [logout]);
+  }, [logout, applyMePayload]);
 
   useEffect(() => {
     if (!isReady) {
@@ -100,8 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (res.ok) {
             const me = (await res.json()) as BackendProfile;
             if (!cancelled) {
-              setToken(existing);
-              setProfile(me);
+              applyMePayload(me);
             }
             await syncLocalFavoritesToServer();
             preloadFavoriteMasterIds();
@@ -156,11 +173,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isReady, initDataRaw, isTelegramWebApp]);
+  }, [isReady, initDataRaw, isTelegramWebApp, applyMePayload]);
 
   useEffect(() => {
-    syncMasterFlagFromProfile(profile?.role);
-  }, [profile?.role]);
+    syncMasterFlagFromProfile(profile ?? undefined);
+  }, [profile]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
