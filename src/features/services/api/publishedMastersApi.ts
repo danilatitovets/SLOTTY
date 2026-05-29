@@ -1,7 +1,8 @@
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import { apiFetch } from '../../../shared/api/backendClient';
 import { fetchPublicGetCached } from '../../../shared/api/publicGetCache';
-import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
-import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
+import { resolveServiceListingCoverUrl } from '../../catalog/catalogServicePhotos';
+import { masterListingPortraitUrl } from '../../masters/lib/masterListingPortrait';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import type { ServiceListingRecord } from '../../services/model/demoMasters';
 
@@ -24,6 +25,7 @@ export type PublishedMasterDto = {
   primaryServiceId: string | null;
   primaryServiceName: string | null;
   nextSlotStartsAt: string | null;
+  completedBookingsCount?: number;
 };
 
 export async function fetchPublishedMasters(params: {
@@ -51,7 +53,7 @@ export function publishedMasterToListingRecord(m: PublishedMasterDto): ServiceLi
     ? {
         visitType: 'studio',
         city: m.location.city?.trim() || undefined,
-        street: (m.location.publicAddress || '').trim() || '—',
+        street: (m.location.publicAddress || '').trim() || LOCATION_EMPTY_SENTINEL,
         building: '',
         ...(m.location.lat != null &&
         m.location.lng != null &&
@@ -60,26 +62,34 @@ export function publishedMasterToListingRecord(m: PublishedMasterDto): ServiceLi
           ? { lat: m.location.lat, lng: m.location.lng }
           : {}),
       }
-    : { visitType: 'studio', street: '—', building: '' };
+    : { visitType: 'studio', street: LOCATION_EMPTY_SENTINEL, building: '' };
 
   const price = m.minServicePrice != null && Number.isFinite(m.minServicePrice) ? m.minServicePrice : 0;
   const serviceName = (m.primaryServiceName && m.primaryServiceName.trim()) || 'Услуга';
+  const categoryCode = m.category?.code?.trim() || undefined;
 
   return {
     id: `${m.masterId}-${m.primaryServiceId ?? 'svc'}`,
     masterId: m.masterId,
     masterName: m.displayName.trim() || 'Мастер',
     category: categoryLabel,
+    categoryCode,
     serviceName,
     rating: m.rating,
     reviewsCount: m.reviewsCount,
     location: loc,
     priceFrom: price,
-    photoUrl: optimizeAvatarUrl(
-      (m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(m.displayName),
-      256,
-    ),
+    photoUrl: masterListingPortraitUrl(m.photoUrl),
+    serviceCoverUrl: resolveServiceListingCoverUrl({
+      category: categoryLabel,
+      categoryCode,
+      serviceName,
+    }),
     primaryServiceId: m.primaryServiceId ?? undefined,
     nextSlotStartsAt: m.nextSlotStartsAt,
+    completedBookingsCount:
+      m.completedBookingsCount != null && Number.isFinite(m.completedBookingsCount)
+        ? Math.max(0, Math.round(m.completedBookingsCount))
+        : undefined,
   };
 }

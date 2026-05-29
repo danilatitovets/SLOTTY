@@ -14,11 +14,13 @@
     "e2e:booking-concurrency": "tsx src/scripts/e2eBookingConcurrency.ts",
     "e2e:hardening-verify": "tsx src/scripts/e2eHardeningVerify.ts",
     "e2e:google-dedup": "tsx src/scripts/e2eGoogleProfileDedup.ts",
+    "e2e:slot-rebook": "tsx src/scripts/e2eSlotRebookAfterCancel.ts",
     "diagnose:profile": "tsx src/scripts/diagnoseProfileByEmail.ts",
     "merge:google-duplicate": "tsx src/scripts/mergeGoogleDuplicateProfile.ts",
     "test:client-ip": "tsx src/scripts/testClientIpSecurity.ts"
   },
   "dependencies": {
+    "@sentry/node": "^9.47.1",
     "@supabase/supabase-js": "^2.105.4",
     "@types/multer": "^2.1.0",
     "bcryptjs": "^3.0.3",
@@ -29,6 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.1.1",
     "pg": "^8.13.1",
+    "redis": "^4.7.1",
     "resend": "^6.12.3",
     "zod": "^3.23.8"
   },

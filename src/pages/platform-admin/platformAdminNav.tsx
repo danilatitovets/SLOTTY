@@ -6,9 +6,11 @@ import {
   HiUserGroup,
   HiUsers,
   HiCalendarDays,
+  HiBanknotes,
 } from 'react-icons/hi2';
 import {
   PLATFORM_ADMIN_AUDIT_PATH,
+  PLATFORM_ADMIN_BILLING_PATH,
   PLATFORM_ADMIN_BOOKINGS_PATH,
   PLATFORM_ADMIN_MASTERS_PATH,
   PLATFORM_ADMIN_PATH,
@@ -39,8 +41,9 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     to: PLATFORM_ADMIN_REQUESTS_PATH,
     label: 'Заявки',
     icon: HiClipboardDocumentList,
-    title: 'Заявки на смену категории',
-    description: 'Мастер просит сменить категорию профиля. Одобрите или отклоните с комментарием — мастер получит уведомление.',
+    title: 'Заявки',
+    description:
+      'Смена категории мастера и заявки «Стать спонсором SLOTTY». Обработайте запрос и оставьте комментарий при отклонении.',
   },
   {
     to: PLATFORM_ADMIN_USERS_PATH,
@@ -73,6 +76,14 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     title: 'Записи',
     description:
       'Кто записался и кто отменил. Раздел «Частые отмены» — клиенты для блокировки при злоупотреблениях.',
+  },
+  {
+    to: PLATFORM_ADMIN_BILLING_PATH,
+    label: 'Биллинг',
+    icon: HiBanknotes,
+    title: 'Биллинг',
+    description:
+      'Покупки тарифа Pro, сводка по выручке и промокоды со скидкой при оформлении подписки.',
   },
   {
     to: PLATFORM_ADMIN_AUDIT_PATH,

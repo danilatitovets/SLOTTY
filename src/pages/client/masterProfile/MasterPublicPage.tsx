@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { MASTERS_PATH, getBookingPath } from '../../../app/paths';
+import { LOGIN_PATH, MASTERS_PATH, getBookingPath } from '../../../app/paths';
 import type { ClientOutletContext } from '../clientOutletContext';
 import { useFavoriteMaster } from '../../../features/profile/hooks/useFavoriteMaster';
 import { useClientErrorModal } from '../ClientErrorModalContext';
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { EmptyState } from '../components/EmptyState';
 import { MasterExtraSections } from './MasterExtraSections';
-import { MasterHeroCard } from './MasterHeroCard';
+import { MasterPublicHeroSection } from './MasterPublicHeroSection';
 import { MasterPortfolioRail } from './MasterPortfolioRail';
 import { MasterProfileMobileToolbar } from './MasterProfileMobileToolbar';
 import { MasterReviewsSection } from './MasterReviewsSection';
@@ -23,6 +23,7 @@ import { shareMasterProfile } from './masterProfileUtils';
 import { useMasterNearestSlot } from './useMasterNearestSlot';
 import { catalogCanvasClass } from './masterProfileTheme';
 import { useMasterPublicProfile } from './useMasterPublicProfile';
+import { MasterProfileReportSheet } from './MasterProfileReportSheet';
 
 export function MasterPublicPage() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export function MasterPublicPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [serviceSheet, setServiceSheet] = useState<DemoMasterService | null>(null);
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const portfolioUrls = useMemo(
     () => (master?.portfolio ?? []).map((p) => p.imageUrl).filter((u): u is string => Boolean(u?.trim())),
@@ -70,6 +72,8 @@ export function MasterPublicPage() {
       showToast('Не удалось поделиться');
     }
   }, [master]);
+
+  const openReport = useCallback(() => setReportOpen(true), []);
 
   const goToBooking = useCallback(
     (serviceId?: string | null) => {
@@ -131,6 +135,7 @@ export function MasterPublicPage() {
         favoriteDisabled={favoriteDisabled}
         onFavoriteToggle={() => void toggleFavorite()}
         onShare={() => void onShare()}
+        onReport={openReport}
         onChooseTime={goToBooking}
         onPhoneUnavailable={() =>
           showToast(
@@ -153,15 +158,17 @@ export function MasterPublicPage() {
             onFavoriteToggle={() => void toggleFavorite()}
             favoriteDisabled={favoriteDisabled}
             onShare={() => void onShare()}
+            onReport={openReport}
           />
 
           <main className={`space-y-4 pb-6 ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
-            <MasterHeroCard
+            <MasterPublicHeroSection
               master={master}
               userLat={userLat}
               userLng={userLng}
               nearest={nearest}
               nearestLoading={nearestLoading}
+              layout="mobile"
               onChooseTime={() => goToBooking(nearest?.serviceId)}
             />
 
@@ -230,6 +237,18 @@ export function MasterPublicPage() {
           {toast}
         </div>
       ) : null}
+
+      <MasterProfileReportSheet
+        open={reportOpen}
+        masterId={master.masterId}
+        masterName={master.masterName}
+        onClose={() => setReportOpen(false)}
+        onSuccess={() => showToast('Жалоба отправлена в админку')}
+        onNeedLogin={() => {
+          setReportOpen(false);
+          navigate(`${LOGIN_PATH}?from=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        }}
+      />
     </>
   );
 }

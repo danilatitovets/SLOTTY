@@ -1,4 +1,8 @@
 import { query } from '../../config/db.js';
+import {
+  isStablePortraitUrl,
+  isTelegramPortraitUrl,
+} from '../../lib/profileAvatarUrlPolicy.js';
 import { ApiError } from '../../utils/ApiError.js';
 import {
   effectiveAccountStatusFromRow,
@@ -11,7 +15,7 @@ export interface ProfileDto {
   telegram_username: string | null;
   full_name: string;
   avatar_url: string | null;
-  /** Аватар для шапки: фото из кабинета мастера или загруженное в профиле клиента, не OAuth. */
+  /** Аватар для шапки: кабинет мастера → profiles (Telegram / загрузка / OAuth). */
   header_avatar_url: string | null;
   role: string;
   phone: string | null;
@@ -26,11 +30,6 @@ export interface ProfileDto {
   access_restricted_until: string | null;
   /** Есть строка в master_profiles — можно открыть кабинет мастера (в т.ч. при role=platform_admin). */
   hasMasterProfile: boolean;
-}
-
-function isOAuthProviderAvatarUrl(url: string): boolean {
-  const u = url.toLowerCase();
-  return u.includes('googleusercontent.com') || u.includes('ggpht.com');
 }
 
 export async function profileHasMasterProfile(profileId: string): Promise<boolean> {
@@ -65,6 +64,52 @@ export async function resolveAccountEmail(profileId: string): Promise<string | n
   return email || null;
 }
 
+export async function fetchUserProfileMediaFallback(profileId: string): Promise<{
+  avatarUrl: string | null;
+  phone: string | null;
+}> {
+  const r = await query<{ avatar_url: string | null; phone: string | null }>(
+    `select avatar_url, phone from public.profiles where id = $1`,
+    [profileId],
+  );
+  const row = r.rows[0];
+  return {
+    avatarUrl: row?.avatar_url?.trim() || null,
+    phone: row?.phone?.trim() || null,
+  };
+}
+
+/** Дозаполняет photo_url / phone в master_profiles из profiles (если в кабинете пусто). */
+export async function backfillMasterProfileMediaFromUserProfile(
+  profileId: string,
+  preferAvatarUrl?: string | null,
+): Promise<void> {
+  const fallback = await fetchUserProfileMediaFallback(profileId);
+  const avatarCandidate = preferAvatarUrl?.trim() || fallback.avatarUrl;
+  const avatar =
+    avatarCandidate &&
+    (isStablePortraitUrl(avatarCandidate) || !isTelegramPortraitUrl(avatarCandidate))
+      ? avatarCandidate
+      : null;
+  const phone = fallback.phone;
+  if (!avatar && !phone) return;
+
+  await query(
+    `update public.master_profiles mp set
+       photo_url = case
+         when nullif(trim(mp.photo_url), '') is null and $2::text is not null then $2
+         else mp.photo_url
+       end,
+       phone = case
+         when nullif(trim(mp.phone), '') is null and $3::text is not null then $3
+         else mp.phone
+       end,
+       updated_at = now()
+     where mp.master_id = $1`,
+    [profileId, avatar, phone],
+  );
+}
+
 export async function resolveHeaderAvatarUrl(
   profileId: string,
   role: string,
@@ -74,9 +119,7 @@ export async function resolveHeaderAvatarUrl(
     const masterPhoto = await fetchMasterCabinetPhotoUrl(profileId);
     if (masterPhoto) return masterPhoto;
   }
-  const av = avatarUrl?.trim();
-  if (!av || isOAuthProviderAvatarUrl(av)) return null;
-  return av;
+  return avatarUrl?.trim() || null;
 }
 
 function toTelegramUserIdNumber(raw: string | null): number | null {
@@ -209,6 +252,9 @@ export async function syncMasterCabinetFromUserProfile(
 }
 
 export async function getProfileById(profileId: string): Promise<ProfileDto> {
+  const { stabilizePortraitForProfile } = await import('../../lib/stabilizePortraitForProfile.js');
+  await stabilizePortraitForProfile(profileId);
+
   const r = await query<{
     id: string;
     telegram_user_id: string | null;

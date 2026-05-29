@@ -1,3 +1,4 @@
+import { EMPTY_TELEGRAM } from '../../../shared/lib/emptyDisplayText';
 import type { ChangeEvent, ReactNode, RefObject } from 'react';
 import { useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -55,6 +56,9 @@ type Props = {
   onApptSubTabChange: (tab: DemoAppointmentTab) => void;
   apptRows: DemoAppointmentRecord[];
   apptListLoading: boolean;
+  apptHasMore?: boolean;
+  apptLoadingMore?: boolean;
+  onLoadMoreAppointments?: () => void;
   apptError: string | null;
   upcomingCount: number;
   favorites: FavoriteMasterDto[];
@@ -72,6 +76,7 @@ function EmptyAppointments() {
   return (
     <NothingFoundCard
       title="Записей пока нет"
+      picture="appointmentsEmpty"
       action={
         <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
           Найти услуги
@@ -85,6 +90,7 @@ function EmptyFavorites() {
   return (
     <NothingFoundCard
       title="Избранных пока нет"
+      picture="clientsEmpty"
       action={
         <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
           Найти услуги
@@ -132,6 +138,9 @@ export function ClientProfileDesktop({
   onApptSubTabChange,
   apptRows,
   apptListLoading,
+  apptHasMore = false,
+  apptLoadingMore = false,
+  onLoadMoreAppointments,
   apptError,
   upcomingCount,
   favorites,
@@ -163,7 +172,7 @@ export function ClientProfileDesktop({
       ? `@${telegramUsername}`
       : isTelegramWebApp
         ? 'Подключен'
-        : '—';
+        : EMPTY_TELEGRAM;
 
   return (
     <div className={`${catalogDesktopShellClass} hidden lg:flex ${catalogCanvasClass}`}>
@@ -276,6 +285,16 @@ export function ClientProfileDesktop({
                     ))}
                   </div>
                 )}
+                {apptHasMore && apptRows.length > 0 ? (
+                  <button
+                    type="button"
+                    disabled={apptLoadingMore}
+                    onClick={onLoadMoreAppointments}
+                    className="mt-3 min-h-11 w-full rounded-[14px] border border-[#EAECEF] bg-white text-[14px] font-semibold text-[#374151] transition hover:bg-[#FAFAFA] active:scale-[0.98] disabled:opacity-60"
+                  >
+                    {apptLoadingMore ? 'Загрузка…' : 'Показать ещё'}
+                  </button>
+                ) : null}
                 </div>
               </>
             ) : null}

@@ -5,4 +5,4 @@ export const HEADER_LOGO_SRC = '/photos/logo-header.webp';
 export const ADMIN_DESKTOP_LOGO_SRC = '/photos/logo.webp';
 
 /** Фон hero-блока главной. */
-export const HERO_BG_SRC = '/photos/hero.png';
+export const HERO_BG_SRC = '/photos/hero.webp';

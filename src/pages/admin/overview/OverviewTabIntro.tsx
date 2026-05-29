@@ -1,17 +1,17 @@
 import { ADMIN_TAB_INTRO_HEIGHT_CLASS } from '../AdminTabIntroBanner';
 import type { OverviewAnalyticsTab } from './overviewAnalytics';
-import { OVERVIEW_CLIENTS_FOOTER_SRC, overviewSvodkaPhotoSrc } from './adminOverviewTheme';
+import { MINI_PICTURE, overviewSvodkaPhotoSrc } from './adminOverviewTheme';
 
 export const OVERVIEW_TAB_INTRO_IMAGES = [
   overviewSvodkaPhotoSrc('обзор.webp'),
   overviewSvodkaPhotoSrc('доход.webp'),
   overviewSvodkaPhotoSrc('клиенты.webp'),
   overviewSvodkaPhotoSrc('репутация.webp'),
-  OVERVIEW_CLIENTS_FOOTER_SRC,
+  MINI_PICTURE.trust,
 ] as const;
 
 const OVERVIEW_TAB_INTRO: Record<OverviewAnalyticsTab, { title: string }> = {
-  summary: { title: 'Обзор' },
+  summary: { title: 'Сводка' },
   revenue: { title: 'Доход' },
   clients: { title: 'Клиенты' },
   reputation: { title: 'Репутация' },

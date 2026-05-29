@@ -39,7 +39,7 @@ export async function isProfileSubstantial(profileId: string): Promise<boolean> 
       )
       or exists (
         select 1 from public.profiles p
-         where p.id = $1 and p.role in ('master', 'platform_admin')
+         where p.id = $1 and p.role = 'master'
       )
     ) as substantial`,
     [profileId],

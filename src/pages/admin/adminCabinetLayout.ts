@@ -24,9 +24,16 @@ export const ADMIN_DESKTOP_PAGE =
 export const adminDesktopNavItemClass = (active: boolean): string =>
   `flex min-h-11 w-full items-center gap-3 rounded-[14px] px-3.5 text-left text-[14px] font-semibold transition active:scale-[0.99] ${
     active
-      ? 'bg-[#FFF1F4] text-[#ff5f7a] shadow-[0_2px_12px_rgba(255,95,122,0.08)]'
+      ? 'bg-[#FFF1F4] text-[#ff5f7a]'
       : 'text-[#6B7280] hover:bg-[#F7F7F8] hover:text-[#111827]'
   }`;
+
+/** Нижние карточки сайдбара: тариф и профиль (без обводки, серый лоток). */
+export const adminSidebarFooterCard =
+  'flex w-full items-center gap-3 rounded-[14px] bg-[#F6F7FB] p-3.5 no-underline transition hover:bg-[#F1EFEF] active:scale-[0.99]';
+
+export const adminSidebarFooterCardAccent =
+  'flex w-full items-center gap-3 rounded-[14px] bg-[#FFF1F4] p-3.5 no-underline transition hover:bg-[#FFE8ED] active:scale-[0.99]';
 
 /** Десктоп: сегменты в сером треке (как фильтры в расписании). */
 export const ADMIN_SEGMENT_NAV_DESKTOP =

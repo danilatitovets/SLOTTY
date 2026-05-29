@@ -1,3 +1,4 @@
+import { EMPTY_BOOKING_DATE, EMPTY_BOOKING_TIME } from '../../shared/lib/emptyDisplayText';
 import type { MasterLocation } from '../../features/profile/model/masterLocation';
 import type { DemoBookingGridDay, DemoBookingGridSlot } from '../../features/booking/model/demoBookingSlotGrid';
 import { MasterAddressBlock } from '../client/masterProfile/MasterAddressBlock';
@@ -70,13 +71,13 @@ export function BookingCheckoutPanel({
         <div className="flex justify-between gap-4 py-3">
           <dt className="text-[#6B7280]">Дата</dt>
           <dd className="text-right font-semibold capitalize text-[#111827]">
-            {selectedDay?.fullDateLabel ?? '—'}
+            {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
           </dd>
         </div>
         <div className="h-px bg-[#EEEEEE]" aria-hidden />
         <div className="flex justify-between gap-4 py-3">
           <dt className="text-[#6B7280]">Время</dt>
-          <dd className="text-right font-semibold text-[#111827]">{selectedSlot?.timeLabel ?? '—'}</dd>
+          <dd className="text-right font-semibold text-[#111827]">{selectedSlot?.timeLabel ?? EMPTY_BOOKING_TIME}</dd>
         </div>
         {slotPromo?.isSlotBound ? (
           <>

@@ -15,14 +15,12 @@ import { useTelegram } from '../shared/hooks/useTelegram';
 import { readTelegramWebAppStartParam } from '../shared/lib/telegramWebApp';
 import { HomeForMasters } from './home/HomeForMasters';
 import { HomeHeroStack } from './home/HomeHeroStack';
-import { HomeHowItWorks } from './home/HomeHowItWorks';
 import { homeShell } from './home/homeLayout';
 import { HomeCategories } from './HomeCategories';
 import { HomeFaq } from './HomeFaq';
 import { HomeFooter } from './HomeFooter';
 import { HomeHeader } from './HomeHeader';
 import { HomeTariffs } from './HomeTariffs';
-import { HomeTelegramShowcase } from './HomeTelegramShowcase';
 import { HomeTopMasters } from './HomeTopMasters';
 import { HomeTrust } from './HomeTrust';
 
@@ -71,36 +69,36 @@ export function Home() {
   }
 
   return (
-    <div className="min-h-dvh bg-white text-neutral-900">
-      <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
+    <div className="min-h-dvh bg-[#E29595] text-neutral-900">
+      <div className="overflow-x-visible rounded-b-[2.5rem] bg-white sm:rounded-b-[3rem]">
+        <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
 
-      <HomeHeroStack
-        onFindMaster={onFindMaster}
-        onBecomeMaster={onBecomeMaster}
-        masterCtaLabel={masterCtaLabel}
-      />
-
-      <main className={`relative z-10 ${homeShell} pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-0`}>
-        <HomeCategories onCategory={onCategory} />
-
-        <HomeTopMasters masters={masters} isLoading={isLoading} />
-
-        <HomeHowItWorks />
-
-        <HomeTelegramShowcase />
-
-        <HomeForMasters
-          masterCtaPath={masterNavPath}
-          masterCtaLabel={isMasterUser ? 'Открыть кабинет' : 'Стать мастером'}
-          isMasterUser={isMasterUser}
+        <HomeHeroStack
+          onFindMaster={onFindMaster}
+          onBecomeMaster={onBecomeMaster}
+          masterCtaLabel={masterCtaLabel}
         />
 
-        <HomeTariffs />
+        <main
+          className={`relative z-10 overflow-x-visible ${homeShell} pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-0`}
+        >
+          <HomeCategories onCategory={onCategory} />
 
-        <HomeTrust />
+          <HomeTopMasters masters={masters} isLoading={isLoading} />
 
-        <HomeFaq />
-      </main>
+          <HomeForMasters
+            masterCtaPath={masterNavPath}
+            masterCtaLabel={isMasterUser ? 'Открыть кабинет' : 'Стать мастером'}
+            isMasterUser={isMasterUser}
+          />
+
+          <HomeTariffs />
+
+          <HomeTrust />
+
+          <HomeFaq />
+        </main>
+      </div>
 
       <HomeFooter />
     </div>

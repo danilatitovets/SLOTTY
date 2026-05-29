@@ -5,7 +5,6 @@ import {
   rejectCategoryChangeRequest,
 } from '../api/platformAdminApi';
 import type { CategoryChangeRequestAdmin } from '../api/platformAdmin.types';
-import { PlatformAdminPageIntro } from '../shared/PlatformAdminPageIntro';
 import { PlatformAdminToolbar } from '../shared/PlatformAdminToolbar';
 import {
   ConfirmModal,
@@ -91,8 +90,6 @@ export function PlatformAdminRequestsTab() {
 
   return (
     <div>
-      <PlatformAdminPageIntro />
-
       <PlatformAdminToolbar
         resultCount={loading ? undefined : total}
         filterGroups={[

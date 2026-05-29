@@ -2,11 +2,15 @@ import { HiHomeModern, HiMapPin } from 'react-icons/hi2';
 import {
   buildLocationDisplayParts,
   catalogLineWithoutVisitPrefix,
+  filterAtHomeSensitiveAccessRows,
   formatHomePublicBeforeBooking,
   isHomeAddressHiddenUntilBooking,
   masterVisitTypeLabel,
+  type MasterLocation,
 } from '../../../features/profile/model/masterLocation';
-import type { MasterLocation } from '../../../features/profile/model/masterLocation';
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
+import { makeYandexMapsRouteUrl } from '../../../shared/lib/yandexMapsExternal';
+import { YandexMapsRouteIcon } from '../../../shared/ui/YandexMapsRouteIcon';
 
 type DetailRow = { label: string; value: string };
 
@@ -41,7 +45,7 @@ export function MasterAddressBlock({ location }: Props) {
       if (district) return district;
       return null;
     }
-    if (parts?.addressLine && parts.addressLine !== '—') {
+    if (parts?.addressLine && parts.addressLine !== LOCATION_EMPTY_SENTINEL) {
       return parts.addressLine.trim();
     }
     if (parts?.catalogLine) {
@@ -51,9 +55,10 @@ export function MasterAddressBlock({ location }: Props) {
     return null;
   })();
 
-  const detailRows: DetailRow[] = hiddenUntilBooking
-    ? []
-    : [...(parts?.access ?? []), ...(parts?.wayfinding ?? [])];
+  const detailRows: DetailRow[] = filterAtHomeSensitiveAccessRows(
+    hiddenUntilBooking ? [] : [...(parts?.access ?? []), ...(parts?.wayfinding ?? [])],
+    location,
+  );
 
   const VisitIcon = location.visitType === 'at_home' ? HiHomeModern : HiMapPin;
 
@@ -77,6 +82,22 @@ export function MasterAddressBlock({ location }: Props) {
       ) : (
         <DetailList rows={detailRows} />
       )}
+
+      {!hiddenUntilBooking ? (
+        <a
+          href={makeYandexMapsRouteUrl({
+            lat: location.lat ?? location.distanceLat,
+            lng: location.lng ?? location.distanceLng,
+            addressLine: mainLine ?? undefined,
+          })}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#FFF1F4] px-4 text-[13px] font-semibold text-[#E29595] transition hover:bg-[#FFE8EC] active:scale-[0.98]"
+        >
+          <YandexMapsRouteIcon className="shrink-0" />
+          Построить маршрут
+        </a>
+      ) : null}
     </div>
   );
 }

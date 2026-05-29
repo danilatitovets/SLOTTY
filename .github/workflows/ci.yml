@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Frontend typecheck and build
+        run: npm run build
+
+      - name: Backend typecheck and build
+        run: npm run build --prefix server
+
+      - name: Build consolidated migrations
+        run: npm run db:v2:build-all
+
+      - name: Migration files present
+        run: test -f supabase/migrations_v2/apply_all_v2.sql
+
+      - name: Staging env validator (dry run with dev defaults)
+        run: node scripts/validate-staging-env.mjs
+        env:
+          NODE_ENV: development
+          VITE_API_URL: http://localhost:4000
+          CLIENT_URL: http://localhost:5173
+          DATABASE_URL: postgresql://local/local
+          JWT_SECRET: ci-validation-secret-32chars-min

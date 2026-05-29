@@ -1,3 +1,4 @@
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import { addDays } from '../../booking/lib/calendar';
 import type { DemoAppointmentStatus, DemoMasterAppointment } from '../../master/model/demoMasterAppointments';
 import { isoDateLocal } from '../../master/model/demoMasterAppointments';
@@ -13,6 +14,7 @@ import { parseContactsJson } from '../../master-onboarding/model/masterContacts'
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { formatStoredPublicAddress } from '../../profile/model/masterLocation';
 import type { MasterCabinetDto, MasterCabinetScheduleRuleDto } from '../api/masterCabinetApi';
+import { resolvePortfolioCoverId } from './masterPortfolioCover';
 import type { PrimaryLocationBody, ScheduleRuleDto } from '../../master-onboarding/api/becomeMasterApi';
 import { decodePaymentNote } from './paymentNoteCodec';
 
@@ -176,8 +178,8 @@ function cabinetLocationToDraft(loc: NonNullable<MasterCabinetDto['primaryLocati
   return {
     visitType: loc.visitType === 'at_home' ? 'at_home' : 'studio',
     city: loc.city?.trim() || undefined,
-    street: (loc.street || '').trim() || '—',
-    building: (loc.building || '').trim() || '—',
+    street: (loc.street || '').trim() || LOCATION_EMPTY_SENTINEL,
+    building: (loc.building || '').trim() || LOCATION_EMPTY_SENTINEL,
     buildingDetail: loc.buildingDetail?.trim() || undefined,
     salonName: loc.salonName?.trim() || undefined,
     district: loc.district?.trim() || undefined,
@@ -196,8 +198,8 @@ function cabinetLocationToDraft(loc: NonNullable<MasterCabinetDto['primaryLocati
 
 export function draftToPrimaryLocationBody(loc: MasterLocation): PrimaryLocationBody {
   const city = (loc.city && loc.city.trim()) || 'Минск';
-  const street = (loc.street || '').trim() || '—';
-  const building = (loc.building || '').trim() || '—';
+  const street = (loc.street || '').trim() || LOCATION_EMPTY_SENTINEL;
+  const building = (loc.building || '').trim() || LOCATION_EMPTY_SENTINEL;
   const publicAddress = formatStoredPublicAddress(loc).slice(0, 600) || street;
 
   const isHome = loc.visitType === 'at_home';
@@ -283,6 +285,7 @@ export function cabinetDtoToMasterDraft(cabinet: MasterCabinetDto): MasterDraft 
     createdAt: new Date().toISOString(),
     certificates: certs.length ? certs : undefined,
     portfolio: port.length ? port : undefined,
+    portfolioCoverId: resolvePortfolioCoverId(port, profile.portfolioCoverItemId),
     careerItems: careerItems.length ? careerItems : undefined,
     bookingRules: bookingRules?.bookingRules ?? undefined,
     cancellationPolicy: bookingRules?.cancellationPolicy ?? undefined,

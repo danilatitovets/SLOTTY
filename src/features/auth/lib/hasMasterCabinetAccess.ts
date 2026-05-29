@@ -6,6 +6,8 @@ export function hasMasterCabinetAccess(
 ): boolean {
   return Boolean(
     profile &&
-      (profile.role === 'master' || profile.hasMasterProfile === true),
+      (profile.role === 'master' ||
+        profile.role === 'platform_admin' ||
+        profile.hasMasterProfile === true),
   );
 }

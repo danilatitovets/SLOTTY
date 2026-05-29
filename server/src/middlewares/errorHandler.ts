@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env.js';
+import { captureApiException } from '../lib/sentry.js';
 import { redactBodyForLog } from './requestId.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -35,6 +36,11 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     logPayload.body = redactBodyForLog(req.body);
   }
   console.error('[api-error]', logPayload, err instanceof Error ? err.message : err);
+  captureApiException(err, {
+    requestId,
+    profileId: typeof req.user?.id === 'string' ? req.user.id : undefined,
+    path: req.originalUrl,
+  });
   return res.status(500).json({
     error: {
       message: 'Internal server error',

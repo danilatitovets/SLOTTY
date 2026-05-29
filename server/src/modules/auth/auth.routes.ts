@@ -21,6 +21,10 @@ import {
   verifyGoogleLinkHandoff,
   verifyGoogleOAuthState,
 } from './googleOAuth.service.js';
+import {
+  consumeGoogleLinkHandoff,
+  createGoogleLinkHandoff,
+} from './googleLinkHandoff.store.js';
 import { syncMasterAccountVerified } from './accountVerification.js';
 import { listAuthIdentitiesForProfile } from './authIdentities.service.js';
 import {
@@ -142,7 +146,8 @@ authRouter.post(
   '/google/link-handoff',
   authMiddleware,
   asyncHandler(async (req, res) => {
-    res.json({ handoffToken: signGoogleLinkHandoff(req.user!.id) });
+    const { jti, profileId } = await createGoogleLinkHandoff(req.user!.id);
+    res.json({ handoffToken: signGoogleLinkHandoff(profileId, jti) });
   }),
 );
 
@@ -151,9 +156,19 @@ authRouter.post(
   optionalAuthMiddleware,
   asyncHandler(async (req, res) => {
     const body = googleLinkBody.parse(req.body);
-    const profileId = body.handoffToken
-      ? verifyGoogleLinkHandoff(body.handoffToken)
-      : req.user?.id;
+    let profileId = req.user?.id;
+    if (body.handoffToken) {
+      const handoff = verifyGoogleLinkHandoff(body.handoffToken);
+      try {
+        await consumeGoogleLinkHandoff(handoff.jti, handoff.profileId);
+      } catch {
+        throw ApiError.badRequest(
+          'Ссылка для привязки Google уже использована или устарела. Откройте снова из Telegram.',
+          'GOOGLE_LINK_HANDOFF_INVALID',
+        );
+      }
+      profileId = handoff.profileId;
+    }
     if (!profileId) {
       throw ApiError.unauthorized('Войдите в аккаунт, чтобы привязать Google', 'AUTH_REQUIRED');
     }

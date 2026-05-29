@@ -2,8 +2,11 @@ import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { notifyUser } from '../notifications/notifyUser.js';
 import { buildMasterPublicProfileUrl } from '../masters/categoryChangePolicy.service.js';
-import { getMasterSubscriptionWithUsage } from '../billing/billing.service.js';
-import { listBillingEventsForMaster } from '../billing/billingEvents.service.js';
+import {
+  ensureMasterSubscription,
+  getMasterSubscriptionWithUsage,
+} from '../billing/billing.service.js';
+import { listBillingEventsForMaster, recordBillingEvent } from '../billing/billingEvents.service.js';
 import { writeAdminAuditLog } from './auditLog.service.js';
 
 export type PlatformMasterListItem = {
@@ -452,4 +455,98 @@ export async function unpausePlatformMaster(masterId: string, adminId: string): 
     entityId: masterId,
     targetUserId: masterId,
   });
+}
+
+export async function grantComplimentaryProToMaster(
+  masterId: string,
+  adminUserId: string,
+  params: { days: number; reason: string },
+): Promise<{ validUntil: string; planCode: 'pro' }> {
+  const days = Math.min(Math.max(Math.trunc(params.days), 1), 365);
+  const reason = params.reason.trim();
+  if (!reason) {
+    throw ApiError.badRequest('Укажите причину выдачи тарифа', 'validation_error');
+  }
+
+  const metaR = await query<{ display_name: string }>(
+    `select display_name from public.master_profiles where master_id = $1`,
+    [masterId],
+  );
+  const displayName = metaR.rows[0]?.display_name;
+  if (!displayName) throw ApiError.notFound('Мастер не найден');
+
+  await ensureMasterSubscription(masterId);
+
+  const planR = await query<{ id: string }>(
+    `select id from public.subscription_plans where code = 'pro' and is_active = true limit 1`,
+  );
+  const planId = planR.rows[0]?.id;
+  if (!planId) throw ApiError.internal('Тариф Pro не найден в базе');
+
+  const validUntil = new Date(Date.now() + days * 86_400_000);
+
+  await query(
+    `update public.master_subscriptions
+        set plan_id = $1,
+            status = 'active'::public.subscription_status,
+            billing_period = 'month'::public.billing_period,
+            current_period_start = now(),
+            current_period_end = $2,
+            updated_at = now()
+      where master_id = $3`,
+    [planId, validUntil, masterId],
+  );
+
+  await query(
+    `update public.master_profiles
+        set master_plan = 'pro',
+            pro_status = 'active',
+            pro_started_at = coalesce(pro_started_at, now()),
+            pro_expires_at = $2,
+            updated_at = now()
+      where master_id = $1`,
+    [masterId, validUntil],
+  );
+
+  await recordBillingEvent({
+    masterId,
+    eventType: 'complimentary_granted',
+    planCode: 'pro',
+    billingPeriod: 'month',
+    amount: 0,
+    status: 'succeeded',
+    source: 'platform_admin',
+    metadata: {
+      days,
+      reason,
+      validUntil: validUntil.toISOString(),
+      grantedBy: adminUserId,
+    },
+  });
+
+  await writeAdminAuditLog({
+    adminUserId,
+    action: 'master_pro_granted',
+    entityType: 'master_profile',
+    entityId: masterId,
+    targetUserId: masterId,
+    reason,
+    metadata: {
+      displayName,
+      days,
+      validUntil: validUntil.toISOString(),
+      planCode: 'pro',
+    },
+  });
+
+  await notifyUser({
+    userId: masterId,
+    type: 'system',
+    title: 'Вам выдан тариф Pro',
+    body: `Бесплатный доступ до ${validUntil.toLocaleDateString('ru-RU')}. ${reason}`,
+    relatedEntityType: 'master_profile',
+    relatedEntityId: masterId,
+  });
+
+  return { validUntil: validUntil.toISOString(), planCode: 'pro' };
 }

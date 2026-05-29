@@ -31,6 +31,8 @@ export type DemoAppointmentRecord = {
   status: DemoAppointmentStatus;
   type: DemoAppointmentTab;
   voucherNumber?: string | null;
+  /** Клиент уже оставил отзыв к этой записи. */
+  hasReview?: boolean;
 };
 
 /** URL встраиваемого виджета Яндекс.Карт для адреса записи. */

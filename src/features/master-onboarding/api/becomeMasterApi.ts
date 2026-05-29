@@ -179,6 +179,8 @@ export type MasterOnboardingPayload = {
   scheduleRules: MasterOnboardingScheduleRulePayload[];
   services: MasterOnboardingServicePayload[];
   certificates: MasterOnboardingCertificatePayload[];
+  bookingRules?: string | null;
+  cancellationPolicy?: string | null;
   /** Сейчас без оплаты сохраняется только basic. */
   masterPlan?: 'basic';
   proInterested?: boolean;

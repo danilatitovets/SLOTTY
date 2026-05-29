@@ -1,3 +1,4 @@
+import { EMPTY_ADDRESS, isEmptyDisplayValue } from '../../../shared/lib/emptyDisplayText';
 import { useMemo, type ReactNode } from 'react';
 import { buildYandexMapWidgetUrl } from '../../../features/appointments/model/demoAppointments';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
@@ -55,7 +56,7 @@ function AddressInfoRow({
   value: string;
 }) {
   const trimmed = value?.trim() ?? '';
-  if (!trimmed || trimmed === '—') return null;
+  if (isEmptyDisplayValue(trimmed)) return null;
 
   return (
     <div className="flex items-start gap-2.5 rounded-[16px] bg-[#F7F7F8] px-3 py-2.5">
@@ -162,14 +163,14 @@ export function AddressSection({
       if (publicLine?.trim()) return publicLine.trim();
     }
     if (parts) return catalogLineWithoutVisitPrefix(parts.catalogLine, visitLabel);
-    return '—';
+    return EMPTY_ADDRESS;
   })();
 
   const detailRows = hiddenUntilBooking
     ? buildLocationAfterBookingPreview(loc).filter((row) => row.value?.trim())
     : parts
       ? [
-          ...(parts.addressLine && parts.addressLine !== '—'
+          ...(parts.addressLine && !isEmptyDisplayValue(parts.addressLine)
             ? [{ label: 'Адрес', value: parts.addressLine }]
             : []),
           ...parts.access,
@@ -200,7 +201,7 @@ export function AddressSection({
 
           <div>
             <AddressBlockTitle>На карточке в каталоге</AddressBlockTitle>
-            {!catalogMain || catalogMain === '—' ? (
+            {isEmptyDisplayValue(catalogMain) ? (
               <p className="rounded-[16px] bg-[#F7F7F8] px-3 py-2.5 text-center text-[13px] leading-snug text-[#9CA3AF]">
                 Адрес не указан — нажмите «Изменить»
               </p>

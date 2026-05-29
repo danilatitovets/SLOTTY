@@ -1,0 +1,97 @@
+import { query } from '../../config/db.js';
+import type {
+  CatalogListingsQuery,
+  CatalogListingsResult,
+  CatalogListingItem,
+  LocationSuggestion,
+} from './catalogSearch.types.js';
+
+type RpcListingsPayload = {
+  items?: CatalogListingItem[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  hasMore?: boolean;
+};
+
+function isMissingRpcError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const code = (err as { code?: string }).code;
+  return code === '42883' || code === '42P01';
+}
+
+function normalizeListingItem(raw: CatalogListingItem): CatalogListingItem {
+  const slot = raw.nextSlotStartsAt;
+  let nextSlotStartsAt: string | null = null;
+  if (slot != null && String(slot).trim() !== '') {
+    const d = new Date(String(slot));
+    nextSlotStartsAt = Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return { ...raw, nextSlotStartsAt };
+}
+
+export async function searchCatalogListingsRpc(q: CatalogListingsQuery): Promise<CatalogListingsResult> {
+  const r = await query<{ payload: RpcListingsPayload }>(
+    `select public.catalog_search_listings(
+      $1::text,
+      $2::text,
+      $3::uuid,
+      $4::text,
+      $5::text,
+      $6::text,
+      $7::numeric,
+      $8::numeric,
+      $9::numeric,
+      $10::int,
+      $11::text,
+      $12::boolean,
+      $13::boolean,
+      $14::text,
+      $15::text,
+      $16::int,
+      $17::int
+    ) as payload`,
+    [
+      q.search?.trim() || null,
+      q.categoryCode?.trim() || null,
+      q.locationId?.trim() || null,
+      q.addressText?.trim() || null,
+      q.dateRange,
+      q.timeOfDay,
+      q.minPrice ?? null,
+      q.maxPrice ?? null,
+      q.minRating ?? null,
+      q.minReviews ?? null,
+      q.visitType,
+      q.verifiedOnly,
+      q.promotionOnly,
+      q.durationPreset,
+      q.sortBy,
+      q.page,
+      q.limit,
+    ],
+  );
+
+  const payload = r.rows[0]?.payload ?? {};
+  const items = (payload.items ?? []).map((row) => normalizeListingItem(row));
+  const total = payload.total ?? 0;
+  const page = payload.page ?? q.page;
+  const limit = payload.limit ?? q.limit;
+  const hasMore = payload.hasMore ?? page * limit < total;
+
+  return { items, total, page, limit, hasMore };
+}
+
+export async function suggestMasterLocationsRpc(
+  rawQuery: string,
+  limit: number,
+): Promise<LocationSuggestion[]> {
+  const r = await query<{ suggestions: LocationSuggestion[] }>(
+    `select public.catalog_suggest_locations($1::text, $2::int) as suggestions`,
+    [rawQuery, limit],
+  );
+  const rows = r.rows[0]?.suggestions;
+  return Array.isArray(rows) ? rows : [];
+}
+
+export { isMissingRpcError };

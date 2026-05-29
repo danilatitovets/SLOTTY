@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react';
+import { MiniPicture } from '../../../shared/ui/MiniPicture';
+import type { MiniPictureKey } from '../../../shared/ui/miniPictureSrc';
 import { NOTHING_FOUND_ILLUSTRATION_SRC } from '../../../shared/ui/nothingFoundIllustrationSrc';
 import { clientOutlineBtn } from '../clientTheme';
 
 type Props = {
   /** Если передан — вместо стандартной иллюстрации «ничего не нашли». */
   icon?: ReactNode;
+  /** Мини-иллюстрация SLOTTY вместо иконки / search-empty. */
+  picture?: MiniPictureKey;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -15,6 +19,7 @@ type Props = {
 
 export function EmptyState({
   icon,
+  picture,
   title,
   description,
   actionLabel,
@@ -30,6 +35,8 @@ export function EmptyState({
     <div className={shellClass}>
       {icon ? (
         <div className="mb-4 text-[#F47C8C] opacity-80">{icon}</div>
+      ) : picture ? (
+        <MiniPicture name={picture} variant="empty" />
       ) : (
         <img
           src={NOTHING_FOUND_ILLUSTRATION_SRC}

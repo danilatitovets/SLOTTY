@@ -61,13 +61,43 @@ export async function getMySubscription(): Promise<MasterSubscriptionDto> {
   return j.subscription;
 }
 
+export type PromoQuoteDto = {
+  promoCodeId: string;
+  code: string;
+  title: string | null;
+  discountPercent: number;
+  billingPeriod: 'month' | 'year';
+  baseAmount: number;
+  discountAmount: number;
+  finalAmount: number;
+  currency: 'BYN';
+};
+
+export async function quotePromoForCheckout(
+  code: string,
+  billingPeriod: 'month' | 'year',
+): Promise<PromoQuoteDto> {
+  const res = await apiFetch('/api/masters/me/promo-codes/quote', {
+    method: 'POST',
+    body: JSON.stringify({ code, billingPeriod }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  const j = (await res.json()) as { quote: PromoQuoteDto };
+  return j.quote;
+}
+
 export async function switchMySubscriptionMock(
   planCode: 'free' | 'pro',
   billingPeriod: 'month' | 'year',
+  options?: { promoCode?: string | null },
 ): Promise<MasterSubscriptionDto> {
   const res = await apiFetch('/api/masters/me/subscription/mock', {
     method: 'PATCH',
-    body: JSON.stringify({ planCode, billingPeriod }),
+    body: JSON.stringify({
+      planCode,
+      billingPeriod,
+      promoCode: options?.promoCode?.trim() || null,
+    }),
   });
   if (!res.ok) throw new Error(await readErr(res));
   const j = (await res.json()) as { subscription: MasterSubscriptionDto };

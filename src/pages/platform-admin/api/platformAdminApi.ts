@@ -2,6 +2,7 @@ import { apiFetch } from '../../../shared/api/backendClient';
 import { readSlottyApiErrorMessage } from '../../../shared/api/slottyApiErrorMessage';
 import type {
   CategoryChangeRequestAdmin,
+  SponsorRequestAdmin,
   PlatformAdminOverview,
   PlatformAuditLogItem,
   PlatformBookingDetail,
@@ -13,6 +14,10 @@ import type {
   PlatformServiceListItem,
   PlatformUserDetail,
   PlatformUserListItem,
+  PromoCodeAdmin,
+  PlatformPurchaseRow,
+  PlatformPurchasesSummary,
+  ProfileReportAdmin,
 } from './platformAdmin.types';
 
 async function readErr(res: Response): Promise<string> {
@@ -67,6 +72,68 @@ export async function rejectCategoryChangeRequest(id: string, adminComment: stri
   const res = await apiFetch(`/api/platform-admin/category-change-requests/${id}/reject`, {
     method: 'POST',
     body: JSON.stringify({ adminComment }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function getSponsorRequests(
+  status: 'all' | 'pending' | 'in_review' | 'closed' | 'rejected' = 'pending',
+  params?: { limit?: number; offset?: number },
+): Promise<PlatformPagedResult<SponsorRequestAdmin> & { requests: SponsorRequestAdmin[] }> {
+  const q = new URLSearchParams();
+  if (status !== 'all') q.set('status', status);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/sponsor-requests?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    requests: SponsorRequestAdmin[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
+  return { requests: data.requests, items: data.requests, total: data.total, limit: data.limit, offset: data.offset };
+}
+
+export async function updateSponsorRequestStatus(
+  id: string,
+  status: 'in_review' | 'closed' | 'rejected',
+  adminComment?: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/sponsor-requests/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, adminComment: adminComment ?? null }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function getProfileReports(
+  status: 'all' | 'pending' | 'in_review' | 'closed' | 'rejected' = 'pending',
+  params?: { limit?: number; offset?: number },
+): Promise<PlatformPagedResult<ProfileReportAdmin> & { reports: ProfileReportAdmin[] }> {
+  const q = new URLSearchParams();
+  if (status !== 'all') q.set('status', status);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/profile-reports?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    reports: ProfileReportAdmin[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
+  return { reports: data.reports, items: data.reports, total: data.total, limit: data.limit, offset: data.offset };
+}
+
+export async function updateProfileReportStatus(
+  id: string,
+  status: 'in_review' | 'closed' | 'rejected',
+  adminComment?: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/profile-reports/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, adminComment: adminComment ?? null }),
   });
   if (!res.ok) throw new Error(await readErr(res));
 }
@@ -196,6 +263,18 @@ export async function unpauseMaster(id: string): Promise<void> {
   if (!res.ok) throw new Error(await readErr(res));
 }
 
+export async function grantMasterComplimentaryPro(
+  masterId: string,
+  params: { days: number; reason: string },
+): Promise<{ validUntil: string; planCode: 'pro' }> {
+  const res = await apiFetch(`/api/platform-admin/masters/${masterId}/grant-pro`, {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { validUntil: string; planCode: 'pro' };
+}
+
 export async function getPlatformServices(params?: {
   filter?: string;
   q?: string;
@@ -282,6 +361,57 @@ export async function getClientBookingStats(params?: {
   if (!res.ok) throw new Error(await readErr(res));
   const data = (await res.json()) as { clients: PlatformClientBookingStats[] };
   return data.clients;
+}
+
+export async function getPromoCodes(): Promise<PromoCodeAdmin[]> {
+  const res = await apiFetch('/api/platform-admin/promo-codes');
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as { promoCodes: PromoCodeAdmin[] };
+  return data.promoCodes;
+}
+
+export async function createPromoCode(body: {
+  code: string;
+  title?: string | null;
+  discountPercent: number;
+  billingPeriod?: 'month' | 'year' | null;
+  maxRedemptions?: number | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+}): Promise<PromoCodeAdmin> {
+  const res = await apiFetch('/api/platform-admin/promo-codes', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as { promoCode: PromoCodeAdmin };
+  return data.promoCode;
+}
+
+export async function setPromoCodeActive(id: string, isActive: boolean): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/promo-codes/${id}/active`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isActive }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function getPlatformPurchasesSummary(): Promise<PlatformPurchasesSummary> {
+  const res = await apiFetch('/api/platform-admin/purchases/summary');
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPurchasesSummary;
+}
+
+export async function getPlatformPurchases(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<{ purchases: PlatformPurchaseRow[]; total: number }> {
+  const q = new URLSearchParams();
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/purchases?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { purchases: PlatformPurchaseRow[]; total: number };
 }
 
 export async function getAuditLogs(params?: {

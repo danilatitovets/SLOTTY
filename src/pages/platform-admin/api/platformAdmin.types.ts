@@ -4,9 +4,42 @@ export type PlatformAdminOverview = {
   mastersTotal: number;
   activeMastersTotal: number;
   pendingCategoryRequests: number;
+  pendingSponsorRequests: number;
   blockedUsers: number;
   bookingsToday: number;
   cancellationsLast7Days: number;
+};
+
+export type SponsorRequestAdmin = {
+  id: string;
+  status: 'pending' | 'in_review' | 'closed' | 'rejected';
+  contactName: string;
+  phone: string;
+  email: string | null;
+  companyName: string | null;
+  city: string | null;
+  message: string;
+  adminComment: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  masterId: string;
+  masterName: string;
+  profileUrl: string;
+};
+
+export type ProfileReportAdmin = {
+  id: string;
+  status: 'pending' | 'in_review' | 'closed' | 'rejected';
+  reasonCode: string;
+  reasonText: string | null;
+  adminComment: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  masterId: string;
+  masterName: string;
+  profileUrl: string;
+  reporterId: string | null;
+  reporterName: string | null;
 };
 
 export type CategoryChangeRequestAdmin = {
@@ -192,6 +225,47 @@ export type PlatformClientBookingStats = {
   completed: number;
   lastBookingAt: string | null;
   lastCancellationAt: string | null;
+};
+
+export type PromoCodeAdmin = {
+  id: string;
+  code: string;
+  title: string | null;
+  discountPercent: number;
+  appliesToPlan: string;
+  billingPeriod: 'month' | 'year' | null;
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  validFrom: string | null;
+  validUntil: string | null;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type PlatformPurchaseRow = {
+  id: string;
+  masterId: string;
+  masterName: string;
+  eventType: string;
+  planCode: string | null;
+  billingPeriod: string | null;
+  amount: number | null;
+  currency: string;
+  status: string;
+  source: string;
+  promoCode: string | null;
+  baseAmount: number | null;
+  discountAmount: number | null;
+  createdAt: string;
+};
+
+export type PlatformPurchasesSummary = {
+  totalRevenue: number;
+  purchasesCount: number;
+  withPromoCount: number;
+  totalDiscountGiven: number;
+  revenueThisMonth: number;
+  purchasesThisMonth: number;
 };
 
 export type PlatformAuditLogItem = {

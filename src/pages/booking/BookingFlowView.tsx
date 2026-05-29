@@ -1,4 +1,7 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
+import { EMPTY_BOOKING_DATE, EMPTY_BOOKING_TIME } from '../../shared/lib/emptyDisplayText';
+import { getMasterPath } from '../../app/paths';
 import { HiCalendarDays, HiClock, HiStar } from 'react-icons/hi2';
 import { masterShowsVerifiedBadge } from '../../features/masters/lib/masterVerifiedBadge';
 import { MasterVerifiedBadge } from '../../shared/ui/MasterVerifiedBadge';
@@ -8,8 +11,7 @@ import type { DemoMasterService } from '../../features/services/model/demoMaster
 import { formatDurationMinutes } from '../client/lib/catalogFormat';
 import { formatMasterCardSpecialty } from '../client/lib/catalogFormat';
 import { MasterAddressBlock } from '../client/masterProfile/MasterAddressBlock';
-import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
-import { ImageReveal } from '../../shared/ui/ImageReveal';
+import { MasterCardPortrait } from '../client/components/MasterCardPortrait';
 import type {
   DemoBookingGridDay,
   DemoBookingGridSlot,
@@ -133,25 +135,48 @@ export function BookingFlowView({
 
       <div className="w-full min-w-0 lg:hidden">
       <header className="mt-4">
-        <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-[#111827]">Запись</h1>
-        <p className="mt-1.5 text-[15px] text-[#6B7280]">Выберите удобную дату и время</p>
+        <nav
+          aria-label="Маршрут записи"
+          className="mb-3 flex min-w-0 items-center gap-1 rounded-[12px] border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2"
+        >
+          <Link
+            to={getMasterPath(master.masterId)}
+            className="min-w-0 truncate text-[13px] font-semibold text-[#111827] underline-offset-2 hover:text-[#F47C8C] hover:underline"
+          >
+            {master.masterName}
+          </Link>
+          <span className="shrink-0 text-[#C7C7CC]" aria-hidden>
+            ›
+          </span>
+          <span className="min-w-0 truncate text-[13px] font-medium text-[#6B7280]" title={service.title}>
+            {service.title}
+          </span>
+        </nav>
+        <h1 className="text-[26px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
+          Выберите дату и время
+        </h1>
+        <p className="mt-1.5 text-[14px] leading-relaxed text-[#6B7280]">
+          Онлайн-запись к мастеру
+        </p>
       </header>
 
       <section className={`${bookingCard} mt-5 p-4`}>
         <div className="flex gap-3.5">
-          <div className="relative h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[16px] bg-[#EBEBEB]">
-            <ImageReveal
-              src={optimizeAvatarUrl(master.photoUrl, 256)}
-              alt=""
-              className="h-full w-full object-cover"
-              loading="eager"
-            />
-          </div>
+          <MasterCardPortrait
+            masterName={master.masterName}
+            photoUrl={master.photoUrl}
+            className="relative h-[5.5rem] w-[5.5rem] shrink-0"
+            imageClassName="h-full w-full rounded-[16px] object-cover"
+            loading="eager"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-start gap-1">
-              <p className="line-clamp-2 text-[17px] font-semibold leading-snug text-[#111827]">
+              <Link
+                to={getMasterPath(master.masterId)}
+                className="line-clamp-2 text-[17px] font-semibold leading-snug text-[#111827] underline-offset-2 hover:text-[#F47C8C] hover:underline"
+              >
                 {master.masterName}
-              </p>
+              </Link>
               {showVerified ? (
                 <MasterVerifiedBadge className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" />
               ) : null}
@@ -199,7 +224,7 @@ export function BookingFlowView({
         <div className={`${bookingMutedPanel} mb-3 px-4 py-3.5`}>
           <p className="text-[11px] font-medium text-[#9CA3AF]">Выбранная дата</p>
           <p className="mt-1 text-[18px] font-semibold capitalize text-[#111827]">
-            {selectedDay?.fullDateLabel ?? '—'}
+            {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
           </p>
         </div>
 
@@ -275,12 +300,12 @@ export function BookingFlowView({
           <div className="flex justify-between gap-3">
             <dt className="text-[#6B7280]">Дата</dt>
             <dd className="text-right font-medium capitalize text-[#111827]">
-              {selectedDay?.fullDateLabel ?? '—'}
+              {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-[#6B7280]">Время</dt>
-            <dd className="text-right font-medium text-[#111827]">{selectedSlot?.timeLabel ?? '—'}</dd>
+            <dd className="text-right font-medium text-[#111827]">{selectedSlot?.timeLabel ?? EMPTY_BOOKING_TIME}</dd>
           </div>
           {slotPromo?.isSlotBound ? (
             <div className="flex justify-between gap-3">

@@ -1,11 +1,15 @@
 import { Link, NavLink } from 'react-router-dom';
 import { HiSparkles } from 'react-icons/hi2';
 import { ADMIN_DESKTOP_LOGO_SRC } from '../../app/headerLogo';
-import { ADMIN_PATH } from '../../app/paths';
+import { ADMIN_PATH, PLATFORM_ADMIN_PATH } from '../../app/paths';
 import { planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../features/billing/useMasterPlanEntitlements';
-import { defaultMasterAvatarUrl } from '../../features/master/model/masterDraftStorage';
 import { useAuth } from '../../features/auth/AuthProvider';
+import { isPlatformAdmin } from '../../features/auth/lib/isPlatformAdmin';
+import {
+  MasterCabinetAvatar,
+  resolveMasterCabinetPortraitUrl,
+} from './profile/adminProfilePortrait';
 import { useAdminNotifications } from './notifications/AdminNotificationsContext';
 import { useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import {
@@ -15,8 +19,12 @@ import {
   ADMIN_NOTIFICATIONS_NAV,
   ADMIN_SETTINGS_NAV,
 } from './adminCabinetNav';
-import { ADMIN_SIDEBAR_WIDTH, adminDesktopNavItemClass } from './adminCabinetLayout';
-import { profileDashboardCard } from './profile/adminProfileDashboardTheme';
+import {
+  ADMIN_SIDEBAR_WIDTH,
+  adminDesktopNavItemClass,
+  adminSidebarFooterCard,
+  adminSidebarFooterCardAccent,
+} from './adminCabinetLayout';
 
 function SidebarUnreadBadge({ count }: { count: number }) {
   const label = count > 9 ? '9+' : String(count);
@@ -35,10 +43,8 @@ export function AdminDesktopSidebar() {
   const { profile } = useAuth();
 
   const displayName = draft.name?.trim() || profile?.full_name?.trim() || 'Мастер';
-  const photoSrc =
-    profile?.header_avatar_url?.trim() ||
-    draft.photoUrl?.trim() ||
-    defaultMasterAvatarUrl(displayName);
+  const photoSrc = resolveMasterCabinetPortraitUrl(draft.photoUrl);
+  const showPlatformAdmin = isPlatformAdmin(profile);
 
   return (
     <aside
@@ -133,43 +139,64 @@ export function AdminDesktopSidebar() {
             );
           }}
         </NavLink>
+
+        {showPlatformAdmin ? (
+          <>
+            <p className="mb-2 mt-4 px-2 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
+              Платформа
+            </p>
+            <NavLink
+              to={PLATFORM_ADMIN_PATH}
+              className={({ isActive }) => adminDesktopNavItemClass(isActive)}
+            >
+              {({ isActive }) => (
+                <>
+                  <HiSparkles className={`shrink-0 ${isActive ? 'text-[#ff5f7a]' : ''}`} aria-hidden />
+                  <span className="truncate">Админка SLOTTY</span>
+                </>
+              )}
+            </NavLink>
+          </>
+        ) : null}
       </nav>
 
-      <div className="border-t border-[#eef0f5] p-4">
-        <Link
-          to={ADMIN_BILLING_NAV.to}
-          className={`${profileDashboardCard} mb-3 block p-4 no-underline ring-1 ring-[#eef0f5] transition hover:ring-[#fde8ed]`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
-              <HiSparkles className="h-5 w-5" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[14px] font-bold tracking-[-0.02em] text-[#111827]">
-                Тариф {planBadgeLabel(planId)}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">
-                Управление подпиской и лимитами
-              </p>
-            </div>
+      <div className="space-y-2 border-t border-[#EEEEEE] p-3">
+        <Link to={ADMIN_BILLING_NAV.to} className={`${adminSidebarFooterCardAccent} mb-0`}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white text-[#ff5f7a]">
+            <HiSparkles className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
+              Тариф {planBadgeLabel(planId)}
+            </p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">
+              Управление подпиской и лимитами
+            </p>
           </div>
         </Link>
 
-        <Link
-          to={ADMIN_PATH}
-          className={`${profileDashboardCard} flex items-center gap-3 p-3 no-underline ring-1 ring-[#eef0f5] transition hover:ring-[#fde8ed]`}
-        >
-          <img
-            src={photoSrc}
-            alt=""
-            className="h-11 w-11 shrink-0 rounded-full object-cover object-center ring-2 ring-white"
-            style={{ objectFit: 'cover', objectPosition: 'center' }}
-          />
-          <div className="min-w-0 flex-1">
+        <Link to={ADMIN_PATH} className={adminSidebarFooterCard}>
+          {photoSrc ? (
+            <img
+              src={photoSrc}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-full object-cover object-center"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <MasterCabinetAvatar
+              name={displayName}
+              photoUrl={draft.photoUrl}
+              sizeClass="h-10 w-10"
+              ringClassName="ring-0"
+              initialsClassName="text-[13px]"
+            />
+          )}
+          <div className="min-w-0 flex-1 text-left">
             <p className="truncate text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
               {displayName}
             </p>
-            <p className="text-[12px] text-[#6B7280]">Кабинет мастера</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">Кабинет мастера</p>
           </div>
         </Link>
       </div>

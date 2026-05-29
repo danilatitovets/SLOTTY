@@ -1,12 +1,7 @@
-import { useMemo, useState } from 'react';
-import {
-  HiEllipsisHorizontal,
-  HiFunnel,
-  HiMagnifyingGlass,
-} from 'react-icons/hi2';
+import { useEffect, useMemo, useState } from 'react';
+import { HiChevronLeft, HiChevronRight, HiFunnel, HiMagnifyingGlass } from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
-  servicesCatalogCardMobile,
   servicesCatalogFilterBtn,
   servicesCatalogFilterBtnActive,
   servicesCatalogSearchInput,
@@ -14,13 +9,14 @@ import {
   servicesTabPanelShell,
   servicesTabScrollBottomPad,
 } from './adminServicesTheme';
+import { MiniPicture } from '../../../shared/ui/MiniPicture';
 import { profileDashboardCard } from '../profile/adminProfileDashboardTheme';
 import { useMasterPlatformAccess } from '../../../features/auth/context/MasterPlatformAccessContext';
 import { ServicesTabFab } from './ServicesTabFab';
-import { ServiceThumbnail, ServiceThumbnailFallback } from './ServicesServiceThumbnail';
+import { CatalogServiceCard } from './ServicesCatalogServiceCard';
 import { filterCatalogServices } from './catalogFilterUtils';
 import type { ManagedService } from './servicesFormat';
-import { formatServicePrice, serviceCatalogThumbnailUrl } from './servicesFormat';
+import { serviceCatalogThumbnailUrl } from './servicesFormat';
 import { CatalogActiveFiltersBar } from './CatalogActiveFiltersBar';
 import { getActiveCatalogFilterChips } from './catalogFilterLabels';
 import {
@@ -48,107 +44,54 @@ function serviceCountLabel(n: number): string {
   return `${n} услуг`;
 }
 
-function CatalogServiceCard({
-  service,
-  imageSrc,
-  onOpenMenu,
+const CATALOG_PAGE_SIZE = 10;
+
+function CatalogPagination({
+  page,
+  pageCount,
+  total,
+  onPageChange,
 }: {
-  service: ManagedService;
-  imageSrc: string | null;
-  onOpenMenu: (service: ManagedService) => void;
+  page: number;
+  pageCount: number;
+  total: number;
+  onPageChange: (next: number) => void;
 }) {
-  const visible = service.isActive !== false;
+  const from = page * CATALOG_PAGE_SIZE + 1;
+  const to = Math.min(total, (page + 1) * CATALOG_PAGE_SIZE);
 
   return (
-    <li
-      className={`${servicesCatalogCardMobile} lg:rounded-[24px] lg:border lg:border-[#EAECEF] lg:p-0 lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] lg:ring-0`}
+    <nav
+      className="mt-4 flex flex-wrap items-center justify-between gap-3 px-0.5 py-1"
+      aria-label="Страницы каталога"
     >
-      {/* Mobile — акцент на услуге, название до 2 строк */}
-      <div className="lg:hidden">
-        <div className="flex items-start gap-3.5">
-          {imageSrc ? (
-            <ServiceThumbnail
-              src={imageSrc}
-              title={service.title}
-              sizeClass="h-[4.5rem] w-[4.5rem] shrink-0 rounded-[14px]"
-            />
-          ) : (
-            <ServiceThumbnailFallback sizeClass="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[14px]" />
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <h3 className="line-clamp-2 text-[17px] font-bold leading-snug tracking-[-0.03em] text-[#111827]">
-                  {service.title}
-                </h3>
-                <p className="mt-2 text-[20px] font-black tabular-nums leading-none tracking-[-0.04em] text-[#F47C8C]">
-                  {formatServicePrice(service)}
-                </p>
-                <span
-                  className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                    visible ? 'bg-[#ECFDF5] text-[#16A34A]' : 'bg-[#F3F4F6] text-[#6B7280]'
-                  }`}
-                >
-                  {visible ? 'Видимая' : 'Скрытая'}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => onOpenMenu(service)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F5F5F5] text-[#6B7280] transition active:scale-[0.96]"
-                aria-label="Меню услуги"
-              >
-                <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Desktop — акцент на услуге, на всю ширину */}
-      <div className="hidden min-h-[120px] items-center gap-5 px-6 py-5 lg:flex">
-        {imageSrc ? (
-          <ServiceThumbnail
-            src={imageSrc}
-            title={service.title}
-            sizeClass="h-20 w-20 rounded-[20px]"
-          />
-        ) : (
-          <ServiceThumbnailFallback sizeClass="flex h-20 w-20 items-center justify-center rounded-[20px]" />
-        )}
-
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-[#111827]">
-            {service.title}
-          </h3>
-        </div>
-
-        <div className="shrink-0 text-right">
-          <p className="text-[32px] font-black tabular-nums leading-none tracking-[-0.06em] text-[#ff5f7a]">
-            {formatServicePrice(service)}
-          </p>
-        </div>
-
-        <span
-          className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold ${
-            visible ? 'bg-[#ECFDF5] text-[#16A34A]' : 'bg-[#f6f7fb] text-[#6B7280]'
-          }`}
-        >
-          {visible ? 'Видимая' : 'Скрытая'}
-        </span>
-
+      <p className="text-[13px] font-semibold text-[#6B7280]">
+        {from}–{to} из {total}
+      </p>
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => onOpenMenu(service)}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-[#f6f7fb] text-[#6B7280] transition hover:bg-[#FFF1F4] hover:text-[#ff5f7a] active:scale-[0.96]"
-          aria-label={`Меню: ${service.title}`}
+          disabled={page <= 0}
+          onClick={() => onPageChange(page - 1)}
+          className="inline-flex h-9 items-center gap-1 rounded-[10px] bg-[#F5F5F5] px-3 text-[13px] font-semibold text-[#374151] transition enabled:hover:bg-[#EBEBEB] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <HiEllipsisHorizontal className="h-6 w-6" aria-hidden />
+          <HiChevronLeft className="h-4 w-4" aria-hidden />
+          Назад
+        </button>
+        <span className="min-w-[4.5rem] text-center text-[13px] font-bold tabular-nums text-[#111827]">
+          {page + 1} / {pageCount}
+        </span>
+        <button
+          type="button"
+          disabled={page >= pageCount - 1}
+          onClick={() => onPageChange(page + 1)}
+          className="inline-flex h-9 items-center gap-1 rounded-[10px] bg-[#F5F5F5] px-3 text-[13px] font-semibold text-[#374151] transition enabled:hover:bg-[#EBEBEB] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Вперёд
+          <HiChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
-    </li>
+    </nav>
   );
 }
 
@@ -157,14 +100,31 @@ export function ServicesCatalogTab({ draft, services, onAdd, onOpenMenu }: Props
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<CatalogFiltersState>(DEFAULT_CATALOG_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [page, setPage] = useState(0);
 
   const filtered = useMemo(
     () => filterCatalogServices(services, query, filters),
     [filters, query, services],
   );
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / CATALOG_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+
+  const pageItems = useMemo(() => {
+    const start = safePage * CATALOG_PAGE_SIZE;
+    return filtered.slice(start, start + CATALOG_PAGE_SIZE);
+  }, [filtered, safePage]);
+
   const filterIsActive = catalogFiltersAreActive(filters);
   const activeFilterChips = useMemo(() => getActiveCatalogFilterChips(filters), [filters]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [query, filters]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   const patchFilters = (patch: Partial<CatalogFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -173,19 +133,17 @@ export function ServicesCatalogTab({ draft, services, onAdd, onOpenMenu }: Props
   return (
     <div className={servicesTabPanelShell}>
       <div className={`${servicesTabContentPad} ${servicesTabScrollBottomPad}`}>
-      <div className="hidden lg:flex lg:items-end lg:justify-between lg:gap-4">
-        <div>
-          <h2 className="text-[22px] font-black tracking-[-0.05em] text-[#111827]">
-            Услуги в каталоге
-          </h2>
-          <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
-            {services.length === 0
-              ? 'Добавьте услуги — клиенты увидят их при записи'
-              : filterIsActive
-                ? `Показано ${serviceCountLabel(filtered.length)} из ${serviceCountLabel(services.length)}`
-                : `Показано ${serviceCountLabel(filtered.length)}`}
-          </p>
-        </div>
+      <div>
+        <h2 className="text-[18px] font-black tracking-[-0.04em] text-[#111827] lg:text-[22px] lg:tracking-[-0.05em]">
+          Каталог услуг
+        </h2>
+        <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
+          {services.length === 0
+            ? 'Нажмите «+» внизу справа, чтобы добавить услугу'
+            : filterIsActive
+              ? `Найдено ${serviceCountLabel(filtered.length)} из ${serviceCountLabel(services.length)}`
+              : serviceCountLabel(services.length)}
+        </p>
       </div>
 
       <div className="flex gap-2 lg:gap-3">
@@ -198,7 +156,7 @@ export function ServicesCatalogTab({ draft, services, onAdd, onOpenMenu }: Props
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск услуги"
-            className={`${servicesCatalogSearchInput} lg:min-h-[52px] lg:rounded-[18px] lg:border lg:border-[#EAECEF] lg:bg-white lg:pl-12 lg:text-[16px]`}
+            className={servicesCatalogSearchInput}
           />
         </label>
         <button
@@ -228,13 +186,17 @@ export function ServicesCatalogTab({ draft, services, onAdd, onOpenMenu }: Props
 
       {filtered.length === 0 ? (
         <div className={`${profileDashboardCard} p-6 text-center`}>
-          <ServiceThumbnailFallback sizeClass="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px]" />
-          <h3 className="mt-4 text-[18px] font-bold tracking-[-0.04em] text-[#111827]">
+          <MiniPicture
+            name={services.length === 0 ? 'servicesEmpty' : 'searchEmpty'}
+            variant="empty"
+            className="mb-2"
+          />
+          <h3 className="mt-2 text-[18px] font-bold tracking-[-0.04em] text-[#111827]">
             {services.length === 0 ? 'Услуг пока нет' : 'Ничего не найдено'}
           </h3>
           <p className="mx-auto mt-2 max-w-[20rem] text-[13px] leading-relaxed text-[#6B7280]">
             {services.length === 0
-              ? 'Добавьте первую услугу, чтобы клиенты могли записываться'
+              ? 'Нажмите «+» внизу справа — укажите название, цену и видимость'
               : activeFilterChips.length > 0
                 ? `По фильтрам «${activeFilterChips.map((c) => c.label).join('», «')}» ничего не нашлось. Ослабьте условия или сбросьте фильтры.`
                 : 'Попробуйте другой запрос'}
@@ -250,16 +212,26 @@ export function ServicesCatalogTab({ draft, services, onAdd, onOpenMenu }: Props
           ) : null}
         </div>
       ) : (
-        <ul className="flex w-full max-w-none flex-col gap-3 lg:gap-4 lg:rounded-[24px] lg:bg-[#f6f7fb] lg:p-4">
-          {filtered.map((service) => (
-            <CatalogServiceCard
-              key={service.id}
-              service={service}
-              imageSrc={serviceCatalogThumbnailUrl(service, draft)}
-              onOpenMenu={onOpenMenu}
+        <>
+          <ul className="flex w-full max-w-none flex-col gap-2.5 lg:gap-3">
+            {pageItems.map((service) => (
+              <CatalogServiceCard
+                key={service.id}
+                service={service}
+                imageSrc={serviceCatalogThumbnailUrl(service, draft)}
+                onOpenMenu={onOpenMenu}
+              />
+            ))}
+          </ul>
+          {filtered.length > CATALOG_PAGE_SIZE ? (
+            <CatalogPagination
+              page={safePage}
+              pageCount={pageCount}
+              total={filtered.length}
+              onPageChange={setPage}
             />
-          ))}
-        </ul>
+          ) : null}
+        </>
       )}
 
       <ServicesCatalogFiltersSheet

@@ -1,72 +1,172 @@
-import type { FC } from 'react';
+import { useMemo, useState, type FC } from 'react';
 import { Link } from 'react-router-dom';
 import { BECOME_MASTER_PATH, SERVICES_PATH } from '../app/paths';
-import { HomeMasterProCard } from './home/HomeMasterProCard';
-import { homePinkBtn, homeSection } from './home/homeTheme';
+import type { BillingPeriod } from '../features/billing/model/masterPlans';
+import { priceForPlan } from '../features/billing/model/masterPlans';
+import {
+  LANDING_MASTER_FREE_FEATURES,
+  LANDING_MASTER_PRO_FEATURES,
+  LandingPricingCard,
+  LandingProTariffCard,
+  landingPlanCtaClass,
+} from '../features/billing/ui/landingTariffCards';
+import { homeSection } from './home/homeTheme';
 
-const CLIENT_PLAN = {
-  key: 'client',
-  title: 'Клиент',
-  price: '0 BYN',
-  text: 'Для клиентов SLOTTY бесплатный: выбирайте услуги, смотрите мастеров и записывайтесь онлайн.',
-  features: ['Поиск услуг', 'Профили мастеров', 'Онлайн-запись', 'Напоминания в Telegram'],
-  cta: 'Найти мастера',
-  to: SERVICES_PATH,
-} as const;
+type PlanCardConfig = {
+  id: string;
+  name: string;
+  price: (period: BillingPeriod) => { value: string; unit: string };
+  includesLabel: string;
+  features: readonly string[];
+  cta: string;
+  to: string;
+  highlighted?: boolean;
+  badge?: string;
+};
 
-function IconCheck({ className }: { className?: string }) {
+const PLANS: PlanCardConfig[] = [
+  {
+    id: 'client',
+    name: 'Клиент',
+    price: () => ({ value: '0 BYN', unit: '' }),
+    includesLabel: 'Включено:',
+    features: [
+      'Ваш регион в каталоге SLOTTY',
+      'Поиск услуг и мастеров',
+      'Онлайн-запись без звонков',
+      'Профили и портфолио',
+      'Напоминания в Telegram',
+    ],
+    cta: 'Найти мастера',
+    to: SERVICES_PATH,
+  },
+  {
+    id: 'master-pro',
+    name: 'Мастер Pro',
+    price: (period) => {
+      const n = priceForPlan('pro', period);
+      return {
+        value: `${n} BYN`,
+        unit: period === 'year' ? '/ год' : '/ месяц',
+      };
+    },
+    includesLabel: 'Всё из «Мастер», и ещё:',
+    features: LANDING_MASTER_PRO_FEATURES,
+    cta: 'Открыть Мастер Pro',
+    to: BECOME_MASTER_PATH,
+    highlighted: true,
+    badge: 'Популярный',
+  },
+  {
+    id: 'master',
+    name: 'Мастер',
+    price: () => ({ value: '0 BYN', unit: '/ месяц' }),
+    includesLabel: 'Включено:',
+    features: LANDING_MASTER_FREE_FEATURES,
+    cta: 'Стать мастером',
+    to: BECOME_MASTER_PATH,
+  },
+];
+
+function BillingToggle({
+  annual,
+  onChange,
+}: {
+  annual: boolean;
+  onChange: (annual: boolean) => void;
+}) {
   return (
-    <svg
-      className={className}
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      aria-hidden
-    >
-      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <label className="inline-flex cursor-pointer items-center gap-3 text-[14px] font-medium text-[#6B7280]">
+      <span>Оплата раз в год</span>
+      <span className="text-[13px] text-[#9CA3AF]">(экономия ~20%)</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={annual}
+        onClick={() => onChange(!annual)}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+          annual ? 'bg-[#111827]' : 'bg-[#E5E7EB]'
+        }`}
+      >
+        <span
+          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${
+            annual ? 'left-6' : 'left-1'
+          }`}
+        />
+      </button>
+    </label>
   );
 }
 
 export const HomeTariffs: FC = () => {
+  const [annual, setAnnual] = useState(false);
+  const period: BillingPeriod = annual ? 'year' : 'month';
+
+  const plans = useMemo(() => PLANS, []);
+
   return (
     <section id="tarify" className={homeSection} style={{ animationDelay: '60ms' }}>
-      <div className="mx-auto max-w-[40rem] text-center">
+      <div className="mx-auto max-w-[44rem] text-center">
         <h2 className="text-[clamp(2rem,6vw,3.25rem)] font-bold leading-[1.05] tracking-[-0.04em] text-[#111827]">
-          Простые условия для клиентов и мастеров
+          Тарифы
         </h2>
+
+        <div className="mt-6 flex justify-center">
+          <BillingToggle annual={annual} onChange={setAnnual} />
+        </div>
       </div>
 
-      <div className="mt-10 grid gap-3 sm:mt-14 sm:grid-cols-2">
-        <article className="relative flex min-h-[20rem] flex-col overflow-hidden rounded-[26px] bg-white px-5 pb-6 pt-5 text-[#111827] shadow-[0_12px_40px_rgba(17,24,39,0.08)] ring-1 ring-[#F3F4F6]">
-          <p className="text-[18px] font-semibold tracking-tight text-[#111827]">{CLIENT_PLAN.title}</p>
+      <div className="relative mt-10 w-full sm:mt-12">
+        <div
+          className="pointer-events-none absolute left-1/2 top-8 -z-10 h-[22rem] w-[min(100%,24rem)] -translate-x-1/2 rounded-full bg-[#FFD4A8]/45 blur-[80px] sm:w-[28rem]"
+          aria-hidden
+        />
 
-          <div className="mt-4 flex items-baseline gap-1">
-            <span className="text-[36px] font-bold tracking-tight text-[#111827]">{CLIENT_PLAN.price}</span>
-          </div>
+        <div className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-3 md:gap-4 lg:gap-5">
+          {plans.map((plan) => {
+            const wrapClass = plan.highlighted ? 'md:-mt-1 md:mb-1' : undefined;
+            const { value, unit } = plan.price(period);
 
-          <p className="mt-3 text-[14px] leading-relaxed text-[#6B7280]">{CLIENT_PLAN.text}</p>
+            if (plan.id === 'master-pro') {
+              return (
+                <div key={plan.id} className={wrapClass}>
+                  <LandingProTariffCard
+                    priceValue={value}
+                    priceUnit={unit}
+                    topBadge={plan.badge}
+                    footer={
+                      <Link to={plan.to} className={landingPlanCtaClass(true)}>
+                        {plan.cta}
+                      </Link>
+                    }
+                  />
+                </div>
+              );
+            }
 
-          <ul className="mt-4 flex flex-1 flex-col gap-2">
-            {CLIENT_PLAN.features.map((feature) => (
-              <li key={feature} className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[#F47C8C]">
-                  <IconCheck className="h-3.5 w-3.5" />
-                </span>
-                <span className="text-[14px] font-medium text-[#374151]">{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          <Link to={CLIENT_PLAN.to} className={`mt-5 flex min-h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold ${homePinkBtn}`}>
-            {CLIENT_PLAN.cta}
-          </Link>
-        </article>
-
-        <HomeMasterProCard cta="Стать мастером" to={BECOME_MASTER_PATH} />
+            return (
+              <div key={plan.id} className={wrapClass}>
+                <LandingPricingCard
+                  name={plan.name}
+                  priceValue={value}
+                  priceUnit={unit}
+                  includesLabel={plan.includesLabel}
+                  features={plan.features}
+                  badge={plan.badge}
+                  highlighted={plan.highlighted}
+                  footer={
+                    <Link
+                      to={plan.to}
+                      className={landingPlanCtaClass(plan.highlighted === true)}
+                    >
+                      {plan.cta}
+                    </Link>
+                  }
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

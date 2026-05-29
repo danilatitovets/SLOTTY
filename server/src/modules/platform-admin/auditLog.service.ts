@@ -12,11 +12,13 @@ export type AdminAuditAction =
   | 'master_paused'
   | 'master_unpaused'
   | 'service_hidden'
-  | 'service_unhidden';
+  | 'service_unhidden'
+  | 'master_pro_granted'
+  | `sponsor_request_${'pending' | 'in_review' | 'closed' | 'rejected'}`;
 
 export async function writeAdminAuditLog(params: {
   adminUserId: string;
-  action: AdminAuditAction;
+  action: AdminAuditAction | string;
   entityType: string;
   entityId: string;
   targetUserId?: string | null;

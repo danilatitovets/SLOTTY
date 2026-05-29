@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { HiCheck, HiCreditCard } from 'react-icons/hi2';
 import { LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
+import { legalReturnState } from '../legal/useLegalPageBack';
 import { categorySupportsReferencePhoto } from '../../features/booking/lib/referencePhotoCategories';
 import {
   catalogFieldClass,
@@ -45,6 +46,8 @@ export function BookingCheckoutExtras({
   onConfirm,
   className = '',
 }: Props) {
+  const { pathname, search } = useLocation();
+  const legalReturn = legalReturnState(`${pathname}${search}`);
   const canSubmit = canConfirm && acceptedTerms && !submitting;
   const showReferencePhoto = categorySupportsReferencePhoto(categoryCode);
 
@@ -104,11 +107,19 @@ export function BookingCheckoutExtras({
         />
         <span className="text-[13px] leading-relaxed text-[#374151]">
           Принимаю{' '}
-          <Link to={LEGAL_TERMS_PATH} className="font-semibold text-[#F47C8C] hover:underline">
+          <Link
+            to={LEGAL_TERMS_PATH}
+            state={legalReturn}
+            className="font-semibold text-[#F47C8C] hover:underline"
+          >
             пользовательское соглашение
           </Link>{' '}
           и{' '}
-          <Link to={LEGAL_PD_CONSENT_PATH} className="font-semibold text-[#F47C8C] hover:underline">
+          <Link
+            to={LEGAL_PD_CONSENT_PATH}
+            state={legalReturn}
+            className="font-semibold text-[#F47C8C] hover:underline"
+          >
             согласие на обработку персональных данных
           </Link>
         </span>

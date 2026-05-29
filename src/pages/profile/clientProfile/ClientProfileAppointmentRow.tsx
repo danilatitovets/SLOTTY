@@ -73,9 +73,15 @@ export function ClientProfileAppointmentRow({
                 </button>
               )
             ) : row.status === 'completed' ? (
-              <button type="button" onClick={() => onReview(row)} className={catalogPrimaryBtn}>
-                Отзыв
-              </button>
+              row.hasReview ? (
+                <span className={`${catalogSecondaryBtn} cursor-default text-[#6B7280]`}>
+                  Отзыв отправлен
+                </span>
+              ) : (
+                <button type="button" onClick={() => onReview(row)} className={catalogPrimaryBtn}>
+                  Отзыв
+                </button>
+              )
             ) : (
               <span className={`${catalogSecondaryBtn} cursor-default opacity-50`}>
                 {row.status === 'cancelled' ? 'Отменена' : 'Завершена'}

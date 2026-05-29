@@ -9,8 +9,9 @@ import {
   formatPriceFrom,
   shortMasterName,
 } from '../lib/catalogFormat';
+import { sortMastersByTopRank } from '../../../features/masters/lib/masterTopScore';
 import { clientPinkBtn } from '../clientTheme';
-import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { MasterCardPortrait } from './MasterCardPortrait';
 
 type Props = {
   items: ServiceListingRecord[];
@@ -80,7 +81,12 @@ function TopMasterMiniCard({
         to={getMasterPath(listing.masterId)}
         className={`relative mb-2 overflow-hidden rounded-full ${style.photo} ${style.glow}`}
       >
-        <ImageReveal src={listing.photoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+        <MasterCardPortrait
+          masterName={listing.masterName}
+          photoUrl={listing.photoUrl}
+          className="relative h-full w-full"
+          imageClassName="h-full w-full rounded-full object-cover"
+        />
       </Link>
 
       <Link to={getMasterPath(listing.masterId)} className="w-full text-center">
@@ -141,11 +147,11 @@ function TopMasterWideCard({ listing, rank }: { listing: ServiceListingRecord; r
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[13px] font-bold text-[#F47C8C]">
         {rank}
       </span>
-      <ImageReveal
-        src={listing.photoUrl}
-        alt=""
-        className="h-14 w-14 shrink-0 rounded-[18px] object-cover"
-        loading="lazy"
+      <MasterCardPortrait
+        masterName={listing.masterName}
+        photoUrl={listing.photoUrl}
+        className="relative h-14 w-14 shrink-0"
+        imageClassName="h-14 w-14 rounded-[18px] object-cover"
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-semibold text-[#111827]">
@@ -171,14 +177,15 @@ function TopMasterWideCard({ listing, rank }: { listing: ServiceListingRecord; r
 export function TopMastersSection({ items }: Props) {
   if (!items.length) return null;
 
-  const sorted = [...items].sort((a, b) => {
-    if (b.rating !== a.rating) return b.rating - a.rating;
-    return b.reviewsCount - a.reviewsCount;
-  });
+  const sorted = sortMastersByTopRank(items);
 
-  const podium = sorted.slice(0, 3);
+  const top3 = sorted.slice(0, 3);
+  /** Пьедестал: 2-е | 1-е | 3-е слева направо. */
+  const podium =
+    top3.length >= 3 ? [top3[1]!, top3[0]!, top3[2]!] : top3;
+  const podiumRanks = top3.length >= 3 ? [2, 1, 3] : top3.map((_, i) => i + 1);
   const rest = sorted.slice(3);
-  const usePodium = podium.length >= 3;
+  const usePodium = top3.length >= 3;
 
   return (
     <section className="-mx-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] px-4 py-5 shadow-[0_12px_40px_rgba(244,124,140,0.08)] sm:-mx-5 sm:px-5">
@@ -189,7 +196,7 @@ export function TopMastersSection({ items }: Props) {
         <div>
           <h2 className="text-[22px] font-semibold tracking-tight text-[#111827]">Топ мастера</h2>
           <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">
-            Лучшие по рейтингу и отзывам — выбирайте с уверенностью
+            Рейтинг, отзывы и записи — честный топ по активности
           </p>
         </div>
       </div>
@@ -200,7 +207,7 @@ export function TopMastersSection({ items }: Props) {
             <TopMasterMiniCard
               key={listing.masterId}
               listing={listing}
-              rank={i + 1}
+              rank={podiumRanks[i] ?? i + 1}
               userLat={null}
               userLng={null}
             />
@@ -208,7 +215,7 @@ export function TopMastersSection({ items }: Props) {
         </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto py-1.5 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {podium.map((listing, i) => (
+          {top3.map((listing, i) => (
             <div key={listing.masterId} className="snap-start">
               <TopMasterWideCard listing={listing} rank={i + 1} />
             </div>

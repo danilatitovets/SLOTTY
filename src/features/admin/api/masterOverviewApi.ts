@@ -59,25 +59,25 @@ export async function fetchOverviewRevenue(period: OverviewPeriodPreset): Promis
   return data;
 }
 
-export async function fetchOverviewClients(period: OverviewPeriodPreset): Promise<ClientAnalytics> {
+export type OverviewPeriodBounds = { periodStart: string; periodEnd: string };
+
+type OverviewClientsApiDto = ClientAnalytics & OverviewPeriodBounds;
+type OverviewReputationApiDto = ReputationAnalyticsPayload & OverviewPeriodBounds;
+
+export async function fetchOverviewClients(
+  period: OverviewPeriodPreset,
+): Promise<OverviewClientsApiDto> {
   const res = await apiFetch(`/api/masters/me/overview/clients${overviewQuery(period)}`);
   if (!res.ok) throw new Error(await readApiError(res));
-  const j = (await res.json()) as ClientAnalytics & { periodStart?: string; periodEnd?: string };
-  const { periodStart: _s, periodEnd: _e, ...data } = j;
-  return data;
+  return (await res.json()) as OverviewClientsApiDto;
 }
 
 export async function fetchOverviewReputation(
   period: OverviewPeriodPreset,
-): Promise<ReputationAnalyticsPayload> {
+): Promise<OverviewReputationApiDto> {
   const res = await apiFetch(`/api/masters/me/overview/reputation${overviewQuery(period)}`);
   if (!res.ok) throw new Error(await readApiError(res));
-  const j = (await res.json()) as ReputationAnalyticsPayload & {
-    periodStart?: string;
-    periodEnd?: string;
-  };
-  const { periodStart: _s, periodEnd: _e, ...data } = j;
-  return data;
+  return (await res.json()) as OverviewReputationApiDto;
 }
 
 export async function postOverviewReviewReply(reviewId: string, text: string): Promise<void> {

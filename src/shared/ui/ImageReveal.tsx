@@ -35,18 +35,24 @@ export const ImageReveal = forwardRef<HTMLImageElement, ImageRevealProps>(functi
   const wantsCover = typeof className === 'string' && className.includes('object-cover');
   const wantsContain = typeof className === 'string' && className.includes('object-contain');
 
+  const srcStr = typeof src === 'string' ? src : '';
+  const oauthAvatar =
+    srcStr.length > 0 &&
+    /googleusercontent\.com|ggpht\.com|telegram-cdn\.org|telesco\.pe|t\.me\/i\/userpic/i.test(srcStr);
+
   return (
     <img
+      {...rest}
       ref={setRefs}
       src={src}
-      {...rest}
+      referrerPolicy={rest.referrerPolicy ?? (oauthAvatar ? 'no-referrer' : undefined)}
       {...(fetchPriority ? { fetchpriority: fetchPriority } : {})}
       decoding={decoding}
       style={{
         ...style,
         opacity: shown ? 1 : 0,
-        ...(wantsCover ? { objectFit: 'cover', objectPosition: 'center' } : {}),
-        ...(wantsContain ? { objectFit: 'contain', objectPosition: 'center' } : {}),
+        ...(wantsCover ? { objectFit: 'cover' } : {}),
+        ...(wantsContain ? { objectFit: 'contain' } : {}),
       }}
       className={className}
       onLoad={(e) => {

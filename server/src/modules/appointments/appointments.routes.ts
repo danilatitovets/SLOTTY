@@ -8,8 +8,10 @@ import { ApiError } from '../../utils/ApiError.js';
 import {
   cancelClientAppointment,
   createAppointmentTx,
+  getMasterAppointmentStats,
   listClientAppointments,
   listMasterAppointments,
+  MASTER_APPOINTMENTS_LIST_MAX,
   masterCancelAppointment,
   masterCompleteAppointment,
   masterConfirmAppointment,
@@ -73,8 +75,12 @@ clientAppointmentsRouter.post(
 );
 
 const listQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(MASTER_APPOINTMENTS_LIST_MAX).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+});
+
+const masterListQuery = listQuery.extend({
+  tab: z.enum(['pending', 'upcoming', 'history', 'active', 'all']).optional(),
 });
 
 clientAppointmentsRouter.get(
@@ -109,10 +115,22 @@ const masterCancelBody = z.object({
 });
 
 masterAppointmentsRouter.get(
+  '/stats',
+  asyncHandler(async (req, res) => {
+    const stats = await getMasterAppointmentStats(req.user!.id);
+    res.json({ stats });
+  }),
+);
+
+masterAppointmentsRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const q = listQuery.parse(req.query);
-    const out = await listMasterAppointments(req.user!.id, { limit: q.limit, offset: q.offset });
+    const q = masterListQuery.parse(req.query);
+    const out = await listMasterAppointments(req.user!.id, {
+      limit: q.limit,
+      offset: q.offset,
+      tab: q.tab,
+    });
     res.json(out);
   }),
 );

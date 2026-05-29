@@ -13,6 +13,7 @@ import {
   ADMIN_SCHEDULE_PATH,
   ADMIN_SERVICES_PATH,
   HUB_PATH,
+  PLATFORM_ADMIN_PATH,
 } from '../../app/paths';
 import { NotificationBellBadge, notificationBellLinkClass } from './notifications/notificationBellUi';
 import { AdminNotificationsProvider, useAdminNotifications } from './notifications/AdminNotificationsContext';
@@ -25,6 +26,7 @@ import { ADMIN_CABINET_SHELL_MAX } from './overview/adminOverviewTheme';
 import { ADMIN_DESKTOP_CANVAS } from './adminCabinetLayout';
 import {
   ADMIN_MAIN_NAV,
+  ADMIN_SECTION_META,
   ADMIN_SETTINGS_NAV,
   IconNavBilling,
   IconNavNotifications,
@@ -42,9 +44,12 @@ import { AccountAccessRestrictedBanner } from '../../features/auth/components/Ac
 import { AccountBlockedScreen } from '../../features/auth/components/AccountBlockedScreen';
 import { MasterPlatformAccessProvider } from '../../features/auth/context/MasterPlatformAccessContext';
 import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
+import { useAuth } from '../../features/auth/AuthProvider';
+import { isPlatformAdmin } from '../../features/auth/lib/isPlatformAdmin';
 import { AdminContentLoadingOverlay } from './shared/AdminContentLoadingOverlay';
 import { LOADING_VIDEO_SRC } from '../../shared/ui/loadingVideoSrc';
 import { AdminCabinetStatusBanner } from './AdminCabinetStatusBanner';
+import { AdminCabinetSectionIntro } from './shared/AdminCabinetSectionIntro';
 
 function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean }) {
   const label = count > 9 ? '9+' : String(count);
@@ -68,9 +73,34 @@ function IconBurger({ className }: { className?: string }) {
 }
 
 function navClass(active: boolean): string {
-  return `flex min-h-12 w-full items-center justify-between gap-3 rounded-full px-4 text-left text-[15px] font-semibold transition active:scale-[0.99] ${
+  return `flex min-h-12 w-full items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left transition active:scale-[0.99] ${
     active ? 'bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.25)]' : 'bg-[#F1EFEF] text-neutral-900'
   }`;
+}
+
+function MobileNavItemText({
+  label,
+  description,
+  active,
+}: {
+  label: string;
+  description?: string;
+  active: boolean;
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="truncate text-[15px] font-semibold">{label}</span>
+      {description ? (
+        <span
+          className={`line-clamp-2 text-[12px] font-normal leading-snug ${
+            active ? 'text-white/85' : 'text-neutral-600'
+          }`}
+        >
+          {description}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function AdminCabinetLoadingGate() {
@@ -92,6 +122,8 @@ export function AdminLayout() {
 
 function AdminLayoutInner() {
   const accountAccess = useAccountAccess();
+  const { profile } = useAuth();
+  const showPlatformAdmin = isPlatformAdmin(profile);
   const { planId } = useMasterPlanEntitlements();
   const { hasUnread, unreadCount } = useAdminNotifications();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -251,6 +283,12 @@ function AdminLayoutInner() {
 
           {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
 
+          {!isProfileHome && !isProfileCompletion ? (
+            <div className="px-4 pt-3 lg:hidden">
+              <AdminCabinetSectionIntro pathname={pathname} variant="mobile" />
+            </div>
+          ) : null}
+
           {accountAccess.showBlockedScreen || accountAccess.showDeletedScreen ? (
             <div className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} px-4 py-6`}>
               <AccountBlockedScreen access={accountAccess} />
@@ -302,18 +340,23 @@ function AdminLayoutInner() {
             >
               {({ isActive }) => {
                 const Icon = item.icon;
+                const meta = ADMIN_SECTION_META[item.to];
                 return (
                   <>
-                    <span className="flex min-w-0 flex-1 items-center gap-3">
-                      <Icon className="shrink-0 opacity-95" />
-                      <span className="truncate">{item.label}</span>
+                    <span className="flex min-w-0 flex-1 items-start gap-3">
+                      <Icon className="mt-0.5 shrink-0 opacity-95" />
+                      <MobileNavItemText
+                        label={item.label}
+                        description={meta?.description}
+                        active={isActive}
+                      />
                     </span>
                     {isActive ? (
-                      <span className="shrink-0 text-[12px] font-medium text-white/90" aria-hidden>
+                      <span className="shrink-0 self-center text-[12px] font-medium text-white/90" aria-hidden>
                         ●
                       </span>
                     ) : (
-                      <span className="w-3 shrink-0" aria-hidden />
+                      <span className="w-3 shrink-0 self-center" aria-hidden />
                     )}
                   </>
                 );
@@ -328,9 +371,13 @@ function AdminLayoutInner() {
           >
             {({ isActive }) => (
               <>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <IconNavNotifications className="shrink-0 opacity-95" />
-                  <span className="truncate">Уведомления</span>
+                <span className="flex min-w-0 flex-1 items-start gap-3">
+                  <IconNavNotifications className="mt-0.5 shrink-0 opacity-95" />
+                  <MobileNavItemText
+                    label="Уведомления"
+                    description={ADMIN_SECTION_META[ADMIN_NOTIFICATIONS_PATH]?.description}
+                    active={isActive}
+                  />
                 </span>
                 {isActive ? (
                   <span className="shrink-0 text-[12px] font-medium text-white/90" aria-hidden>
@@ -355,9 +402,13 @@ function AdminLayoutInner() {
                 const badge = planBadgeLabel(planId);
                 return (
                   <>
-                    <span className="flex min-w-0 flex-1 items-center gap-3">
-                      <IconNavBilling className="shrink-0 opacity-95" />
-                      <span className="truncate">Мой тариф</span>
+                    <span className="flex min-w-0 flex-1 items-start gap-3">
+                      <IconNavBilling className="mt-0.5 shrink-0 opacity-95" />
+                      <MobileNavItemText
+                        label="Мой тариф"
+                        description={ADMIN_SECTION_META[ADMIN_BILLING_PATH]?.description}
+                        active={isActive}
+                      />
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
@@ -378,20 +429,54 @@ function AdminLayoutInner() {
             >
               {({ isActive }) => (
                 <>
-                  <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <ADMIN_SETTINGS_NAV.icon className="shrink-0 opacity-95" />
-                    <span className="truncate">{ADMIN_SETTINGS_NAV.label}</span>
+                  <span className="flex min-w-0 flex-1 items-start gap-3">
+                    <ADMIN_SETTINGS_NAV.icon className="mt-0.5 shrink-0 opacity-95" />
+                    <MobileNavItemText
+                      label={ADMIN_SETTINGS_NAV.label}
+                      description={ADMIN_SECTION_META[ADMIN_SETTINGS_PATH]?.description}
+                      active={isActive}
+                    />
                   </span>
                   {isActive ? (
-                    <span className="shrink-0 text-[12px] font-medium text-white/90" aria-hidden>
+                    <span className="shrink-0 self-center text-[12px] font-medium text-white/90" aria-hidden>
                       ●
                     </span>
                   ) : (
-                    <span className="w-3 shrink-0" aria-hidden />
+                    <span className="w-3 shrink-0 self-center" aria-hidden />
                   )}
                 </>
               )}
             </NavLink>
+
+            {showPlatformAdmin ? (
+              <NavLink
+                to={PLATFORM_ADMIN_PATH}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) => navClass(isActive)}
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center text-[15px]" aria-hidden>
+                        ✦
+                      </span>
+                      <MobileNavItemText
+                        label="Админка SLOTTY"
+                        description="Управление платформой: мастера, жалобы, промокоды"
+                        active={isActive}
+                      />
+                    </span>
+                    {isActive ? (
+                      <span className="shrink-0 self-center text-[12px] font-medium text-white/90" aria-hidden>
+                        ●
+                      </span>
+                    ) : (
+                      <span className="w-3 shrink-0 self-center" aria-hidden />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ) : null}
           </div>
         </nav>
       </AdminBottomSheet>

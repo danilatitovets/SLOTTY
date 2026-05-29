@@ -1,3 +1,4 @@
+import { sortMastersByTopRank } from '../../../features/masters/lib/masterTopScore';
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
 import { isSlotToday, listingDistanceKm } from './catalogFormat';
 import { sortMastersByDistance } from './groupMasters';
@@ -37,11 +38,6 @@ function sortBySoonest(a: ServiceListingRecord, b: ServiceListingRecord): number
   const ta = a.nextSlotStartsAt ? new Date(a.nextSlotStartsAt).getTime() : Number.POSITIVE_INFINITY;
   const tb = b.nextSlotStartsAt ? new Date(b.nextSlotStartsAt).getTime() : Number.POSITIVE_INFINITY;
   return ta - tb;
-}
-
-function sortByTop(a: ServiceListingRecord, b: ServiceListingRecord): number {
-  if (b.rating !== a.rating) return b.rating - a.rating;
-  return b.reviewsCount - a.reviewsCount;
 }
 
 /** Мастера с мало отзывами — блок «Новые» (пока нет createdAt в API). */
@@ -136,14 +132,12 @@ export function buildMasterFeed(
     }
   }
 
-  const topPool = masters.filter((m) => m.rating >= 4.5 || m.reviewsCount >= 10).sort(sortByTop);
-  const topFallback = [...masters].sort(sortByTop);
-  const top = takeUnique(topPool.length >= 2 ? topPool : topFallback, used, 8);
+  const top = takeUnique(sortMastersByTopRank(masters), used, 8);
   if (top.length >= 1) {
     sections.push({
       id: 'top',
       title: 'Топ мастера',
-      subtitle: 'Высокий рейтинг и отзывы',
+      subtitle: 'Рейтинг, отзывы и число записей',
       items: top,
       layout: 'top',
     });
@@ -161,7 +155,7 @@ export function buildMasterFeed(
     });
   }
 
-  const allSorted = [...masters].sort((a, b) => sortByTop(a, b));
+  const allSorted = sortMastersByTopRank(masters);
   sections.push({
     id: 'all',
     title: 'Все мастера',

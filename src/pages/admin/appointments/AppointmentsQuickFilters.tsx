@@ -15,7 +15,8 @@ export function AppointmentsQuickFilters({
   sheetAriaLabel,
 }: Props) {
   return (
-    <div className="flex w-full justify-end">
+    <div className="flex w-full items-center justify-between">
+      <span className="h-12 w-12 shrink-0" aria-hidden />
       <button
         type="button"
         onClick={onOpenSheet}

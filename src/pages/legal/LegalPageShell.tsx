@@ -1,18 +1,22 @@
 import type { FC, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { HUB_PATH } from '../../app/paths';
+import { HiArrowLeft } from 'react-icons/hi2';
+import { useLegalPageBack } from './useLegalPageBack';
 
 export const LegalPageShell: FC<{ title: string; children: ReactNode }> = ({ title, children }) => {
+  const { goBack, backLabel } = useLegalPageBack();
+
   return (
     <div className="min-h-dvh bg-[#F8F6F6] text-neutral-900">
       <header className="sticky top-0 z-10 border-b border-black/[0.06] bg-white/90 px-4 py-4 backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-          <Link
-            to={HUB_PATH}
-            className="text-[14px] font-semibold text-[#E29595] transition hover:opacity-90 active:scale-[0.99]"
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex min-h-10 items-center gap-1.5 text-[14px] font-semibold text-[#E29595] transition hover:opacity-90 active:scale-[0.99]"
           >
-            На главную
-          </Link>
+            <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            {backLabel}
+          </button>
           <span className="truncate text-right text-[13px] font-medium text-neutral-500">SLOTTY</span>
         </div>
       </header>

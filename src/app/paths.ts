@@ -38,6 +38,8 @@ export const SERVICES_PATH = '/services';
 export const MASTERS_PATH = '/masters';
 
 export type MastersCatalogUrlParams = {
+  /** Табы каталога: рядом / сегодня / топ рейтинг. */
+  tab?: 'near' | 'today' | 'top';
   /** Только мастера со свободными окнами. */
   slots?: boolean;
   sort?: 'recommended' | 'rating' | 'price_asc' | 'price_desc' | 'reviews' | 'soonest';
@@ -53,6 +55,17 @@ export type MastersCatalogUrlParams = {
 export function getMastersCatalogPath(opts?: MastersCatalogUrlParams): string {
   if (!opts) return MASTERS_PATH;
   const q = new URLSearchParams();
+  if (opts.tab === 'near') {
+    q.set('tab', 'near');
+    q.set('sort', 'soonest');
+    q.set('slots', '1');
+  } else if (opts.tab === 'today') {
+    q.set('tab', 'today');
+  } else if (opts.tab === 'top') {
+    q.set('tab', 'top');
+    q.set('sort', 'rating');
+    q.set('rating', '1');
+  }
   if (opts.slots) q.set('slots', '1');
   if (opts.sort && opts.sort !== 'recommended') q.set('sort', opts.sort);
   if (opts.verified) q.set('verified', '1');
@@ -62,6 +75,20 @@ export function getMastersCatalogPath(opts?: MastersCatalogUrlParams): string {
   if (opts.rating) q.set('rating', '1');
   const s = q.toString();
   return s ? `${MASTERS_PATH}?${s}` : MASTERS_PATH;
+}
+
+export type ServicesCatalogUrlParams = {
+  tab?: 'popular' | 'promo' | 'new';
+  sort?: 'recommended' | 'soonest' | 'rating' | 'price_asc' | 'price_desc' | 'reviews';
+};
+
+export function getServicesCatalogPath(opts?: ServicesCatalogUrlParams): string {
+  if (!opts) return SERVICES_PATH;
+  const q = new URLSearchParams();
+  if (opts.tab) q.set('tab', opts.tab);
+  if (opts.sort && opts.sort !== 'recommended') q.set('sort', opts.sort);
+  const s = q.toString();
+  return s ? `${SERVICES_PATH}?${s}` : SERVICES_PATH;
 }
 
 export function getServiceCategoryPath(categoryCode: string): string {
@@ -110,6 +137,7 @@ export const PLATFORM_ADMIN_MASTERS_PATH = '/platform-admin/masters';
 export const PLATFORM_ADMIN_SERVICES_PATH = '/platform-admin/services';
 export const PLATFORM_ADMIN_BOOKINGS_PATH = '/platform-admin/bookings';
 export const PLATFORM_ADMIN_AUDIT_PATH = '/platform-admin/audit';
+export const PLATFORM_ADMIN_BILLING_PATH = '/platform-admin/billing';
 
 /** Разделы кабинета (отдельные страницы). */
 export const ADMIN_SERVICES_PATH = '/admin/services';
@@ -121,6 +149,7 @@ export const ADMIN_NOTIFICATIONS_PATH = '/admin/notifications';
 export const ADMIN_SETTINGS_PATH = '/admin/settings';
 export const ADMIN_SETTINGS_LOGIN_METHODS_PATH = '/admin/settings/login-methods';
 export const ADMIN_SETTINGS_SUPPORT_PATH = '/admin/settings/support';
+export const ADMIN_SETTINGS_SPONSOR_PATH = '/admin/settings/sponsor';
 export const ADMIN_SETTINGS_DOCUMENTS_PATH = '/admin/settings/documents';
 /** Редирект со старого URL. */
 export const ADMIN_LOGIN_METHODS_PATH = ADMIN_SETTINGS_LOGIN_METHODS_PATH;

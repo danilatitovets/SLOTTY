@@ -7,6 +7,7 @@ import {
   ADMIN_SERVICES_PATH,
   getMastersCatalogPath,
   getServiceCategoryPath,
+  getServicesCatalogPath,
   MASTERS_PATH,
   SERVICES_PATH,
 } from '../../../app/paths';
@@ -28,7 +29,7 @@ import {
   LANDING_MASTERS_TAB_SERVICES,
 } from './headerNav';
 
-export type MegaMenuKey = 'catalog' | 'masters' | 'how' | 'mastersFor' | 'tariffs';
+export type MegaMenuKey = 'catalog' | 'masters' | 'how' | 'services' | 'mastersFor' | 'tariffs';
 
 export type MegaMenuItem = {
   title: string;
@@ -91,34 +92,75 @@ export const MEGA_MENU: Record<MegaMenuKey, MegaMenuGroup> = {
     to: MASTERS_PATH,
     items: [
       {
-        title: 'Лучшие мастера',
-        description: 'Карточки специалистов с рейтингом, услугами, адресом и фото работ.',
-        to: getMastersCatalogPath({ sort: 'rating', rating: true }),
+        title: 'Топ рейтинг',
+        badge: 'HOT',
+        description: 'Лучшие мастера по оценкам клиентов и проверенным отзывам.',
+        to: getMastersCatalogPath({ tab: 'top' }),
         accent: 'pink',
       },
       {
-        title: 'Свободные окна',
+        title: 'Сегодня',
         badge: 'FAST',
-        description: 'Показываем, когда можно записаться сегодня, завтра или на неделе.',
-        to: getMastersCatalogPath({ slots: true, sort: 'soonest' }),
+        description: 'Мастера со свободными окнами — запись в ближайшие часы.',
+        to: getMastersCatalogPath({ tab: 'today' }),
         accent: 'blue',
       },
       {
-        title: 'Портфолио',
-        description: 'Фото работ, сертификаты и визуальная проверка качества мастера.',
-        to: getMastersCatalogPath({ verified: true }),
+        title: 'Рядом',
+        description: 'Сортировка по близости и ближайшему свободному времени.',
+        to: getMastersCatalogPath({ tab: 'near' }),
         accent: 'violet',
       },
       {
-        title: 'Отзывы клиентов',
-        description: 'Помогают выбрать мастера быстрее и повышают доверие к записи.',
+        title: 'По отзывам',
+        description: 'Специалисты с большим числом отзывов и высоким доверием.',
         to: getMastersCatalogPath({ sort: 'reviews', reviews: '20' }),
         accent: 'green',
       },
       {
-        title: 'Запись 24/7',
-        description: 'Клиент выбирает услугу, время и отправляет заявку без звонков.',
-        to: getMastersCatalogPath({ slots: true }),
+        title: 'Сначала дешевле',
+        description: 'Подбор мастеров по цене — от доступных услуг к премиум.',
+        to: getMastersCatalogPath({ sort: 'price_asc' }),
+        accent: 'orange',
+      },
+    ],
+  },
+
+  services: {
+    label: 'Услуги',
+    to: SERVICES_PATH,
+    items: [
+      {
+        title: 'Популярные',
+        badge: 'HOT',
+        description: 'Услуги с высоким спросом, хитами и быстрой записью.',
+        to: getServicesCatalogPath({ tab: 'popular' }),
+        accent: 'pink',
+      },
+      {
+        title: 'С акциями',
+        badge: 'SALE',
+        description: 'Скидки и спецпредложения от мастеров в вашем районе.',
+        to: getServicesCatalogPath({ tab: 'promo' }),
+        accent: 'blue',
+      },
+      {
+        title: 'Ближайшее время',
+        badge: 'FAST',
+        description: 'Сортировка по свободным окнам — запись сегодня или завтра.',
+        to: getServicesCatalogPath({ sort: 'soonest' }),
+        accent: 'violet',
+      },
+      {
+        title: 'По рейтингу',
+        description: 'Лучшие услуги по оценкам клиентов и отзывам.',
+        to: getServicesCatalogPath({ sort: 'rating' }),
+        accent: 'green',
+      },
+      {
+        title: 'Сначала дешевле',
+        description: 'Подбор по цене — от доступных процедур к премиум.',
+        to: getServicesCatalogPath({ sort: 'price_asc' }),
         accent: 'orange',
       },
     ],

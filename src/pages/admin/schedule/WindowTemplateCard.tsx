@@ -59,7 +59,7 @@ export function WindowTemplateCard({
             e.stopPropagation();
             onOpenMenu();
           }}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#F5F5F5] text-[#6B7280] ring-1 ring-[#EEEEEE] transition hover:bg-[#EBEBEB] hover:text-[#111827] active:scale-[0.95] lg:right-2.5 lg:top-2.5"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/90 text-[#6B7280] transition hover:bg-white hover:text-[#111827] active:scale-[0.95] lg:right-2.5 lg:top-2.5"
           aria-label={`Действия: ${label}`}
         >
           <HiEllipsisVertical className="h-5 w-5" aria-hidden />

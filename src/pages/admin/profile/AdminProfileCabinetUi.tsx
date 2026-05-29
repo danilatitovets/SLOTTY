@@ -1,18 +1,24 @@
 import type { ReactNode } from 'react';
+import {
+  EMPTY_ABOUT,
+  EMPTY_CONTACTS,
+  EMPTY_METRIC,
+  EMPTY_SCHEDULE_PREVIEW,
+  valueOrEmptyField,
+} from '../../../shared/lib/emptyDisplayText';
 import { BY } from 'country-flag-icons/react/1x1';
 import { AboutDescriptionText } from './AboutDescriptionText';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
-  defaultMasterAvatarUrl,
   formatScheduleClientPreview,
   WEEKDAY_LABELS_SHORT,
 } from '../../../features/master/model/masterDraftStorage';
 import { resolveFilledContacts } from '../../../features/master-onboarding/model/masterContacts';
 import { MasterContactsChips } from '../../master-onboarding/MasterContactsChips';
 import { HiCamera } from 'react-icons/hi2';
-import { ProfileAvatarImage, ProfileCoverImage } from './adminProfileMedia';
+import { MasterCabinetAvatar, MasterCabinetCoverBanner } from './adminProfilePortrait';
 import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
 import { MasterVerificationStatusBadge } from '../../../shared/ui/MasterVerificationStatusBadge';
 import { resolveCoverUrl, useMasterCoverUpload } from './masterProfileCover';
@@ -71,10 +77,13 @@ function buildRatingStat(meta?: ProfileStatsRatingMeta): StatMiniDisplay {
 
 function buildBookingsStat(appointments: DemoMasterAppointment[]): StatMiniDisplay {
   const count = appointments.length;
+  if (count <= 0) {
+    return { value: EMPTY_METRIC, label: 'Записи', empty: true };
+  }
   return {
     value: String(count),
     label: 'Записи',
-    empty: count <= 0,
+    empty: false,
   };
 }
 
@@ -142,9 +151,7 @@ export function AdminProfileHero({
 }) {
   const { coverInputRef, coverBusy, coverError, onCoverFileChange, pickCover } = useMasterCoverUpload();
   const { verified, pendingSteps } = useAccountVerificationStatus();
-  const photoSrc = (draft.photoUrl && draft.photoUrl.trim()) || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const dedicatedCover = resolveCoverUrl(draft);
-  const coverSrc = dedicatedCover || photoSrc;
   const displayName = draft.name.trim() || 'Мастер';
 
   return (
@@ -158,15 +165,12 @@ export function AdminProfileHero({
         tabIndex={-1}
         onChange={onCoverFileChange}
       />
-      <div className="group relative">
-        <ProfileCoverImage
-          src={coverSrc}
-          alt=""
-          aspectClass="aspect-[16/9] w-full bg-[#F7F7F8]"
-          onError={(event) => {
-            (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-          }}
-        />
+      <MasterCabinetCoverBanner
+        name={displayName}
+        dedicatedCoverUrl={dedicatedCover}
+        photoUrl={draft.photoUrl}
+        aspectClass="aspect-[16/9] w-full"
+      >
         <button
           type="button"
           onClick={pickCover}
@@ -176,21 +180,18 @@ export function AdminProfileHero({
         >
           <HiCamera className="h-5 w-5" aria-hidden />
         </button>
-      </div>
+      </MasterCabinetCoverBanner>
       {coverError ? (
         <p className="px-4 pt-2 text-[12px] font-medium text-[#DC2626]">{coverError}</p>
       ) : null}
 
       <div className="relative px-4 pb-5 pt-0">
         <div className="-mt-11 flex justify-center">
-          <ProfileAvatarImage
-            src={photoSrc}
-            alt=""
+          <MasterCabinetAvatar
+            name={displayName}
+            photoUrl={draft.photoUrl}
             sizeClass="h-[88px] w-[88px]"
             ringClassName="bg-white ring-4 ring-white"
-            onError={(event) => {
-              (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-            }}
           />
         </div>
 
@@ -253,11 +254,6 @@ function InfoGridCell({
   );
 }
 
-function valueOrDash(value?: string | null): string {
-  const trimmed = value?.trim() ?? '';
-  return trimmed || '—';
-}
-
 export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: () => void }) {
   const clientContacts = resolveFilledContacts(draft);
 
@@ -278,12 +274,12 @@ export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: ()
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <InfoGridCell
           label="Имя и фамилия"
-          value={valueOrDash(draft.name)}
+          value={valueOrEmptyField(draft.name)}
           icon={<CabinetIcon name="user" size={18} />}
         />
         <InfoGridCell
           label="Телефон"
-          value={valueOrDash(draft.phone)}
+          value={valueOrEmptyField(draft.phone)}
           icon={
             <BY title="Беларусь" className="h-[18px] w-[18px] rounded-full object-cover" />
           }
@@ -297,7 +293,7 @@ export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: ()
             <MasterContactsChips contacts={clientContacts} size="compact" />
           </div>
         ) : (
-          <p className="mt-1.5 text-[15px] font-medium text-[#9CA3AF]">—</p>
+          <p className="mt-1.5 text-[15px] font-medium text-[#9CA3AF]">{EMPTY_CONTACTS}</p>
         )}
       </div>
     </section>
@@ -317,7 +313,7 @@ export function AboutCard({ description }: { description: string }) {
           <div className="mt-2">
             <AboutDescriptionText
               text={trimmed}
-              placeholder="—"
+              placeholder={EMPTY_ABOUT}
               emptyClassName="text-[#6B7280]"
               textClassName="text-[#6B7280]"
             />
@@ -345,7 +341,7 @@ export function ScheduleWorkCard({
         <div className="min-w-0 flex-1">
           <h2 className="text-[17px] font-semibold tracking-[-0.03em] text-[#111827]">График работы</h2>
           <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">
-            Клиенты смогут записываться {preview || '—'}
+            Клиенты смогут записываться {preview || EMPTY_SCHEDULE_PREVIEW}
           </p>
         </div>
       </div>

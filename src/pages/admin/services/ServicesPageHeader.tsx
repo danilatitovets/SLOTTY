@@ -5,16 +5,17 @@ import type { ServicesTabId } from './servicesTypes';
 type Props = {
   activeTab: ServicesTabId;
   metrics: ServicesTabMetrics;
+  extrasLocked?: boolean;
 };
 
-export function ServicesPageHeader({ activeTab, metrics }: Props) {
+export function ServicesPageHeader({ activeTab, metrics, extrasLocked = false }: Props) {
   return (
     <>
       <div className="pb-4 lg:hidden">
-        <ServicesDesktopHero tab={activeTab} metrics={metrics} />
+        <ServicesDesktopHero tab={activeTab} metrics={metrics} extrasLocked={extrasLocked} />
       </div>
       <div className="hidden lg:block">
-        <ServicesDesktopHero tab={activeTab} metrics={metrics} />
+        <ServicesDesktopHero tab={activeTab} metrics={metrics} extrasLocked={extrasLocked} />
       </div>
     </>
   );

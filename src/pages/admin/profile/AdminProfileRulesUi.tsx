@@ -5,12 +5,10 @@ import {
   cabinetCardPad,
   sheetFieldClass,
   sheetHintClass,
-  sheetLabelClass,
   sheetSectionTitleClass,
 } from './adminProfileCabinetTheme';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
 import { decodePaymentNote } from '../../../features/admin/lib/paymentNoteCodec';
-import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import { SheetFooter } from './AdminProfileEditSheets';
 
 export const PAYMENT_OPTIONS = ['Наличные', 'Карта', 'Перевод', 'Онлайн позже'] as const;
@@ -44,17 +42,13 @@ export function hasRulesContent(d: MasterDraft): boolean {
   );
 }
 
-const rulesFieldLabel = `block ${sheetLabelClass}`;
-
 function RulesReadCard({
   iconName,
   title,
-  hint,
   value,
 }: {
   iconName: CabinetIconName;
   title: string;
-  hint: string;
   value?: string | null;
 }) {
   const text = value?.trim() ?? '';
@@ -67,7 +61,6 @@ function RulesReadCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold text-[#111827]">{title}</p>
-          <p className="mt-0.5 text-[11px] leading-snug text-[#9CA3AF]">{hint}</p>
           {text ? (
             <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#374151]">{text}</p>
           ) : (
@@ -118,15 +111,9 @@ export function RulesSection({
             <RulesReadCard
               iconName="calendar"
               title="Запись"
-              hint="Когда и как можно записаться"
               value={draft.bookingRules}
             />
-            <RulesReadCard
-              iconName="rules"
-              title="Отмена и перенос"
-              hint="Что будет при отмене или опоздании"
-              value={draft.cancellationPolicy}
-            />
+            <RulesReadCard iconName="rules" title="Отмена" value={draft.cancellationPolicy} />
 
             <div className="rounded-[18px] bg-[#F7F7F8] p-3.5">
               <div className="flex items-start gap-2.5">
@@ -135,7 +122,6 @@ export function RulesSection({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[14px] font-semibold text-[#111827]">Оплата</p>
-                  <p className="mt-0.5 text-[11px] leading-snug text-[#9CA3AF]">Способы и уточнения</p>
                   {paymentMethods.length > 0 ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {paymentMethods.map((method) => {
@@ -231,9 +217,8 @@ export function SheetRules({
   return (
     <div className="space-y-5">
       <label className="block">
-        <p className={sheetSectionTitleClass}>Запись</p>
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <AdminSheetFieldLabel className={rulesFieldLabel}>Условия записи</AdminSheetFieldLabel>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className={sheetSectionTitleClass}>Запись</p>
           <CharCount value={bookingRules} max={RULES_TEXT_MAX} />
         </div>
         <textarea
@@ -242,31 +227,29 @@ export function SheetRules({
           onChange={(e) => setBookingRules(e.target.value)}
           rows={4}
           placeholder="Например: запись за сутки. При первом визите — предоплата 30%."
-          className={`${sheetFieldClass} resize-none leading-relaxed`}
+          className={`${sheetFieldClass} mt-3 resize-none leading-relaxed`}
         />
       </label>
 
       <label className="block">
-        <p className={sheetSectionTitleClass}>Отмена</p>
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <AdminSheetFieldLabel className={rulesFieldLabel}>Отмена и перенос</AdminSheetFieldLabel>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className={sheetSectionTitleClass}>Отмена</p>
           <CharCount value={cancellationPolicy} max={RULES_TEXT_MAX} />
         </div>
-        <p className={`mt-1 ${sheetHintClass}`}>Отмена, перенос, опоздание</p>
         <textarea
           value={cancellationPolicy}
           maxLength={RULES_TEXT_MAX}
           onChange={(e) => setCancellationPolicy(e.target.value)}
           rows={4}
           placeholder="Например: бесплатная отмена за 24 часа. При опоздании более 15 мин — визит сокращается."
-          className={`${sheetFieldClass} resize-none leading-relaxed`}
+          className={`${sheetFieldClass} mt-3 resize-none leading-relaxed`}
         />
       </label>
 
       <div>
         <p className={sheetSectionTitleClass}>Оплата</p>
-        <p className={`mt-1 ${sheetHintClass}`}>image.png</p>
-        <div className="mt-1.5 grid grid-cols-2 gap-2">
+        <p className={`mt-1 ${sheetHintClass}`}>Выберите способы оплаты</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {PAYMENT_OPTIONS.map((opt) => {
             const on = paymentMethods.includes(opt);
             const meta = PAYMENT_META[opt];
@@ -296,8 +279,7 @@ export function SheetRules({
         </div>
 
         <label className="mt-4 block">
-          <div className="flex items-baseline justify-between gap-2">
-            <AdminSheetFieldLabel className={rulesFieldLabel}>Комментарий к оплате</AdminSheetFieldLabel>
+          <div className="flex items-baseline justify-end gap-2">
             <CharCount value={paymentNote} max={500} />
           </div>
           <textarea
@@ -306,7 +288,7 @@ export function SheetRules({
             onChange={(e) => setPaymentNote(e.target.value)}
             rows={2}
             placeholder="Например: перевод на карту Приорбанка, чек по запросу"
-            className={`${sheetFieldClass} resize-none leading-relaxed`}
+            className={`${sheetFieldClass} mt-1.5 resize-none leading-relaxed`}
           />
         </label>
       </div>

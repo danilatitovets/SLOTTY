@@ -1,4 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { PortfolioImagePreview } from '../../client/masterProfile/PortfolioImagePreview';
+import { CertificatePreviewCard } from '../../master-onboarding/CertificatePreviewCard';
 import type { MasterDraft, MasterPortfolioItem } from '../../../features/profile/lib/demoMasterStorage';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
@@ -522,6 +524,15 @@ export function TrustSection({
   actionsDisabled?: boolean;
 }) {
   const [portfolioDetailId, setPortfolioDetailId] = useState<string | null>(null);
+  const [certPreviewIndex, setCertPreviewIndex] = useState<number | null>(null);
+
+  const certImageUrls = useMemo(
+    () =>
+      (draft.certificates ?? [])
+        .map((c) => c.imageUrl?.trim())
+        .filter((url): url is string => Boolean(url)),
+    [draft.certificates],
+  );
   const careerItems = normalizeCareerItems(draft);
   const certificates = draft.certificates ?? [];
   const portfolio = draft.portfolio ?? [];
@@ -601,16 +612,26 @@ export function TrustSection({
           <>
             <div className="mt-4 -mx-0.5 flex gap-3 overflow-x-auto pb-1 pl-0.5 pr-0.5 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {certificates.map((certificate, i) => {
-                const meta = [certificate.issuer?.trim(), certificate.year?.trim()]
-                  .filter(Boolean)
-                  .join(' · ');
+                const imageUrl = certificate.imageUrl?.trim();
+                const openPreview = () => {
+                  if (!imageUrl) return;
+                  const index = certImageUrls.indexOf(imageUrl);
+                  setCertPreviewIndex(index >= 0 ? index : 0);
+                };
 
                 return (
-                  <article
+                  <CertificatePreviewCard
                     key={certificate.id}
-                    className="relative flex w-[min(72vw,11.5rem)] shrink-0 snap-start flex-col rounded-[16px] bg-[#F5F5F5] p-3"
-                  >
-                    <div className="absolute right-2 top-2 z-10">
+                    certificate={{
+                      id: certificate.id,
+                      title: certificate.title,
+                      organization: certificate.issuer,
+                      year: certificate.year,
+                      imageUrl: certificate.imageUrl,
+                    }}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    onImageClick={imageUrl ? openPreview : undefined}
+                    headerSlot={
                       <CardOverflowMenu
                         ariaLabel="Действия с сертификатом"
                         sheetTitle="Сертификат"
@@ -630,32 +651,20 @@ export function TrustSection({
                           },
                         ]}
                       />
-                    </div>
-                    <div className="aspect-[3/4] w-full overflow-hidden rounded-[16px] bg-white ring-1 ring-[#EAECEF]/80">
-                      {certificate.imageUrl?.trim() ? (
-                        <ImageReveal
-                          src={certificate.imageUrl}
-                          alt=""
-                          className="absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center"
-                          loading={i === 0 ? 'eager' : 'lazy'}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[#9CA3AF]">
-                          <CabinetIcon name="certificate" size={36} />
-                          <span className="text-[10px] font-medium text-[#9CA3AF]">Документ</span>
-                        </div>
-                      )}
-                    </div>
-                    <p className="mt-2.5 line-clamp-2 text-[13px] font-semibold leading-snug text-[#111827]">
-                      {certificate.title}
-                    </p>
-                    {meta ? (
-                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#6B7280]">{meta}</p>
-                    ) : null}
-                  </article>
+                    }
+                  />
                 );
               })}
             </div>
+            {certPreviewIndex != null && certImageUrls.length > 0 ? (
+              <PortfolioImagePreview
+                urls={certImageUrls}
+                index={certPreviewIndex}
+                singleLabel="Сертификат"
+                onClose={() => setCertPreviewIndex(null)}
+                onIndexChange={setCertPreviewIndex}
+              />
+            ) : null}
             <TrustAddButton label="Добавить сертификат" onClick={onAddCert} disabled={actionsDisabled} />
           </>
         ) : (

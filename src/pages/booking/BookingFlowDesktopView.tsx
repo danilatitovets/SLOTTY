@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { EMPTY_BOOKING_DATE } from '../../shared/lib/emptyDisplayText';
 import {
   HiCalendarDays,
   HiClock,
@@ -12,8 +14,8 @@ import {
   catalogDesktopSectionLabel,
   catalogSecondaryBtn,
 } from '../client/servicesCatalog/servicesCatalogTheme';
-import { optimizeAvatarUrl } from '../../shared/lib/optimizeAvatarUrl';
-import { ImageReveal } from '../../shared/ui/ImageReveal';
+import { MasterCardPortrait } from '../client/components/MasterCardPortrait';
+import { getMasterPath } from '../../app/paths';
 import type {
   DemoBookingGridDay,
   DemoBookingGridSlot,
@@ -100,6 +102,7 @@ export function BookingFlowDesktopView({
       <BookingDesktopHero
         backTo={backTo}
         backLabel={backLabel}
+        masterProfileTo={getMasterPath(master.masterId)}
         masterName={master.masterName}
         serviceTitle={service.title}
       />
@@ -108,19 +111,21 @@ export function BookingFlowDesktopView({
         <div className="min-w-0 space-y-4">
           <section className={bookingDesktopCard}>
             <div className="flex gap-5">
-              <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[16px] bg-[#EBEBEB]">
-                <ImageReveal
-                  src={optimizeAvatarUrl(master.photoUrl, 320)}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  loading="eager"
-                />
-              </div>
+              <MasterCardPortrait
+                masterName={master.masterName}
+                photoUrl={master.photoUrl}
+                className="relative h-28 w-28 shrink-0"
+                imageClassName="h-full w-full rounded-[16px] object-cover"
+                loading="eager"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-2">
-                  <p className="text-[22px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
+                  <Link
+                    to={getMasterPath(master.masterId)}
+                    className="text-[22px] font-bold leading-tight tracking-[-0.03em] text-[#111827] underline-offset-2 transition hover:text-[#F47C8C] hover:underline"
+                  >
                     {master.masterName}
-                  </p>
+                  </Link>
                   {showVerified ? (
                     <MasterVerifiedBadge className="mt-1 h-5 w-5 shrink-0 text-[#F47C8C]" />
                   ) : null}
@@ -170,7 +175,7 @@ export function BookingFlowDesktopView({
             <div className={`${bookingMutedPanel} mb-5 px-4 py-3.5`}>
               <p className={catalogDesktopSectionLabel}>Выбранная дата</p>
               <p className="mt-1 text-[20px] font-bold capitalize tracking-[-0.02em] text-[#111827]">
-                {selectedDay?.fullDateLabel ?? '—'}
+                {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
               </p>
             </div>
 

@@ -42,7 +42,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 1',
     title: 'Выберите услугу',
     text: 'Откройте каталог, выберите категорию, мастера или конкретную услугу — всё в одном месте.',
-    imageSrc: howItWorksPhoto('1.png'),
+    imageSrc: howItWorksPhoto('1.webp'),
     imageAlt: 'Выбор услуги в приложении',
   },
   {
@@ -51,7 +51,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 2',
     title: 'Выберите время',
     text: 'Смотрите реальные свободные окна мастера и доступные даты без звонков и переписок.',
-    imageSrc: howItWorksPhoto('2.png'),
+    imageSrc: howItWorksPhoto('2.webp'),
     imageAlt: 'Выбор даты и времени',
   },
   {
@@ -60,7 +60,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 3',
     title: 'Запишитесь',
     text: 'Подтвердите визит в пару кликов — мастер сразу увидит заявку в своём кабинете.',
-    imageSrc: howItWorksPhoto('3.png'),
+    imageSrc: howItWorksPhoto('3.webp'),
     imageAlt: 'Подтверждение записи',
   },
   {
@@ -69,7 +69,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 4',
     title: 'Получите напоминание',
     text: 'Подтверждение и напоминание придут в Telegram — меньше неявок и забытых визитов.',
-    imageSrc: howItWorksPhoto('4.png'),
+    imageSrc: howItWorksPhoto('4.webp'),
     imageAlt: 'Напоминание о записи',
   },
   {
@@ -78,7 +78,7 @@ const HOW_TABS: HowTab[] = [
     stepLabel: 'Шаг 5',
     title: 'Все записи под рукой',
     text: 'Будущие и прошлые визиты хранятся в профиле — удобно перенести, отменить или записаться снова.',
-    imageSrc: howItWorksPhoto('5.png'),
+    imageSrc: howItWorksPhoto('5.webp'),
     imageAlt: 'История записей',
   },
 ];
@@ -186,7 +186,7 @@ export const HomeHowItWorks: FC = () => {
               alt={activeTab.imageAlt}
               loading="lazy"
               draggable={false}
-              className="absolute inset-0 block h-full w-full max-h-full max-w-full object-contain object-center"
+              className="absolute inset-0 block h-full w-full object-cover object-top"
             />
           </article>
         </div>

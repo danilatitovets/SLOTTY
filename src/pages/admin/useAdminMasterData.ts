@@ -12,6 +12,7 @@ export function useAdminMasterDraft() {
     commitDraftBaseline,
     flushDraftToBackend,
     flushScheduleToBackend,
+    flushLocationToBackend,
     patchProfileToBackend,
     refreshDraft,
   } = useAdminMasterCabinet();
@@ -21,6 +22,7 @@ export function useAdminMasterDraft() {
     commitDraftBaseline,
     flushDraftToBackend,
     flushScheduleToBackend,
+    flushLocationToBackend,
     patchProfileToBackend,
     refreshDraft,
   };

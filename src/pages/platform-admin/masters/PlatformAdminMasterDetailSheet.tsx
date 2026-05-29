@@ -1,21 +1,24 @@
+import { displayOrEmpty, EMPTY_FIELD, EMPTY_METRIC } from '../../../shared/lib/emptyDisplayText';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getPlatformMaster } from '../api/platformAdminApi';
+import { getPlatformMaster, grantMasterComplimentaryPro } from '../api/platformAdminApi';
 import type { PlatformMasterDetail, PlatformMasterListItem } from '../api/platformAdmin.types';
 import {
   PlatformAdminError,
   PlatformAdminLoading,
   StatusBadge,
 } from '../shared/PlatformAdminSharedUi';
-import { paCard, paGhostBtn } from '../platformAdminTheme';
+import { paCard, paGhostBtn, paInput, paPrimaryBtn } from '../platformAdminTheme';
+import {
+  labelBillingEventType,
+  labelBillingPeriod,
+  labelBillingSource,
+  labelMasterPlan,
+  labelProStatus,
+  labelSubscriptionStatus,
+} from '../platformAdminLabels';
 
-const EVENT_LABELS: Record<string, string> = {
-  checkout_started: 'Начал оформление Pro',
-  checkout_cancelled: 'Отменил оформление',
-  plan_changed: 'Смена тарифа',
-  pro_interest: 'Интерес к Pro (онбординг)',
-  payment_failed: 'Ошибка оплаты',
-};
+const GRANT_DAYS_PRESETS = [7, 14, 30, 90, 180] as const;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('ru-RU', {
@@ -43,6 +46,116 @@ type Props = {
   listPreview?: PlatformMasterListItem | null;
   onClose: () => void;
 };
+
+function GrantProPanel({
+  masterId,
+  onGranted,
+}: {
+  masterId: string;
+  onGranted: () => void;
+}) {
+  const [days, setDays] = useState(30);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [grantError, setGrantError] = useState<string | null>(null);
+  const [grantSuccess, setGrantSuccess] = useState<string | null>(null);
+
+  const submit = async () => {
+    setGrantError(null);
+    setGrantSuccess(null);
+    if (reason.trim().length < 3) {
+      setGrantError('Укажите причину (не короче 3 символов)');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await grantMasterComplimentaryPro(masterId, {
+        days,
+        reason: reason.trim(),
+      });
+      setGrantSuccess(
+        `Pro выдан до ${new Date(res.validUntil).toLocaleString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`,
+      );
+      setReason('');
+      onGranted();
+    } catch (e) {
+      setGrantError(e instanceof Error ? e.message : 'Не удалось выдать тариф');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#FDE8ED] bg-gradient-to-br from-[#FFF8F9] to-white p-4">
+      <h4 className="text-[15px] font-bold text-[#111827]">Выдать Pro бесплатно</h4>
+      <p className="mt-1 text-[13px] leading-relaxed text-[#6B7280]">
+        Тариф активируется сразу на выбранный срок. Запись появится в журнале действий.
+      </p>
+
+      <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Срок</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {GRANT_DAYS_PRESETS.map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={`rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
+              days === d
+                ? 'bg-[#ff5f7a] text-white'
+                : 'bg-white text-[#6B7280] ring-1 ring-[#E5E7EB] hover:bg-[#FAFAFA]'
+            }`}
+            onClick={() => setDays(d)}
+          >
+            {d} дн.
+          </button>
+        ))}
+      </div>
+      <label className="mt-3 block text-[13px] font-medium text-[#6B7280]">
+        Или своё число дней (1–365)
+        <input
+          type="number"
+          min={1}
+          max={365}
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value) || 1)}
+          className={`${paInput} mt-1.5`}
+        />
+      </label>
+
+      <label className="mt-3 block text-[13px] font-medium text-[#6B7280]">
+        Причина для журнала и уведомления мастеру *
+        <textarea
+          className={`${paInput} mt-1.5 min-h-[88px] resize-y`}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Например: партнёрская программа, конкурс, компенсация…"
+          maxLength={2000}
+        />
+      </label>
+
+      {grantError ? <p className="mt-2 text-[13px] font-medium text-rose-600">{grantError}</p> : null}
+      {grantSuccess ? (
+        <p className="mt-2 rounded-xl bg-[#ECFDF5] px-3 py-2 text-[13px] font-medium text-[#047857]">
+          {grantSuccess}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        className={`${paPrimaryBtn} mt-4`}
+        disabled={busy}
+        onClick={() => void submit()}
+      >
+        {busy ? 'Выдаём…' : 'Выдать Pro'}
+      </button>
+    </div>
+  );
+}
 
 export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose }: Props) {
   const [detail, setDetail] = useState<PlatformMasterDetail | null>(null);
@@ -102,7 +215,7 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                   isPro ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-700'
                 }`}
               >
-                {isPro ? 'Pro' : 'Free'}
+                {isPro ? 'Pro' : 'Бесплатный'}
               </span>
               {detail.isVerified ? (
                 <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[12px] font-semibold text-sky-800">
@@ -128,15 +241,15 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                     label="Подписка в БД"
                     value={`${detail.subscription?.planName ?? detail.planName} (${detail.subscription?.planCode ?? detail.planCode})`}
                   />
-                  <DetailRow label="Профиль master_plan" value={detail.masterPlan} />
+                  <DetailRow label="Тариф в профиле" value={labelMasterPlan(detail.masterPlan)} />
                   <DetailRow
                     label="Статус Pro"
                     value={
                       detail.proStatus
-                        ? `${detail.proStatus}${detail.proInterested ? ' · интерес при онбординге' : ''}`
+                        ? `${labelProStatus(detail.proStatus)}${detail.proInterested ? ' · интерес при онбординге' : ''}`
                         : detail.proInterested
                           ? 'Интерес при онбординге'
-                          : '—'
+                          : EMPTY_METRIC
                     }
                   />
                   {detail.proStartedAt ? (
@@ -155,7 +268,10 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                         label="Текущий период"
                         value={`${formatDate(detail.subscription.currentPeriodStart)} — ${formatDate(detail.subscription.currentPeriodEnd)}`}
                       />
-                      <DetailRow label="Статус подписки" value={detail.subscription.status} />
+                      <DetailRow
+                        label="Статус подписки"
+                        value={labelSubscriptionStatus(detail.subscription.status)}
+                      />
                       <DetailRow
                         label="Цена Pro"
                         value={`${detail.subscription.priceMonth} BYN/мес · ${detail.subscription.priceYear} BYN/год`}
@@ -163,6 +279,10 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                     </>
                   ) : null}
                 </dl>
+
+                <div className="mt-4">
+                  <GrantProPanel masterId={masterId} onGranted={() => void load()} />
+                </div>
               </section>
 
               <section>
@@ -178,15 +298,16 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                     {detail.billingEvents.map((ev) => (
                       <li key={ev.id} className="rounded-2xl bg-[#f6f7fb] px-4 py-3">
                         <p className="text-[14px] font-semibold text-[#111827]">
-                          {EVENT_LABELS[ev.eventType] ?? ev.eventType}
+                          {labelBillingEventType(ev.eventType)}
                         </p>
                         <p className="mt-1 text-[12px] text-[#6B7280]">
                           {formatDate(ev.createdAt)}
-                          {ev.planCode ? ` · ${ev.planCode}` : ''}
-                          {ev.billingPeriod ? ` · ${ev.billingPeriod}` : ''}
+                          {ev.planCode ? ` · ${ev.planCode === 'pro' ? 'Pro' : ev.planCode}` : ''}
+                          {ev.billingPeriod
+                            ? ` · ${labelBillingPeriod(ev.billingPeriod)}`
+                            : ''}
                           {ev.amount != null ? ` · ${ev.amount} ${ev.currency}` : ''}
-                          {` · ${ev.source}`}
-                          {ev.status !== 'recorded' ? ` · ${ev.status}` : ''}
+                          {` · ${labelBillingSource(ev.source)}`}
                         </p>
                         {ev.errorMessage ? (
                           <p className="mt-1 text-[12px] text-rose-700">{ev.errorMessage}</p>
@@ -202,12 +323,12 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                   Контакты и профиль
                 </h3>
                 <dl className="space-y-3">
-                  <DetailRow label="Категория" value={detail.categoryName ?? '—'} />
-                  <DetailRow label="Email" value={detail.email ?? '—'} />
-                  <DetailRow label="Телефон" value={detail.phone ?? '—'} />
+                  <DetailRow label="Категория" value={displayOrEmpty(detail.categoryName)} />
+                  <DetailRow label="Email" value={displayOrEmpty(detail.email)} />
+                  <DetailRow label="Телефон" value={displayOrEmpty(detail.phone)} />
                   <DetailRow
                     label="Telegram"
-                    value={detail.telegramUsername ? `@${detail.telegramUsername}` : '—'}
+                    value={detail.telegramUsername ? `@${detail.telegramUsername}` : EMPTY_FIELD}
                   />
                   <DetailRow label="Регистрация" value={formatDate(detail.createdAt)} />
                   {detail.adminHiddenReason ? (

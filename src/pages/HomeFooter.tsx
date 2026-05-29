@@ -7,82 +7,164 @@ import {
   LEGAL_PD_CONSENT_PATH,
   LEGAL_PRIVACY_PATH,
   LEGAL_TERMS_PATH,
+  SERVICES_PATH,
 } from '../app/paths';
 import { homeShell } from './home/homeLayout';
 import { TIVONIX_SITE_URL } from './legal/legalSiteInfo';
-
-const FOOTER_BG = '/photos/foooter.png';
-
-const FOOTER_NAV = [
-  { key: 'booking', label: 'Запись', to: BOOKING_PATH },
-  { key: 'tarify', label: 'Тарифы', to: `${HUB_PATH}#tarify` },
-  { key: 'faq', label: 'FAQ', to: `${HUB_PATH}#faq` },
-  { key: 'master', label: 'Кабинет мастера', to: BECOME_MASTER_PATH },
+const FOOTER_MARQUEE_SERVICES = [
+  'Лимфодренаж',
+  'Кератин',
+  'Дизайн',
+  'Маникюр',
+  'Педикюр',
+  'Окрашивание',
+  'Ресницы',
+  'Брови',
+  'Стрижка',
 ] as const;
 
-const LEGAL_LINKS = [
+const FOOTER_COL_A = [
+  { key: 'booking', label: 'Запись', to: BOOKING_PATH },
+  { key: 'catalog', label: 'Каталог', to: SERVICES_PATH },
+  { key: 'tarify', label: 'Тарифы', to: `${HUB_PATH}#tarify` },
+  { key: 'faq', label: 'FAQ', to: `${HUB_PATH}#faq` },
+  { key: 'masters', label: 'Для мастеров', to: `${HUB_PATH}#for-masters` },
+] as const;
+
+const FOOTER_COL_B = [
+  { key: 'master', label: 'Кабинет мастера', to: BECOME_MASTER_PATH },
   { key: 'privacy', label: 'Политика ПД', to: LEGAL_PRIVACY_PATH },
-  { key: 'consent', label: 'Согласие на обработку ПД', to: LEGAL_PD_CONSENT_PATH },
+  { key: 'consent', label: 'Согласие на обработку', to: LEGAL_PD_CONSENT_PATH },
   { key: 'terms', label: 'Пользовательское соглашение', to: LEGAL_TERMS_PATH },
 ] as const;
 
-const linkClass =
-  'text-[15px] font-semibold text-white/90 transition hover:text-white active:opacity-80';
+const navLinkClass =
+  'text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80';
 
-const legalLinkClass =
-  'text-[14px] font-semibold text-white/75 underline-offset-2 transition hover:text-white hover:underline';
+const inputClass =
+  'h-10 w-full rounded-full bg-white/12 px-4 text-[13px] text-white placeholder:text-white/55 outline-none ring-1 ring-inset ring-white/12 transition focus:ring-white/30';
+
+const ctaClass =
+  'inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#171717] transition hover:bg-white/90 active:opacity-80';
+
+function FooterLinkList({ items }: { items: readonly { key: string; label: string; to: string }[] }) {
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {items.map((item) => (
+        <li key={item.key}>
+          <Link to={item.to} className={navLinkClass}>
+            {item.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export const HomeFooter: FC = () => {
+  const year = new Date().getFullYear();
+  const marqueeTrack = Array.from({ length: 6 })
+    .flatMap(() => FOOTER_MARQUEE_SERVICES);
+
   return (
-    <footer className="mt-14 pb-[max(2rem,env(safe-area-inset-bottom))] sm:mt-16">
-      <div className={homeShell}>
-        <div
-          className="relative overflow-hidden rounded-[28px] bg-cover bg-center bg-no-repeat px-5 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.2)] sm:rounded-[32px] sm:px-7 sm:py-8"
-          style={{ backgroundImage: `url('${FOOTER_BG}')` }}
-        >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-black/25 to-black/40" aria-hidden />
+    <footer className="relative w-full overflow-hidden bg-[#E29595] text-[#171717]">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background:radial-gradient(800px_circle_at_20%_10%,rgba(255,255,255,0.95),transparent_55%),radial-gradient(900px_circle_at_80%_40%,rgba(255,255,255,0.65),transparent_55%)]" />
 
-          <div className="relative z-10 text-white">
-            <p className="text-[20px] font-bold tracking-tight text-white">SLOTTY</p>
-            <p className="mt-1 max-w-sm text-[14px] leading-relaxed text-white/80">
-              Онлайн-запись к мастерам прямо в Telegram.
-            </p>
+      <div className="relative">
+        <div className="border-b border-black/10 py-5 sm:py-6">
+          <div className="relative left-1/2 w-[100vw] max-w-[100vw] -translate-x-1/2 overflow-hidden">
+            <div className="flex w-max items-center gap-8 px-6 text-[30px] font-bold tracking-[-0.04em] text-white sm:text-[40px] motion-reduce:animate-none animate-services-marquee-left">
+              {[...marqueeTrack, ...marqueeTrack].map((text, index) => (
+                <span key={`${text}-${index}`} className="inline-flex items-center gap-5">
+                  <span>{text}</span>
+                  <span aria-hidden className="text-white/55">
+                    •
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
 
-            <nav aria-label="Навигация" className="mt-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">Навигация</p>
-              <ul className="mt-2 flex flex-col gap-2">
-                {FOOTER_NAV.map((item) => (
-                  <li key={item.key}>
-                    <Link to={item.to} className={linkClass}>
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+        <div className={`${homeShell} px-5 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-10 sm:px-6 sm:pt-12 lg:pt-14`}>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-16">
+            <div>
+              <h3 className="text-pretty text-[18px] font-semibold tracking-[-0.02em] text-[#171717] sm:text-[19px]">
+                Подпишись на новости и обновления
+              </h3>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#171717]/70 sm:text-[14px]">
+                Новые мастера, акции и полезные материалы — иногда, без спама.
+              </p>
 
-            <div className="mt-6">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">Документы</p>
-              <nav aria-label="Юридические документы" className="mt-2 flex flex-col gap-2">
-                {LEGAL_LINKS.map((item) => (
-                  <Link key={item.key} to={item.to} className={legalLinkClass}>
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input className={inputClass} placeholder="Введите email" />
+                <button type="button" className={ctaClass}>
+                  Подписаться
+                </button>
+              </div>
+
+              <p className="mt-2 text-[12px] text-[#171717]/55">
+                Нажимая «Подписаться», вы соглашаетесь с{' '}
+                <Link to={LEGAL_PRIVACY_PATH} className="font-medium underline decoration-black/20 underline-offset-2 hover:decoration-black/40">
+                  политикой конфиденциальности
+                </Link>
+                .
+              </p>
             </div>
 
-            <p className="mt-8 text-center text-[13px] font-medium text-white/65">
-              Разработка и сопровождение —{' '}
-              <a
-                href={TIVONIX_SITE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-[#FFB8C6] underline decoration-white/30 underline-offset-2 transition hover:text-white"
-              >
-                tivonix.tech
-              </a>
-            </p>
+            <div className="grid grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-3 sm:gap-x-14 md:gap-x-20">
+              <nav aria-label="Разделы сайта">
+                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">РАЗДЕЛЫ</p>
+                <FooterLinkList items={FOOTER_COL_A} />
+              </nav>
+              <nav aria-label="Мастерам и документы">
+                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">ДОКУМЕНТЫ</p>
+                <FooterLinkList items={FOOTER_COL_B} />
+              </nav>
+              <nav aria-label="Контакты">
+                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">КОНТАКТ</p>
+                <ul className="flex flex-col gap-2.5">
+                  <li>
+                    <a href={TIVONIX_SITE_URL} target="_blank" rel="noopener noreferrer" className="text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80">
+                      tivonix.tech
+                    </a>
+                  </li>
+                  <li>
+                    <Link to={BECOME_MASTER_PATH} className="text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80">
+                      Стать мастером
+                    </Link>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+
+          <div className="relative mt-12 border-t border-black/10 pt-6 sm:mt-14 sm:pt-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <p className="text-[13px] text-[#171717]/60">
+                  © SLOTTY 2024 – {year}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <Link to={LEGAL_PRIVACY_PATH} className="text-[13px] font-medium text-[#171717]/60 transition hover:text-[#171717]/80">
+                  Политика конфиденциальности
+                </Link>
+                <Link to={LEGAL_TERMS_PATH} className="text-[13px] font-medium text-[#171717]/60 transition hover:text-[#171717]/80">
+                  Условия использования
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pb-2 sm:mt-8 sm:pb-3">
+            <div
+              aria-hidden
+              className="pointer-events-none relative left-1/2 w-[1200px] max-w-[120vw] -translate-x-1/2 -translate-y-[3%] select-none text-center text-[140px] font-black leading-none tracking-[-0.06em] text-white/60 sm:-translate-y-[4%] sm:text-[220px] md:text-[260px] lg:text-[320px]"
+            >
+              SLOTTY
+            </div>
           </div>
         </div>
       </div>

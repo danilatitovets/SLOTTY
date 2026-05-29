@@ -1,10 +1,12 @@
+import { isGeneratedPlaceholderAvatarUrl } from '../../features/profile/lib/profileDisplayAvatar';
+
 /**
  * Уменьшает запрашиваемый размер у генераторов аватаров (меньше трафик и быстрее декодирование).
  * Остальные URL не трогаем.
  */
 export function optimizeAvatarUrl(url: string, maxEdge = 256): string {
   const u = typeof url === 'string' ? url.trim() : '';
-  if (!u) return u;
+  if (!u || isGeneratedPlaceholderAvatarUrl(u)) return '';
   try {
     if (u.includes('ui-avatars.com/api')) {
       const parsed = new URL(u, 'https://ui-avatars.com');

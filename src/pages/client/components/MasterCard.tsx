@@ -17,6 +17,8 @@ import {
   getCategoryWorkPhotoUrl,
   resolveCategoryWorkCode,
 } from '../../../features/catalog/categoryWorkPhotos';
+import { resolveServiceListingCoverUrl } from '../../../features/catalog/catalogServicePhotos';
+import { EMPTY_DISTANCE, EMPTY_METRIC } from '../../../shared/lib/emptyDisplayText';
 import {
   estimatedBookingsCount,
   formatDistanceKm,
@@ -35,6 +37,7 @@ import {
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { useFavoriteMaster } from '../../../features/profile/hooks/useFavoriteMaster';
 import { useClientErrorModal } from '../ClientErrorModalContext';
+import { MasterCardPortrait } from './MasterCardPortrait';
 
 type Props = {
   listing: ServiceListingRecord;
@@ -42,12 +45,6 @@ type Props = {
   userLng: number | null;
   layout?: 'carousel' | 'list' | 'featured' | 'catalog' | 'home';
 };
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
-  return (name[0] ?? 'M').toUpperCase();
-}
 
 function uniquePortfolioUrls(urls: string[] | undefined): string[] {
   if (!urls?.length) return [];
@@ -66,19 +63,123 @@ function uniquePortfolioUrls(urls: string[] | undefined): string[] {
 const CARD_STAT_VALUE = 'text-[15px] font-semibold leading-none tabular-nums';
 const CARD_STAT_LABEL = 'mt-1 text-[11px] font-medium leading-snug text-[#9CA3AF]';
 
+/** Бейдж «Свободна» поверх фото — всегда с фоном, иначе теряется на светлых снимках. */
+const AVAILABILITY_BADGE =
+  'inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold leading-none text-[#15803D] shadow-[0_2px_10px_rgba(0,0,0,0.14)] ring-1 ring-black/10 backdrop-blur-[2px]';
+
+function StatDivider() {
+  return <div className="mx-1.5 w-px self-stretch min-h-[2.25rem] bg-[#F3F4F6]" aria-hidden />;
+}
+
+function MasterCardMetricsStrip({
+  listing,
+  userLat,
+  userLng,
+  className = '',
+  variant = 'strip',
+}: {
+  listing: ServiceListingRecord;
+  userLat: number | null;
+  userLng: number | null;
+  className?: string;
+  variant?: 'strip' | 'plain' | 'catalog';
+}) {
+  const isNewMaster = listing.reviewsCount <= 0 && listing.rating <= 0;
+  const bookingsCount = estimatedBookingsCount(listing.reviewsCount);
+  const distanceKm = listingDistanceKm(listing, userLat, userLng);
+  const distanceLabel = formatDistanceKm(distanceKm);
+  const hasRating = listing.rating > 0;
+  const hasReviews = listing.reviewsCount > 0;
+  const valueClass = variant === 'catalog' ? 'text-[16px] font-bold leading-none tabular-nums' : CARD_STAT_VALUE;
+  const labelClass = variant === 'catalog' ? 'mt-1 text-[12px] font-medium leading-snug text-[#9CA3AF]' : CARD_STAT_LABEL;
+
+  const ratingColumn = isNewMaster ? (
+    <StatColumn
+      value="Новый"
+      label={variant === 'plain' ? 'рейтинг' : 'мастер'}
+      valueClassName={`${valueClass} text-[#F47C8C]`}
+      labelClassName={labelClass}
+    />
+  ) : (
+    <StatColumn
+      value={
+        <span className="inline-flex items-center justify-center gap-0.5">
+          <HiStar className={`${variant === 'catalog' ? 'h-4 w-4' : 'h-3.5 w-3.5'} text-[#F59E0B]`} aria-hidden />
+          {hasRating ? listing.rating.toFixed(1) : EMPTY_METRIC}
+        </span>
+      }
+      label={
+        hasReviews
+          ? formatReviewsCountLabel(listing.reviewsCount)
+          : hasRating
+            ? 'средний рейтинг'
+            : 'нет отзывов'
+      }
+      valueClassName={
+        hasRating ? `${valueClass} text-[#111827]` : `${valueClass} text-[#D1D5DB]`
+      }
+      labelClassName={labelClass}
+    />
+  );
+
+  const bookingsColumn =
+    bookingsCount != null ? (
+      <StatColumn value={String(bookingsCount)} label="записей" valueClassName={`${valueClass} text-[#111827]`} labelClassName={labelClass} />
+    ) : (
+      <StatColumn value={EMPTY_METRIC} label="записей" valueClassName={`${valueClass} text-[#9CA3AF]`} labelClassName={labelClass} />
+    );
+
+  const distanceColumn = (
+    <StatColumn
+      value={distanceLabel ?? EMPTY_DISTANCE}
+      label={distanceLabel ? 'от вас' : 'расстояние'}
+      valueClassName={
+        distanceLabel ? `${valueClass} text-[#111827]` : `${valueClass} text-[#9CA3AF]`
+      }
+      labelClassName={labelClass}
+    />
+  );
+
+  if (variant === 'plain') {
+    return (
+      <div className={`grid w-full min-h-[2.75rem] shrink-0 grid-cols-3 gap-1 pt-0.5 ${className}`}>
+        {ratingColumn}
+        {bookingsColumn}
+        {distanceColumn}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex w-full items-start border-t border-[#F3F4F6] ${
+        variant === 'catalog' ? 'pt-3' : 'pt-2.5'
+      } ${className}`}
+    >
+      {ratingColumn}
+      <StatDivider />
+      {bookingsColumn}
+      <StatDivider />
+      {distanceColumn}
+    </div>
+  );
+}
+
 function StatColumn({
   value,
   label,
   valueClassName = `${CARD_STAT_VALUE} text-[#111827]`,
+  labelClassName = CARD_STAT_LABEL,
 }: {
   value: ReactNode;
   label: string;
   valueClassName?: string;
+  labelClassName?: string;
 }) {
   return (
     <div className="min-w-0 w-full flex-1 text-center">
       <div className={`flex min-h-[1.125rem] items-center justify-center ${valueClassName}`}>{value}</div>
-      <p className={CARD_STAT_LABEL}>{label}</p>
+      <p className={labelClassName}>{label}</p>
     </div>
   );
 }
@@ -96,12 +197,16 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
   const hasSlot = Boolean(listing.nextSlotStartsAt);
   const slotSubline = formatSlotCardSubline(listing.nextSlotStartsAt);
   const showVerified = masterShowsVerifiedBadge(listing);
-  const isNewMaster = listing.reviewsCount <= 0 && listing.rating <= 0;
-  const bookingsCount = estimatedBookingsCount(listing.reviewsCount);
-  const distanceKm = listingDistanceKm(listing, userLat, userLng);
-  const distanceLabel = formatDistanceKm(distanceKm);
 
   const priceLabel = listing.priceFrom > 0 ? formatPriceFrom(listing.priceFrom) : null;
+
+  const serviceCoverSrc =
+    listing.serviceCoverUrl ??
+    resolveServiceListingCoverUrl({
+      category: listing.category,
+      categoryCode: listing.categoryCode,
+      serviceName: listing.serviceName,
+    });
 
   const { previewPhotos, extraWorks } = useMemo(() => {
     const urls = uniquePortfolioUrls(listing.portfolioPreview);
@@ -172,20 +277,15 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
         </button>
 
         <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#EBEBEB] lg:h-auto lg:w-[168px] lg:min-h-[148px]">
-          {listing.photoUrl ? (
-            <ImageReveal
-              src={listing.photoUrl}
-              alt=""
-              className="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
-              loading="lazy"
-            />
-          ) : (
-            <span className="flex h-full min-h-[176px] w-full items-center justify-center bg-gradient-to-br from-[#FFF1F4] to-[#FFE4EA] text-[28px] font-bold text-[#F47C8C] lg:min-h-[148px]">
-              {initials(listing.masterName)}
-            </span>
-          )}
+          <ImageReveal
+            src={serviceCoverSrc}
+            alt=""
+            className="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
+            loading="lazy"
+          />
           {hasSlot ? (
-            <span className="absolute left-3 top-3 rounded-[8px] bg-[#ECFDF5] px-2.5 py-1 text-[11px] font-semibold text-[#15803D]">
+            <span className={`absolute left-3 top-3 ${AVAILABILITY_BADGE}`}>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
               Свободна
             </span>
           ) : null}
@@ -205,29 +305,15 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
               ) : null}
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-medium text-[#374151]">
-              {isNewMaster ? (
-                <span className="font-semibold text-[#F47C8C]">Новый мастер</span>
-              ) : (
-                <span className="inline-flex items-center gap-1">
-                  <HiStar className="h-4 w-4 text-[#F59E0B]" aria-hidden />
-                  {listing.rating > 0 ? listing.rating.toFixed(1) : '—'}
-                  {listing.reviewsCount > 0 ? (
-                    <span className="text-[#8E8E93]">
-                      ({formatReviewsCountLabel(listing.reviewsCount)})
-                    </span>
-                  ) : null}
-                </span>
-              )}
-              {bookingsCount != null ? <span>{bookingsCount} записей</span> : null}
-              {distanceLabel ? (
-                <span className="inline-flex items-center gap-1">
-                  <HiMapPin className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
-                  {distanceLabel}
-                </span>
-              ) : null}
+            <div className="mt-2">
+              <MasterCardMetricsStrip
+                listing={listing}
+                userLat={userLat}
+                userLng={userLng}
+                variant="catalog"
+              />
               {priceLabel ? (
-                <span className="font-semibold text-[#111827]">{priceLabel}</span>
+                <p className="mt-2 text-[14px] font-semibold text-[#111827]">{priceLabel}</p>
               ) : null}
             </div>
 
@@ -284,38 +370,22 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
       } ${featured && !plainHome ? 'ring-1 ring-[#F47C8C]/25' : ''}`}
     >
       <div className={`flex gap-3.5 ${plainHome ? 'shrink-0' : ''}`}>
-        <div className="relative h-[8.5rem] w-[7rem] shrink-0">
-          {listing.photoUrl ? (
-            <ImageReveal
-              src={listing.photoUrl}
-              alt=""
-              className="h-full w-full rounded-[14px] object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <span
-              className={`flex h-full w-full items-center justify-center rounded-[14px] text-[22px] font-bold text-[#F47C8C] ${
-                plainHome ? 'bg-transparent' : 'bg-[#F5F5F5]'
-              }`}
-            >
-              {initials(listing.masterName)}
-            </span>
-          )}
-          <span
-            className={`absolute bottom-2 left-1.5 right-1.5 flex items-center justify-center gap-1 text-[11px] font-semibold text-[#15803D] ${
-              plainHome
-                ? hasSlot
-                  ? ''
-                  : 'pointer-events-none opacity-0'
-                : hasSlot
-                  ? 'rounded-full bg-white px-2 py-1 ring-1 ring-[#E5E7EB]'
-                  : 'hidden'
-            }`}
-          >
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
-            Свободна
-          </span>
-        </div>
+        <MasterCardPortrait
+          masterName={listing.masterName}
+          photoUrl={listing.photoUrl}
+          className="relative h-[8.5rem] w-[7rem] shrink-0"
+          imageClassName="h-full w-full rounded-[14px] object-cover"
+          badge={
+            hasSlot ? (
+              <span
+                className={`absolute bottom-2 left-1.5 right-1.5 justify-center ${AVAILABILITY_BADGE}`}
+              >
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
+                Свободна
+              </span>
+            ) : null
+          }
+        />
 
         <div className={`min-w-0 flex-1 ${plainHome ? 'flex min-h-[8.5rem] flex-col' : ''}`}>
           <div className="flex items-start gap-2">
@@ -349,60 +419,13 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
             </button>
           </div>
 
-          <div
-            className={`${
-              plainHome
-                ? 'mt-3 grid w-full min-h-[2.75rem] shrink-0 grid-cols-3 gap-1 pt-0.5'
-                : 'mt-3 flex w-full items-start border-t border-[#F3F4F6] pt-3'
-            }`}
-          >
-            {isNewMaster ? (
-              <StatColumn
-                value="Новый"
-                label="рейтинг"
-                valueClassName={`${CARD_STAT_VALUE} text-[#F47C8C]`}
-              />
-            ) : (
-              <StatColumn
-                value={
-                  <span className="inline-flex items-center justify-center gap-0.5">
-                    <HiStar className="h-3.5 w-3.5 text-[#F59E0B]" aria-hidden />
-                    {listing.rating > 0 ? listing.rating.toFixed(1) : '—'}
-                  </span>
-                }
-                label={
-                  listing.reviewsCount > 0
-                    ? formatReviewsCountLabel(listing.reviewsCount)
-                    : 'нет отзывов'
-                }
-                valueClassName={
-                  listing.rating > 0
-                    ? `${CARD_STAT_VALUE} text-[#111827]`
-                    : `${CARD_STAT_VALUE} text-[#D1D5DB]`
-                }
-              />
-            )}
-            {plainHome ? null : (
-              <div className="mx-1.5 w-px self-stretch min-h-[2.25rem] bg-[#F3F4F6]" aria-hidden />
-            )}
-            {bookingsCount != null ? (
-              <StatColumn value={String(bookingsCount)} label="записей" />
-            ) : (
-              <StatColumn value="—" label="записей" valueClassName={`${CARD_STAT_VALUE} text-[#D1D5DB]`} />
-            )}
-            {plainHome ? null : (
-              <div className="mx-1.5 w-px self-stretch min-h-[2.25rem] bg-[#F3F4F6]" aria-hidden />
-            )}
-            <StatColumn
-              value={distanceLabel ?? '—'}
-              label={distanceLabel ? 'от вас' : 'расстояние'}
-              valueClassName={
-                distanceLabel
-                  ? `${CARD_STAT_VALUE} text-[#111827]`
-                  : `${CARD_STAT_VALUE} text-[#9CA3AF]`
-              }
-            />
-          </div>
+          <MasterCardMetricsStrip
+            listing={listing}
+            userLat={userLat}
+            userLng={userLng}
+            variant={plainHome ? 'plain' : 'strip'}
+            className={plainHome ? 'mt-3 shrink-0' : 'mt-3'}
+          />
 
           <div
             className={`flex flex-wrap gap-x-3 gap-y-1 ${

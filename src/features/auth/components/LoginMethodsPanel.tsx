@@ -1,3 +1,4 @@
+import { EMPTY_NOT_LINKED } from '../../../shared/lib/emptyDisplayText';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { HiArrowPath, HiCheck } from 'react-icons/hi2';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -613,7 +614,7 @@ export function LoginMethodsPanel({
                     onError={(m) => setError(m)}
                   />
                 ) : (
-                  <span className="text-[12px] text-[#9CA3AF]">—</span>
+                  <span className="text-[12px] text-[#9CA3AF]">{EMPTY_NOT_LINKED}</span>
                 )
               }
             />

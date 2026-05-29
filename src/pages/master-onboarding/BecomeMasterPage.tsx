@@ -1,32 +1,40 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ChangeEvent,
-  type ReactNode,
 } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BY } from 'country-flag-icons/react/1x1';
-import { ADMIN_PATH, getMasterPath, HUB_PATH } from '../../app/paths';
+import { isEmptyDisplayValue } from '../../shared/lib/emptyDisplayText';
+import { ADMIN_PATH, HUB_PATH } from '../../app/paths';
 import { priceForPlan } from '../../features/billing/model/masterPlans';
 import type { MasterOnboardingService } from '../../features/profile/lib/demoMasterStorage';
 import type { MasterLocation, MasterVisitType } from '../../features/profile/model/masterLocation';
-import {
-  formatHomePublicBeforeBooking,
-  formatHomeAfterBookingMainLine,
-  homeAfterBookingDetailLines,
-  formatCityWithAddressLine,
-  formatStoredPublicAddress,
-  masterVisitTypeLabel,
-} from '../../features/profile/model/masterLocation';
-import { OnboardingAddressMap } from './OnboardingAddressMap';
+import { formatStoredPublicAddress } from '../../features/profile/model/masterLocation';
 import { OnboardingStep1Intro } from './OnboardingStep1Intro';
+import { OnboardingStep2Categories } from './OnboardingStep2Categories';
+import { getCategoryPlanTheme } from './onboardingCategoryPlanTheme';
+import { OnboardingStep3Profile } from './OnboardingStep3Profile';
+import { OnboardingStep4Address } from './OnboardingStep4Address';
+import {
+  addressNeedsMoreSection,
+  firstErrorMessage,
+  pickFirstAddressErrorField,
+  pickFirstProfileErrorField,
+  scrollToOnboardingField,
+  touchAllErrorKeys,
+} from './onboardingNavigate';
 import { useAuth } from '../../features/auth/AuthProvider';
+import {
+  isOnboardingAvatarPhotoUrl,
+  profileDisplayAvatarUrl,
+} from '../../features/profile/lib/profileDisplayAvatar';
+import { useIsMasterUser } from '../../features/profile/hooks/useIsMasterUser';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
-import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { getMasterDisplayNameQualityError } from '../../shared/lib/masterDisplayNamePolicy';
 import {
   DEFAULT_WEEKDAY_SCHEDULE,
@@ -46,32 +54,64 @@ import {
   normalizeBelarusPhone,
   sanitizeBelarusPhoneInput,
 } from '../../features/master-onboarding/model/belarusPhone';
-import { MasterProfileContactsBlock } from './MasterProfileContactsBlock';
 import {
-  getServiceTemplatesForCategoryCode,
+  getServiceTitlePlaceholder,
   templatePriceTypeToApp,
   type ServiceTemplate,
 } from '../../constants/serviceTemplates';
+import { normalizeCategoryCode } from '../../features/catalog/serviceCategoryLabels';
+import {
+  fallbackCategoryCodeById,
+  ONBOARDING_FALLBACK_CATEGORIES,
+} from '../../features/master-onboarding/onboardingFallbackCategories';
+import { OnboardingStep5Services } from './OnboardingStep5Services';
+import { OnboardingStep6Trust } from './OnboardingStep6Trust';
+import { OnboardingStep7Review } from './OnboardingStep7Review';
+import { navigateAfterPublish, OnboardingPublishSuccess } from './OnboardingPublishSuccess';
+import {
+  sortEducationItemsChronologically,
+  type OnboardingEducationItem,
+} from './onboardingEducation';
+import { createCareerItem } from '../../features/admin/api/adminProfileApi';
 import type { MasterCertificate } from '../../features/master-onboarding/model/masterCertificate';
-import { parseHttpsCertificateImageUrl } from '../../features/master-onboarding/model/masterCertificate';
+import { isPersistableCertificateImageUrl } from '../../features/master-onboarding/model/masterCertificate';
+import { uploadMasterCertificateImageFile } from '../../features/admin/api/masterCabinetApi';
+import {
+  fileToCertificateDraftImageUrl,
+  resolveCertificateImageForDraft,
+} from './certificateImagePersistence';
+import {
+  buildOnboardingCertificatePayload,
+  uploadPendingOnboardingCertificatePhotos,
+} from './onboardingCertificateImages';
+import { MAX_CERTIFICATE_IMAGE_BYTES } from './OnboardingCertificatePhotoField';
 import type { MasterPlanSelection } from '../../features/master-onboarding/model/masterOnboardingPlanTypes';
 import {
   AT_HOME_ENTRANCE_MAX,
   AT_HOME_INTERCOM_MAX,
-  AT_HOME_ROOM_MAX,
-  isAtHomeAddressDetailsComplete,
-  validateAtHomeEntrance,
-  validateAtHomeFloor,
-  validateAtHomeIntercom,
-  validateAtHomeRoom,
+  sanitizeAtHomeRoomInput,
   validateMasterAddressForm,
 } from '../../features/profile/lib/masterAddressValidation';
+import {
+  buildBecomeMasterDraftKey,
+  loadMergedOnboardingDraft,
+  migrateBecomeMasterDraft,
+  useBecomeMasterDraft,
+  writeBecomeMasterDraft,
+  type BecomeMasterDraftData,
+} from './useBecomeMasterDraft';
+import { useOnboardingStepUrl } from './useOnboardingStepUrl';
+import {
+  onboardingEyebrowClass,
+  onboardingPreviewTitleClass,
+  onboardingStepTitleClass,
+} from './onboardingFormField';
 
 const TOTAL_STEPS = 8;
 const ONBOARDING_PAGE_WRAP =
   'mx-auto w-full min-w-0 max-w-2xl px-3 sm:px-4 lg:max-w-[1320px] lg:px-6 xl:px-10';
 const ONBOARDING_CITY = 'Минск';
-const FINISH_ILLUSTRATION_SRC = '/photos/finish.webp';
+const BY_PHONE_PREFIX = '+375';
 
 type PriceType = 'fixed' | 'from';
 
@@ -80,27 +120,6 @@ type OnboardingService = MasterOnboardingService & {
   isActive?: boolean;
   sortOrder?: number;
 };
-
-/** Пути как на главной (`HomeCategories`): `public/photos/work/`. */
-const CATEGORY_IMAGES: Record<string, string> = {
-  manicure: '/photos/work/manicure.webp',
-  barbers: '/photos/work/barbers.webp',
-  'brows-lashes': '/photos/work/brows_lashes.webp',
-  massage: '/photos/work/massage.webp',
-  fitness: '/photos/work/fitness.webp',
-  tattoo: '/photos/work/tattoo.webp',
-};
-
-const CATEGORY_HINTS: Record<string, string> = {
-  manicure: 'Ногти и уход',
-  barbers: 'Стрижки и борода',
-  'brows-lashes': 'Брови и ресницы',
-  massage: 'Расслабление',
-  fitness: 'Тренировки',
-  tattoo: 'Тату и эскизы',
-};
-
-const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
 function sanitizeAtHomeFloorInput(raw: string): string {
   let s = raw.replace(/[^\d-]/g, '');
@@ -116,39 +135,6 @@ function newEntityId(prefix: string): string {
   }
 
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function fieldClass(): string {
-  return `
-    mt-1.5
-    min-w-0
-    max-w-full
-    w-full
-    rounded-[24px]
-    bg-[#F1EFEF]
-    px-4
-    py-3.5
-    text-[16px]
-    font-semibold
-    text-neutral-950
-    outline-none
-    ring-0
-    placeholder:text-neutral-400
-    transition
-    focus:bg-white
-    focus:shadow-[0_10px_28px_rgba(17,17,17,0.05)]
-  `;
-}
-
-function formatPrice(service: OnboardingService): string {
-  const prefix = service.priceType === 'from' ? 'от ' : '';
-  return `${prefix}${service.priceByn} BYN`;
-}
-
-/** Цена в предпросмотре для клиента */
-function formatPreviewServicePrice(service: OnboardingService): string {
-  if (service.priceByn === 0) return 'Бесплатно';
-  return formatPrice(service);
 }
 
 const GARBAGE_SERVICE_TITLES = new Set([
@@ -189,7 +175,8 @@ type PublishBlockingIssue = {
 
 function hasValidBelarusPhoneForOnboarding(phone: string): boolean {
   const p = phone.trim();
-  return p.length > 0 && isOptionalBelarusPhoneValid(p);
+  if (!p || p === BY_PHONE_PREFIX) return false;
+  return isOptionalBelarusPhoneValid(p);
 }
 
 /** Хотя бы один заполненный и валидный мессенджер / соцсеть (телефон считается отдельно). */
@@ -200,11 +187,6 @@ function hasAtLeastOneValidMessengerContact(clientContacts: MasterContactRow[]):
     if (validateContactValue(row.type, v) == null) return true;
   }
   return false;
-}
-
-/** На шаге профиля и при публикации нужны и телефон РБ, и минимум один контакт. */
-function isProfileReachabilityComplete(phone: string, clientContacts: MasterContactRow[]): boolean {
-  return hasValidBelarusPhoneForOnboarding(phone) && hasAtLeastOneValidMessengerContact(clientContacts);
 }
 
 function collectPublishBlockingIssues(params: {
@@ -243,12 +225,13 @@ function collectPublishBlockingIssues(params: {
   }
 
   const phoneTrim = phone.trim();
-  if (phoneTrim.length > 0 && !isOptionalBelarusPhoneValid(phoneTrim)) {
+  const hasPhonePayload = phoneTrim.length > 0 && phoneTrim !== BY_PHONE_PREFIX;
+  if (hasPhonePayload && !isOptionalBelarusPhoneValid(phoneTrim)) {
     out.push({ id: 'phone-invalid', message: 'Введите корректный номер Беларуси', fixStep: 3 });
   }
 
   if (!hasValidBelarusPhoneForOnboarding(phone)) {
-    if (phoneTrim.length === 0) {
+    if (!hasPhonePayload) {
       out.push({ id: 'phone-empty', message: 'Укажите номер телефона Беларуси', fixStep: 3 });
     }
   } else if (!hasAtLeastOneValidMessengerContact(clientContacts)) {
@@ -281,12 +264,6 @@ function collectPublishBlockingIssues(params: {
   }
 
   return out;
-}
-
-function formatContactLineForPreview(type: ContactType, value: string): string {
-  const v = value.trim();
-  const label = CONTACT_CHANNEL_META.find((c) => c.type === type)?.label ?? 'Контакт';
-  return `${label}: ${v}`;
 }
 
 function buildLocationFromForm(
@@ -389,13 +366,11 @@ function StepTitle({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-        {eyebrow}
-      </p>
+      <p className={onboardingEyebrowClass}>{eyebrow}</p>
 
       <h1
-        className={`break-words text-balance font-semibold leading-[1.08] tracking-[-0.05em] text-neutral-950 sm:tracking-[-0.065em] ${
-          dense ? 'mt-1.5 text-[22px] sm:text-[30px]' : 'mt-2 text-[24px] sm:text-[30px]'
+        className={`${onboardingStepTitleClass} ${
+          dense ? 'sm:text-[30px]' : 'mt-2 text-[24px] sm:text-[30px]'
         }`}
       >
         {title}
@@ -410,75 +385,14 @@ function StepTitle({
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  multiline,
-  inputMode,
-  hint,
-  error,
-  maxLength,
-  onBlur,
-  labelAdornment,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  inputMode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
-  hint?: string;
-  error?: string | null;
-  maxLength?: number;
-  onBlur?: () => void;
-  labelAdornment?: ReactNode;
-}) {
-  return (
-    <label className="block min-w-0">
-      <span className="flex items-center gap-2 text-[13px] font-semibold text-neutral-500">
-        {labelAdornment ? <span className="inline-flex shrink-0 items-center">{labelAdornment}</span> : null}
-        <span>{label}</span>
-      </span>
-
-      {hint ? (
-        <p className="mt-1 text-[12px] leading-snug text-neutral-400">{hint}</p>
-      ) : null}
-
-      {multiline ? (
-        <textarea
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          rows={3}
-          maxLength={maxLength}
-          className={`${fieldClass()} resize-none leading-relaxed`}
-        />
-      ) : (
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          inputMode={inputMode}
-          maxLength={maxLength}
-          className={fieldClass()}
-        />
-      )}
-
-      {error ? (
-        <p className="mt-1.5 text-[12px] font-medium leading-snug text-red-600">{error}</p>
-      ) : null}
-    </label>
-  );
-}
-
 export function BecomeMasterPage() {
   const navigate = useNavigate();
+  const { urlStep, setUrlStep } = useOnboardingStepUrl(TOTAL_STEPS);
+  /** true, когда step меняем из приложения (не из history) — чтобы не откатывать шаг. */
+  const stepChangeFromAppRef = useRef(false);
   const { isAuthenticated, isLoading: authLoading, profile, backendConfigured, refreshProfile } = useAuth();
-  const { telegramUserPreview } = useTelegram();
+  const isMasterUser = useIsMasterUser();
+  const { telegramUserPreview, telegramUserPhotoUrl } = useTelegram();
 
   const suggestedTgUsername = useMemo(() => {
     const fromProfile = profile?.telegram_username?.trim();
@@ -491,6 +405,8 @@ export function BecomeMasterPage() {
   const contactTgPrefilledRef = useRef(false);
 
   const [step, setStep] = useState(1);
+  const [furthestStep, setFurthestStep] = useState(1);
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [success, setSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -501,15 +417,18 @@ export function BecomeMasterPage() {
   const [categoriesReady, setCategoriesReady] = useState(false);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryCode, setSelectedCategoryCode] = useState<string | null>(null);
   const [categoryChangePendingId, setCategoryChangePendingId] = useState<string | null>(null);
   const [categoryChangeConfirmOpen, setCategoryChangeConfirmOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [clientContacts, setClientContacts] = useState<MasterContactRow[]>([]);
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(`${BY_PHONE_PREFIX} `);
   const [profileFieldErrors, setProfileFieldErrors] = useState<Record<string, string>>({});
   const [profileTouched, setProfileTouched] = useState<Record<string, boolean>>({});
   const [step3NavigateAttempted, setStep3NavigateAttempted] = useState(false);
+  const [stepNavigateHint, setStepNavigateHint] = useState<string | null>(null);
+  const [stepTransitionBusy, setStepTransitionBusy] = useState(false);
 
   const [visitType, setVisitType] = useState<MasterVisitType>('studio');
   const [city] = useState(ONBOARDING_CITY);
@@ -548,35 +467,24 @@ export function BecomeMasterPage() {
   const [svcHighlightId, setSvcHighlightId] = useState<string | null>(null);
 
   const [certificates, setCertificates] = useState<MasterCertificate[]>([]);
+  const [educationItems, setEducationItems] = useState<OnboardingEducationItem[]>([]);
   const [certFormVisible, setCertFormVisible] = useState(false);
   const [certEditingId, setCertEditingId] = useState<string | null>(null);
   const [certTitle, setCertTitle] = useState('');
   const [certOrganization, setCertOrganization] = useState('');
   const [certYear, setCertYear] = useState('');
   const [certDesc, setCertDesc] = useState('');
-  const [certImageUrl, setCertImageUrl] = useState<string | undefined>(undefined);
-  const [certPhotoLink, setCertPhotoLink] = useState('');
-  const [certImageFileName, setCertImageFileName] = useState<string | undefined>(undefined);
+  const [certImageUrl, setCertImageUrl] = useState('');
+  const [certPhotoUploading, setCertPhotoUploading] = useState(false);
+  const [certPhotoUploadErr, setCertPhotoUploadErr] = useState<string | null>(null);
+  const certImageBlobRef = useRef<string | null>(null);
   const [certFieldErrors, setCertFieldErrors] = useState<Record<string, string>>({});
   const [certTouched, setCertTouched] = useState<Record<string, boolean>>({});
   const [certAttemptedSubmit, setCertAttemptedSubmit] = useState(false);
 
   useEffect(() => {
-    return () => {
-      if (certImageUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(certImageUrl);
-      }
-
-      certificates.forEach((certificate) => {
-        if (certificate.imageUrl?.startsWith('blob:')) {
-          URL.revokeObjectURL(certificate.imageUrl);
-        }
-      });
-    };
-  }, [certImageUrl, certificates]);
-
-  useEffect(() => {
     if (!getApiBaseUrl()) {
+      setCategories(ONBOARDING_FALLBACK_CATEGORIES);
       setCategoriesReady(true);
       return;
     }
@@ -587,9 +495,12 @@ export function BecomeMasterPage() {
     void (async () => {
       try {
         const list = await fetchServiceCategories();
-        if (!cancelled) setCategories(list);
+        if (!cancelled) {
+          setCategories(list.length > 0 ? list : ONBOARDING_FALLBACK_CATEGORIES);
+        }
       } catch (e) {
         if (!cancelled) {
+          setCategories(ONBOARDING_FALLBACK_CATEGORIES);
           setCategoriesError(e instanceof Error ? e.message : 'Не удалось загрузить категории');
         }
       } finally {
@@ -620,14 +531,226 @@ export function BecomeMasterPage() {
     }
   }, [visitType]);
 
-  const progressPct = useMemo(
-    () => (success ? 100 : (step / TOTAL_STEPS) * 100),
-    [step, success],
+  useEffect(() => {
+    if (!isAuthenticated || !isMasterUser || success) return;
+    navigate(ADMIN_PATH, { replace: true });
+  }, [isAuthenticated, isMasterUser, navigate, success]);
+
+  const draftStorageKey = useMemo(() => buildBecomeMasterDraftKey(profile?.id ?? null), [profile?.id]);
+
+  const draftData = useMemo<BecomeMasterDraftData>(
+    () => ({
+      step,
+      furthestStep,
+      selectedCategoryId,
+      selectedCategoryCode,
+      name,
+      description,
+      phone,
+      clientContacts,
+      visitType,
+      street,
+      building,
+      lat,
+      lng,
+      entrance,
+      floor,
+      room,
+      intercom,
+      directions,
+      clientNote,
+      salonName,
+      houseDetail,
+      showExactAddressAfterBooking,
+      services,
+      certificates: certificates.map((c) => ({
+        ...c,
+        imageUrl: isPersistableCertificateImageUrl(c.imageUrl) ? c.imageUrl : undefined,
+      })),
+      educationItems,
+      tariffSelection,
+    }),
+    [
+      step,
+      furthestStep,
+      selectedCategoryId,
+      selectedCategoryCode,
+      name,
+      description,
+      phone,
+      clientContacts,
+      visitType,
+      street,
+      building,
+      lat,
+      lng,
+      entrance,
+      floor,
+      room,
+      intercom,
+      directions,
+      clientNote,
+      salonName,
+      houseDetail,
+      showExactAddressAfterBooking,
+      services,
+      certificates,
+      educationItems,
+      tariffSelection,
+    ],
   );
+
+  const draftDataRef = useRef(draftData);
+  draftDataRef.current = draftData;
+
+  const { flushDraft, clearDraft } = useBecomeMasterDraft({
+    storageKey: draftStorageKey,
+    data: draftData,
+    enabled: !success && draftHydrated,
+  });
+
+  const hydratedStorageKeyRef = useRef<string | null>(null);
+
+  const applyDraftToForm = useCallback((draft: BecomeMasterDraftData) => {
+    setSelectedCategoryId(draft.selectedCategoryId);
+    setSelectedCategoryCode(draft.selectedCategoryCode ?? null);
+    setName(draft.name);
+    setDescription(draft.description);
+    setPhone(draft.phone || `${BY_PHONE_PREFIX} `);
+    setClientContacts(draft.clientContacts ?? []);
+    setVisitType(draft.visitType ?? 'studio');
+    setStreet(draft.street ?? '');
+    setBuilding(draft.building ?? '');
+    setLat(draft.lat);
+    setLng(draft.lng);
+    setEntrance(draft.entrance ?? '');
+    setFloor(draft.floor ?? '');
+    setRoom(draft.room ?? '');
+    setIntercom(draft.intercom ?? '');
+    setDirections(draft.directions ?? '');
+    setClientNote(draft.clientNote ?? '');
+    setSalonName(draft.salonName ?? '');
+    setHouseDetail(draft.houseDetail ?? '');
+    setShowExactAddressAfterBooking(draft.showExactAddressAfterBooking ?? true);
+    setServices(draft.services ?? []);
+    setCertificates(draft.certificates ?? []);
+    setEducationItems(draft.educationItems ?? []);
+    setTariffSelection(draft.tariffSelection ?? 'basic');
+    const restored = Math.max(1, Math.min(TOTAL_STEPS, draft.step || 1));
+    const restoredFurthest = Math.max(restored, Math.min(TOTAL_STEPS, draft.furthestStep ?? restored));
+    setFurthestStep(restoredFurthest);
+    stepChangeFromAppRef.current = true;
+    setStep(restored);
+    setUrlStep(restored, true);
+  }, [setUrlStep]);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    const key = draftStorageKey;
+    if (hydratedStorageKeyRef.current === key) return;
+
+    setDraftHydrated(false);
+
+    const localKey = buildBecomeMasterDraftKey(null);
+    const prevKey = hydratedStorageKeyRef.current;
+
+    if (prevKey && prevKey !== key) {
+      writeBecomeMasterDraft(prevKey, draftDataRef.current);
+    }
+
+    if (profile?.id && key !== localKey) {
+      migrateBecomeMasterDraft(localKey, key);
+      migrateBecomeMasterDraft(buildBecomeMasterDraftKey('anonymous'), key);
+    }
+
+    const draft = loadMergedOnboardingDraft(
+      key,
+      localKey,
+      buildBecomeMasterDraftKey('anonymous'),
+      prevKey && prevKey !== key ? prevKey : '',
+    );
+
+    if (draft) {
+      applyDraftToForm(draft);
+      writeBecomeMasterDraft(key, draft);
+    } else {
+      const initialStep =
+        urlStep != null ? Math.max(1, Math.min(TOTAL_STEPS, urlStep)) : 1;
+      stepChangeFromAppRef.current = true;
+      setStep(initialStep);
+      setFurthestStep(initialStep);
+      if (urlStep == null) {
+        setUrlStep(initialStep, true);
+      }
+    }
+
+    hydratedStorageKeyRef.current = key;
+    setDraftHydrated(true);
+  }, [applyDraftToForm, authLoading, draftStorageKey, profile?.id, setUrlStep]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    flushDraft();
+  }, [
+    draftHydrated,
+    flushDraft,
+    step,
+    selectedCategoryId,
+    selectedCategoryCode,
+    name,
+    services.length,
+  ]);
 
   const selectedCategory = useMemo(
     () => categories.find((item) => item.id === selectedCategoryId),
     [categories, selectedCategoryId],
+  );
+
+  const effectiveCategoryCode = useMemo(() => {
+    if (selectedCategory?.code?.trim()) return normalizeCategoryCode(selectedCategory.code);
+    if (selectedCategoryCode?.trim()) return normalizeCategoryCode(selectedCategoryCode);
+    const fromId = fallbackCategoryCodeById(selectedCategoryId);
+    if (fromId) return normalizeCategoryCode(fromId);
+    return '';
+  }, [selectedCategory?.code, selectedCategoryCode, selectedCategoryId]);
+
+  const effectiveCategoryLabel = useMemo(() => {
+    if (selectedCategory?.name?.trim()) return selectedCategory.name.trim();
+    const fromList = categories.find((c) => c.id === selectedCategoryId)?.name;
+    if (fromList?.trim()) return fromList.trim();
+    return '';
+  }, [categories, selectedCategory?.name, selectedCategoryId]);
+
+  useEffect(() => {
+    if (!selectedCategoryId || selectedCategoryCode) return;
+    const code = selectedCategory?.code?.trim() ?? fallbackCategoryCodeById(selectedCategoryId);
+    if (!code) return;
+    setSelectedCategoryCode(normalizeCategoryCode(code));
+  }, [selectedCategory?.code, selectedCategoryCode, selectedCategoryId]);
+
+  const applyCategorySelection = useCallback(
+    (categoryId: string) => {
+      setSelectedCategoryId(categoryId);
+      const cat = categories.find((c) => c.id === categoryId);
+      const code = cat?.code?.trim() ?? fallbackCategoryCodeById(categoryId);
+      setSelectedCategoryCode(code ? normalizeCategoryCode(code) : null);
+      queueMicrotask(() => {
+        if (draftDataRef.current) {
+          writeBecomeMasterDraft(draftStorageKey, {
+            ...draftDataRef.current,
+            selectedCategoryId: categoryId,
+            selectedCategoryCode: code ? normalizeCategoryCode(code) : null,
+          });
+        }
+      });
+    },
+    [categories, draftStorageKey],
+  );
+
+  const step2CategoryTheme = useMemo(
+    () => getCategoryPlanTheme(effectiveCategoryCode),
+    [effectiveCategoryCode],
   );
 
   const trySelectCategory = useCallback(
@@ -638,14 +761,9 @@ export function BecomeMasterPage() {
         setCategoryChangeConfirmOpen(true);
         return;
       }
-      setSelectedCategoryId(categoryId);
+      applyCategorySelection(categoryId);
     },
-    [selectedCategoryId, services.length],
-  );
-
-  const popularServiceTemplates = useMemo(
-    () => getServiceTemplatesForCategoryCode(selectedCategory?.code ?? ''),
-    [selectedCategory?.code],
+    [applyCategorySelection, selectedCategoryId, services.length],
   );
 
   const svcPricePreviewLabel = useMemo(() => {
@@ -710,11 +828,6 @@ export function BecomeMasterPage() {
     [visitType, city, street, building, salonName, landmark, showExactAddressAfterBooking],
   );
 
-  const contactPreviewRows = useMemo(
-    () => clientContacts.filter((r) => r.value.trim()),
-    [clientContacts],
-  );
-
   const publishBlockingIssues = useMemo(
     () =>
       collectPublishBlockingIssues({
@@ -730,60 +843,7 @@ export function BecomeMasterPage() {
 
   const proOnboardingPriceLabel = useMemo(() => `от ${priceForPlan('pro', 'month')} BYN / месяц`, []);
 
-  const canGoNext = useMemo(() => {
-    if (step === 2) return Boolean(selectedCategoryId);
-    if (step === 3) {
-      const n = name.trim();
-      if (n.length < 2 || n.length > 200) return false;
-      if (getMasterDisplayNameQualityError(n)) return false;
-      return isProfileReachabilityComplete(phone, clientContacts);
-    }
-    if (step === 4) {
-      if (visitType === 'studio') {
-        const sn = salonName.trim();
-        if (!sn || sn.length < 2) return false;
-      }
-      if (!street.trim()) return false;
-      const coordsRequired = mapScriptOk === true;
-      if (coordsRequired) {
-        const hasCoords = lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
-        if (!hasCoords) return false;
-        if (!addressPinnedToMap) return false;
-      }
-      if (visitType === 'at_home' && !isAtHomeAddressDetailsComplete(entrance, floor, room, intercom)) {
-        return false;
-      }
-      return true;
-    }
-    if (step === 5) return services.length > 0;
-
-    if (step === 6) return true;
-
-    if (step === 7) return publishBlockingIssues.length === 0;
-
-    return true;
-  }, [
-    addressPinnedToMap,
-    building,
-    city,
-    lat,
-    lng,
-    mapScriptOk,
-    name,
-    phone,
-    publishBlockingIssues.length,
-    selectedCategoryId,
-    services.length,
-    step,
-    street,
-    visitType,
-    salonName,
-    clientContacts,
-    entrance,
-    floor,
-    room,
-    intercom,
-  ]);
+  const profileAvatarUrl = useMemo(() => profileDisplayAvatarUrl(profile), [profile]);
 
   useEffect(() => {
     if (!svcHighlightId) return undefined;
@@ -853,19 +913,6 @@ export function BecomeMasterPage() {
     setSvcAttemptedAdd(false);
   }, []);
 
-  const startEditService = useCallback((service: OnboardingService) => {
-    setSvcEditingId(service.id);
-    setSvcTitle(service.title);
-    setSvcDur(String(service.durationMin));
-    setSvcPrice(String(service.priceByn));
-    setSvcPriceType(service.priceType ?? 'fixed');
-    setSvcDesc(service.description ?? '');
-    setSvcFieldErrors({});
-    setSvcTouched({});
-    setSvcAttemptedAdd(false);
-    setSvcHighlightId(null);
-  }, []);
-
   const submitServiceForm = useCallback(() => {
     setSvcAttemptedAdd(true);
 
@@ -927,116 +974,123 @@ export function BecomeMasterPage() {
     cancelSvcForm();
   }, [cancelSvcForm, svcDesc, svcDur, svcEditingId, svcPrice, svcPriceType, svcTitle]);
 
-  const duplicateService = useCallback((service: OnboardingService) => {
-    setServices((prev) => [
-      ...prev,
-      {
-        ...service,
-        id: newEntityId('svc'),
-        sortOrder: prev.length,
-      },
-    ]);
-  }, []);
-
-  const removeService = useCallback((id: string) => {
-    setServices((prev) => prev.filter((s) => s.id !== id));
-  }, []);
-
-  const clearCertLocalImage = useCallback(() => {
-    setCertImageUrl((previous) => {
-      if (previous?.startsWith('blob:')) {
-        URL.revokeObjectURL(previous);
-      }
-      return undefined;
-    });
-    setCertImageFileName(undefined);
-  }, []);
-
-  const detachCertFormImage = useCallback(() => {
-    setCertImageUrl(undefined);
-    setCertImageFileName(undefined);
-  }, []);
-
-  const onPickCertificateImage = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      setCertFieldErrors((prev) => ({ ...prev, image: 'Выберите файл изображения.' }));
-      return;
+  const revokeCertImageBlob = useCallback(() => {
+    if (certImageBlobRef.current) {
+      URL.revokeObjectURL(certImageBlobRef.current);
+      certImageBlobRef.current = null;
     }
-
-    setCertFieldErrors((prev) => {
-      const next = { ...prev };
-      delete next.image;
-      return next;
-    });
-
-    setCertPhotoLink('');
-    setCertImageFileName(file.name?.trim() || 'Фото добавлено');
-
-    setCertImageUrl((previous) => {
-      if (previous?.startsWith('blob:')) {
-        URL.revokeObjectURL(previous);
-      }
-      return URL.createObjectURL(file);
-    });
   }, []);
 
   const clearCertPhoto = useCallback(() => {
-    clearCertLocalImage();
-    setCertPhotoLink('');
+    revokeCertImageBlob();
+    setCertImageUrl('');
+    setCertPhotoUploadErr(null);
     setCertFieldErrors((prev) => {
       const next = { ...prev };
-      delete next.image;
-      delete next.photoLink;
+      delete next.photo;
       return next;
     });
-  }, [clearCertLocalImage]);
+  }, [revokeCertImageBlob]);
+
+  const resetCertImageForm = useCallback(() => {
+    revokeCertImageBlob();
+    setCertImageUrl('');
+    setCertPhotoUploading(false);
+    setCertPhotoUploadErr(null);
+  }, [revokeCertImageBlob]);
 
   const cancelCertForm = useCallback(() => {
-    clearCertLocalImage();
     setCertTitle('');
     setCertOrganization('');
     setCertYear('');
     setCertDesc('');
-    setCertPhotoLink('');
+    resetCertImageForm();
     setCertFieldErrors({});
     setCertTouched({});
     setCertAttemptedSubmit(false);
     setCertEditingId(null);
     setCertFormVisible(false);
-  }, [clearCertLocalImage]);
+  }, [resetCertImageForm]);
 
   const resetCertFormAfterSubmit = useCallback(() => {
-    detachCertFormImage();
     setCertTitle('');
     setCertOrganization('');
     setCertYear('');
     setCertDesc('');
-    setCertPhotoLink('');
+    resetCertImageForm();
     setCertFieldErrors({});
     setCertTouched({});
     setCertAttemptedSubmit(false);
     setCertEditingId(null);
     setCertFormVisible(false);
-  }, [detachCertFormImage]);
+  }, [resetCertImageForm]);
 
   const openCertFormForAdd = useCallback(() => {
-    clearCertLocalImage();
     setCertTitle('');
     setCertOrganization('');
     setCertYear('');
     setCertDesc('');
-    setCertPhotoLink('');
+    resetCertImageForm();
     setCertFieldErrors({});
     setCertTouched({});
     setCertAttemptedSubmit(false);
     setCertEditingId(null);
     setCertFormVisible(true);
-  }, [clearCertLocalImage]);
+  }, [resetCertImageForm]);
+
+  const handleCertImageFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        setCertPhotoUploadErr('Выберите изображение (JPEG, PNG или WebP)');
+        return;
+      }
+      if (file.size > MAX_CERTIFICATE_IMAGE_BYTES) {
+        setCertPhotoUploadErr('Фото не больше 5 МБ');
+        return;
+      }
+
+      setCertPhotoUploadErr(null);
+      setCertFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.photo;
+        return next;
+      });
+
+      revokeCertImageBlob();
+      const preview = URL.createObjectURL(file);
+      certImageBlobRef.current = preview;
+      setCertImageUrl(preview);
+
+      void (async () => {
+        if (isAuthenticated && getApiBaseUrl()) {
+          setCertPhotoUploading(true);
+          try {
+            const url = await uploadMasterCertificateImageFile(file);
+            revokeCertImageBlob();
+            setCertImageUrl(url);
+            return;
+          } catch {
+            /* загрузка на сервер недоступна — сохраним в черновик как data URL */
+          } finally {
+            setCertPhotoUploading(false);
+          }
+        }
+
+        try {
+          const dataUrl = await fileToCertificateDraftImageUrl(file);
+          revokeCertImageBlob();
+          setCertImageUrl(dataUrl);
+        } catch {
+          setCertPhotoUploadErr('Не удалось подготовить фото для сохранения');
+        }
+      })();
+    },
+    [isAuthenticated, revokeCertImageBlob],
+  );
 
   useEffect(() => {
     if (!certEditingId) return;
@@ -1056,22 +1110,11 @@ export function BecomeMasterPage() {
 
   const startEditCertificate = useCallback(
     (c: MasterCertificate) => {
-      clearCertLocalImage();
-      const url = c.imageUrl?.trim();
-      const isRemote = Boolean(url && (url.startsWith('http://') || url.startsWith('https://')));
-      if (isRemote && url) {
-        setCertPhotoLink(url);
-        setCertImageUrl(undefined);
-        setCertImageFileName(undefined);
-      } else if (url) {
-        setCertPhotoLink('');
-        setCertImageUrl(url);
-        setCertImageFileName(undefined);
-      } else {
-        setCertPhotoLink('');
-        setCertImageUrl(undefined);
-        setCertImageFileName(undefined);
-      }
+      revokeCertImageBlob();
+      const url = c.imageUrl?.trim() ?? '';
+      if (url.startsWith('blob:')) certImageBlobRef.current = url;
+      setCertImageUrl(url);
+      setCertPhotoUploadErr(null);
       setCertTitle(c.title);
       setCertOrganization(c.organization);
       setCertYear(c.year ?? '');
@@ -1082,7 +1125,7 @@ export function BecomeMasterPage() {
       setCertEditingId(c.id);
       setCertFormVisible(true);
     },
-    [clearCertLocalImage],
+    [revokeCertImageBlob],
   );
 
   const submitCertificateForm = useCallback(() => {
@@ -1092,9 +1135,7 @@ export function BecomeMasterPage() {
     const organization = certOrganization.trim();
     const yearStr = certYear.trim();
     const desc = certDesc.trim();
-    const httpsImage = parseHttpsCertificateImageUrl(certPhotoLink);
-    const blobImage = certImageUrl?.trim() ? certImageUrl : undefined;
-    const resolvedImage = httpsImage ?? blobImage;
+    const imageRaw = certImageUrl.trim();
 
     const errs: Record<string, string> = {};
 
@@ -1112,39 +1153,63 @@ export function BecomeMasterPage() {
 
     if (desc.length > 1000) errs.description = 'Не длиннее 1000 символов.';
 
-    if (certPhotoLink.trim() && !httpsImage) {
-      errs.photoLink = 'Укажите корректную ссылку https://…';
-    }
+    if (certPhotoUploading) errs.photo = 'Дождитесь окончания загрузки фото';
 
     setCertFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    const payload = {
-      title,
-      organization,
-      year: yearStr || undefined,
-      description: desc || undefined,
-      imageUrl: resolvedImage,
-    };
+    void (async () => {
+      let resolvedImage: string | undefined;
+      try {
+        resolvedImage = await resolveCertificateImageForDraft(imageRaw || undefined);
+      } catch {
+        setCertFieldErrors((prev) => ({
+          ...prev,
+          photo: 'Не удалось сохранить фото. Попробуйте другое изображение.',
+        }));
+        return;
+      }
 
-    if (certEditingId) {
-      setCertificates((prev) =>
-        prev.map((x) => (x.id === certEditingId ? { ...x, ...payload, id: x.id } : x)),
-      );
-    } else {
-      setCertificates((prev) => [...prev, { ...payload, id: newEntityId('cert') }]);
-    }
+      const payload = {
+        title,
+        organization,
+        year: yearStr || undefined,
+        description: desc || undefined,
+        imageUrl: resolvedImage,
+      };
 
-    resetCertFormAfterSubmit();
+      if (certEditingId) {
+        setCertificates((prev) =>
+          prev.map((x) => {
+            if (x.id !== certEditingId) return x;
+            if (x.imageUrl?.startsWith('blob:') && x.imageUrl !== resolvedImage) {
+              URL.revokeObjectURL(x.imageUrl);
+            }
+            return { ...x, ...payload, id: x.id };
+          }),
+        );
+      } else {
+        setCertificates((prev) => [...prev, { ...payload, id: newEntityId('cert') }]);
+      }
+
+      if (resolvedImage?.startsWith('blob:')) {
+        certImageBlobRef.current = null;
+      } else {
+        revokeCertImageBlob();
+      }
+
+      resetCertFormAfterSubmit();
+    })();
   }, [
     certDesc,
     certEditingId,
     certImageUrl,
     certOrganization,
-    certPhotoLink,
+    certPhotoUploading,
     certTitle,
     certYear,
     resetCertFormAfterSubmit,
+    revokeCertImageBlob,
   ]);
 
   const removeCertificate = useCallback(
@@ -1162,7 +1227,7 @@ export function BecomeMasterPage() {
     [],
   );
 
-  const validateProfileStep = useCallback((): boolean => {
+  const computeProfileStepErrors = useCallback((): Record<string, string> => {
     const errs: Record<string, string> = {};
     const n = name.trim();
     if (n.length < 2) errs.name = 'Минимум 2 символа.';
@@ -1176,9 +1241,10 @@ export function BecomeMasterPage() {
     if (bio.length > 10_000) errs.description = 'Не длиннее 10 000 символов.';
 
     const phoneTrim = phone.trim();
-    if (phoneTrim && !isOptionalBelarusPhoneValid(phoneTrim)) {
+    const hasPhonePayload = phoneTrim.length > 0 && phoneTrim !== BY_PHONE_PREFIX;
+    if (hasPhonePayload && !isOptionalBelarusPhoneValid(phoneTrim)) {
       errs.phone = 'Введите корректный номер Беларуси';
-    } else if (!phoneTrim) {
+    } else if (!hasPhonePayload) {
       errs.phone = 'Укажите номер телефона Беларуси';
     }
 
@@ -1196,9 +1262,40 @@ export function BecomeMasterPage() {
       if (fmt) errs[row.id] = fmt;
     }
 
+    return errs;
+  }, [clientContacts, description, name, phone]);
+
+  const validateProfileStep = useCallback((): boolean => {
+    const errs = computeProfileStepErrors();
     setProfileFieldErrors(errs);
     return Object.keys(errs).length === 0;
-  }, [clientContacts, description, name, phone]);
+  }, [computeProfileStepErrors]);
+
+  const isProfilePhoneEmpty = useCallback((): boolean => {
+    const phoneTrim = phone.trim();
+    return phoneTrim.length === 0 || phoneTrim === BY_PHONE_PREFIX;
+  }, [phone]);
+
+  const isProfileFieldValueEmpty = useCallback(
+    (key: string, contactId?: string): boolean => {
+      switch (key) {
+        case 'name':
+          return !name.trim();
+        case 'phone':
+          return isProfilePhoneEmpty();
+        case 'description':
+          return false;
+        case 'contactReachability':
+          return !hasAtLeastOneValidMessengerContact(clientContacts);
+        default: {
+          if (!contactId) return true;
+          const row = clientContacts.find((r) => r.id === contactId);
+          return !row?.value.trim();
+        }
+      }
+    },
+    [clientContacts, isProfilePhoneEmpty, name],
+  );
 
   /** Сброс подтверждения адреса без сброса координат — чтобы карта не пересоздавалась на каждый символ. */
   const invalidatePrimaryAddressOnMap = useCallback(() => {
@@ -1206,48 +1303,58 @@ export function BecomeMasterPage() {
     setPickedAddressSummary(null);
   }, []);
 
-  const resetPrimaryAddressCoordinates = useCallback(() => {
-    setAddressPinnedToMap(false);
-    setPickedAddressSummary(null);
-    setLat(undefined);
-    setLng(undefined);
-  }, []);
-
   const touchAddressField = useCallback((key: string) => {
     setAddressTouched((t) => ({ ...t, [key]: true }));
   }, []);
 
-  const touchAndValidateAtHomeField = useCallback(
-    (key: 'entrance' | 'floor' | 'room' | 'intercom') => {
-      touchAddressField(key);
-      if (visitType !== 'at_home') return;
-
-      const err =
-        key === 'entrance'
-          ? validateAtHomeEntrance(entrance)
-          : key === 'floor'
-            ? validateAtHomeFloor(floor)
-            : key === 'room'
-              ? validateAtHomeRoom(room)
-              : validateAtHomeIntercom(intercom);
-
-      setAddressFieldErrors((prev) => {
-        const next = { ...prev };
-        if (err) next[key] = err;
-        else delete next[key];
-        return next;
-      });
+  const isAddressFieldValueEmpty = useCallback(
+    (key: string): boolean => {
+      switch (key) {
+        case 'salonName':
+          return !salonName.trim();
+        case 'street':
+          return isEmptyDisplayValue(street);
+        case 'coords':
+          return lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng);
+        case 'entrance':
+          return !entrance.trim();
+        case 'floor':
+          return !floor.trim();
+        case 'room':
+          return !room.trim();
+        case 'intercom':
+          return !intercom.trim();
+        case 'houseDetail':
+        case 'buildingDetail':
+          return !houseDetail.trim();
+        case 'directions':
+          return !directions.trim();
+        case 'clientNote':
+          return !clientNote.trim();
+        case 'landmark':
+          return !landmark.trim();
+        default:
+          return true;
+      }
     },
-    [entrance, floor, intercom, room, touchAddressField, visitType],
+    [
+      clientNote,
+      directions,
+      entrance,
+      floor,
+      houseDetail,
+      intercom,
+      landmark,
+      lat,
+      lng,
+      room,
+      salonName,
+      street,
+    ],
   );
 
-  const showAddressFieldError = useCallback(
-    (key: string) => Boolean(addressFieldErrors[key] && (addressTouched[key] || addressNavigateAttempted)),
-    [addressFieldErrors, addressNavigateAttempted, addressTouched],
-  );
-
-  const validateAddressStep = useCallback((): boolean => {
-    const errs = validateMasterAddressForm(
+  const computeAddressStepErrors = useCallback((): Record<string, string> => {
+    return validateMasterAddressForm(
       {
         visitType,
         street,
@@ -1265,8 +1372,6 @@ export function BecomeMasterPage() {
       },
       { mapScriptOk: mapScriptOk === true, addressPinnedToMap },
     );
-    setAddressFieldErrors(errs);
-    return Object.keys(errs).length === 0;
   }, [
     addressPinnedToMap,
     clientNote,
@@ -1285,6 +1390,103 @@ export function BecomeMasterPage() {
     visitType,
   ]);
 
+  const validateAddressStep = useCallback((): boolean => {
+    const errs = computeAddressStepErrors();
+    setAddressFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }, [computeAddressStepErrors]);
+
+  const touchAndValidateAddressField = useCallback(
+    (key: 'salonName' | 'street' | 'entrance' | 'floor' | 'room' | 'intercom') => {
+      touchAddressField(key);
+      const errs = computeAddressStepErrors();
+      const err = errs[key];
+      setAddressFieldErrors((prev) => {
+        const next = { ...prev };
+        if (!err || (isAddressFieldValueEmpty(key) && !addressNavigateAttempted)) delete next[key];
+        else next[key] = err;
+        return next;
+      });
+    },
+    [addressNavigateAttempted, computeAddressStepErrors, isAddressFieldValueEmpty, touchAddressField],
+  );
+
+  const showAddressFieldError = useCallback(
+    (key: string) => {
+      const err = addressFieldErrors[key];
+      if (!err) return false;
+      if (isAddressFieldValueEmpty(key)) return addressNavigateAttempted;
+      return Boolean(addressTouched[key] || addressNavigateAttempted);
+    },
+    [addressFieldErrors, addressNavigateAttempted, addressTouched, isAddressFieldValueEmpty],
+  );
+
+  const resetAddressValidationUi = useCallback(() => {
+    setAddressNavigateAttempted(false);
+    setAddressFieldErrors({});
+    setAddressTouched({});
+  }, []);
+
+  const prevOnboardingStepRef = useRef(step);
+  useLayoutEffect(() => {
+    const prev = prevOnboardingStepRef.current;
+    prevOnboardingStepRef.current = step;
+    if (step === 3 && prev !== 3 && prev !== 7) {
+      setStep3NavigateAttempted(false);
+      setProfileFieldErrors({});
+      setProfileTouched({});
+      setStepNavigateHint(null);
+    }
+    // Шаг 4 с проверки (7) — оставляем ошибки; с шага 3 и др. — чистая форма.
+    if (step === 4 && prev !== 4 && prev !== 7) {
+      resetAddressValidationUi();
+      setStepNavigateHint(null);
+    }
+  }, [resetAddressValidationUi, step]);
+
+  useEffect(() => {
+    setStepTransitionBusy(false);
+  }, [step]);
+
+  const maxReachableStep = useMemo(() => {
+    let cap = TOTAL_STEPS;
+    if (!selectedCategoryId) cap = 2;
+    else if (Object.keys(computeProfileStepErrors()).length > 0) cap = 3;
+    else if (Object.keys(computeAddressStepErrors()).length > 0) cap = 4;
+    else if (services.length === 0) cap = 5;
+    return Math.max(cap, furthestStep);
+  }, [
+    computeAddressStepErrors,
+    computeProfileStepErrors,
+    furthestStep,
+    selectedCategoryId,
+    services.length,
+  ]);
+
+  const goToStep = useCallback(
+    (target: number, options?: { replaceUrl?: boolean }) => {
+      const clamped = Math.max(1, Math.min(TOTAL_STEPS, Math.min(target, maxReachableStep)));
+      setFurthestStep((prev) => Math.max(prev, clamped));
+      stepChangeFromAppRef.current = true;
+      setStep(clamped);
+      setUrlStep(clamped, options?.replaceUrl ?? false);
+      return clamped;
+    },
+    [maxReachableStep, setUrlStep],
+  );
+
+  /** Только браузер «Назад/Вперёд» — не реагируем на собственное обновление step. */
+  useEffect(() => {
+    if (!draftHydrated) return;
+    if (stepChangeFromAppRef.current) {
+      stepChangeFromAppRef.current = false;
+      return;
+    }
+    if (urlStep == null) return;
+    const clamped = Math.min(urlStep, maxReachableStep);
+    setStep((current) => (current === clamped ? current : clamped));
+  }, [draftHydrated, urlStep, maxReachableStep]);
+
   const touchProfileField = useCallback((key: string) => {
     setProfileTouched((t) => ({ ...t, [key]: true }));
   }, []);
@@ -1293,14 +1495,54 @@ export function BecomeMasterPage() {
     setProfileTouched((t) => ({ ...t, [id]: true }));
   }, []);
 
+  const touchAndValidateProfileField = useCallback(
+    (key: 'name' | 'phone' | 'description') => {
+      touchProfileField(key);
+      const errs = computeProfileStepErrors();
+      const err = errs[key];
+      setProfileFieldErrors((prev) => {
+        const next = { ...prev };
+        if (!err || (isProfileFieldValueEmpty(key) && !step3NavigateAttempted)) delete next[key];
+        else next[key] = err;
+        return next;
+      });
+    },
+    [computeProfileStepErrors, isProfileFieldValueEmpty, step3NavigateAttempted, touchProfileField],
+  );
+
+  const touchAndValidateContactRow = useCallback(
+    (id: string) => {
+      touchContactRow(id);
+      const errs = computeProfileStepErrors();
+      const err = errs[id];
+      setProfileFieldErrors((prev) => {
+        const next = { ...prev };
+        if (!err || (isProfileFieldValueEmpty(id, id) && !step3NavigateAttempted)) delete next[id];
+        else next[id] = err;
+        return next;
+      });
+    },
+    [computeProfileStepErrors, isProfileFieldValueEmpty, step3NavigateAttempted, touchContactRow],
+  );
+
   const showProfileFieldError = useCallback(
-    (key: string) => Boolean(profileFieldErrors[key] && (profileTouched[key] || step3NavigateAttempted)),
-    [profileFieldErrors, profileTouched, step3NavigateAttempted],
+    (key: string) => {
+      const err = profileFieldErrors[key];
+      if (!err) return false;
+      if (isProfileFieldValueEmpty(key)) return step3NavigateAttempted;
+      return Boolean(profileTouched[key] || step3NavigateAttempted);
+    },
+    [isProfileFieldValueEmpty, profileFieldErrors, profileTouched, step3NavigateAttempted],
   );
 
   const showContactRowError = useCallback(
-    (id: string) => Boolean(profileFieldErrors[id] && (profileTouched[id] || step3NavigateAttempted)),
-    [profileFieldErrors, profileTouched, step3NavigateAttempted],
+    (id: string) => {
+      const err = profileFieldErrors[id];
+      if (!err) return false;
+      if (isProfileFieldValueEmpty(id, id)) return step3NavigateAttempted;
+      return Boolean(profileTouched[id] || step3NavigateAttempted);
+    },
+    [isProfileFieldValueEmpty, profileFieldErrors, profileTouched, step3NavigateAttempted],
   );
 
   const addClientContactRow = useCallback((type: ContactType) => {
@@ -1344,29 +1586,91 @@ export function BecomeMasterPage() {
   }, []);
 
   const goNext = useCallback(() => {
+    if (stepTransitionBusy) return;
+    setStepNavigateHint(null);
+
+    if (step === 2) {
+      if (!selectedCategoryId) {
+        setCategoriesError('Выберите категорию');
+        scrollToOnboardingField('category');
+        setStepNavigateHint('Выберите категорию');
+        return;
+      }
+      setCategoriesError(null);
+      setStep3NavigateAttempted(false);
+      setProfileFieldErrors({});
+      setProfileTouched({});
+      setStepTransitionBusy(true);
+      goToStep(3);
+      return;
+    }
+
     if (step === 3) {
       setStep3NavigateAttempted(true);
-      if (!validateProfileStep()) return;
+      const errs = computeProfileStepErrors();
+      setProfileFieldErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        touchAllErrorKeys(setProfileTouched, errs);
+        const field = pickFirstProfileErrorField(errs, clientContacts);
+        scrollToOnboardingField(field);
+        setStepNavigateHint(firstErrorMessage(errs, field === 'contacts' ? 'contactReachability' : field));
+        return;
+      }
       setStep3NavigateAttempted(false);
+      resetAddressValidationUi();
+      setStepTransitionBusy(true);
+      goToStep(4);
+      return;
     }
+
     if (step === 4) {
       setAddressNavigateAttempted(true);
-      if (!validateAddressStep()) {
-        if (visitType === 'at_home') setAddressMoreOpen(true);
+      const errs = computeAddressStepErrors();
+      setAddressFieldErrors(errs);
+      if (Object.keys(errs).length > 0) {
+        touchAllErrorKeys(setAddressTouched, errs);
+        if (addressNeedsMoreSection(errs, visitType)) setAddressMoreOpen(true);
+        const field = pickFirstAddressErrorField(errs, visitType);
+        scrollToOnboardingField(field);
+        setStepNavigateHint(firstErrorMessage(errs, field));
         return;
       }
       setAddressNavigateAttempted(false);
     }
 
     if (step === 5 && services.length === 0) {
+      setSvcAttemptedAdd(true);
       setSvcFieldErrors({ form: 'Добавьте хотя бы одну услугу' });
+      scrollToOnboardingField('services');
+      setStepNavigateHint('Добавьте хотя бы одну услугу');
       return;
     }
 
     if (step === 7) {
-      if (publishBlockingIssues.length > 0) return;
-      if (!validateProfileStep() || !validateAddressStep()) {
-        if (visitType === 'at_home') setAddressMoreOpen(true);
+      if (publishBlockingIssues.length > 0) {
+        scrollToOnboardingField('review-issues');
+        setStepNavigateHint('Исправьте пункты в списке выше');
+        return;
+      }
+      const profileErrs = computeProfileStepErrors();
+      const addressErrs = computeAddressStepErrors();
+      if (Object.keys(profileErrs).length > 0 || Object.keys(addressErrs).length > 0) {
+        setProfileFieldErrors(profileErrs);
+        setAddressFieldErrors(addressErrs);
+        setStep3NavigateAttempted(true);
+        setAddressNavigateAttempted(true);
+        touchAllErrorKeys(setProfileTouched, profileErrs);
+        touchAllErrorKeys(setAddressTouched, addressErrs);
+        if (addressNeedsMoreSection(addressErrs, visitType)) setAddressMoreOpen(true);
+        if (Object.keys(profileErrs).length > 0) {
+          const field = pickFirstProfileErrorField(profileErrs, clientContacts);
+          scrollToOnboardingField(field);
+          setStepNavigateHint(firstErrorMessage(profileErrs, field === 'contacts' ? 'contactReachability' : field));
+        } else {
+          const field = pickFirstAddressErrorField(addressErrs, visitType);
+          scrollToOnboardingField(field);
+          setStepNavigateHint(firstErrorMessage(addressErrs, field));
+        }
         setPublishError('Проверьте поля профиля и адреса.');
         return;
       }
@@ -1380,20 +1684,42 @@ export function BecomeMasterPage() {
     });
     setAddressFieldErrors({});
     setCertFieldErrors({});
-    setStep((current) => Math.min(TOTAL_STEPS, current + 1));
-  }, [publishBlockingIssues.length, services.length, step, validateAddressStep, validateProfileStep, visitType]);
+    setStepNavigateHint(null);
+    setStepTransitionBusy(true);
+    goToStep(step + 1);
+  }, [
+    clientContacts,
+    computeAddressStepErrors,
+    computeProfileStepErrors,
+    goToStep,
+    publishBlockingIssues.length,
+    resetAddressValidationUi,
+    selectedCategoryId,
+    services.length,
+    step,
+    stepTransitionBusy,
+    visitType,
+  ]);
 
   const goBack = useCallback(() => {
-    setStep((current) => Math.max(1, current - 1));
+    goToStep(step - 1, { replaceUrl: false });
+    setStepNavigateHint(null);
     setPublishError(null);
     setSvcFieldErrors((prev) => {
       const next = { ...prev };
       delete next.form;
       return next;
     });
+    if (step === 3 || step === 4) {
+      setStep3NavigateAttempted(false);
+      setProfileFieldErrors({});
+      setProfileTouched({});
+    }
     setAddressFieldErrors({});
+    setAddressTouched({});
+    setAddressNavigateAttempted(false);
     setCertFieldErrors({});
-  }, []);
+  }, [goToStep, step]);
 
   const publish = useCallback(async () => {
     if (step !== 8) return;
@@ -1431,9 +1757,9 @@ export function BecomeMasterPage() {
       return;
     }
 
-    const photoRaw = profile?.avatar_url?.trim();
     let photoUrl: string | null = null;
-    if (photoRaw) {
+    const photoRaw = profileAvatarUrl?.trim() || profile?.avatar_url?.trim();
+    if (photoRaw && isOnboardingAvatarPhotoUrl(photoRaw)) {
       try {
         photoUrl = new URL(photoRaw).toString();
       } catch {
@@ -1445,26 +1771,15 @@ export function BecomeMasterPage() {
     setPublishError(null);
 
     try {
-      const certPayload = certificates
-        .map((c, sortOrder) => ({
-          title: c.title.trim(),
-          issuer: c.organization.trim() || null,
-          year: c.year ? Number.parseInt(String(c.year), 10) : null,
-          description: c.description?.trim().slice(0, 1000) || null,
-          imageUrl:
-            c.imageUrl && (c.imageUrl.startsWith('http://') || c.imageUrl.startsWith('https://'))
-              ? c.imageUrl
-              : null,
-          sortOrder,
-        }))
-        .filter((c) => c.title.length >= 2);
+      const { payload: certPayload, pendingLocalBySortOrder } =
+        buildOnboardingCertificatePayload(certificates);
 
       const contactItems = clientContacts
         .map((r) => ({ type: r.type, value: r.value.trim() }))
         .filter((c) => c.value.length > 0);
       const phoneNorm = phone.trim() ? normalizeBelarusPhone(phone.trim()) : null;
 
-      await submitMasterOnboarding({
+      const onboardingResult = await submitMasterOnboarding({
         categoryCode: cat.code,
         name: name.trim(),
         description: description.trim() || undefined,
@@ -1506,7 +1821,34 @@ export function BecomeMasterPage() {
         proInterested: tariffSelection === 'pro_interest',
       });
 
+      if (pendingLocalBySortOrder.size > 0) {
+        const created = (onboardingResult.certificates ?? []) as Array<{
+          id: string;
+          sortOrder?: number;
+        }>;
+        await uploadPendingOnboardingCertificatePhotos(created, pendingLocalBySortOrder);
+      }
+
+      const educationPayload = sortEducationItemsChronologically(educationItems)
+        .filter((item) => item.title.trim().length >= 2)
+        .map((item, sortOrder) => ({ item, sortOrder }));
+
+      if (educationPayload.length > 0) {
+        for (const { item, sortOrder } of educationPayload) {
+          await createCareerItem({
+            type: 'education',
+            title: item.title.trim(),
+            place: item.place.trim(),
+            startYear: item.startYear?.trim() ? Number.parseInt(item.startYear.trim(), 10) : null,
+            endYear: item.endYear?.trim() ? Number.parseInt(item.endYear.trim(), 10) : null,
+            description: item.description?.trim().slice(0, 500) || null,
+            sortOrder,
+          });
+        }
+      }
+
       await refreshProfile();
+      clearDraft();
       setSuccess(true);
     } catch {
       setPublishError('Не удалось опубликовать профиль');
@@ -1516,6 +1858,7 @@ export function BecomeMasterPage() {
   }, [
     categories,
     certificates,
+    educationItems,
     city,
     clientContacts,
     clientNote,
@@ -1533,6 +1876,7 @@ export function BecomeMasterPage() {
     profile?.avatar_url,
     publicAddressForApi,
     refreshProfile,
+    clearDraft,
     room,
     salonName,
     selectedCategoryId,
@@ -1550,55 +1894,22 @@ export function BecomeMasterPage() {
 
   if (success) {
     return (
-      <div className="min-h-dvh bg-white px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(0.75rem+env(safe-area-inset-top,0px))] text-neutral-900">
-        <div className="mx-auto w-full max-w-2xl">
-          <div className="rounded-[42px] bg-[#F1EFEF] p-3 shadow-[0_24px_70px_rgba(17,17,17,0.06)]">
-            <div className="rounded-[34px] bg-white px-6 py-8 text-center">
-              <img
-                src={FINISH_ILLUSTRATION_SRC}
-                alt=""
-                aria-hidden
-                className="mx-auto w-full max-w-[min(100%,17.5rem)] object-contain"
-                draggable={false}
-              />
-
-              <h1 className="mt-6 text-[31px] font-semibold leading-[1.05] tracking-[-0.065em] text-neutral-950">
-                Профиль опубликован
-              </h1>
-
-              <p className="mx-auto mt-3 max-w-[20rem] text-[15px] leading-relaxed text-neutral-500">
-                Теперь клиенты смогут записываться к вам
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (profile?.id) {
-                    navigate(getMasterPath(profile.id));
-                    return;
-                  }
-                  navigate(ADMIN_PATH);
-                }}
-                className="mt-8 flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[#E29595] px-5 text-[16px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.26)] transition active:scale-[0.98]"
-              >
-                Перейти в профиль
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <OnboardingPublishSuccess
+        masterName={name}
+        onOpenProfile={() => navigateAfterPublish(navigate, profile?.id)}
+      />
     );
   }
 
   return (
     <div
-      className={`min-h-dvh overflow-x-hidden text-neutral-900 ${
+      className={`min-h-dvh overflow-x-hidden text-neutral-900 lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden ${
         step === 1
-          ? 'bg-white pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] lg:bg-[#F5F5F5]'
-          : 'bg-white pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]'
+          ? 'bg-white pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] lg:bg-[#F5F5F5] lg:pb-0'
+          : 'bg-white pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] lg:pb-0'
       }`}
     >
-      <header className="sticky top-0 z-40 bg-[#F1EFEF] pt-[calc(0.75rem+env(safe-area-inset-top,0px))] lg:border-b lg:border-[#EBEBEB] lg:bg-[#FFFCFC]/95 lg:backdrop-blur-md">
+      <header className="sticky top-0 z-40 shrink-0 bg-[#F1EFEF] pt-[calc(0.75rem+env(safe-area-inset-top,0px))] lg:fixed lg:inset-x-0 lg:top-0 lg:border-b lg:border-[#EBEBEB] lg:bg-[#FFFCFC]/95 lg:backdrop-blur-md">
         <div className={`${ONBOARDING_PAGE_WRAP} pb-3`}>
           <div className="flex items-center justify-between gap-2 sm:gap-3">
             {step === 1 ? (
@@ -1623,15 +1934,34 @@ export function BecomeMasterPage() {
             </span>
           </div>
 
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70 sm:mt-3.5">
-            <div
-              className="h-full rounded-full bg-[#E29595] transition-[width] duration-300 ease-out"
-              style={{ width: `${progressPct}%` }}
-            />
+          <div
+            className="mt-3 flex gap-1 sm:mt-3.5 sm:gap-1.5"
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={TOTAL_STEPS}
+            aria-valuenow={success ? TOTAL_STEPS : step}
+            aria-label={`Шаг ${success ? TOTAL_STEPS : step} из ${TOTAL_STEPS}`}
+          >
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => {
+              const filled = success || step > i;
+              return (
+                <div
+                  key={i}
+                  className={`h-2 min-w-0 flex-1 rounded-full transition-colors duration-300 ease-out ${
+                    filled ? 'bg-[#E29595]' : 'bg-neutral-300'
+                  }`}
+                />
+              );
+            })}
           </div>
         </div>
       </header>
 
+      <main
+        className={`min-h-0 flex-1 lg:overflow-y-auto lg:pt-[calc(5.25rem+env(safe-area-inset-top,0px))] ${
+          step > 1 ? (step === 7 ? 'lg:pb-[7.5rem]' : 'lg:pb-[6.5rem]') : ''
+        }`}
+      >
       {step >= 2 && (!backendConfigured || (!authLoading && !isAuthenticated)) ? (
         <div className={`${ONBOARDING_PAGE_WRAP} space-y-2 pt-3`}>
           {!backendConfigured ? (
@@ -1647,1308 +1977,322 @@ export function BecomeMasterPage() {
         </div>
       ) : null}
 
-      <div className={`${ONBOARDING_PAGE_WRAP} ${step === 1 ? 'pt-2 sm:pt-3 lg:pt-6' : 'pt-4'}`}>
+      <div className={`${ONBOARDING_PAGE_WRAP} ${step === 1 ? 'pt-2 sm:pt-3 lg:pt-4' : 'pt-4'}`}>
         <div
-          className={`min-w-0 ${
-            step === 1
+          className={`min-w-0 transition-colors duration-500 ${
+            step === 1 || step === 2 || step === 4 || step === 5 || step === 6 || step === 7
               ? 'rounded-[42px] bg-[#F1EFEF] p-2 shadow-[0_24px_70px_rgba(17,17,17,0.06)] sm:p-2.5 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none'
               : 'rounded-[42px] bg-[#F1EFEF] p-2.5 shadow-[0_24px_70px_rgba(17,17,17,0.06)] sm:p-3'
           }`}
         >
           <div
-            className={`relative z-10 min-w-0 overflow-hidden ${
-              step === 1
-                ? 'rounded-[34px] bg-white px-3 pb-5 pt-4 shadow-[0_10px_30px_rgba(17,17,17,0.035)] sm:px-6 sm:pb-6 sm:pt-5 lg:rounded-[16px] lg:px-8 lg:pb-8 lg:pt-8 lg:shadow-[0_8px_40px_rgba(17,17,17,0.06)]'
-                : 'rounded-[34px] bg-white shadow-[0_10px_30px_rgba(17,17,17,0.035)] ' +
-                  (step === 2
-                    ? 'px-3 py-4 sm:px-6 sm:py-5'
-                    : 'px-3 py-5 sm:px-6 sm:py-6')
+            className={`relative z-10 min-w-0 transition-[background,box-shadow] duration-500 ${
+              step === 2 || step === 4 || step === 5 || step === 6 || step === 7
+                ? 'overflow-visible'
+                : 'overflow-hidden'
+            } ${
+              step === 1 || step === 2 || step === 4 || step === 5 || step === 6 || step === 7
+                ? `rounded-[34px] bg-white ${step === 2 ? '' : 'shadow-[0_10px_30px_rgba(17,17,17,0.035)]'} lg:rounded-[16px] ${step === 2 ? 'lg:shadow-none' : 'lg:shadow-[0_8px_40px_rgba(17,17,17,0.06)]'} ` +
+                  (step === 1
+                    ? 'px-3 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5 lg:px-8 lg:pb-8 lg:pt-8'
+                    : step === 7
+                      ? 'px-0 py-0 sm:px-0 sm:py-0 lg:px-0 lg:py-0'
+                      : 'px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8')
+                : 'rounded-[34px] bg-white px-3 py-5 shadow-[0_10px_30px_rgba(17,17,17,0.035)] sm:px-6 sm:py-6'
             }`}
+            style={step === 2 && step2CategoryTheme ? { background: 'transparent' } : undefined}
           >
             {step === 1 ? (
               <div className="w-full">
-                <OnboardingStep1Intro onStart={() => setStep(2)} />
+                <OnboardingStep1Intro onStart={() => goToStep(2)} />
               </div>
             ) : null}
 
             {step === 2 ? (
-              <div className="mx-auto w-full max-w-xl">
-                <StepTitle dense eyebrow="Категория" title="Чем вы занимаетесь?" />
-
-                <div className="mt-4 rounded-2xl bg-[#FFFBEB] px-4 py-3 ring-1 ring-[#FDE68A]/60">
-                  <p className="text-[14px] font-semibold text-[#92400E]">Категория влияет на каталог</p>
-                  <p className="mt-1 text-[13px] leading-relaxed text-[#A16207]">
-                    Клиенты будут находить вас в этом разделе. После публикации профиля смена категории может
-                    проходить через проверку.
-                  </p>
-                </div>
-
-                {categoriesError ? (
-                  <p className="mt-4 rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
-                    {categoriesError}
-                  </p>
-                ) : null}
-
-                {!categoriesReady ? (
-                  <div className="mt-6 flex justify-center py-4">
-                    <LoadingVideo label="Загрузка категорий…" />
-                  </div>
-                ) : categories.length === 0 ? (
-                  <p className="mt-6 text-center text-[15px] text-neutral-500">
-                    Категории не найдены. Обратитесь в поддержку.
-                  </p>
-                ) : (
-                  <div className="mt-4 grid grid-cols-1 gap-1.5">
-                    {[...categories]
-                      .sort((a, b) => a.sortOrder - b.sortOrder)
-                      .map((item, index) => {
-                        const active = selectedCategoryId === item.id;
-                        const imageSrc = CATEGORY_IMAGES[item.code];
-                        const hint = CATEGORY_HINTS[item.code] ?? '';
-
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => trySelectCategory(item.id)}
-                            className={`flex min-h-[4.25rem] w-full items-center gap-3 rounded-[26px] px-3.5 py-2.5 text-left transition sm:min-h-[4.35rem] sm:gap-3.5 sm:px-4 sm:py-3 ${
-                              active
-                                ? 'bg-[#FDF9F9] text-neutral-950 shadow-[0_8px_22px_rgba(226,149,149,0.18)] ring-1 ring-[#E29595]/40'
-                                : 'bg-[#F1EFEF] text-neutral-950 ring-1 ring-transparent hover:bg-[#E9E6E6] active:scale-[0.99]'
-                            }`}
-                          >
-                            <span
-                              className={`relative flex h-[3.35rem] w-[3.35rem] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white sm:h-14 sm:w-14 ${
-                                active ? 'ring-2 ring-[#E29595]/45 ring-offset-2 ring-offset-[#FDF9F9]' : ''
-                              }`}
-                              aria-hidden
-                            >
-                              {imageSrc ? (
-                                <img
-                                  src={imageSrc}
-                                  alt=""
-                                  width={112}
-                                  height={112}
-                                  loading={index < 3 ? 'eager' : 'lazy'}
-                                  decoding="async"
-                                  draggable={false}
-                                  className="h-full w-full object-cover object-center"
-                                />
-                              ) : (
-                                <span className="text-[12px] font-semibold text-neutral-400" aria-hidden>
-                                  {item.name.slice(0, 1)}
-                                </span>
-                              )}
-                            </span>
-
-                            <span className="min-w-0 flex-1 py-0.5">
-                              <span className="block text-[16px] font-semibold leading-tight tracking-[-0.035em] text-neutral-950 sm:text-[17px] sm:tracking-[-0.04em]">
-                                {item.name}
-                              </span>
-
-                              {hint ? (
-                                <span className="mt-0.5 block text-[12.5px] leading-snug text-neutral-500 sm:text-[13px]">
-                                  {hint}
-                                </span>
-                              ) : null}
-                            </span>
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
+              <OnboardingStep2Categories
+                categories={categories}
+                categoriesReady={categoriesReady}
+                categoriesError={categoriesError}
+                selectedCategoryId={selectedCategoryId}
+                onSelectCategory={trySelectCategory}
+              />
             ) : null}
 
             {step === 3 ? (
-              <>
-                <StepTitle
-                  eyebrow="Профиль"
-                  title="Расскажите о себе"
-                  text="Эти данные увидят клиенты перед записью"
-                />
-
-                <div className="mt-7 space-y-6">
-                  <Field
-                    label="Имя мастера или студии"
-                    value={name}
-                    onChange={(v) => {
-                      setName(v);
-                      setProfileFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.name;
-                        return next;
-                      });
-                    }}
-                    onBlur={() => touchProfileField('name')}
-                    placeholder="Фамилия Имя Отчество"
-                    error={showProfileFieldError('name') ? profileFieldErrors.name : undefined}
-                    maxLength={200}
-                  />
-
-                  <Field
-                    label="Описание"
-                    value={description}
-                    onChange={(v) => {
-                      setDescription(v);
-                      setProfileFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.description;
-                        return next;
-                      });
-                    }}
-                    onBlur={() => touchProfileField('description')}
-                    placeholder="Расскажите, чем занимаетесь и почему к вам стоит записаться"
-                    multiline
-                    error={showProfileFieldError('description') ? profileFieldErrors.description : undefined}
-                    maxLength={10_000}
-                  />
-
-                  <Field
-                    label="Телефон для связи"
-                    labelAdornment={
-                      <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-white shadow-[0_2px_6px_rgba(17,17,17,0.04)]"
-                        title="Беларусь"
-                        aria-hidden
-                      >
-                        <BY title="Беларусь" className="h-full w-full object-cover" />
-                      </span>
-                    }
-                    value={phone}
-                    onChange={(v) => {
-                      setPhone(sanitizeBelarusPhoneInput(v));
-                      setProfileFieldErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.phone;
-                        delete next.contactReachability;
-                        return next;
-                      });
-                    }}
-                    onBlur={() => touchProfileField('phone')}
-                    placeholder="+375 29 000-00-00"
-                    inputMode="tel"
-                    error={showProfileFieldError('phone') ? profileFieldErrors.phone : undefined}
-                    maxLength={19}
-                  />
-
-                  {step3NavigateAttempted && profileFieldErrors.contactReachability ? (
-                    <p className="mt-3 rounded-[18px] bg-[#FFF4E8] px-3 py-2 text-[12px] font-semibold leading-snug text-[#B66A24]">
-                      {profileFieldErrors.contactReachability}
-                    </p>
-                  ) : null}
-
-                  <MasterProfileContactsBlock
-                    rows={clientContacts}
-                    onAdd={addClientContactRow}
-                    onChange={updateClientContactRow}
-                    onRemove={removeClientContactRow}
-                    onBlurRow={touchContactRow}
-                    rowErrors={profileFieldErrors}
-                    showRowError={showContactRowError}
-                  />
-                </div>
-              </>
+              <OnboardingStep3Profile
+                name={name}
+                onNameChange={(v) => {
+                  setName(v);
+                  setProfileFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.name;
+                    return next;
+                  });
+                }}
+                onNameBlur={() => touchAndValidateProfileField('name')}
+                nameError={showProfileFieldError('name') ? profileFieldErrors.name : undefined}
+                description={description}
+                onDescriptionChange={(v) => {
+                  setDescription(v);
+                  setProfileFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.description;
+                    return next;
+                  });
+                }}
+                onDescriptionBlur={() => touchAndValidateProfileField('description')}
+                descriptionError={
+                  showProfileFieldError('description') ? profileFieldErrors.description : undefined
+                }
+                phone={phone}
+                onPhoneChange={(v) => {
+                  setPhone(sanitizeBelarusPhoneInput(v));
+                  setProfileFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.phone;
+                    delete next.contactReachability;
+                    return next;
+                  });
+                }}
+                onPhoneBlur={() => touchAndValidateProfileField('phone')}
+                phoneError={showProfileFieldError('phone') ? profileFieldErrors.phone : undefined}
+                clientContacts={clientContacts}
+                onAddContact={addClientContactRow}
+                onChangeContact={updateClientContactRow}
+                onRemoveContact={removeClientContactRow}
+                onBlurContact={touchAndValidateContactRow}
+                contactRowErrors={profileFieldErrors}
+                showContactRowError={showContactRowError}
+                contactReachabilityError={profileFieldErrors.contactReachability}
+                showContactReachabilityError={step3NavigateAttempted}
+                isAuthenticated={isAuthenticated}
+                profileAvatarUrl={profileAvatarUrl}
+                telegramPhotoUrl={telegramUserPhotoUrl ?? telegramUserPreview?.photoUrl ?? null}
+                onAvatarUpdated={refreshProfile}
+              />
             ) : null}
 
             {step === 4 ? (
-              <div className="mx-auto w-full max-w-xl">
-                <StepTitle dense eyebrow="Адрес" title="Место приёма" />
-
-                <div className="mt-4">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-neutral-400">Формат</p>
-                  <div className="mt-2 grid grid-cols-1 gap-2 rounded-[26px] bg-[#F1EFEF] p-1.5 sm:grid-cols-2">
-                    {VISIT_TYPES.map((type) => {
-                      const active = visitType === type;
-                      return (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => {
-                            setVisitType(type);
-                            setAddressFieldErrors({});
-                            setAddressNavigateAttempted(false);
-                            resetPrimaryAddressCoordinates();
-                          }}
-                          className={`min-h-11 rounded-full px-3 text-[14px] font-semibold transition active:scale-[0.98] ${
-                            active
-                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                              : 'text-neutral-500'
-                          }`}
-                        >
-                          {masterVisitTypeLabel(type)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <p className="mt-3 text-[13px] font-medium text-neutral-500">Город: Минск</p>
-
-                {visitType === 'studio' ? (
-                  <>
-                    <div className="mt-4">
-                      <Field
-                        label="Название салона или студии"
-                        value={salonName}
-                        onChange={(v) => {
-                          setSalonName(v);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.salonName;
-                            return next;
-                          });
-                        }}
-                        onBlur={() => touchAddressField('salonName')}
-                        placeholder="Например, Beauty Studio"
-                        error={showAddressFieldError('salonName') ? addressFieldErrors.salonName : undefined}
-                        maxLength={120}
-                      />
-                    </div>
-
-                    <div className="mt-4 overflow-visible rounded-[26px] bg-[#F1EFEF] p-3">
-                      <OnboardingAddressMap
-                        key={`map-${visitType}`}
-                        city={ONBOARDING_CITY}
-                        visitType={visitType}
-                        street={street}
-                        onStreetChange={(value) => {
-                          invalidatePrimaryAddressOnMap();
-                          setStreet(value);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.street;
-                            return next;
-                          });
-                        }}
-                        inputLabel="Адрес салона *"
-                        inputPlaceholder="Адрес"
-                        inputError={showAddressFieldError('street') ? addressFieldErrors.street : undefined}
-                        onInputBlur={() => touchAddressField('street')}
-                        viewportDropdown
-                        initialLat={lat ?? null}
-                        initialLng={lng ?? null}
-                        addressSummary={pickedAddressSummary}
-                        coordsError={showAddressFieldError('coords') ? addressFieldErrors.coords : undefined}
-                        onMapAvailabilityChange={(ok) => setMapScriptOk(ok)}
-                        onPick={(result) => {
-                          setPickedAddressSummary(result.addressLine);
-                          setAddressPinnedToMap(true);
-                          setStreet(result.addressLine.trim());
-                          setBuilding('б/н');
-                          setLat(result.lat);
-                          setLng(result.lng);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.street;
-                            delete next.coords;
-                            return next;
-                          });
-                        }}
-                      />
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <Field
-                        label="Этаж"
-                        value={floor}
-                        onChange={setFloor}
-                        onBlur={() => touchAddressField('floor')}
-                        placeholder="3"
-                        error={showAddressFieldError('floor') ? addressFieldErrors.floor : undefined}
-                        maxLength={40}
-                      />
-                      <Field
-                        label="Кабинет"
-                        value={room}
-                        onChange={setRoom}
-                        onBlur={() => touchAddressField('room')}
-                        placeholder="312"
-                        error={showAddressFieldError('room') ? addressFieldErrors.room : undefined}
-                        maxLength={80}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="mt-4 overflow-visible rounded-[26px] bg-[#F1EFEF] p-3">
-                      <OnboardingAddressMap
-                        key={`map-${visitType}`}
-                        city={ONBOARDING_CITY}
-                        visitType={visitType}
-                        street={street}
-                        onStreetChange={(value) => {
-                          invalidatePrimaryAddressOnMap();
-                          setStreet(value);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.street;
-                            return next;
-                          });
-                        }}
-                        inputLabel="Адрес приёма *"
-                        inputPlaceholder="Адрес"
-                        inputError={showAddressFieldError('street') ? addressFieldErrors.street : undefined}
-                        onInputBlur={() => touchAddressField('street')}
-                        viewportDropdown
-                        initialLat={lat ?? null}
-                        initialLng={lng ?? null}
-                        addressSummary={pickedAddressSummary}
-                        coordsError={showAddressFieldError('coords') ? addressFieldErrors.coords : undefined}
-                        onMapAvailabilityChange={(ok) => setMapScriptOk(ok)}
-                        onPick={(result) => {
-                          setPickedAddressSummary(result.addressLine);
-                          setAddressPinnedToMap(true);
-                          setStreet(result.addressLine.trim());
-                          setBuilding('б/н');
-                          setLat(result.lat);
-                          setLng(result.lng);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.street;
-                            delete next.coords;
-                            return next;
-                          });
-                        }}
-                      />
-                    </div>
-
-                    <div className="mt-4">
-                      <p className="text-[13px] font-semibold text-neutral-500">Детали адреса для клиентов</p>
-                      <p className="mt-1 text-[12px] leading-snug text-neutral-400">
-                        Улица из поля выше видна всем. Подъезд, этаж, квартира и домофон — в дополнительных деталях ниже.
-                      </p>
-                      <div
-                        className="mt-2 grid grid-cols-1 gap-2 rounded-[26px] bg-[#F1EFEF] p-1.5 sm:grid-cols-2"
-                        role="radiogroup"
-                        aria-label="Когда показывать детали адреса"
-                      >
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={!showExactAddressAfterBooking}
-                          onClick={() => setShowExactAddressAfterBooking(false)}
-                          className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
-                            !showExactAddressAfterBooking
-                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                              : 'text-neutral-500'
-                          }`}
-                        >
-                          Видно сразу
-                        </button>
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={showExactAddressAfterBooking}
-                          onClick={() => setShowExactAddressAfterBooking(true)}
-                          className={`min-h-11 rounded-full px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${
-                            showExactAddressAfterBooking
-                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                              : 'text-neutral-500'
-                          }`}
-                        >
-                          После записи
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setAddressMoreOpen((v) => !v)}
-                  aria-expanded={addressMoreOpen}
-                  className="mt-4 flex w-full items-center gap-3 rounded-[22px] bg-[#F1EFEF] px-4 py-3.5 text-left transition hover:bg-[#E9E6E6] active:scale-[0.99]"
-                >
-                  <span className="min-w-0 flex-1 text-[14px] font-semibold leading-none tracking-[-0.02em] text-neutral-900">
-                    Дополнительные детали
-                  </span>
-                  <span
-                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-neutral-400 transition-transform duration-200 ease-out ${
-                      addressMoreOpen ? 'rotate-45' : ''
-                    }`}
-                    aria-hidden
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="block">
-                      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                </button>
-
-                {addressMoreOpen ? (
-                  <div className="mt-3 space-y-3 rounded-[22px] border border-neutral-200/80 bg-white/60 px-3 py-3 sm:px-4">
-                    {visitType === 'at_home' ? (
-                      <Field
-                        label="Корпус / строение"
-                        value={houseDetail}
-                        onChange={(v) => {
-                          setHouseDetail(v);
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.houseDetail;
-                            return next;
-                          });
-                        }}
-                        onBlur={() => touchAddressField('houseDetail')}
-                        placeholder="При необходимости"
-                        error={showAddressFieldError('houseDetail') ? addressFieldErrors.houseDetail : undefined}
-                        maxLength={120}
-                      />
-                    ) : null}
-
-                    {visitType === 'at_home' ? (
-                      <Field
-                        label="Подъезд *"
-                        value={entrance}
-                        onChange={(v) => {
-                          setEntrance(v.slice(0, AT_HOME_ENTRANCE_MAX));
-                          setAddressFieldErrors((prev) => {
-                            const next = { ...prev };
-                            delete next.entrance;
-                            return next;
-                          });
-                        }}
-                        onBlur={() => touchAndValidateAtHomeField('entrance')}
-                        placeholder="2"
-                        error={showAddressFieldError('entrance') ? addressFieldErrors.entrance : undefined}
-                        maxLength={AT_HOME_ENTRANCE_MAX}
-                      />
-                    ) : null}
-
-                    {visitType === 'at_home' ? (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Field
-                          label="Этаж *"
-                          value={floor}
-                          onChange={(v) => {
-                            setFloor(sanitizeAtHomeFloorInput(v));
-                            setAddressFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.floor;
-                              return next;
-                            });
-                          }}
-                          onBlur={() => touchAndValidateAtHomeField('floor')}
-                          placeholder="3"
-                          inputMode="numeric"
-                          error={showAddressFieldError('floor') ? addressFieldErrors.floor : undefined}
-                          maxLength={3}
-                        />
-                        <Field
-                          label="Квартира *"
-                          value={room}
-                          onChange={(v) => {
-                            setRoom(v.slice(0, AT_HOME_ROOM_MAX));
-                            setAddressFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.room;
-                              return next;
-                            });
-                          }}
-                          onBlur={() => touchAndValidateAtHomeField('room')}
-                          placeholder="45"
-                          error={showAddressFieldError('room') ? addressFieldErrors.room : undefined}
-                          maxLength={AT_HOME_ROOM_MAX}
-                        />
-                      </div>
-                    ) : null}
-
-                    <Field
-                      label={visitType === 'at_home' ? 'Код домофона *' : 'Код домофона'}
-                      value={intercom}
-                      onChange={(v) => {
-                        setIntercom(v.slice(0, visitType === 'at_home' ? AT_HOME_INTERCOM_MAX : 80));
-                        setAddressFieldErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.intercom;
-                          return next;
-                        });
-                      }}
-                      onBlur={() =>
-                        visitType === 'at_home'
-                          ? touchAndValidateAtHomeField('intercom')
-                          : touchAddressField('intercom')
-                      }
-                      placeholder="12В"
-                      error={showAddressFieldError('intercom') ? addressFieldErrors.intercom : undefined}
-                      maxLength={visitType === 'at_home' ? AT_HOME_INTERCOM_MAX : 80}
-                    />
-
-                    <Field
-                      label="Как пройти"
-                      value={directions}
-                      onChange={setDirections}
-                      onBlur={() => touchAddressField('directions')}
-                      placeholder="Главный вход, направо"
-                      multiline
-                      error={showAddressFieldError('directions') ? addressFieldErrors.directions : undefined}
-                      maxLength={2000}
-                    />
-
-                    <Field
-                      label="Комментарий для клиента"
-                      value={clientNote}
-                      onChange={setClientNote}
-                      onBlur={() => touchAddressField('clientNote')}
-                      placeholder="Например, приходите за 5 минут"
-                      multiline
-                      error={showAddressFieldError('clientNote') ? addressFieldErrors.clientNote : undefined}
-                      maxLength={2000}
-                    />
-                  </div>
-                ) : null}
-
-                {mapScriptOk === false ? (
-                  <p className="mt-3 text-[12px] leading-snug text-neutral-500">
-                    Карта не загрузилась — сохраните адрес текстом. Координаты не обязательны.
-                  </p>
-                ) : null}
-
-                <div className="mt-5 rounded-[26px] bg-[#F1EFEF] p-4">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                    Как увидит клиент
-                  </p>
-
-                  {!street.trim() ? (
-                    <p className="mt-2 text-[15px] font-semibold text-neutral-500">Адрес пока не указан</p>
-                  ) : visitType === 'studio' ? (
-                    <div className="mt-2 space-y-1.5 text-[14px] leading-snug text-neutral-700">
-                      <p className="font-semibold text-neutral-950">Салон</p>
-                      {salonName.trim() ? <p className="font-medium text-neutral-800">{salonName.trim()}</p> : null}
-                      <p>{formatCityWithAddressLine(locationDraft)}</p>
-                      {floor.trim() || room.trim() ? (
-                        <p className="text-neutral-600">
-                          {[floor.trim() ? `${floor.trim()} этаж` : null, room.trim() ? `кабинет ${room.trim()}` : null]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </p>
-                      ) : null}
-                      {directions.trim() ? (
-                        <p className="text-neutral-600">
-                          Как пройти: {directions.trim()}
-                        </p>
-                      ) : null}
-                      {clientNote.trim() ? <p className="text-neutral-600">{clientNote.trim()}</p> : null}
-                    </div>
-                  ) : showExactAddressAfterBooking ? (
-                    <div className="mt-3 space-y-4">
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                          До записи
-                        </p>
-                        <p className="mt-1 font-semibold text-neutral-950">На дому</p>
-                        <p className="mt-1 text-neutral-700">{formatHomePublicBeforeBooking(locationDraft)}</p>
-                        <p className="mt-1 text-[13px] text-neutral-500">
-                          Подъезд, этаж и другие детали — только после записи
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
-                          После записи
-                        </p>
-                        <p className="mt-1 text-neutral-700">{formatHomeAfterBookingMainLine(locationDraft)}</p>
-                        <div className="mt-1 space-y-0.5 text-[13px] text-neutral-600">
-                          {homeAfterBookingDetailLines(locationDraft).map((line) => (
-                            <p key={line}>{line}</p>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 space-y-1 text-[14px] leading-snug text-neutral-700">
-                      <p className="font-semibold text-neutral-950">На дому</p>
-                      <p>{formatCityWithAddressLine(locationDraft)}</p>
-                      <div className="space-y-0.5 text-[13px] text-neutral-600">
-                        {entrance.trim() ? <p>подъезд {entrance.trim()}</p> : null}
-                        {floor.trim() ? <p>этаж {floor.trim()}</p> : null}
-                        {room.trim() ? <p>квартира {room.trim()}</p> : null}
-                        {intercom.trim() ? <p>код домофона {intercom.trim()}</p> : null}
-                        {clientNote.trim() ? <p>Комментарий: {clientNote.trim()}</p> : null}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <OnboardingStep4Address
+                city={ONBOARDING_CITY}
+                visitType={visitType}
+                onVisitTypeChange={(type) => {
+                  setVisitType(type);
+                  setAddressFieldErrors({});
+                  setAddressNavigateAttempted(false);
+                }}
+                salonName={salonName}
+                onSalonNameChange={(v) => {
+                  setSalonName(v);
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.salonName;
+                    return next;
+                  });
+                }}
+                onSalonNameBlur={() => touchAndValidateAddressField('salonName')}
+                salonNameError={showAddressFieldError('salonName') ? addressFieldErrors.salonName : undefined}
+                street={street}
+                onStreetChange={(v) => {
+                  invalidatePrimaryAddressOnMap();
+                  setStreet(v);
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.street;
+                    return next;
+                  });
+                }}
+                onStreetBlur={() => touchAndValidateAddressField('street')}
+                streetError={showAddressFieldError('street') ? addressFieldErrors.street : undefined}
+                coordsError={showAddressFieldError('coords') ? addressFieldErrors.coords : undefined}
+                lat={lat}
+                lng={lng}
+                pickedAddressSummary={pickedAddressSummary}
+                addressPinnedToMap={addressPinnedToMap}
+                mapScriptOk={mapScriptOk}
+                onMapAvailabilityChange={(ok) => setMapScriptOk(ok)}
+                onInvalidateAddressOnMap={invalidatePrimaryAddressOnMap}
+                onMapPick={(result) => {
+                  setPickedAddressSummary(result.addressLine);
+                  setAddressPinnedToMap(true);
+                  setStreet(result.addressLine.trim());
+                  setBuilding('б/н');
+                  setLat(result.lat);
+                  setLng(result.lng);
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.street;
+                    delete next.coords;
+                    return next;
+                  });
+                }}
+                floor={floor}
+                onFloorChange={(v) => {
+                  if (visitType === 'at_home') setFloor(sanitizeAtHomeFloorInput(v));
+                  else setFloor(v);
+                }}
+                onFloorBlur={() =>
+                  visitType === 'at_home' ? touchAndValidateAddressField('floor') : touchAddressField('floor')
+                }
+                floorError={showAddressFieldError('floor') ? addressFieldErrors.floor : undefined}
+                room={room}
+                onRoomChange={(v) => {
+                  setRoom(visitType === 'at_home' ? sanitizeAtHomeRoomInput(v) : v.slice(0, 80));
+                }}
+                onRoomBlur={() =>
+                  visitType === 'at_home' ? touchAndValidateAddressField('room') : touchAddressField('room')
+                }
+                roomError={showAddressFieldError('room') ? addressFieldErrors.room : undefined}
+                showExactAddressAfterBooking={showExactAddressAfterBooking}
+                onShowExactAddressAfterBookingChange={setShowExactAddressAfterBooking}
+                addressMoreOpen={addressMoreOpen}
+                onToggleAddressMore={() => setAddressMoreOpen((v) => !v)}
+                houseDetail={houseDetail}
+                onHouseDetailChange={(v) => {
+                  setHouseDetail(v);
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.houseDetail;
+                    return next;
+                  });
+                }}
+                onHouseDetailBlur={() => touchAddressField('houseDetail')}
+                houseDetailError={showAddressFieldError('houseDetail') ? addressFieldErrors.houseDetail : undefined}
+                entrance={entrance}
+                onEntranceChange={(v) => {
+                  setEntrance(v.slice(0, AT_HOME_ENTRANCE_MAX));
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.entrance;
+                    return next;
+                  });
+                }}
+                onEntranceBlur={() => touchAndValidateAddressField('entrance')}
+                entranceError={showAddressFieldError('entrance') ? addressFieldErrors.entrance : undefined}
+                intercom={intercom}
+                onIntercomChange={(v) => {
+                  setIntercom(v.slice(0, visitType === 'at_home' ? AT_HOME_INTERCOM_MAX : 80));
+                  setAddressFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.intercom;
+                    return next;
+                  });
+                }}
+                onIntercomBlur={() =>
+                  visitType === 'at_home'
+                    ? touchAndValidateAddressField('intercom')
+                    : touchAddressField('intercom')
+                }
+                intercomError={showAddressFieldError('intercom') ? addressFieldErrors.intercom : undefined}
+                directions={directions}
+                onDirectionsChange={setDirections}
+                onDirectionsBlur={() => touchAddressField('directions')}
+                directionsError={showAddressFieldError('directions') ? addressFieldErrors.directions : undefined}
+                clientNote={clientNote}
+                onClientNoteChange={setClientNote}
+                onClientNoteBlur={() => touchAddressField('clientNote')}
+                clientNoteError={showAddressFieldError('clientNote') ? addressFieldErrors.clientNote : undefined}
+                locationDraft={locationDraft}
+              />
             ) : null}
-
             {step === 5 ? (
-              <>
-                <StepTitle
-                  eyebrow="Услуги"
-                  title="Добавьте услуги"
-                  text="Добавьте минимум одну услугу для записи"
+                <OnboardingStep5Services
+                  categoryCode={effectiveCategoryCode || undefined}
+                  categoryLabel={effectiveCategoryLabel || undefined}
+                  serviceTitlePlaceholder={getServiceTitlePlaceholder(effectiveCategoryCode)}
+                  templateHighlightId={svcHighlightId}
+                  onTemplateSelect={applyServiceTemplate}
+                  title={svcTitle}
+                  onTitleChange={(value) => {
+                    setSvcHighlightId(null);
+                    setSvcTitle(value);
+                  }}
+                  onTitleBlur={() => touchSvcField('title')}
+                  titleError={showSvcFieldError('title') ? svcFieldErrors.title : undefined}
+                  duration={svcDur}
+                  onDurationChange={setSvcDur}
+                  onDurationBlur={() => touchSvcField('duration')}
+                  durationError={showSvcFieldError('duration') ? svcFieldErrors.duration : undefined}
+                  price={svcPrice}
+                  onPriceChange={setSvcPrice}
+                  onPriceBlur={() => touchSvcField('price')}
+                  priceError={showSvcFieldError('price') ? svcFieldErrors.price : undefined}
+                  priceType={svcPriceType}
+                  onPriceTypeChange={setSvcPriceType}
+                  pricePreviewLabel={svcPricePreviewLabel}
+                  description={svcDesc}
+                  onDescriptionChange={setSvcDesc}
+                  onDescriptionBlur={() => touchSvcField('description')}
+                  descriptionError={showSvcFieldError('description') ? svcFieldErrors.description : undefined}
+                  formError={svcFieldErrors.form}
+                  editingId={svcEditingId}
+                  onSubmit={submitServiceForm}
+                  onCancelEdit={cancelSvcForm}
+                  services={services}
                 />
-
-                <div className="mt-6 space-y-6 rounded-[30px] bg-white p-3 shadow-[0_10px_30px_rgba(17,17,17,0.035)] sm:p-4">
-                  {popularServiceTemplates.length > 0 ? (
-                    <div>
-                      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                        Популярные услуги
-                      </p>
-                      <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1 [-webkit-overflow-scrolling:touch]">
-                        {popularServiceTemplates.map((tm) => (
-                          <button
-                            key={tm.id}
-                            type="button"
-                            onClick={() => applyServiceTemplate(tm)}
-                            className={`shrink-0 max-w-[min(100%,14rem)] rounded-full px-3.5 py-2 text-left text-[13px] font-semibold leading-snug transition active:scale-[0.98] ${
-                              svcHighlightId === tm.id
-                                ? 'bg-[#E8BCBC] text-neutral-950'
-                                : 'bg-[#F5E0E0] text-neutral-900'
-                            }`}
-                          >
-                            {tm.title}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="space-y-4">
-                    <Field
-                      label="Название услуги"
-                      value={svcTitle}
-                      onChange={setSvcTitle}
-                      onBlur={() => touchSvcField('title')}
-                      placeholder="Например, маникюр с покрытием"
-                      error={showSvcFieldError('title') ? svcFieldErrors.title : undefined}
-                      maxLength={300}
-                    />
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
-                      <Field
-                        label="Длительность"
-                        value={svcDur}
-                        onChange={setSvcDur}
-                        onBlur={() => touchSvcField('duration')}
-                        placeholder="90"
-                        inputMode="numeric"
-                        error={showSvcFieldError('duration') ? svcFieldErrors.duration : undefined}
-                      />
-
-                      <Field
-                        label="Цена, BYN"
-                        value={svcPrice}
-                        onChange={setSvcPrice}
-                        onBlur={() => touchSvcField('price')}
-                        placeholder="45"
-                        inputMode="decimal"
-                        error={showSvcFieldError('price') ? svcFieldErrors.price : undefined}
-                      />
-                    </div>
-
-                    <div>
-                      <p className="text-[13px] font-semibold text-neutral-500">Тип цены</p>
-
-                      <div
-                        className="mt-2 grid grid-cols-2 gap-2 rounded-[26px] bg-[#F1EFEF] p-1.5"
-                        role="radiogroup"
-                        aria-label="Тип цены"
-                      >
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={svcPriceType === 'fixed'}
-                          onClick={() => setSvcPriceType('fixed')}
-                          className={`min-h-11 rounded-full px-2 text-[14px] font-semibold leading-tight transition active:scale-[0.98] ${
-                            svcPriceType === 'fixed'
-                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                              : 'text-neutral-600'
-                          }`}
-                        >
-                          Точная
-                        </button>
-
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={svcPriceType === 'from'}
-                          onClick={() => setSvcPriceType('from')}
-                          className={`min-h-11 rounded-full px-2 text-[14px] font-semibold leading-tight transition active:scale-[0.98] ${
-                            svcPriceType === 'from'
-                              ? 'bg-white text-neutral-950 shadow-[0_8px_20px_rgba(17,17,17,0.05)]'
-                              : 'text-neutral-600'
-                          }`}
-                        >
-                          От
-                        </button>
-                      </div>
-
-                      <p className="mt-2 text-[12px] font-medium leading-snug text-neutral-500">
-                        {svcPricePreviewLabel ? (
-                          <>
-                            Клиент увидит:{' '}
-                            <span className="font-semibold text-neutral-800">{svcPricePreviewLabel}</span>
-                          </>
-                        ) : (
-                          'Укажите цену — покажем, как она отобразится в каталоге'
-                        )}
-                      </p>
-                    </div>
-
-                    <div>
-                      <Field
-                        label="Описание"
-                        value={svcDesc}
-                        onChange={setSvcDesc}
-                        onBlur={() => touchSvcField('description')}
-                        placeholder="Что входит в услугу"
-                        multiline
-                        error={showSvcFieldError('description') ? svcFieldErrors.description : undefined}
-                        maxLength={1000}
-                      />
-                    </div>
-                  </div>
-
-                  {svcFieldErrors.form ? (
-                    <p className="rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
-                      {svcFieldErrors.form}
-                    </p>
-                  ) : null}
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={submitServiceForm}
-                      className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-[#E29595] text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(226,149,149,0.24)] transition active:scale-[0.98]"
-                    >
-                      {svcEditingId ? 'Сохранить услугу' : 'Добавить услугу'}
-                    </button>
-
-                    {svcEditingId ? (
-                      <button
-                        type="button"
-                        onClick={cancelSvcForm}
-                        className="flex min-h-12 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] px-5 text-[14px] font-semibold text-neutral-600 transition active:scale-[0.98]"
-                      >
-                        Отмена
-                      </button>
-                    ) : null}
-                  </div>
-
-                  <div className="border-t border-[#F1EFEF] pt-5">
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                      Ваши услуги
-                    </p>
-
-                    {services.length === 0 ? (
-                      <div className="mt-3 rounded-[22px] bg-[#F1EFEF] px-4 py-5 text-center">
-                        <p className="text-[16px] font-semibold text-neutral-950">Пока нет услуг</p>
-                        <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-neutral-500">
-                          Добавьте первую услугу — она появится здесь
-                        </p>
-                      </div>
-                    ) : (
-                      <ul className="mt-3 flex flex-col gap-2.5">
-                        {services.map((service) => (
-                          <li
-                            key={service.id}
-                            className={`rounded-[22px] bg-white px-4 py-3.5 shadow-[0_6px_20px_rgba(17,17,17,0.04)] ${
-                              svcEditingId === service.id ? 'ring-2 ring-[#E29595]/50' : ''
-                            }`}
-                          >
-                            <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-start min-[400px]:justify-between">
-                              <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                                <p className="break-words text-[17px] font-semibold tracking-[-0.03em] text-neutral-950">
-                                  {service.title}
-                                </p>
-                                <p className="mt-2 inline-flex rounded-full bg-[#F8F0F0] px-2.5 py-1 text-[12px] font-semibold text-neutral-700">
-                                  {service.durationMin} мин · {formatPrice(service)}
-                                </p>
-                                {service.description ? (
-                                  <p className="mt-3 line-clamp-3 whitespace-pre-wrap break-words rounded-[14px] bg-[#F1EFEF] px-3 py-2.5 text-[13px] leading-relaxed text-neutral-600">
-                                    {service.description}
-                                  </p>
-                                ) : null}
-                              </div>
-                              <div className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-[13px] font-semibold">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditService(service)}
-                                  className="text-[#E29595] underline-offset-2 hover:underline"
-                                >
-                                  Редактировать
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => duplicateService(service)}
-                                  className="text-neutral-600 underline-offset-2 hover:underline"
-                                >
-                                  Дублировать
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeService(service.id)}
-                                  className="text-neutral-500 underline-offset-2 hover:underline"
-                                >
-                                  Удалить
-                                </button>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </>
             ) : null}
 
             {step === 6 ? (
-              <>
-                <StepTitle
-                  eyebrow="Доверие"
-                  title="Сертификаты"
-                  text="Добавьте дипломы или курсы, чтобы повысить доверие клиентов"
-                />
-
-                <div className="mt-6 space-y-4 rounded-[30px] bg-[#F1EFEF] p-3 sm:p-4">
-                  <button
-                    type="button"
-                    onClick={openCertFormForAdd}
-                    className="flex min-h-11 w-full items-center justify-center rounded-full border border-dashed border-neutral-300/80 bg-white/70 px-4 text-[14px] font-semibold text-neutral-800 transition active:scale-[0.98]"
-                  >
-                    + Добавить сертификат
-                  </button>
-
-                  {certFormVisible ? (
-                    <div className="space-y-3.5 rounded-[22px] bg-white/80 px-3 py-3.5 sm:px-4">
-                      <Field
-                        label="Название сертификата"
-                        value={certTitle}
-                        onChange={setCertTitle}
-                        onBlur={() => touchCertField('title')}
-                        placeholder="Например, курс аппаратного маникюра"
-                        error={showCertFieldError('title') ? certFieldErrors.title : undefined}
-                        maxLength={300}
-                      />
-
-                      <Field
-                        label="Организация"
-                        value={certOrganization}
-                        onChange={setCertOrganization}
-                        onBlur={() => touchCertField('organization')}
-                        placeholder="Например, Nail School Minsk"
-                        error={showCertFieldError('organization') ? certFieldErrors.organization : undefined}
-                        maxLength={300}
-                      />
-
-                      <Field
-                        label="Год"
-                        value={certYear}
-                        onChange={setCertYear}
-                        onBlur={() => touchCertField('year')}
-                        placeholder="2024"
-                        inputMode="numeric"
-                        error={showCertFieldError('year') ? certFieldErrors.year : undefined}
-                        maxLength={4}
-                      />
-
-                      <Field
-                        label="Описание"
-                        value={certDesc}
-                        onChange={setCertDesc}
-                        onBlur={() => touchCertField('description')}
-                        placeholder="Коротко о курсе или направлении"
-                        multiline
-                        error={showCertFieldError('description') ? certFieldErrors.description : undefined}
-                        maxLength={1000}
-                      />
-
-                      <div>
-                        <p className="text-[13px] font-semibold text-neutral-500">Фото сертификата</p>
-
-                        <label className="mt-2 flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]">
-                          Добавить фото
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={onPickCertificateImage}
-                          />
-                        </label>
-
-                        <Field
-                          label="Ссылка на фото"
-                          value={certPhotoLink}
-                          onChange={(v) => {
-                            setCertPhotoLink(v);
-                            if (v.trim()) clearCertLocalImage();
-                            setCertFieldErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.photoLink;
-                              return next;
-                            });
-                          }}
-                          onBlur={() => touchCertField('photoLink')}
-                          placeholder="https://…"
-                          error={showCertFieldError('photoLink') ? certFieldErrors.photoLink : undefined}
-                        />
-
-                        {(() => {
-                          const previewSrc =
-                            parseHttpsCertificateImageUrl(certPhotoLink) ?? certImageUrl ?? undefined;
-                          const hasPhoto = Boolean(previewSrc);
-                          if (!hasPhoto) return null;
-                          return (
-                            <div className="mt-3 flex gap-3 rounded-[18px] bg-[#F1EFEF] p-2.5">
-                              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[14px] bg-white">
-                                <img src={previewSrc} alt="" className="h-full w-full object-cover" decoding="async" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[13px] font-semibold text-neutral-900">
-                                  {certImageFileName
-                                    ? certImageFileName
-                                    : parseHttpsCertificateImageUrl(certPhotoLink)
-                                      ? 'Ссылка на фото'
-                                      : 'Фото добавлено'}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={clearCertPhoto}
-                                  className="mt-2 text-[13px] font-semibold text-[#E29595] underline-offset-2 hover:underline"
-                                >
-                                  Удалить фото
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })()}
-
-                        {certFieldErrors.image ? (
-                          <p className="mt-2 text-[12px] font-medium text-red-600">{certFieldErrors.image}</p>
-                        ) : null}
-                      </div>
-
-                      <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-3">
-                        <button
-                          type="button"
-                          onClick={submitCertificateForm}
-                          className="flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#E29595] text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-                        >
-                          {certEditingId ? 'Сохранить сертификат' : 'Добавить сертификат'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelCertForm}
-                          className="flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-700 transition active:scale-[0.98]"
-                        >
-                          Отмена
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {certificates.length === 0 && !certFormVisible ? (
-                    <p className="rounded-[18px] bg-white/60 px-3 py-2.5 text-center text-[13px] font-medium leading-snug text-neutral-500">
-                      Сертификаты можно добавить позже
-                    </p>
-                  ) : null}
-
-                  {certificates.length > 0 ? (
-                    <ul className="space-y-2.5 border-t border-white/50 pt-4">
-                      {certificates.map((certificate) => {
-                        const meta = [certificate.organization.trim(), certificate.year].filter(Boolean).join(' · ');
-                        return (
-                          <li
-                            key={certificate.id}
-                            className={`flex flex-col gap-3 min-[360px]:flex-row rounded-[22px] bg-white px-3 py-3 shadow-[0_6px_18px_rgba(17,17,17,0.04)] ${
-                              certEditingId === certificate.id ? 'ring-2 ring-[#E29595]/45' : ''
-                            }`}
-                          >
-                            {certificate.imageUrl ? (
-                              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-[#F1EFEF]">
-                                <img
-                                  src={certificate.imageUrl}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                  decoding="async"
-                                />
-                              </div>
-                            ) : null}
-                            <div className="min-w-0 flex-1">
-                              <p className="break-words text-[16px] font-semibold tracking-[-0.03em] text-neutral-950">
-                                {certificate.title}
-                              </p>
-                              {meta ? (
-                                <p className="mt-0.5 text-[13px] font-medium text-neutral-500">{meta}</p>
-                              ) : null}
-                              {certificate.description ? (
-                                <p className="mt-1.5 line-clamp-2 text-[13px] leading-snug text-neutral-500">
-                                  {certificate.description}
-                                </p>
-                              ) : null}
-                              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-semibold">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditCertificate(certificate)}
-                                  className="text-[#E29595] underline-offset-2 hover:underline"
-                                >
-                                  Редактировать
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeCertificate(certificate.id)}
-                                  className="text-neutral-500 underline-offset-2 hover:underline"
-                                >
-                                  Удалить
-                                </button>
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : null}
-                </div>
-              </>
+              <OnboardingStep6Trust
+                certificates={certificates}
+                educationItems={educationItems}
+                onEducationChange={setEducationItems}
+                certFormVisible={certFormVisible}
+                certEditingId={certEditingId}
+                onOpenCertFormForAdd={openCertFormForAdd}
+                onCancelCertForm={cancelCertForm}
+                onSubmitCertificateForm={submitCertificateForm}
+                certTitle={certTitle}
+                onCertTitleChange={setCertTitle}
+                onCertTitleBlur={() => touchCertField('title')}
+                certTitleError={showCertFieldError('title') ? certFieldErrors.title : undefined}
+                certOrganization={certOrganization}
+                onCertOrganizationChange={setCertOrganization}
+                onCertOrganizationBlur={() => touchCertField('organization')}
+                certOrganizationError={
+                  showCertFieldError('organization') ? certFieldErrors.organization : undefined
+                }
+                certYear={certYear}
+                onCertYearChange={setCertYear}
+                onCertYearBlur={() => touchCertField('year')}
+                certYearError={showCertFieldError('year') ? certFieldErrors.year : undefined}
+                certDesc={certDesc}
+                onCertDescChange={setCertDesc}
+                onCertDescBlur={() => touchCertField('description')}
+                certDescError={showCertFieldError('description') ? certFieldErrors.description : undefined}
+                certImageUrl={certImageUrl}
+                onCertImageFileChange={handleCertImageFileChange}
+                onClearCertPhoto={clearCertPhoto}
+                certPhotoUploading={certPhotoUploading}
+                certPhotoUploadErr={certPhotoUploadErr}
+                certPhotoError={showCertFieldError('photo') ? certFieldErrors.photo : undefined}
+                onStartEditCertificate={startEditCertificate}
+                onRemoveCertificate={removeCertificate}
+              />
             ) : null}
 
             {step === 7 ? (
               <>
-                <StepTitle
-                  eyebrow="Проверка"
-                  title="Проверьте профиль"
-                  text="Так клиенты увидят вашу карточку после публикации"
-                />
-
-                <div className="mt-6 rounded-[30px] bg-[#F1EFEF] p-3 sm:p-4">
-                  <div className="overflow-hidden rounded-[26px] bg-white shadow-[0_12px_34px_rgba(17,17,17,0.06)]">
-                    <div className="border-b border-neutral-100 px-3 pb-5 pt-5 sm:px-5">
-                      <div className="flex flex-col items-center gap-4 text-center min-[420px]:flex-row min-[420px]:items-start min-[420px]:text-left">
-                        {(() => {
-                          const raw = profile?.avatar_url?.trim();
-                          const src =
-                            raw && (raw.startsWith('https://') || raw.startsWith('http://')) ? raw : null;
-                          return src ? (
-                            <img
-                              src={src}
-                              alt=""
-                              className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-[22px] object-cover"
-                              decoding="async"
-                            />
-                          ) : (
-                            <div className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[22px] bg-[#E29595] text-[26px] font-semibold text-white shadow-[0_10px_26px_rgba(226,149,149,0.26)]">
-                              {name.trim().charAt(0).toUpperCase() || 'S'}
-                            </div>
-                          );
-                        })()}
-
-                        <div className="min-w-0 w-full flex-1 [overflow-wrap:anywhere]">
-                          <p className="text-[18px] font-semibold leading-snug tracking-[-0.04em] text-neutral-950 sm:text-[22px] sm:leading-tight sm:tracking-[-0.055em]">
-                            {name.trim() || 'Имя'}
-                          </p>
-
-                          {visitType === 'studio' && salonName.trim() ? (
-                            <p className="mt-1 break-words text-[14px] font-medium text-neutral-600">{salonName.trim()}</p>
-                          ) : null}
-
-                          <p className="mt-1.5 break-words text-[14px] font-medium text-neutral-500">
-                            {selectedCategory?.name ?? 'Категория'}
-                          </p>
-
-                          <p className="mt-2 inline-flex max-w-full rounded-full bg-[#F1EFEF] px-3 py-1 text-[12px] font-semibold text-neutral-600">
-                            {masterVisitTypeLabel(visitType)}
-                          </p>
-
-                          <p className="mt-2.5 text-[11px] font-medium text-neutral-400 sm:text-[12px]">
-                            отзывов: 0
-                          </p>
-
-                          <button
-                            type="button"
-                            disabled
-                            className="mt-4 flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-full bg-[#E29595]/35 px-4 text-[14px] font-semibold text-white/90 min-[420px]:max-w-[16rem]"
-                          >
-                            Записаться
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-5 px-3 py-5 sm:px-5">
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                          Основное
-                        </p>
-                        <ul className="mt-2 space-y-1.5 text-[14px] leading-snug text-neutral-800">
-                          <li>
-                            <span className="font-semibold text-neutral-950">Имя: </span>
-                            {name.trim() || '—'}
-                          </li>
-                          <li>
-                            <span className="font-semibold text-neutral-950">Категория: </span>
-                            {selectedCategory?.name ?? '—'}
-                          </li>
-                          <li>
-                            <span className="font-semibold text-neutral-950">Формат приёма: </span>
-                            {masterVisitTypeLabel(visitType)}
-                          </li>
-                        </ul>
-                      </div>
-
-                      {description.trim() ? (
-                        <div>
-                          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                            О себе
-                          </p>
-                          <div className="mt-2 rounded-[18px] bg-[#F8F0F0] px-3.5 py-3 ring-1 ring-[#E29595]/10">
-                            <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-neutral-700">
-                              {description.trim()}
-                            </p>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {phone.trim() || contactPreviewRows.length > 0 ? (
-                        <div>
-                          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                            Контакты
-                          </p>
-                          <ul className="mt-2 space-y-1.5 text-[14px] font-medium leading-snug text-neutral-900">
-                            {phone.trim() ? (
-                              <li className="break-words">
-                                Телефон: {normalizeBelarusPhone(phone.trim()) ?? phone.trim()}
-                              </li>
-                            ) : null}
-                            {contactPreviewRows.map((row) => (
-                              <li key={row.id} className="break-words">
-                                {formatContactLineForPreview(row.type, row.value)}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                          Адрес
-                        </p>
-                        {visitType === 'studio' ? (
-                          <div className="mt-2 space-y-1.5 text-[14px] leading-snug text-neutral-800">
-                            <p className="font-semibold text-neutral-950">Салон</p>
-                            {salonName.trim() ? <p>{salonName.trim()}</p> : null}
-                            <p>{formatCityWithAddressLine(locationDraft)}</p>
-                            {floor.trim() || room.trim() ? (
-                              <p className="text-[13px] text-neutral-600">
-                                {[floor.trim() ? `${floor.trim()} этаж` : null, room.trim() ? `кабинет ${room.trim()}` : null]
-                                  .filter(Boolean)
-                                  .join(' · ')}
-                              </p>
-                            ) : null}
-                            {directions.trim() ? (
-                              <p className="text-[13px] text-neutral-600">Как пройти: {directions.trim()}</p>
-                            ) : null}
-                            {entrance.trim() || intercom.trim() || clientNote.trim() ? (
-                              <div className="space-y-0.5 text-[13px] text-neutral-600">
-                                {entrance.trim() ? <p>Подъезд {entrance.trim()}</p> : null}
-                                {intercom.trim() ? <p>Домофон {intercom.trim()}</p> : null}
-                                {clientNote.trim() ? <p>{clientNote.trim()}</p> : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : showExactAddressAfterBooking ? (
-                          <div className="mt-2 space-y-1.5 text-[14px] leading-snug text-neutral-800">
-                            <p className="font-semibold text-neutral-950">На дому</p>
-                            <p>{formatHomePublicBeforeBooking(locationDraft)}</p>
-                            <p className="text-[13px] text-neutral-500">
-                              Подъезд, этаж и другие детали — только после записи
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="mt-2 space-y-1.5 text-[14px] leading-snug text-neutral-800">
-                            <p className="font-semibold text-neutral-950">На дому</p>
-                            <p>{formatCityWithAddressLine(locationDraft)}</p>
-                            <div className="space-y-0.5 text-[13px] text-neutral-600">
-                              {entrance.trim() ? <p>Подъезд {entrance.trim()}</p> : null}
-                              {floor.trim() ? <p>Этаж {floor.trim()}</p> : null}
-                              {room.trim() ? <p>Квартира {room.trim()}</p> : null}
-                              {intercom.trim() ? <p>Домофон {intercom.trim()}</p> : null}
-                              {directions.trim() ? <p>Как пройти: {directions.trim()}</p> : null}
-                              {clientNote.trim() ? <p>{clientNote.trim()}</p> : null}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                          Услуги
-                        </p>
-                        <ul className="mt-2 flex flex-col gap-2.5">
-                          {services.map((service) => (
-                            <li
-                              key={service.id}
-                              className="overflow-hidden rounded-[20px] bg-white px-4 py-3.5 shadow-[0_6px_22px_rgba(17,17,17,0.05)] ring-1 ring-[#F1EFEF]"
-                            >
-                              <p className="break-words text-[16px] font-semibold tracking-[-0.03em] text-neutral-950">
-                                {service.title}
-                              </p>
-                              <p className="mt-2 inline-flex rounded-full bg-[#F8F0F0] px-2.5 py-1 text-[12px] font-semibold text-neutral-700">
-                                {service.durationMin} мин · {formatPreviewServicePrice(service)}
-                              </p>
-                              {service.description ? (
-                                <p className="mt-3 whitespace-pre-wrap break-words rounded-[14px] bg-[#F1EFEF] px-3 py-2.5 text-[13px] leading-relaxed text-neutral-600">
-                                  {service.description}
-                                </p>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-                          Сертификаты
-                        </p>
-                        {certificates.length > 0 ? (
-                          <ul className="mt-2 flex flex-col gap-2">
-                            {certificates.map((certificate) => {
-                              const meta = [certificate.organization.trim(), certificate.year]
-                                .filter(Boolean)
-                                .join(' · ');
-                              return (
-                                <li
-                                  key={certificate.id}
-                                  className="flex gap-2.5 rounded-[16px] bg-[#F1EFEF] px-2.5 py-2"
-                                >
-                                  {certificate.imageUrl ? (
-                                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px] bg-white">
-                                      <img
-                                        src={certificate.imageUrl}
-                                        alt=""
-                                        className="h-full w-full object-cover"
-                                        decoding="async"
-                                      />
-                                    </div>
-                                  ) : null}
-                                  <div className="min-w-0 flex-1">
-                                    <p className="break-words text-[14px] font-semibold text-neutral-950">
-                                      {certificate.title}
-                                    </p>
-                                    {meta ? (
-                                      <p className="mt-0.5 text-[12px] font-medium text-neutral-500">{meta}</p>
-                                    ) : null}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : (
-                          <p className="mt-2 text-[13px] leading-snug text-neutral-500">Можно добавить позже</p>
-                        )}
-                      </div>
-
-                      <div className="rounded-[18px] bg-[#F1EFEF] px-3 py-3">
-                        <p className="text-[13px] font-semibold text-neutral-950">График работы</p>
-                        <p className="mt-1 text-[14px] font-medium text-neutral-700">Пн–Пт, 9:00–18:00</p>
-                        <p className="mt-1.5 text-[12px] leading-snug text-neutral-500">
-                          Изменить график работы можно в кабинете мастера
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="px-3 pt-4 sm:px-6 lg:px-8 lg:pt-6">
+                  <StepTitle
+                    eyebrow="Проверка"
+                    title="Проверьте профиль"
+                    text="Так клиенты увидят вашу карточку после публикации"
+                  />
                 </div>
+                <OnboardingStep7Review
+                  name={name}
+                  description={description}
+                  phone={phone}
+                  clientContacts={clientContacts}
+                  location={locationDraft}
+                  services={services}
+                  categoryName={selectedCategory?.name ?? ''}
+                  categoryCode={selectedCategory?.code ?? ''}
+                  photoUrl={profileAvatarUrl}
+                  certificates={certificates}
+                  educationItems={educationItems}
+                />
               </>
             ) : step === 8 ? (
               <>
@@ -2976,8 +2320,8 @@ export function BecomeMasterPage() {
                       tariffSelection === 'basic' ? 'border-[#E29595]/55 ring-1 ring-[#E29595]/25' : 'border-neutral-100'
                     }`}
                   >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Тариф</p>
-                    <p className="mt-1 text-[18px] font-semibold tracking-[-0.04em] text-neutral-950">Базовый</p>
+                    <p className={onboardingEyebrowClass}>Тариф</p>
+                    <p className={`mt-1 text-[18px] ${onboardingPreviewTitleClass}`}>Базовый</p>
                     <p className="mt-1 text-[20px] font-semibold text-[#E29595]">0 BYN</p>
                     <p className="mt-1 text-[13px] font-medium text-neutral-500">Для старта</p>
                     <ul className="mt-3 flex flex-1 flex-col gap-1.5 text-[12px] font-medium leading-snug text-neutral-700">
@@ -3003,11 +2347,11 @@ export function BecomeMasterPage() {
                         : 'border-neutral-100'
                     }`}
                   >
-                    <span className="absolute right-3 top-3 rounded-full bg-[#FFF4F4] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#C96B6B]">
+                    <span className="absolute right-3 top-3 rounded-full bg-[#FFF4F4] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-normal text-[#C96B6B]">
                       Для роста
                     </span>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Тариф</p>
-                    <p className="mt-1 text-[18px] font-semibold tracking-[-0.04em] text-neutral-950">Pro</p>
+                    <p className={onboardingEyebrowClass}>Тариф</p>
+                    <p className={`mt-1 text-[18px] ${onboardingPreviewTitleClass}`}>Pro</p>
                     <p className="mt-1 text-[15px] font-semibold text-neutral-700">{proOnboardingPriceLabel}</p>
                     <p className="mt-1 text-[13px] font-medium text-neutral-500">Для роста записей</p>
                     <ul className="mt-3 flex flex-1 flex-col gap-1.5 text-[12px] font-medium leading-snug text-neutral-700">
@@ -3019,22 +2363,13 @@ export function BecomeMasterPage() {
                       <li>больше фото работ</li>
                       <li>приоритетная поддержка</li>
                     </ul>
-                    <div className="mt-4 flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTariffSelection('pro_interest')}
-                        className="flex min-h-11 w-full items-center justify-center rounded-full bg-[#E29595] px-3 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-                      >
-                        Оставить заявку на Pro
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTariffSelection('pro_interest')}
-                        className="flex min-h-10 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-3 text-[13px] font-semibold text-neutral-800 transition active:scale-[0.98]"
-                      >
-                        Подключить позже
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTariffSelection('pro_interest')}
+                      className="mt-4 flex min-h-11 w-full items-center justify-center rounded-full bg-[#E29595] px-3 text-[14px] font-semibold text-white shadow-[0_10px_24px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
+                    >
+                      Оставить заявку на Pro
+                    </button>
                   </div>
                 </div>
 
@@ -3046,17 +2381,21 @@ export function BecomeMasterPage() {
           </div>
         </div>
       </div>
+      </main>
 
       {step > 1 ? (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-neutral-200 bg-white px-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 sm:px-4">
+        <div className="fixed inset-x-0 bottom-0 z-30 shrink-0 border-t border-neutral-200 bg-white px-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] pt-3 sm:px-4 lg:z-40 lg:bg-white/95 lg:backdrop-blur-md">
           <div className={ONBOARDING_PAGE_WRAP}>
-            {step === 5 && services.length === 0 ? (
-              <p className="mb-2 text-center text-[13px] font-medium text-neutral-500">
-                Добавьте хотя бы одну услугу
+            {stepNavigateHint ? (
+              <p className="mb-2 rounded-[18px] bg-[#FFF4E8] px-3 py-2.5 text-center text-[13px] font-semibold leading-snug text-[#B66A24]">
+                {stepNavigateHint}
               </p>
             ) : null}
             {step === 7 && publishBlockingIssues.length > 0 ? (
-              <div className="mb-2 rounded-[18px] border border-[#F0D6CC] bg-[#FFF9F7] px-3 py-2.5">
+              <div
+                data-onboarding-field="review-issues"
+                className="mb-2 scroll-mt-28 rounded-[18px] border border-[#F0D6CC] bg-[#FFF9F7] px-3 py-2.5 lg:scroll-mt-32"
+              >
                 <p className="text-center text-[13px] font-semibold text-[#8B4B3B]">Проверьте данные перед продолжением</p>
                 <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[12px] font-medium text-neutral-700">
                   {publishBlockingIssues.map((issue) => (
@@ -3067,7 +2406,7 @@ export function BecomeMasterPage() {
                   {publishBlockingIssues.some((i) => i.fixStep === 3) ? (
                     <button
                       type="button"
-                      onClick={() => setStep(3)}
+                      onClick={() => goToStep(3)}
                       className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-[#E29595] shadow-sm transition active:scale-[0.98]"
                     >
                       Исправить профиль
@@ -3076,7 +2415,7 @@ export function BecomeMasterPage() {
                   {publishBlockingIssues.some((i) => i.fixStep === 4) ? (
                     <button
                       type="button"
-                      onClick={() => setStep(4)}
+                      onClick={() => goToStep(4)}
                       className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-[#E29595] shadow-sm transition active:scale-[0.98]"
                     >
                       Исправить адрес
@@ -3085,7 +2424,7 @@ export function BecomeMasterPage() {
                   {publishBlockingIssues.some((i) => i.fixStep === 5) ? (
                     <button
                       type="button"
-                      onClick={() => setStep(5)}
+                      onClick={() => goToStep(5)}
                       className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-[#E29595] shadow-sm transition active:scale-[0.98]"
                     >
                       Исправить услуги
@@ -3098,10 +2437,12 @@ export function BecomeMasterPage() {
               <button
                 type="button"
                 onClick={goNext}
-                disabled={step !== 6 && !canGoNext}
-                className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition enabled:hover:opacity-90 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                disabled={stepTransitionBusy}
+                className="flex min-h-12 w-full items-center justify-center rounded-full bg-[#E29595] px-4 text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(226,149,149,0.22)] transition hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {step === 6 && certificates.length === 0 ? 'Пропустить' : 'Дальше'}
+                {step === 6 && certificates.length === 0 && educationItems.length === 0
+                  ? 'Пропустить'
+                  : 'Дальше'}
               </button>
             ) : (
               <button
@@ -3130,7 +2471,7 @@ export function BecomeMasterPage() {
           aria-modal="true"
         >
           <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-[0_24px_70px_rgba(17,17,17,0.18)]">
-            <h3 className="text-[17px] font-semibold tracking-[-0.03em] text-neutral-950">
+            <h3 className="text-[17px] font-semibold tracking-normal text-neutral-950">
               Проверьте услуги после смены категории
             </h3>
             <p className="mt-2 text-[14px] leading-relaxed text-neutral-600">
@@ -3150,7 +2491,7 @@ export function BecomeMasterPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (categoryChangePendingId) setSelectedCategoryId(categoryChangePendingId);
+                  if (categoryChangePendingId) applyCategorySelection(categoryChangePendingId);
                   setCategoryChangeConfirmOpen(false);
                   setCategoryChangePendingId(null);
                 }}

@@ -124,3 +124,18 @@ export const platformAdminMutationLimiter = createLimiter({
   maxProd: 60,
   label: '1 мин',
 });
+
+/** POST /api/masters/:id/report */
+export const masterProfileReportLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxProd: 5,
+  label: '1 ч',
+});
+
+/** GET /api/geo/search, /api/geo/reverse */
+export const geoRateLimit = createLimiter({
+  windowMs: 60 * 1000,
+  maxProd: 40,
+  label: '1 мин',
+  keyGenerator: catalogIpKey,
+});

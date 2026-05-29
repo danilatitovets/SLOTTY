@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { EMPTY_DATE } from '../../../shared/lib/emptyDisplayText';
 import {
   HiCalendarDays,
   HiChatBubbleLeftRight,
@@ -32,7 +33,7 @@ function publicationStatusDisplay(status: MasterPublicationStatus | null): {
 
 function formatRegistrationDate(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return EMPTY_DATE;
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 

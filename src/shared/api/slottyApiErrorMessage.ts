@@ -47,6 +47,32 @@ const CATEGORY_CHANGE_MESSAGES: Record<string, string> = {
     'Для активного профиля смена категории проходит через заявку.',
 };
 
+const SPONSOR_MESSAGES: Record<string, string> = {
+  active_sponsor_request_exists:
+    'У вас уже есть активная заявка на спонсорство. Дождитесь ответа команды SLOTTY.',
+};
+
+const PROMO_MESSAGES: Record<string, string> = {
+  PROMO_NOT_FOUND: 'Промокод не найден. Проверьте написание.',
+  PROMO_INACTIVE: 'Промокод недействителен.',
+  PROMO_NOT_STARTED: 'Промокод ещё не активен.',
+  PROMO_EXPIRED: 'Срок действия промокода истёк.',
+  PROMO_WRONG_PLAN: 'Промокод не подходит к этому тарифу.',
+  PROMO_WRONG_PERIOD: 'Промокод не действует для выбранного периода оплаты.',
+  PROMO_LIMIT_REACHED: 'Лимит использований промокода исчерпан.',
+  PROMO_EXISTS: 'Такой промокод уже создан.',
+};
+
+const PRO_FEATURE_MESSAGES: Record<string, string> = {
+  PRO_REQUIRED:
+    'Наборы услуг и акции доступны по подписке «Мастер Pro». Подключите тариф в разделе «Тарифы».',
+};
+
+const PRO_MESSAGES: Record<string, string> = {
+  PRO_REQUIRED:
+    'Функция доступна по подписке «Мастер Pro». Подключите тариф в разделе «Тарифы».',
+};
+
 const LIMIT_MESSAGES: Record<string, string> = {
   LIMIT_SERVICES_REACHED:
     'Достигнут лимит услуг по тарифу. Оформите Pro или деактивируйте лишние услуги.',
@@ -81,8 +107,12 @@ export async function readSlottyApiErrorMessage(res: Response): Promise<string> 
   if (code && SLOT_MESSAGES[code]) return SLOT_MESSAGES[code];
   if (code && REVIEW_MESSAGES[code]) return REVIEW_MESSAGES[code];
   if (code && FAVORITE_MESSAGES[code]) return FAVORITE_MESSAGES[code];
+  if (code && PRO_FEATURE_MESSAGES[code]) return PRO_FEATURE_MESSAGES[code];
+  if (code && PRO_MESSAGES[code]) return PRO_MESSAGES[code];
   if (code && LIMIT_MESSAGES[code]) return LIMIT_MESSAGES[code];
   if (code && CATEGORY_CHANGE_MESSAGES[code]) return CATEGORY_CHANGE_MESSAGES[code];
+  if (code && SPONSOR_MESSAGES[code]) return SPONSOR_MESSAGES[code];
+  if (code && PROMO_MESSAGES[code]) return PROMO_MESSAGES[code];
   const msg = j?.error?.message;
   if (msg) return msg;
   return `Ошибка ${res.status}`;

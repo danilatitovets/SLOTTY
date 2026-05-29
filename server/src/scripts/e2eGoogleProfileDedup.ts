@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import {
   collectGoogleLoginCandidateProfileIds,
   issueSessionForProfile,
+  loginOrRegisterWithGoogle,
   pickPreferredProfileIdAmong,
   resolveCanonicalProfileId,
 } from '../modules/auth/authIdentities.service.js';
@@ -138,8 +139,21 @@ async function main() {
     const session = await issueSessionForProfile(emptyB);
     log(
       session.profile.id === masterA,
-      'S2c: issueSessionForProfile(B) JWT profile is A',
+      'S2c: issueSessionForProfile(B) resolves to master A (orphan shell + alias)',
       `profile.id=${session.profile.id}`,
+    );
+
+    const loginSession = await loginOrRegisterWithGoogle({
+      sub: googleSub,
+      email,
+      name: 'E2E Login',
+      picture: undefined,
+      email_verified: true,
+    });
+    log(
+      loginSession.profile.id === masterA,
+      'S2c-login: loginOrRegisterWithGoogle → master A',
+      `profile.id=${loginSession.profile.id}`,
     );
 
     // --- Сценарий 3: link simulation — reassign google to A (same as login merge path) ---
@@ -177,6 +191,24 @@ async function main() {
       'S4: two substantial masters — pick returns one deterministically',
       `pick=${pick4}`,
     );
+
+    // --- Сценарий 5: master+TG vs platform_admin+Google по email → TG/master ---
+    const adminG = await insertProfile('client', `Admin ${tag}`);
+    await query(
+      `update public.profiles set role = 'platform_admin'::public.user_role where id = $1`,
+      [adminG],
+    );
+    await insertGoogleIdentity(adminG, `admin-sub-${tag}`, email);
+
+    const pick5 = await pickPreferredProfileIdAmong([masterA, adminG], { preferProvider: 'telegram' });
+    log(
+      pick5 === masterA,
+      'S5: Telegram login prefers master over platform_admin Google shell',
+      `pick=${pick5} masterA=${masterA} adminG=${adminG}`,
+    );
+
+    const adminSubstantial = await isProfileSubstantial(adminG);
+    log(!adminSubstantial, 'S5b: platform_admin without cabinet is not substantial', String(adminSubstantial));
 
     console.log('\n[e2e-google-dedup] done');
   } finally {

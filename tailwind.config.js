@@ -57,6 +57,14 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(28px)' },
           '100%': { opacity: '1', transform: 'none' },
         },
+        'services-marquee-left': {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'services-marquee-right': {
+          '0%': { transform: 'translateX(-50%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
       },
       animation: {
         'fade-enter': 'fade-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both',
@@ -66,6 +74,8 @@ export default {
         'menu-link-drop': 'menu-link-drop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both',
         'notif-backdrop': 'notif-backdrop 0.32s ease-out both',
         'notif-sheet': 'notif-sheet 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'services-marquee-left': 'services-marquee-left 55s linear infinite',
+        'services-marquee-right': 'services-marquee-right 60s linear infinite',
       },
       borderRadius: {
         card: '1.5rem',

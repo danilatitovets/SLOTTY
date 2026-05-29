@@ -7,6 +7,8 @@
  * TODO: скрывать sensitive-инструкции до подтверждения записи, если потребуется.
  */
 
+import { EMPTY_ADDRESS, LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
+
 /** «В салоне» или «На дому» (у клиента / домашний формат — уточняется в описании). */
 export type MasterVisitType = 'studio' | 'at_home';
 
@@ -127,7 +129,7 @@ function buildAtHomeAddressLine(loc: MasterLocation, includeBuilding: boolean): 
 export function formatStoredPublicAddress(loc: MasterLocation | null | undefined): string {
   if (!loc) return '';
   if (loc.visitType === 'at_home') {
-    if (loc.showExactAddressAfterBooking === true) {
+    if (isHomeAddressHiddenUntilBooking(loc)) {
       return buildAtHomeAddressLine(loc, false);
     }
     return buildAtHomeAddressLine(loc, true);
@@ -158,7 +160,7 @@ export function formatPublicAddress(loc: MasterLocation | null | undefined): str
   const base = baseAddressLine(loc);
   if (loc.visitType === 'at_home') {
     const visit = masterVisitTypeLabel('at_home');
-    if (loc.showExactAddressAfterBooking === true) {
+    if (isHomeAddressHiddenUntilBooking(loc)) {
       const publicLine = formatHomePublicBeforeBooking(loc);
       return publicLine ? `${visit}, ${publicLine}` : visit;
     }
@@ -240,7 +242,7 @@ export function buildLocationDisplayParts(loc: MasterLocation | null | undefined
   const addressLine =
     loc.visitType === 'at_home'
       ? formatHomeAfterBookingMainLine(loc)
-      : baseAddressLine(loc) || formatCityWithAddressLine(loc) || '—';
+      : baseAddressLine(loc) || formatCityWithAddressLine(loc) || EMPTY_ADDRESS;
 
   const access: LocationDetailField[] = [];
   if (loc.buildingDetail?.trim()) {
@@ -284,8 +286,26 @@ export function buildLocationAfterBookingPreview(
   return [...rows, ...parts.access, ...parts.wayfinding];
 }
 
+/** «На дому» + режим «после записи» (по умолчанию для at_home). */
 export function isHomeAddressHiddenUntilBooking(loc: MasterLocation | null | undefined): boolean {
-  return loc?.visitType === 'at_home' && loc.showExactAddressAfterBooking === true;
+  return loc?.visitType === 'at_home' && loc.showExactAddressAfterBooking !== false;
+}
+
+const AT_HOME_SENSITIVE_ACCESS_LABELS = new Set([
+  'подъезд',
+  'этаж',
+  'квартира',
+  'домофон',
+  'дом / корпус',
+]);
+
+/** Подъезд, этаж, квартира, домофон — не показываем до записи. */
+export function filterAtHomeSensitiveAccessRows(
+  rows: LocationDetailField[],
+  loc: MasterLocation | null | undefined,
+): LocationDetailField[] {
+  if (!loc || loc.visitType !== 'at_home' || !isHomeAddressHiddenUntilBooking(loc)) return rows;
+  return rows.filter((row) => !AT_HOME_SENSITIVE_ACCESS_LABELS.has(row.label.trim().toLowerCase()));
 }
 
 export function catalogLineWithoutVisitPrefix(catalogLine: string, visitLabel: string): string {
@@ -299,7 +319,9 @@ export function formatFullAddress(loc: MasterLocation | null | undefined): strin
   const parts = buildLocationDisplayParts(loc);
   if (!parts) return '';
   const lines: string[] = [];
-  if (parts.addressLine && parts.addressLine !== '—') lines.push(parts.addressLine);
+  if (parts.addressLine && parts.addressLine !== EMPTY_ADDRESS && parts.addressLine !== LOCATION_EMPTY_SENTINEL) {
+    lines.push(parts.addressLine);
+  }
   for (const row of [...parts.access, ...parts.wayfinding]) {
     lines.push(`${row.label}: ${row.value}`);
   }
@@ -353,19 +375,20 @@ export function masterLocationDetailRows(
   const rows: { label: string; value: string }[] = [];
   rows.push({ label: 'Формат', value: masterVisitTypeLabel(loc.visitType) });
   if (loc.salonName?.trim()) rows.push({ label: 'Салон', value: loc.salonName.trim() });
+  const hideHomeUntilBooking = isHomeAddressHiddenUntilBooking(loc);
   const addressValue =
-    loc.visitType === 'at_home' && loc.showExactAddressAfterBooking === true && !revealed
-      ? stripCityFromAddressLine(loc.street.trim(), cityLabel(loc)) || '—'
+    loc.visitType === 'at_home' && hideHomeUntilBooking && !revealed
+      ? stripCityFromAddressLine(loc.street.trim(), cityLabel(loc)) || EMPTY_ADDRESS
       : loc.visitType === 'at_home'
         ? formatHomeAfterBookingMainLine(loc)
-        : baseAddressLine(loc) || '—';
+        : baseAddressLine(loc) || EMPTY_ADDRESS;
   rows.push({ label: 'Адрес', value: addressValue });
 
-  if (loc.visitType === 'at_home' && loc.showExactAddressAfterBooking === true && !revealed) {
+  if (loc.visitType === 'at_home' && hideHomeUntilBooking && !revealed) {
     return rows;
   }
 
-  if (loc.visitType === 'at_home' && revealed && loc.showExactAddressAfterBooking === true) {
+  if (loc.visitType === 'at_home' && revealed && hideHomeUntilBooking) {
     for (const line of homeAfterBookingDetailLines(loc)) {
       rows.push({ label: ' ', value: line });
     }

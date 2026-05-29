@@ -263,6 +263,8 @@ async function fetchNominatim(
     signal,
     headers: {
       Accept: 'application/json',
+      'Accept-Language': 'ru',
+      'User-Agent': 'SLOTTY/1.0 (https://slotty.app; address-suggest)',
     },
   });
 

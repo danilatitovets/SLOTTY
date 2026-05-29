@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { EMPTY_TELEGRAM } from '../../shared/lib/emptyDisplayText';
 import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import { ADMIN_PATH, BECOME_MASTER_PATH, getMasterPath, getProfilePath, PROFILE_NOTIFICATIONS_PATH, PROFILE_SETTINGS_PATH, SERVICES_PATH } from '../../app/paths';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
@@ -20,11 +21,12 @@ import {
 } from '../../features/appointments/model/demoAppointments';
 import {
   emptyClientAppointments,
-  splitClientAppointments,
+  fetchClientAppointmentsPage,
+  mergeClientAppointmentsState,
   type ClientAppointmentsState,
-  type ServerClientAppointment,
 } from '../../features/appointments/api/clientAppointments';
 import { masterLocationDetailRows } from '../../features/profile/model/masterLocation';
+import { YandexMapsRouteIcon } from '../../shared/ui/YandexMapsRouteIcon';
 import { removeMyFavoriteMaster, type FavoriteMasterDto } from '../../features/profile/api/clientFavorites';
 import {
   fetchFavoritesForDisplay,
@@ -43,10 +45,10 @@ import { AccountBlockedScreen } from '../../features/auth/components/AccountBloc
 import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
 import { openBookingVoucherPrint } from '../../features/booking/lib/bookingConfirmationVoucherPrint';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
+import type { MiniPictureKey } from '../../shared/ui/miniPictureSrc';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { formatTelegramUserDisplayName } from '../../shared/lib/telegramWebApp';
 import { apiFetch, getApiBaseUrl } from '../../shared/api/backendClient';
-import { readSlottyApiErrorMessage } from '../../shared/api/slottyApiErrorMessage';
 import { postClientReview } from '../../features/profile/api/clientReviews';
 import { useClientErrorModal } from '../client/ClientErrorModalContext';
 import { profileDisplayAvatarUrl } from '../../features/profile/lib/profileDisplayAvatar';
@@ -199,16 +201,6 @@ function IconReviewStar({ className }: { className?: string }) {
   );
 }
 
-function IconRouteYandex({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <circle cx="7" cy="17" r="2.5" />
-      <circle cx="17" cy="7" r="2.5" />
-      <path d="M9 15l6-6M15 9h4v4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 type MainTab = 'appointments' | 'favorites' | 'profile';
 
 function parseMainTab(tabParam: string | null): MainTab {
@@ -327,14 +319,21 @@ function AppointmentCard({
             </button>
           )
         ) : row.status === 'completed' ? (
-          <button
-            type="button"
-            onClick={() => onReview(row)}
-            className={`${btnBase} bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.22)]`}
-          >
-            <IconReviewStar className="shrink-0 opacity-95" />
-            Отзыв
-          </button>
+          row.hasReview ? (
+            <span className={`${btnBase} cursor-default bg-[#F3F1F1] text-neutral-500 active:scale-100`}>
+              <IconReviewStar className="shrink-0 opacity-60" />
+              Отзыв отправлен
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onReview(row)}
+              className={`${btnBase} bg-[#E29595] text-white shadow-[0_8px_22px_rgba(226,149,149,0.22)]`}
+            >
+              <IconReviewStar className="shrink-0 opacity-95" />
+              Отзыв
+            </button>
+          )
         ) : (
           <span className={`${btnBase} cursor-default bg-[#F3F1F1] text-neutral-400 active:scale-100`}>
             {row.status === 'cancelled' ? 'Отменена' : 'Завершена'}
@@ -412,14 +411,17 @@ function EmptyState({
   title,
   text,
   buttonText,
+  picture,
 }: {
   title: string;
   text?: string;
   buttonText: string;
+  picture?: MiniPictureKey;
 }) {
   return (
     <NothingFoundCard
       title={title}
+      picture={picture}
       {...(text ? { text } : {})}
       action={
         <Link
@@ -628,6 +630,9 @@ export function ProfilePage() {
 
   const [apptState, setApptState] = useState<ClientAppointmentsState>(() => emptyClientAppointments());
   const [apptListLoading, setApptListLoading] = useState(false);
+  const [apptLoadingMore, setApptLoadingMore] = useState(false);
+  const [apptHasMore, setApptHasMore] = useState(false);
+  const apptOffsetRef = useRef(0);
   const [apptError, setApptError] = useState<string | null>(null);
 
   const [favorites, setFavorites] = useState<FavoriteMasterDto[]>([]);
@@ -645,36 +650,52 @@ export function ProfilePage() {
 
   const { showError } = useClientErrorModal();
 
-  const loadClientAppointments = useCallback(async () => {
-    const base = getApiBaseUrl();
-    if (!isAuthenticated || !base) {
-      setApptState(emptyClientAppointments());
-      setApptError(null);
-      setApptListLoading(false);
-      return;
-    }
-    setApptListLoading(true);
-    setApptError(null);
-    try {
-      const res = await apiFetch('/api/me/appointments');
-      if (!res.ok) {
+  const loadClientAppointments = useCallback(
+    async (mode: 'reset' | 'more' = 'reset') => {
+      const base = getApiBaseUrl();
+      if (!isAuthenticated || !base) {
         setApptState(emptyClientAppointments());
-        setApptError(
-          res.status === 401
-            ? 'Сессия истекла. Откройте приложение снова.'
-            : await readSlottyApiErrorMessage(res),
-        );
+        setApptError(null);
+        setApptHasMore(false);
+        apptOffsetRef.current = 0;
+        setApptListLoading(false);
+        setApptLoadingMore(false);
         return;
       }
-      const data = (await res.json()) as { appointments?: ServerClientAppointment[] };
-      setApptState(splitClientAppointments(data.appointments ?? []));
-    } catch {
-      setApptState(emptyClientAppointments());
-      setApptError('Нет соединения с сервером.');
-    } finally {
-      setApptListLoading(false);
-    }
-  }, [isAuthenticated]);
+      const offset = mode === 'reset' ? 0 : apptOffsetRef.current;
+      if (mode === 'reset') {
+        setApptListLoading(true);
+        setApptError(null);
+      } else {
+        setApptLoadingMore(true);
+      }
+      try {
+        const page = await fetchClientAppointmentsPage({ limit: 30, offset });
+        apptOffsetRef.current = page.loaded;
+        setApptHasMore(page.hasMore);
+        setApptState((prev) =>
+          mode === 'reset' ? page.state : mergeClientAppointmentsState(prev, page.state),
+        );
+      } catch (e) {
+        if (mode === 'reset') {
+          setApptState(emptyClientAppointments());
+          setApptHasMore(false);
+          apptOffsetRef.current = 0;
+          const msg = e instanceof Error ? e.message : 'Нет соединения с сервером.';
+          setApptError(/401|unauthorized/i.test(msg) ? 'Сессия истекла. Откройте приложение снова.' : msg);
+        }
+      } finally {
+        if (mode === 'reset') setApptListLoading(false);
+        else setApptLoadingMore(false);
+      }
+    },
+    [isAuthenticated],
+  );
+
+  const loadMoreClientAppointments = useCallback(() => {
+    if (!apptHasMore || apptListLoading || apptLoadingMore) return;
+    void loadClientAppointments('more');
+  }, [apptHasMore, apptListLoading, apptLoadingMore, loadClientAppointments]);
 
   const loadFavorites = useCallback(
     async (opts?: { silent?: boolean; syncLocal?: boolean }) => {
@@ -876,13 +897,14 @@ export function ProfilePage() {
     setReviewSubmitting(true);
     try {
       await postClientReview(reviewRow.id, reviewRating, body);
+      await loadClientAppointments();
       closeReview();
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Не удалось отправить отзыв', { title: 'Отзыв' });
     } finally {
       setReviewSubmitting(false);
     }
-  }, [closeReview, reviewBody, reviewRating, reviewRow, showError]);
+  }, [closeReview, loadClientAppointments, reviewBody, reviewRating, reviewRow, showError]);
 
   const openDownloadPdf = useCallback((row: DemoAppointmentRecord) => {
     openBookingVoucherPrint(demoAppointmentToVoucherPayload(row), HEADER_LOGO_SRC);
@@ -960,6 +982,9 @@ export function ProfilePage() {
         onApptSubTabChange={setApptSubTab}
         apptRows={apptRows}
         apptListLoading={apptListLoading}
+        apptHasMore={apptHasMore}
+        apptLoadingMore={apptLoadingMore}
+        onLoadMoreAppointments={loadMoreClientAppointments}
         apptError={apptError}
         upcomingCount={apptState.upcoming.length}
         favorites={favorites}
@@ -1242,7 +1267,7 @@ export function ProfilePage() {
                 ))}
               </ul>
             ) : !showApptList ? (
-              <EmptyState title="Записей пока нет" buttonText="Найти услуги" />
+              <EmptyState title="Записей пока нет" buttonText="Найти услуги" picture="appointmentsEmpty" />
             ) : (
               <ul className="flex flex-col gap-3">
                 {apptRows.map((row) => (
@@ -1259,6 +1284,16 @@ export function ProfilePage() {
                 ))}
               </ul>
             )}
+            {apptHasMore && showApptList ? (
+              <button
+                type="button"
+                disabled={apptLoadingMore}
+                onClick={loadMoreClientAppointments}
+                className="mt-3 min-h-11 w-full rounded-[14px] border border-[#EAECEF] bg-white text-[14px] font-semibold text-[#374151] transition hover:bg-[#FAFAFA] active:scale-[0.98] disabled:opacity-60"
+              >
+                {apptLoadingMore ? 'Загрузка…' : 'Показать ещё'}
+              </button>
+            ) : null}
           </section>
         ) : null}
 
@@ -1298,7 +1333,7 @@ export function ProfilePage() {
                 ))}
               </ul>
             ) : favorites.length === 0 ? (
-              <EmptyState title="Избранных пока нет" buttonText="Найти услуги" />
+              <EmptyState title="Избранных пока нет" buttonText="Найти услуги" picture="clientsEmpty" />
             ) : (
               <ul className="flex flex-col gap-3">
                   {favorites.map((row, i) => (
@@ -1339,7 +1374,7 @@ export function ProfilePage() {
                         ? `@${telegramUserPreview.username}`
                         : isTelegramWebApp
                           ? 'Подключен'
-                          : '—'}
+                          : EMPTY_TELEGRAM}
                   </p>
                 </div>
 
@@ -1439,7 +1474,7 @@ export function ProfilePage() {
               rel="noopener noreferrer"
               className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-[22px] bg-white px-4 py-2.5 text-[14px] font-semibold text-neutral-900 shadow-[0_4px_14px_rgba(17,17,17,0.06)] transition active:scale-[0.98] hover:bg-neutral-50"
             >
-              <IconRouteYandex className="shrink-0 text-[#E29595]" />
+              <YandexMapsRouteIcon className="shrink-0 text-[#E29595]" />
               Построить маршрут в Яндекс.Картах
             </a>
           </div>

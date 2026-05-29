@@ -6,6 +6,7 @@ import { overviewDesktopKpiTile } from '../overview/adminOverviewTheme';
 import {
   profileDashboardCard,
   profileDashboardCardPad,
+  profileDesktopTabsSticky,
   PROFILE_DESKTOP_PAGE_BG,
 } from '../profile/adminProfileDashboardTheme';
 
@@ -21,8 +22,7 @@ export const appointmentsTabPanelShell = `${appointmentsDesktopCard} max-lg:!rou
 
 export const appointmentsShellCard = 'hidden w-full min-w-0 lg:block';
 
-export const appointmentsDesktopTabsSticky =
-  'sticky z-20 overflow-hidden bg-white top-[var(--slotty-admin-desktop-topbar-h,4.75rem)]';
+export const appointmentsDesktopTabsSticky = profileDesktopTabsSticky;
 
 export const APPOINTMENTS_GRADIENT =
   'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';

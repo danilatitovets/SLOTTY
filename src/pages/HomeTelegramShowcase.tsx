@@ -1,13 +1,12 @@
 import type { FC, ReactNode, SVGProps } from 'react';
 import { homeSection } from './home/homeTheme';
 
-const BARBER_BG = '/photos/барбершоп/fon.png';
+const BARBER_BG = '/photos/барбершоп/fon.webp';
 
-const GOLD = '#C5A059';
-const CREAM = '#F5F5F0';
-const INK = '#1A1A1A';
+const CREAM = '#FAFAF8';
+const BARBER_SERIF = "Georgia, 'Times New Roman', Times, serif";
 
-function IconCheckGold({ className }: { className?: string }) {
+function IconCheck({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
       <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
@@ -68,20 +67,12 @@ const IconBell = (p: SVGProps<SVGSVGElement>) => (
   </RowIcon>
 );
 
-const IconShield = (p: SVGProps<SVGSVGElement>) => (
-  <RowIcon {...p}>
-    <path d="M12 3 5 6v5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3z" />
-    <path d="m9 12 2 2 4-4" />
-  </RowIcon>
-);
-
 const DEMO_ROWS = [
   { Icon: IconScissors, label: 'Услуга', value: 'Мужская стрижка' },
   { Icon: IconCalendar, label: 'Дата и время', value: 'Завтра, 14:30' },
   { Icon: IconPerson, label: 'Мастер', value: 'Артём Соколов' },
   { Icon: IconTag, label: 'Стоимость', value: 'от 35 BYN' },
-  { Icon: IconBell, label: 'Напоминание', value: 'завтра в 12:00' },
-  { Icon: IconShield, label: 'Статус', value: 'подтверждено' },
+  { Icon: IconBell, label: 'Напоминание', value: 'Завтра в 12:00' },
 ] as const;
 
 export const HomeTelegramShowcase: FC = () => {
@@ -106,53 +97,63 @@ export const HomeTelegramShowcase: FC = () => {
         style={{ backgroundImage: `url('${BARBER_BG}')` }}
       >
         <article
-          className="relative w-[min(100%,16.75rem)] shrink-0 rounded-[18px] border border-[#2a2a2a]/15 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.5)] sm:w-full sm:max-w-md sm:rounded-[22px] sm:p-6"
+          className="relative w-full max-w-[24rem] shrink-0 overflow-hidden rounded-[20px] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.45)] sm:max-w-md sm:rounded-[24px] lg:max-w-lg"
           style={{ backgroundColor: CREAM }}
         >
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-[3.25rem] sm:w-[3.25rem]"
-              style={{ backgroundColor: INK, color: GOLD }}
-            >
-              <IconCheckGold className="h-4 w-4 sm:h-6 sm:w-6" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[12px] font-semibold text-[#FFE566] sm:text-[13px]">Подтверждение</p>
-              <h3
-                className="text-[1.35rem] font-bold leading-tight tracking-tight sm:text-[1.85rem]"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif", color: INK }}
-              >
-                Вы записаны
-              </h3>
+          <div className="border-b border-[#1A1A1A]/8 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1A1A1A] text-white sm:h-11 sm:w-11">
+                  <IconCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                </span>
+                <div className="min-w-0 pt-0.5">
+                  <p className="text-[13px] font-medium leading-snug text-[#737373] sm:text-[14px]">
+                    Подтверждение
+                  </p>
+                  <h3
+                    className="mt-0.5 text-[1.3rem] font-bold leading-[1.15] tracking-[-0.02em] text-[#1A1A1A] sm:text-[1.65rem]"
+                    style={{ fontFamily: BARBER_SERIF }}
+                  >
+                    Вы записаны
+                  </h3>
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full bg-[#1A1A1A]/[0.07] px-2.5 py-1 text-[11px] font-semibold leading-none text-[#1A1A1A] sm:text-[12px]">
+                Подтверждено
+              </span>
             </div>
           </div>
 
-          <dl className="mt-3 space-y-0 sm:mt-6">
+          <dl className="px-4 py-1 sm:px-5">
             {DEMO_ROWS.map(({ Icon, label, value }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 border-b border-[#1A1A1A]/10 py-2 last:border-0 sm:gap-3 sm:py-3.5"
+                className="flex items-center gap-2.5 border-b border-[#1A1A1A]/8 py-2.5 last:border-0 sm:gap-3 sm:py-3"
               >
-                <Icon className="h-4 w-4 shrink-0 text-[#5c5c5c] sm:h-5 sm:w-5" />
-                <dt className="min-w-0 flex-1 text-[12px] font-medium text-[#6B7280] sm:text-[14px]">{label}</dt>
-                <dd className="max-w-[48%] shrink-0 text-right text-[11px] font-bold leading-tight text-[#111827] sm:max-w-none sm:text-[14px]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1A1A1A]/[0.05] text-[#525252] sm:h-9 sm:w-9">
+                  <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+                </span>
+                <dt className="min-w-0 flex-1 text-[12px] text-[#737373] sm:text-[13px]">{label}</dt>
+                <dd className="max-w-[52%] shrink-0 text-right text-[12px] font-semibold leading-snug text-[#1A1A1A] sm:max-w-none sm:text-[14px]">
                   {value}
                 </dd>
               </div>
             ))}
           </dl>
 
-          <button
-            type="button"
-            className="mt-3.5 flex w-full min-h-10 cursor-default items-center justify-center rounded-xl bg-[#1A1A1A] text-[13px] font-semibold text-[#FFE566] sm:mt-6 sm:min-h-[3.25rem] sm:rounded-[14px] sm:text-[15px]"
-            tabIndex={-1}
-          >
-            Открыть запись
-          </button>
+          <div className="border-t border-[#1A1A1A]/8 px-4 py-3.5 sm:px-5 sm:py-4">
+            <button
+              type="button"
+              className="flex w-full min-h-11 cursor-default items-center justify-center rounded-xl bg-[#1A1A1A] text-[14px] font-semibold text-white transition sm:min-h-12 sm:rounded-[14px] sm:text-[15px]"
+              tabIndex={-1}
+            >
+              Открыть запись
+            </button>
+          </div>
         </article>
 
         <div
-          className="pointer-events-none absolute inset-x-5 bottom-4 mx-auto flex max-w-[16.75rem] items-center justify-center gap-2 sm:inset-x-6 sm:max-w-md sm:bottom-6 sm:gap-3"
+          className="pointer-events-none absolute inset-x-5 bottom-4 mx-auto flex w-full max-w-[24rem] items-center justify-center gap-2 sm:inset-x-6 sm:max-w-md sm:bottom-6 sm:gap-3 lg:max-w-lg"
           aria-hidden
         >
           <span className="h-px flex-1 bg-white/25" />

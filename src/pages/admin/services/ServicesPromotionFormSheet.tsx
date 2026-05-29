@@ -14,6 +14,7 @@ import {
   catalogSheetSecondaryBtn,
 } from '../shared/adminCatalogSheetTheme';
 import { sheetChipClass, sheetLabelClass, sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
+import { EMPTY_PROMO_PRICE } from '../../../shared/lib/emptyDisplayText';
 import { PromotionBannerCard } from './PromotionBannerCard';
 import {
   PROMOTION_TEMPLATES,
@@ -346,7 +347,7 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
                             {discountedPrice(selectedService, discountType, discountValue)} BYN
                           </>
                         ) : (
-                          '—'
+                          EMPTY_PROMO_PRICE
                         ),
                     },
                   ]}

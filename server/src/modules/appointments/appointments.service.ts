@@ -248,6 +248,7 @@ type ClientAppointmentRow = {
   location_lng: number | string | null;
   location_show_exact_after_booking: boolean | null;
   voucher_number: string | null;
+  has_review: boolean;
 };
 
 function mapClientAppointmentRow(row: ClientAppointmentRow, clientId: string) {
@@ -302,6 +303,7 @@ function mapClientAppointmentRow(row: ClientAppointmentRow, clientId: string) {
     location_lat: loc?.lat ?? null,
     location_lng: loc?.lng ?? null,
     voucher_number: row.voucher_number,
+    has_review: row.has_review,
   };
 }
 
@@ -313,11 +315,40 @@ const CLIENT_APPOINTMENTS_FROM = `
       and ml.is_primary = true
      left join public.booking_vouchers bv on bv.appointment_id = a.id`;
 
+export type AppointmentsListTab = 'pending' | 'upcoming' | 'history' | 'active' | 'all';
+
+export const MASTER_APPOINTMENTS_LIST_MAX = 200;
+
+function appointmentsTabFilter(tab: AppointmentsListTab | undefined): string {
+  switch (tab) {
+    case 'pending':
+      return `a.status = 'pending'`;
+    case 'upcoming':
+      return `a.status = 'confirmed' and a.starts_at >= now()`;
+    case 'history':
+      return `a.status in ('completed', 'no_show', 'cancelled_by_client', 'cancelled_by_master')`;
+    case 'active':
+      return `a.status in ('pending', 'confirmed')`;
+    default:
+      return 'true';
+  }
+}
+
+function appointmentsTabOrder(tab: AppointmentsListTab | undefined): string {
+  switch (tab) {
+    case 'upcoming':
+    case 'active':
+      return 'a.starts_at asc';
+    default:
+      return 'a.starts_at desc';
+  }
+}
+
 export async function listClientAppointments(
   clientId: string,
   params?: { limit?: number; offset?: number },
 ) {
-  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 100);
+  const limit = Math.min(Math.max(params?.limit ?? 30, 1), 100);
   const offset = Math.max(params?.offset ?? 0, 0);
 
   const countR = await query<{ total: string }>(
@@ -357,7 +388,8 @@ export async function listClientAppointments(
        ml.lat as location_lat,
        ml.lng as location_lng,
        ml.show_exact_address_after_booking as location_show_exact_after_booking,
-       bv.voucher_number
+       bv.voucher_number,
+       exists (select 1 from public.reviews rv where rv.appointment_id = a.id) as has_review
      ${CLIENT_APPOINTMENTS_FROM}
     where a.client_id = $1
     order by a.starts_at desc
@@ -366,18 +398,70 @@ export async function listClientAppointments(
   );
 
   const items = r.rows.map((row) => mapClientAppointmentRow(row, clientId));
-  return { items, appointments: items, total, limit, offset };
+  const hasMore = offset + items.length < total;
+  return { items, appointments: items, total, limit, offset, hasMore };
+}
+
+export type MasterAppointmentStatsDto = {
+  pending: number;
+  upcoming: number;
+  history: number;
+  completedCount: number;
+  cancelledCount: number;
+  earnedTotal: number;
+};
+
+export async function getMasterAppointmentStats(masterId: string): Promise<MasterAppointmentStatsDto> {
+  const r = await query<{
+    pending: number;
+    upcoming: number;
+    history: number;
+    completed_count: number;
+    cancelled_count: number;
+    earned_total: string;
+  }>(
+    `select count(*) filter (where a.status = 'pending')::int as pending,
+            count(*) filter (where a.status = 'confirmed' and a.starts_at >= now())::int as upcoming,
+            count(*) filter (
+              where a.status in ('completed', 'no_show', 'cancelled_by_client', 'cancelled_by_master')
+            )::int as history,
+            count(*) filter (where a.status in ('completed', 'no_show'))::int as completed_count,
+            count(*) filter (
+              where a.status in ('cancelled_by_client', 'cancelled_by_master')
+            )::int as cancelled_count,
+            coalesce(
+              sum(a.price_snapshot) filter (where a.status in ('completed', 'no_show')),
+              0
+            )::text as earned_total
+       from public.appointments a
+      where a.master_id = $1`,
+    [masterId],
+  );
+  const row = r.rows[0];
+  return {
+    pending: row?.pending ?? 0,
+    upcoming: row?.upcoming ?? 0,
+    history: row?.history ?? 0,
+    completedCount: row?.completed_count ?? 0,
+    cancelledCount: row?.cancelled_count ?? 0,
+    earnedTotal: Number(row?.earned_total ?? 0),
+  };
 }
 
 export async function listMasterAppointments(
   masterId: string,
-  params?: { limit?: number; offset?: number },
+  params?: { limit?: number; offset?: number; tab?: AppointmentsListTab },
 ) {
-  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 100);
+  const limit = Math.min(Math.max(params?.limit ?? 30, 1), MASTER_APPOINTMENTS_LIST_MAX);
   const offset = Math.max(params?.offset ?? 0, 0);
+  const tab = params?.tab ?? 'all';
+  const tabFilter = appointmentsTabFilter(tab);
+  const orderBy = appointmentsTabOrder(tab);
 
   const countR = await query<{ total: string }>(
-    `select count(*)::text as total from public.appointments a where a.master_id = $1`,
+    `select count(*)::text as total
+       from public.appointments a
+      where a.master_id = $1 and (${tabFilter})`,
     [masterId],
   );
   const total = Number(countR.rows[0]?.total ?? 0);
@@ -391,13 +475,14 @@ export async function listMasterAppointments(
             nullif(trim(p.avatar_url), '') as client_avatar_url
        from public.appointments a
        left join public.profiles p on p.id = a.client_id
-      where a.master_id = $1
-      order by a.starts_at desc
+      where a.master_id = $1 and (${tabFilter})
+      order by ${orderBy}
       limit $2 offset $3`,
     [masterId, limit, offset],
   );
   const items = r.rows;
-  return { items, appointments: items, total, limit, offset };
+  const hasMore = offset + items.length < total;
+  return { items, appointments: items, total, limit, offset, hasMore };
 }
 
 function normalizeCancelReason(reason?: string | null): string | null {

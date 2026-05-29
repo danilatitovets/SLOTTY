@@ -30,17 +30,18 @@ type Props = {
   promo: PromotionCardModel;
   onMenu?: () => void;
   className?: string;
+  examplePreview?: boolean;
 };
 
-export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
+export function PromotionBannerCard({ promo, onMenu, className = '', examplePreview = false }: Props) {
   const muted = promo.status === 'finished';
   const bg = promo.backgroundImage?.trim();
 
   return (
     <article
       className={`flex w-full overflow-hidden rounded-[16px] bg-white lg:rounded-[24px] lg:border lg:border-[#EAECEF] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] ${
-        muted ? 'opacity-75' : ''
-      } ${className}`}
+        muted && !examplePreview ? 'opacity-75' : ''
+      } ${examplePreview ? 'ring-2 ring-dashed ring-[#D1D5DB]' : ''} ${className}`}
     >
       <div className="relative flex w-[6.25rem] shrink-0 self-stretch bg-[#EBEBEB] sm:w-28 lg:w-[7rem]">
         {bg ? (
@@ -48,10 +49,18 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
             <img
               src={bg}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover"
+              className={`absolute inset-0 h-full w-full object-cover ${examplePreview ? 'opacity-60 saturate-50' : ''}`}
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-[#111827]/20" aria-hidden />
+            <div
+              className={`absolute inset-0 ${examplePreview ? 'bg-[#111827]/35' : 'bg-[#111827]/20'}`}
+              aria-hidden
+            />
+            {examplePreview ? (
+              <span className="absolute inset-x-0 top-2 z-10 text-center text-[9px] font-black uppercase tracking-wider text-white drop-shadow">
+                Пример
+              </span>
+            ) : null}
           </>
         ) : (
           <span className="flex h-full min-h-[7.5rem] w-full items-center justify-center">
@@ -60,20 +69,33 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
             </span>
           </span>
         )}
-        <div className="relative z-10 flex h-full w-full items-center justify-center p-2">
-          <span className="flex min-h-[3.5rem] min-w-[3.5rem] items-center justify-center rounded-full bg-white px-2 text-center text-[11px] font-bold leading-tight text-[#F47C8C] shadow-[0_4px_14px_rgba(17,24,39,0.08)]">
+        <div className="relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 p-2">
+          <span
+            className={`flex min-h-[3.5rem] min-w-[3.5rem] items-center justify-center rounded-full bg-white px-2 text-center text-[11px] font-bold leading-tight text-[#F47C8C] shadow-[0_4px_14px_rgba(17,24,39,0.08)] ${
+              examplePreview ? 'ring-2 ring-dashed ring-[#D1D5DB]' : ''
+            }`}
+          >
             {promo.discountLabel}
           </span>
+          {examplePreview ? (
+            <span className="text-[8px] font-bold uppercase tracking-wide text-white/90">иллюстрация</span>
+          ) : null}
         </div>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-3.5 lg:justify-center lg:px-5 lg:py-4">
         <div className="flex items-start justify-between gap-2">
-          <span
-            className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusBadgeClass(promo.status)}`}
-          >
-            {promotionStatusLabel(promo.status)}
-          </span>
+          {examplePreview ? (
+            <span className="inline-flex rounded-full bg-[#FFFBEB] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#92400E] ring-1 ring-[#FDE68A]">
+              Только пример
+            </span>
+          ) : (
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusBadgeClass(promo.status)}`}
+            >
+              {promotionStatusLabel(promo.status)}
+            </span>
+          )}
           {onMenu ? (
             <button
               type="button"
@@ -100,10 +122,16 @@ export function PromotionBannerCard({ promo, onMenu, className = '' }: Props) {
           </p>
         ) : null}
 
-        <p className="mt-2 flex items-center gap-1 text-[12px] font-semibold text-[#9CA3AF]">
-          <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {formatDdMmRu(promo.startsAt)} — {formatDdMmRu(promo.endsAt)}
-        </p>
+        {examplePreview ? (
+          <p className="mt-2 text-[12px] font-semibold italic text-[#9CA3AF]">
+            Даты публикации задаются при создании своей акции
+          </p>
+        ) : (
+          <p className="mt-2 flex items-center gap-1 text-[12px] font-semibold text-[#9CA3AF]">
+            <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {formatDdMmRu(promo.startsAt)} — {formatDdMmRu(promo.endsAt)}
+          </p>
+        )}
       </div>
     </article>
   );

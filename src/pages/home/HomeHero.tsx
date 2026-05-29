@@ -67,11 +67,11 @@ export const HomeHero: FC<HomeHeroProps> = ({
   return (
     <section
       ref={sectionRef}
-      className="relative min-h-[100dvh] w-full scroll-mt-28 overflow-hidden rounded-b-[28px] sm:rounded-b-[36px]"
+      className="relative min-h-[100dvh] w-full scroll-mt-28 overflow-hidden rounded-b-[28px] sm:min-h-[calc(100dvh+4.5rem)] sm:rounded-b-[36px]"
       aria-labelledby="home-hero-heading"
     >
       <div
-        className="pointer-events-none absolute inset-0 left-1/2 z-0 h-full w-[100vw] max-w-[100vw] -translate-x-1/2 overflow-hidden rounded-b-[28px] bg-[#F1EFEF] sm:rounded-b-[36px]"
+        className="pointer-events-none absolute left-1/2 top-0 z-0 h-[calc(100%+3rem)] w-[100vw] max-w-[100vw] -translate-x-1/2 overflow-hidden rounded-b-[28px] bg-[#F5EBEB] sm:h-[calc(100%+5.5rem)] sm:rounded-b-[36px]"
         aria-hidden
       >
         {motionOk ? (
@@ -85,7 +85,7 @@ export const HomeHero: FC<HomeHeroProps> = ({
             playsInline
             preload="metadata"
             disablePictureInPicture
-            className="h-full min-h-full w-full object-cover object-[center_55%] sm:object-[center_52%]"
+            className="h-full min-h-full w-full scale-[1.06] object-cover object-[center_58%] sm:scale-[1.08] sm:object-[center_56%]"
           />
         ) : (
           <img
@@ -94,7 +94,7 @@ export const HomeHero: FC<HomeHeroProps> = ({
             loading="eager"
             decoding="async"
             draggable={false}
-            className="h-full w-full object-cover object-[center_55%] sm:object-[center_52%]"
+            className="h-full min-h-full w-full scale-[1.06] object-cover object-[center_58%] sm:scale-[1.08] sm:object-[center_56%]"
           />
         )}
 
@@ -102,7 +102,7 @@ export const HomeHero: FC<HomeHeroProps> = ({
       </div>
 
       <div
-        className={`${heroContentShell} relative z-10 flex min-h-[100dvh] flex-col items-center justify-center pb-10 text-center sm:pb-14`}
+        className={`${heroContentShell} relative z-10 flex min-h-[100dvh] flex-col items-center justify-center pb-10 text-center sm:min-h-[calc(100dvh+4.5rem)] sm:pb-14`}
         style={{
           paddingTop: 'var(--slotty-header-height, calc(5.5rem + env(safe-area-inset-top, 0px) + 0.5rem))',
         }}

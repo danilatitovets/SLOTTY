@@ -1,5 +1,7 @@
-import type { DemoMasterService } from '../../../features/services/model/demoMasters';
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
+import type { MasterLocation } from '../../../features/profile/model/masterLocation';
 import type { MasterDraftCareerItem } from '../../../features/profile/lib/demoMasterStorage';
+import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
 import { formatDurationMinutes } from '../lib/catalogFormat';
 
@@ -116,6 +118,35 @@ export function serviceDurationLabel(minutes: number): string {
 
 export function visitChipLabel(visitType: 'studio' | 'at_home'): string {
   return visitType === 'at_home' ? 'На дому' : 'В студии';
+}
+
+/** Короткая строка локации для карточки / шапки профиля (без «Выбранная точка на карте»). */
+export function formatMasterProfileLocationChip(location: MasterLocation): string {
+  const city = location.city?.trim() || 'Минск';
+  const district = location.district?.trim();
+  if (district && district !== LOCATION_EMPTY_SENTINEL && !/выбранн/i.test(district)) {
+    const short = district.length > 22 ? `${district.slice(0, 21)}…` : district;
+    return `${city}, ${short}`;
+  }
+  const landmark = location.landmark?.trim();
+  if (landmark && !/выбранн/i.test(landmark)) {
+    if (/центр/i.test(landmark)) return `${city}, Центр`;
+    const m = landmark.match(/район\s+([^,.]+)/i);
+    if (m?.[1]) {
+      const part = m[1].trim();
+      return `${city}, ${part.length > 16 ? `${part.slice(0, 15)}…` : part}`;
+    }
+  }
+  const street = location.street?.trim();
+  if (street && street !== LOCATION_EMPTY_SENTINEL && !/выбранн/i.test(street)) {
+    const cleaned = street
+      .replace(/^ул\.?\s*/i, '')
+      .replace(/^улица\s*/i, '')
+      .replace(/^пр-т\s*/i, '');
+    const short = cleaned.length > 20 ? `${cleaned.slice(0, 19)}…` : cleaned;
+    return `${city}, ${short}`;
+  }
+  return city;
 }
 
 export function locationDistrictLine(city: string | undefined, street: string): string {

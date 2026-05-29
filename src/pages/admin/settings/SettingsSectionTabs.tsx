@@ -1,7 +1,11 @@
 import type { ComponentType } from 'react';
 import { NavLink } from 'react-router-dom';
-import { ADMIN_SETTINGS_LOGIN_METHODS_PATH, ADMIN_SETTINGS_SUPPORT_PATH } from '../../../app/paths';
-import { IconNavProfile, IconNavSupport } from '../adminCabinetNav';
+import {
+  ADMIN_SETTINGS_LOGIN_METHODS_PATH,
+  ADMIN_SETTINGS_SPONSOR_PATH,
+  ADMIN_SETTINGS_SUPPORT_PATH,
+} from '../../../app/paths';
+import { IconNavProfile, IconNavSponsor, IconNavSupport } from '../adminCabinetNav';
 
 const TABS: Array<{
   to: string;
@@ -10,6 +14,7 @@ const TABS: Array<{
 }> = [
   { to: ADMIN_SETTINGS_LOGIN_METHODS_PATH, label: 'Способы входа', Icon: IconNavProfile },
   { to: ADMIN_SETTINGS_SUPPORT_PATH, label: 'Справка', Icon: IconNavSupport },
+  { to: ADMIN_SETTINGS_SPONSOR_PATH, label: 'Спонсор SLOTTY', Icon: IconNavSponsor },
 ];
 
 type Props = {

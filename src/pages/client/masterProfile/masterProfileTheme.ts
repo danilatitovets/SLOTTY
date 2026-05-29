@@ -1,5 +1,3 @@
-import { catalogStickyToolbarClass } from '../servicesCatalog/servicesCatalogTheme';
-
 export {
   catalogCanvasClass,
   catalogDesktopPanel,
@@ -11,8 +9,6 @@ export {
   catalogSecondaryBtn,
   catalogStickyToolbarClass,
 } from '../servicesCatalog/servicesCatalogTheme';
-
-export const masterProfileMobileToolbarStickyClass = `${catalogStickyToolbarClass} pb-2 pt-1`;
 
 /** Десктоп: колонки одной высоты — sticky-сайдбар держится, пока листается основной блок. */
 export const masterProfileDesktopLayout =

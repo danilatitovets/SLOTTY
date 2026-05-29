@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { HiArrowTrendingUp, HiReceiptPercent, HiStop } from 'react-icons/hi2';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { overviewDesktopCard, overviewDesktopCardPad } from './adminOverviewTheme';
+import { EMPTY_TREND } from '../../../shared/lib/emptyDisplayText';
 import {
   OverviewKpiCarousel,
   OverviewKpiStatCard,
@@ -142,7 +143,7 @@ function RevenueDailyBarsSection({ dayStats }: { dayStats: RevenueAnalytics['day
 }
 
 function RevenueMetricsCarousel({ data }: { data: RevenueAnalytics }) {
-  const avgTrend = formatTrendPercent(data.avgCheckTrendPercent) ?? '—';
+  const avgTrend = formatTrendPercent(data.avgCheckTrendPercent) ?? EMPTY_TREND;
 
   return (
     <OverviewKpiCarousel>
@@ -153,7 +154,7 @@ function RevenueMetricsCarousel({ data }: { data: RevenueAnalytics }) {
         hint="По завершённым записям"
         icon={<HiArrowTrendingUp className="h-5 w-5" aria-hidden />}
         trailing={
-          <OverviewTrendBadge value={avgTrend} tone={avgTrend === '—' ? 'neutral' : 'positive'} />
+          <OverviewTrendBadge value={avgTrend} tone={avgTrend === EMPTY_TREND ? 'neutral' : 'positive'} />
         }
       />
       <OverviewKpiStatCard

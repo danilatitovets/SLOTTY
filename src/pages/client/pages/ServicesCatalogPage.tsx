@@ -9,8 +9,8 @@ import { filterServicesForCatalog } from '../lib/filterServices';
 import {
   catalogFiltersToApiParams,
   countActiveCatalogFilters,
-  DEFAULT_CATALOG_FILTERS,
   getCatalogViewTab,
+  parseCatalogFiltersFromSearch,
   resetCatalogFilters,
   setCatalogViewTab,
   type CatalogFiltersState,
@@ -28,14 +28,12 @@ export function ServicesCatalogPage() {
   const [searchParams] = useSearchParams();
   const initialQ = searchParams.get('q')?.trim() ?? '';
   const [search, setSearch] = useState(initialQ);
-  const [filters, setFilters] = useState<CatalogFiltersState>(() => ({
-    ...DEFAULT_CATALOG_FILTERS,
-    chips: new Set(),
-  }));
-  const [filterDraft, setFilterDraft] = useState<CatalogFiltersState>(() => ({
-    ...DEFAULT_CATALOG_FILTERS,
-    chips: new Set(),
-  }));
+  const [filters, setFilters] = useState<CatalogFiltersState>(() =>
+    parseCatalogFiltersFromSearch(searchParams),
+  );
+  const [filterDraft, setFilterDraft] = useState<CatalogFiltersState>(() =>
+    parseCatalogFiltersFromSearch(searchParams),
+  );
   const [filterOpen, setFilterOpen] = useState(false);
 
   const activeFilterCount = countActiveCatalogFilters(filters);

@@ -264,6 +264,17 @@ export function parseMastersCatalogFiltersFromSearch(
 ): CategoryMasterFilters {
   const f: CategoryMasterFilters = { ...DEFAULT_CATEGORY_MASTER_FILTERS };
 
+  const tab = searchParams.get('tab');
+  if (tab === 'today') f.dateRange = 'today';
+  if (tab === 'near') {
+    f.sortBy = 'soonest';
+    f.onlyWithSlots = true;
+  }
+  if (tab === 'top') {
+    f.sortBy = 'rating';
+    f.minRating = '48';
+  }
+
   if (searchParams.get('slots') === '1') f.onlyWithSlots = true;
   if (searchParams.get('verified') === '1') f.verifiedOnly = true;
   if (searchParams.get('promo') === '1') f.promotionOnly = true;

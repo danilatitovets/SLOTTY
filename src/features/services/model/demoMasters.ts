@@ -10,24 +10,28 @@ import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
 import type { MasterContact } from '../../master-onboarding/model/masterContacts';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import { DEMO_MASTER_LOCATIONS } from './demoMasterLocations';
-import {
-  getCategoryWorkPhotoUrl,
-  resolveCategoryWorkCode,
-} from '../../catalog/categoryWorkPhotos';
+import { resolveServiceListingCoverUrl } from '../../catalog/catalogServicePhotos';
 
 export type ServiceListingRecord = {
   id: string;
   masterId: string;
   masterName: string;
   category: string;
+  /** Slug категории с API (`manicure`, `barbers`, …) для фото по категории. */
+  categoryCode?: string;
   serviceName: string;
   rating: number;
   /** TODO (Supabase): агрегат из таблицы reviews. */
   reviewsCount: number;
+  /** Завершённые записи (с бэка); для топа без поля — оценка по отзывам. */
+  completedBookingsCount?: number;
   isVerified?: boolean;
   location: MasterLocation;
   priceFrom: number;
+  /** Аватар мастера (колонка «Мастера»). */
   photoUrl: string;
+  /** Обложка услуги по категории (`public/photos/каталог_услуги/`). */
+  serviceCoverUrl?: string;
   /** С бэка: id основной услуги для ссылки на запись. */
   primaryServiceId?: string;
   /** С бэка: id ближайшего свободного слота (для `slot` в ссылке на /zapis). */
@@ -553,22 +557,28 @@ export const DEMO_SERVICE_LISTINGS: ServiceListingRecord[] = MASTERS.map((m) => 
   const nextSlot = new Date();
   nextSlot.setHours(16, 0, 0, 0);
   if (nextSlot.getTime() < Date.now()) nextSlot.setDate(nextSlot.getDate() + 1);
-  const categoryPhoto = getCategoryWorkPhotoUrl(resolveCategoryWorkCode(m.category));
+  const serviceCoverUrl = resolveServiceListingCoverUrl({
+    category: m.category,
+    categoryCode: m.categoryCode,
+    serviceName: primary.title,
+  });
   return {
     id: `listing-${m.masterId}`,
     masterId: m.masterId,
     masterName: m.masterName,
     category: m.category,
+    categoryCode: m.categoryCode,
     serviceName: primary.title,
     rating: m.rating,
     reviewsCount: m.reviewsCount,
     location: m.location,
     priceFrom: primary.price,
     photoUrl: m.photoUrl,
+    serviceCoverUrl,
     primaryServiceId: primary.id,
     nextSlotStartsAt: nextSlot.toISOString(),
     nextSlotId: `demo-slot-${m.masterId}`,
-    portfolioPreview: [categoryPhoto],
+    portfolioPreview: [serviceCoverUrl],
     portfolioTotal: 27,
   };
 });

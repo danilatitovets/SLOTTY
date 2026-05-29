@@ -147,7 +147,7 @@ export function OnboardingStep1Intro({ onStart }: Props) {
                   </div>
 
                   <div className="px-1 pb-1 pt-5 text-center sm:px-2 sm:pt-6 lg:hidden">
-                    <h2 className="break-words text-[22px] font-semibold leading-tight tracking-[-0.05em] text-neutral-950 sm:text-[28px] sm:tracking-[-0.06em]">
+                    <h2 className="break-words text-[22px] font-semibold leading-tight tracking-normal text-neutral-950 sm:text-[28px]">
                       {s.title}
                     </h2>
                     <p className="mt-2 text-[15px] leading-snug text-neutral-500 sm:text-[16px]">{s.text}</p>
@@ -189,8 +189,8 @@ export function OnboardingStep1Intro({ onStart }: Props) {
       </div>
 
       <div className="hidden min-w-0 lg:flex lg:flex-col lg:justify-center">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#E29595]">Шаг 1 из 8</p>
-        <h1 className="mt-3 text-[32px] font-semibold leading-[1.08] tracking-[-0.04em] text-neutral-950 xl:text-[36px]">
+        <p className="text-[13px] font-semibold uppercase tracking-normal text-[#E29595]">Шаг 1 из 8</p>
+        <h1 className="mt-3 text-[32px] font-semibold leading-[1.15] tracking-normal text-neutral-950 xl:text-[36px]">
           Что входит в анкету мастера
         </h1>
         <p className="mt-3 max-w-md text-[16px] leading-relaxed text-neutral-500">

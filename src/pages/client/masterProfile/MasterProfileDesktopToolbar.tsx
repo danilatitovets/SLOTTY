@@ -8,6 +8,7 @@ type Props = {
   isFavorite: boolean;
   onFavoriteToggle: () => void;
   onShare: () => void;
+  onReport?: () => void;
   favoriteDisabled?: boolean;
 };
 
@@ -16,6 +17,7 @@ export function MasterProfileDesktopToolbar({
   isFavorite,
   onFavoriteToggle,
   onShare,
+  onReport,
   favoriteDisabled = false,
 }: Props) {
   const [compact, setCompact] = useState(false);
@@ -36,6 +38,7 @@ export function MasterProfileDesktopToolbar({
           isFavorite={isFavorite}
           onFavoriteToggle={onFavoriteToggle}
           onShare={onShare}
+          onReport={onReport}
           favoriteDisabled={favoriteDisabled}
           actionSize="md"
         />

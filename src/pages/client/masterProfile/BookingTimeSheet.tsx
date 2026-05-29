@@ -1,3 +1,4 @@
+import { EMPTY_BOOKING_DATE } from '../../../shared/lib/emptyDisplayText';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HiCalendarDays } from 'react-icons/hi2';
@@ -14,6 +15,7 @@ import {
 import { useAuth } from '../../../features/auth/AuthProvider';
 import { useAccountAccess } from '../../../features/auth/hooks/useAccountAccess';
 import { getApiBaseUrl } from '../../../shared/api/backendClient';
+import { isDevDemoAllowed } from '../../../shared/lib/appMode';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { BookingSuccessCelebration } from '../../booking/BookingSuccessModal';
@@ -175,6 +177,10 @@ export function BookingTimeSheet({ open, onClose, master, initialServiceId }: Pr
       })();
       return;
     }
+    if (!isDevDemoAllowed()) {
+      setError('Запись недоступна: не настроен API или выбран демо-слот.');
+      return;
+    }
     setSuccess(true);
   }, [
     accountAccess,
@@ -286,7 +292,7 @@ export function BookingTimeSheet({ open, onClose, master, initialServiceId }: Pr
               <div className={`${bookingMutedPanel} mt-2 px-4 py-3`}>
                 <p className="text-[11px] font-medium text-[#9CA3AF]">Выбранная дата</p>
                 <p className="mt-1 text-[17px] font-semibold capitalize text-[#111827]">
-                  {selectedDay?.fullDateLabel ?? '—'}
+                  {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
                 </p>
               </div>
 

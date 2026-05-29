@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type FocusEvent,
@@ -55,7 +56,27 @@ import {
   SLOTTY_NAV_MASTERS,
 } from './headerNav';
 import { SlottyImg } from '../../ui/SlottyImg';
+import { getMastersCatalogPath, getServicesCatalogPath } from '../../../app/paths';
+import {
+  MASTERS_VIEW_TABS,
+  type MastersViewTab,
+} from '../../../pages/client/lib/categoryMasterFilters';
+import {
+  CATALOG_VIEW_TABS,
+  type CatalogViewTab,
+} from '../../../pages/client/servicesCatalog/catalogFiltersState';
+import { catalogViewTabIdle } from '../../../pages/client/servicesCatalog/servicesCatalogTheme';
 import { resolveMegaMenuGroup, type MegaMenuKey, type MegaMenuGroup, type MegaMenuItem } from './megaMenuConfig';
+
+function servicesCatalogTabHref(tab: CatalogViewTab): string {
+  if (tab === 'all') return SERVICES_PATH;
+  return getServicesCatalogPath({ tab });
+}
+
+function mastersCatalogTabHref(tab: MastersViewTab): string {
+  if (tab === 'all') return MASTERS_PATH;
+  return getMastersCatalogPath({ tab });
+}
 
 const iconBtn =
   'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] text-[#374151] transition hover:bg-[#E9E6E6] hover:text-[#F47C8C] active:scale-[0.97]';
@@ -66,30 +87,43 @@ const HEADER_LOGO_IMG_CLASS = 'block h-[72px] w-auto object-contain object-cente
 
 const HEADER_LOGO_COMPACT_CLASS = 'block h-10 w-auto object-contain object-center lg:h-11';
 
+/** Высота строки = кнопка бургера (h-9) + вертикальные отступы, без лишнего зазора снизу. */
 const HEADER_LANDING_ROW_CLASS =
-  'relative flex h-20 items-center justify-between gap-3 pl-2 pr-3 sm:pl-3 sm:pr-4 lg:h-[5.5rem] lg:gap-4 lg:px-5 xl:px-6';
+  'relative flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 lg:h-[5.5rem] lg:gap-4 lg:px-5 xl:px-6';
 
-/** Логотип на лендинге — крупнее на мобиле, ближе к левому краю pill. */
+/**
+ * Лендинг mobile: базовый слот h-9, визуальный размер — через scale (не трогает padding строки).
+ * lg+ — обычный крупный логотип без scale.
+ */
 const HEADER_LANDING_LOGO_CLASS =
-  'relative z-[1] shrink-0 -ml-1.5 max-lg:-translate-x-1.5 sm:-ml-2 sm:max-lg:-translate-x-2 lg:ml-0 lg:translate-x-0';
+  'relative z-[1] h-9 w-9 shrink-0 origin-left scale-[1.72] translate-x-[1px] sm:scale-[1.78] lg:h-auto lg:w-auto lg:origin-center lg:scale-100 lg:translate-x-[-22px] xl:translate-x-[-18px]';
+
+const HEADER_LANDING_LOGO_IMG_CLASS =
+  'block h-9 w-auto max-w-none object-contain object-left object-center lg:h-20 lg:object-center';
 
 const HEADER_BAR_ROW_CLASS =
   'relative flex h-14 items-center justify-between gap-4 px-4 sm:px-5 lg:h-[4.25rem] lg:px-0';
 
 function HeaderLogoLink({
   className = '',
+  imgClassName,
   onClick,
   size = 'large',
 }: {
   className?: string;
+  imgClassName?: string;
   onClick?: () => void;
   size?: 'large' | 'compact';
 }) {
+  const imgClass =
+    imgClassName ??
+    (size === 'compact' ? HEADER_LOGO_COMPACT_CLASS : HEADER_LOGO_IMG_CLASS);
+
   return (
     <Link
       to={HUB_PATH}
       aria-label="SLOTTY — на главную"
-      className={`inline-flex shrink-0 items-center justify-center outline-none transition hover:opacity-60 ${className}`}
+      className={`inline-flex h-9 shrink-0 items-center justify-center outline-none transition hover:opacity-60 sm:h-10 lg:h-auto ${className}`}
       onClick={onClick}
     >
       <SlottyImg
@@ -98,14 +132,14 @@ function HeaderLogoLink({
         decoding="async"
         loading="eager"
         fetchPriority="high"
-        className={size === 'compact' ? HEADER_LOGO_COMPACT_CLASS : HEADER_LOGO_IMG_CLASS}
+        className={imgClass}
       />
     </Link>
   );
 }
 
 const navTriggerClass =
-  'inline-flex h-10 items-center rounded-full px-2 text-[15px] font-semibold leading-none text-[#374151] transition hover:text-[#F47C8C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F47C8C]/40';
+  'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 text-[14px] font-semibold leading-none text-[#374151] transition hover:text-[#F47C8C] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F47C8C]/40 xl:px-3 xl:text-[15px]';
 
 const activeNavTriggerClass = 'text-[#F47C8C]';
 
@@ -210,16 +244,14 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isTelegramWebApp } = useTelegram();
-  const { isAuthenticated, profile, logout } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
   const isMasterUser = useIsMasterUser();
   const showPlatformAdmin = isPlatformAdmin(profile);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const [megaOpenKey, setMegaOpenKey] = useState<MegaMenuKey | null>(null);
   const [megaPanelKey, setMegaPanelKey] = useState<MegaMenuKey | null>(null);
-
-  const profileRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const megaHostRef = useRef<HTMLDivElement>(null);
   const megaPanelRef = useRef<HTMLDivElement>(null);
@@ -252,13 +284,23 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
     setMegaOpenKey(null);
   }, [cancelMegaClose]);
 
-  const scheduleMegaClose = useCallback(() => {
+  const closeHeaderPanels = useCallback(() => {
+    closeMegaMenu();
+    setProfilePanelOpen(false);
+  }, [closeMegaMenu]);
+
+  const scheduleHeaderPanelClose = useCallback(() => {
     cancelMegaClose();
     megaCloseTimerRef.current = window.setTimeout(() => {
-      closeMegaMenu();
+      closeHeaderPanels();
       megaCloseTimerRef.current = null;
     }, MEGA_CLOSE_DELAY_MS);
-  }, [cancelMegaClose, closeMegaMenu]);
+  }, [cancelMegaClose, closeHeaderPanels]);
+
+  const openMegaMenu = useCallback((key: MegaMenuKey) => {
+    setProfilePanelOpen(false);
+    setMegaOpenKey(key);
+  }, []);
 
   const isPointerInsideMegaZone = useCallback((clientX: number, clientY: number) => {
     const nodes = [megaHostRef.current, megaPanelRef.current];
@@ -277,7 +319,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const scrollToLandingAnchor = useCallback(
     (anchor: string) => {
       closeMobileMenu();
-      closeMegaMenu();
+      closeHeaderPanels();
 
       const onHub = location.pathname === HUB_PATH || location.pathname === '/';
 
@@ -306,15 +348,15 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
       navigate(landingAnchorHref(anchor));
     },
-    [closeMobileMenu, closeMegaMenu, location.pathname, navigate],
+    [closeMobileMenu, closeHeaderPanels, location.pathname, navigate],
   );
 
   const goAppointments = useCallback(() => {
     closeMobileMenu();
-    closeMegaMenu();
+    closeHeaderPanels();
     void setProfileRole('client');
     navigate(appointmentsHref);
-  }, [appointmentsHref, closeMegaMenu, closeMobileMenu, navigate]);
+  }, [appointmentsHref, closeHeaderPanels, closeMobileMenu, navigate]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -335,28 +377,6 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   }, [mobileMenuOpen]);
 
   useEffect(() => {
-    if (!profileOpen) return;
-
-    const onPointer = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
-    };
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setProfileOpen(false);
-    };
-
-    document.addEventListener('mousedown', onPointer);
-    window.addEventListener('keydown', onKey);
-
-    return () => {
-      document.removeEventListener('mousedown', onPointer);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [profileOpen]);
-
-  useEffect(() => {
     return () => {
       cancelMegaClose();
     };
@@ -371,14 +391,14 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   }, [megaOpenKey]);
 
   useEffect(() => {
-    if (!megaOpenKey) return;
+    if (!megaOpenKey && !profilePanelOpen) return;
 
     const onPointerMove = (e: PointerEvent) => {
       if (isPointerInsideMegaZone(e.clientX, e.clientY)) {
         cancelMegaClose();
         return;
       }
-      scheduleMegaClose();
+      scheduleHeaderPanelClose();
     };
 
     document.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -386,12 +406,82 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
     return () => {
       document.removeEventListener('pointermove', onPointerMove);
     };
-  }, [megaOpenKey, cancelMegaClose, isPointerInsideMegaZone, scheduleMegaClose]);
+  }, [
+    megaOpenKey,
+    profilePanelOpen,
+    cancelMegaClose,
+    isPointerInsideMegaZone,
+    scheduleHeaderPanelClose,
+  ]);
+
+  useEffect(() => {
+    if (!megaOpenKey && !profilePanelOpen) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeHeaderPanels();
+    };
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [megaOpenKey, profilePanelOpen, closeHeaderPanels]);
 
   const megaMenuOpen = megaOpenKey !== null;
+  const headerPanelOpen = megaMenuOpen || profilePanelOpen;
+
+  const accountMegaItems = useMemo((): MegaMenuItem[] => {
+    const items: MegaMenuItem[] = [
+      {
+        title: 'Мои записи',
+        description: 'Будущие и прошлые визиты к мастерам — статусы и детали в одном месте.',
+        to: appointmentsHref,
+        accent: 'pink',
+      },
+      {
+        title: 'Профиль',
+        description: 'Личные данные, избранное и настройки клиентского аккаунта.',
+        to: PROFILE_PATH,
+        accent: 'blue',
+      },
+      {
+        title: 'Способы входа',
+        description: 'Telegram, email и привязанные способы авторизации.',
+        to: loginMethodsHref,
+        accent: 'violet',
+      },
+    ];
+
+    if (isMasterUser) {
+      items.push({
+        title: 'Кабинет мастера',
+        description: 'Заявки, услуги, расписание и аналитика вашего профиля.',
+        to: ADMIN_PATH,
+        accent: 'green',
+      });
+    } else {
+      items.push({
+        title: 'Стать мастером',
+        description: 'Создайте профиль мастера и начните принимать записи онлайн.',
+        to: BECOME_MASTER_PATH,
+        accent: 'green',
+      });
+    }
+
+    if (showPlatformAdmin) {
+      items.push({
+        title: 'Админ',
+        badge: 'ADMIN',
+        description: 'Платформенная панель управления и модерация.',
+        to: PLATFORM_ADMIN_PATH,
+        accent: 'orange',
+      });
+    }
+
+    return items;
+  }, [appointmentsHref, isMasterUser, loginMethodsHref, showPlatformAdmin]);
+
   const megaHostProps = {
     onMouseEnter: cancelMegaClose,
-    onMouseLeave: scheduleMegaClose,
+    onMouseLeave: scheduleHeaderPanelClose,
   };
 
   if (variant === 'bar' && isTelegramWebApp) {
@@ -401,25 +491,33 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const desktopCenterNav = (
     <DesktopMegaNav
       openKey={megaOpenKey}
-      onOpen={setMegaOpenKey}
-      onForceClose={closeMegaMenu}
+      onOpen={openMegaMenu}
+      onForceClose={closeHeaderPanels}
       onAnchorClick={scrollToLandingAnchor}
     />
   );
 
   const goCatalog = useCallback(() => {
     closeMobileMenu();
-    closeMegaMenu();
+    closeHeaderPanels();
     void setProfileRole('client');
     navigate(SERVICES_PATH);
-  }, [closeMegaMenu, closeMobileMenu, navigate]);
+  }, [closeHeaderPanels, closeMobileMenu, navigate]);
 
   const goClientProfile = useCallback(() => {
     closeMobileMenu();
-    closeMegaMenu();
+    closeHeaderPanels();
     void setProfileRole('client');
     navigate(isAuthenticated ? PROFILE_PATH : loginHref);
-  }, [closeMegaMenu, closeMobileMenu, isAuthenticated, loginHref, navigate]);
+  }, [closeHeaderPanels, closeMobileMenu, isAuthenticated, loginHref, navigate]);
+
+  const toggleProfilePanel = useCallback(() => {
+    cancelMegaClose();
+    setProfilePanelOpen((open) => {
+      if (!open) setMegaOpenKey(null);
+      return !open;
+    });
+  }, [cancelMegaClose]);
 
   const desktopActions = (
     <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
@@ -445,78 +543,16 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       ) : null}
 
       {isAuthenticated ? (
-        <div className="relative" ref={profileRef}>
-          <button
-            type="button"
-            onClick={() => setProfileOpen((o) => !o)}
-            className={`${iconBtn} overflow-hidden p-0`}
-            aria-expanded={profileOpen}
-            aria-haspopup="menu"
-            aria-label="Профиль"
-          >
-            <HeaderProfileAvatar profile={profile} fill />
-          </button>
-
-          {profileOpen ? (
-            <div
-              role="menu"
-              className="absolute right-0 top-[calc(100%+0.5rem)] z-[90] min-w-[13.5rem] overflow-hidden rounded-[20px] border border-[#F3F4F6] bg-white py-1.5 shadow-[0_16px_48px_rgba(17,24,39,0.12)]"
-            >
-              <ProfileMenuItem
-                onClick={() => {
-                  setProfileOpen(false);
-                  void goAppointments();
-                }}
-              >
-                Мои записи
-              </ProfileMenuItem>
-
-              <ProfileMenuItem
-                to={PROFILE_PATH}
-                onNavigate={() => {
-                  setProfileOpen(false);
-                  void setProfileRole('client');
-                }}
-              >
-                Профиль
-              </ProfileMenuItem>
-
-              <ProfileMenuItem to={loginMethodsHref} onNavigate={() => setProfileOpen(false)}>
-                Способы входа
-              </ProfileMenuItem>
-
-              {isMasterUser ? (
-                <ProfileMenuItem to={ADMIN_PATH} onNavigate={() => setProfileOpen(false)}>
-                  Кабинет мастера
-                </ProfileMenuItem>
-              ) : (
-                <ProfileMenuItem to={BECOME_MASTER_PATH} onNavigate={() => setProfileOpen(false)}>
-                  Стать мастером
-                </ProfileMenuItem>
-              )}
-
-              {showPlatformAdmin ? (
-                <ProfileMenuItem to={PLATFORM_ADMIN_PATH} onNavigate={() => setProfileOpen(false)}>
-                  Админ
-                </ProfileMenuItem>
-              ) : null}
-
-              <div className="my-1 border-t border-[#F3F4F6]" />
-
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setProfileOpen(false);
-                  logout();
-                }}
-                className="block w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#374151] transition hover:bg-[#F7F7F8]"
-              >
-                Выйти
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <button
+          type="button"
+          onClick={toggleProfilePanel}
+          className={`${iconBtn} overflow-hidden p-0 ${profilePanelOpen ? 'ring-2 ring-[#F47C8C]/35' : ''}`}
+          aria-expanded={profilePanelOpen}
+          aria-controls="slotty-account-panel"
+          aria-label="Аккаунт"
+        >
+          <HeaderProfileAvatar profile={profile} fill />
+        </button>
       ) : (
         <Link
           to={loginHref}
@@ -545,11 +581,12 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   const topBar = (
     <div className={HEADER_LANDING_ROW_CLASS}>
       <HeaderLogoLink
-        onClick={closeMegaMenu}
-        className={`${HEADER_LANDING_LOGO_CLASS} [&>img]:h-14 [&>img]:w-auto sm:[&>img]:h-16 lg:[&>img]:h-20`}
+        onClick={closeHeaderPanels}
+        className={HEADER_LANDING_LOGO_CLASS}
+        imgClassName={HEADER_LANDING_LOGO_IMG_CLASS}
       />
 
-      <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 xl:gap-8 lg:flex">
+      <div className="hidden flex-1 items-center justify-center lg:flex">
         {showLandingDesktop || showDesktopChrome ? desktopCenterNav : null}
       </div>
 
@@ -744,11 +781,11 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
   if (variant === 'bar') {
     return (
-      <HeaderShell variant="bar" shellRef={headerRef} innerClassName={megaMenuOpen ? 'mega-open' : ''}>
+      <HeaderShell variant="bar" shellRef={headerRef} innerClassName={headerPanelOpen ? 'mega-open' : ''}>
         <div ref={megaHostRef} className="relative" {...megaHostProps}>
           <div className={`${HEADER_BAR_ROW_CLASS} lg:px-0`}>
             <div className="flex min-w-0 items-center gap-5 xl:gap-8">
-              <HeaderLogoLink onClick={closeMegaMenu} size="compact" />
+              <HeaderLogoLink onClick={closeHeaderPanels} size="compact" />
 
               {desktopCenterNav}
             </div>
@@ -758,13 +795,14 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
           <HeaderMegaDropdown
             variant="bar"
-            isOpen={megaMenuOpen}
+            isOpen={headerPanelOpen}
             panelKey={megaPanelKey}
             panelRef={megaPanelRef}
             isMasterUser={isMasterUser}
+            accountItems={profilePanelOpen ? accountMegaItems : null}
             onAnchorClick={scrollToLandingAnchor}
-            onForceClose={closeMegaMenu}
-            onScheduleClose={scheduleMegaClose}
+            onForceClose={closeHeaderPanels}
+            onScheduleClose={scheduleHeaderPanelClose}
             onCancelClose={cancelMegaClose}
           />
         </div>
@@ -788,7 +826,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
         variant="landing"
         shellRef={headerRef}
         innerClassName={
-          megaMenuOpen
+          headerPanelOpen
             ? 'mega-open rounded-b-none shadow-[0_24px_70px_rgba(244,124,140,0.14),0_12px_40px_rgba(17,24,39,0.08)]'
             : ''
         }
@@ -796,14 +834,16 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
         <div ref={megaHostRef} className="relative" {...megaHostProps}>
           {topBar}
           <HeaderMegaDropdown
+            id="slotty-account-panel"
             variant="landing"
-            isOpen={megaMenuOpen}
+            isOpen={headerPanelOpen}
             panelKey={megaPanelKey}
             panelRef={megaPanelRef}
             isMasterUser={isMasterUser}
+            accountItems={profilePanelOpen ? accountMegaItems : null}
             onAnchorClick={scrollToLandingAnchor}
-            onForceClose={closeMegaMenu}
-            onScheduleClose={scheduleMegaClose}
+            onForceClose={closeHeaderPanels}
+            onScheduleClose={scheduleHeaderPanelClose}
             onCancelClose={cancelMegaClose}
           />
           {mobileMenu}
@@ -832,7 +872,7 @@ function DesktopMegaNav({
 
   return (
     <div className="relative hidden lg:block" onBlur={handleBlur}>
-      <nav className="flex items-center gap-5 xl:gap-8" aria-label="Основное меню">
+      <nav className="flex shrink-0 items-center gap-4 xl:gap-6" aria-label="Основное меню">
         <MegaTrigger
           menuKey="catalog"
           label={SLOTTY_NAV_CATALOG.label}
@@ -852,32 +892,23 @@ function DesktopMegaNav({
         />
 
         <MegaTrigger
-          menuKey="how"
-          label="Как это работает"
-          anchor={LANDING_ANCHOR_HOW}
+          menuKey="services"
+          label="Услуги"
+          to={SERVICES_PATH}
           openKey={openKey}
           onOpen={onOpen}
           onForceClose={onForceClose}
-          onAnchorClick={onAnchorClick}
         />
 
-        <MegaTrigger
-          menuKey="mastersFor"
+        <LandingNavAnchor
           label="Для мастеров"
           anchor={LANDING_ANCHOR_FOR_MASTERS}
-          openKey={openKey}
-          onOpen={onOpen}
-          onForceClose={onForceClose}
           onAnchorClick={onAnchorClick}
         />
 
-        <MegaTrigger
-          menuKey="tariffs"
+        <LandingNavAnchor
           label="Тарифы"
           anchor={LANDING_ANCHOR_TARIFFS}
-          openKey={openKey}
-          onOpen={onOpen}
-          onForceClose={onForceClose}
           onAnchorClick={onAnchorClick}
         />
       </nav>
@@ -907,27 +938,35 @@ function useMegaCardReveal(animateIn: boolean) {
 }
 
 function HeaderMegaDropdown({
+  id,
   variant,
   isOpen,
   panelKey,
   panelRef,
   isMasterUser,
+  accountItems,
   onAnchorClick,
   onForceClose,
   onScheduleClose,
   onCancelClose,
 }: {
+  id?: string;
   variant: Variant;
   isOpen: boolean;
   panelKey: MegaMenuKey | null;
   panelRef: MutableRefObject<HTMLDivElement | null>;
   isMasterUser: boolean;
+  accountItems?: MegaMenuItem[] | null;
   onAnchorClick: (anchor: string) => void;
   onForceClose: () => void;
   onScheduleClose: () => void;
   onCancelClose: () => void;
 }) {
   const group = panelKey ? resolveMegaMenuGroup(panelKey, isMasterUser) : null;
+  const accountGroup: MegaMenuGroup | null =
+    accountItems && accountItems.length > 0
+      ? { label: 'Аккаунт', items: accountItems }
+      : null;
   const panelSurfaceClass =
     variant === 'landing'
       ? 'overflow-hidden rounded-b-[30px] bg-[#F1EFEF]/98 shadow-[0_24px_60px_rgba(17,24,39,0.10)] backdrop-blur-xl'
@@ -955,6 +994,7 @@ function HeaderMegaDropdown({
       {backdrop}
 
       <div
+        id={id}
         ref={panelRef}
         className={`absolute inset-x-0 top-full z-[60] -mt-px hidden overflow-visible transition-[opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:block ${
           isOpen ? 'duration-300' : 'duration-150'
@@ -968,9 +1008,19 @@ function HeaderMegaDropdown({
         onMouseLeave={onScheduleClose}
       >
         <div className={panelSurfaceClass}>
-          {group ? (
+          {accountGroup ? (
+            <MegaPanel
+              key="account"
+              panelKey="catalog"
+              group={accountGroup}
+              animateIn={isOpen}
+              onAnchorClick={onAnchorClick}
+              onForceClose={onForceClose}
+            />
+          ) : group && panelKey ? (
             <MegaPanel
               key={panelKey}
+              panelKey={panelKey}
               group={group}
               animateIn={isOpen}
               onAnchorClick={onAnchorClick}
@@ -980,6 +1030,26 @@ function HeaderMegaDropdown({
         </div>
       </div>
     </>
+  );
+}
+
+function LandingNavAnchor({
+  label,
+  anchor,
+  onAnchorClick,
+}: {
+  label: string;
+  anchor: string;
+  onAnchorClick: (anchor: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={navTriggerClass}
+      onClick={() => onAnchorClick(anchor)}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -1039,18 +1109,65 @@ function MegaTrigger({
 }
 
 function MegaPanel({
+  panelKey,
   group,
   animateIn,
   onAnchorClick,
   onForceClose,
 }: {
+  panelKey: MegaMenuKey;
   group: MegaMenuGroup;
   animateIn: boolean;
   onAnchorClick: (anchor: string) => void;
   onForceClose: () => void;
 }) {
+  const showServiceTabs = panelKey === 'services';
+  const showMasterTabs = panelKey === 'masters';
+
   return (
     <div className="relative px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+      {showServiceTabs ? (
+        <nav
+          className="mb-4 flex flex-wrap items-center gap-1"
+          aria-label="Разделы каталога услуг"
+        >
+          {CATALOG_VIEW_TABS.map((tab) => (
+            <Link
+              key={tab.id}
+              to={servicesCatalogTabHref(tab.id)}
+              className={`rounded-[10px] px-4 py-2 text-[14px] font-semibold transition ${catalogViewTabIdle}`}
+              onClick={() => {
+                onForceClose();
+                void setProfileRole('client');
+              }}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
+      {showMasterTabs ? (
+        <nav
+          className="mb-4 flex flex-wrap items-center gap-1"
+          aria-label="Разделы каталога мастеров"
+        >
+          {MASTERS_VIEW_TABS.map((tab) => (
+            <Link
+              key={tab.id}
+              to={mastersCatalogTabHref(tab.id)}
+              className={`rounded-[10px] px-4 py-2 text-[14px] font-semibold transition ${catalogViewTabIdle}`}
+              onClick={() => {
+                onForceClose();
+                void setProfileRole('client');
+              }}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+
       <div
         className={`relative grid gap-4 ${
           group.items.length <= 2 ? 'mx-auto max-w-[700px] grid-cols-2' : 'grid-cols-5'
@@ -1278,34 +1395,5 @@ function LightMegaCardDecor({
       <div className="absolute bottom-20 left-1/2 h-20 w-32 -translate-x-1/2 rotate-45 rounded-[22px] border border-[#F47C8C]/14 bg-white/50" />
       <div className="absolute bottom-16 left-1/2 h-20 w-32 -translate-x-1/2 rotate-45 rounded-[22px] border border-[#F47C8C]/10 bg-white/40" />
     </>
-  );
-}
-
-function ProfileMenuItem({
-  children,
-  to,
-  onClick,
-  onNavigate,
-}: {
-  children: ReactNode;
-  to?: string;
-  onClick?: () => void;
-  onNavigate?: () => void;
-}) {
-  const className =
-    'block w-full px-4 py-2.5 text-left text-[14px] font-medium text-[#374151] transition hover:bg-[#F7F7F8] hover:text-[#F47C8C]';
-
-  if (to) {
-    return (
-      <Link to={to} role="menuitem" className={className} onClick={onNavigate}>
-        {children}
-      </Link>
-    );
-  }
-
-  return (
-    <button type="button" role="menuitem" className={className} onClick={onClick}>
-      {children}
-    </button>
   );
 }

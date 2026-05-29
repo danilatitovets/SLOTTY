@@ -5,11 +5,16 @@ import {
   HiCheckCircle,
   HiUserGroup,
   HiUserPlus,
-  HiUsers,
 } from 'react-icons/hi2';
-import type { ClientAnalytics } from './overviewAnalytics';
+import type {
+  ClientAnalytics,
+  OverviewClientRosterItem,
+  OverviewPeriodPreset,
+} from './overviewAnalytics';
+import { overviewPeriodLabel } from './overviewAnalytics';
+import { formatDdMm } from './overviewFormat';
 import {
-  OVERVIEW_CLIENTS_FOOTER_SRC,
+  MINI_PICTURE,
   overviewDesktopCard,
   overviewDesktopCardPad,
   overviewIconCircle,
@@ -17,11 +22,12 @@ import {
 import { OverviewKpiCarousel, OverviewKpiStatCard } from './OverviewKpiBlocks';
 import {
   OverviewClientsDynamicsChart,
-  OverviewEmptyState,
+  OverviewDividedMetricsRow,
+  OverviewEmptyMetricCell,
+  OverviewEmptyTabHero,
+  OverviewMetricHeroPlaque,
+  overviewHairline,
 } from './OverviewSharedUi';
-
-const SLOTTY_GRADIENT =
-  'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
 
 function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
@@ -56,6 +62,83 @@ function SoftIcon({
     <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] ${toneClass}`}>
       {children}
     </span>
+  );
+}
+
+function visitCountLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'визит';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'визита';
+  return 'визитов';
+}
+
+function ClientsDividedMetricsStrip({
+  newClients,
+  repeatClients,
+  totalClients,
+}: {
+  newClients: number;
+  repeatClients: number;
+  totalClients: number;
+}) {
+  return (
+    <OverviewDividedMetricsRow>
+      <OverviewEmptyMetricCell
+        label="Новые"
+        value={String(newClients)}
+        hint="Первый визит"
+      />
+      <OverviewEmptyMetricCell
+        label="Повторные"
+        value={String(repeatClients)}
+        hint="Возвращаются"
+      />
+      <OverviewEmptyMetricCell label="Всего" value={String(totalClients)} hint="Уникальных" />
+    </OverviewDividedMetricsRow>
+  );
+}
+
+function ClientsRosterList({ roster }: { roster: OverviewClientRosterItem[] }) {
+  if (!roster.length) return null;
+
+  return (
+    <ul className="m-0 list-none p-0">
+      {roster.map((client) => (
+        <li key={client.key} className={`border-b ${overviewHairline} last:border-b-0`}>
+          <div className="flex items-center gap-3 px-5 py-3.5 sm:px-6 sm:py-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F7FB] text-[14px] font-bold text-[#6B7280]">
+              {client.name.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[15px] font-bold text-[#111827]">{client.name}</p>
+              <p className="mt-0.5 text-[12px] font-medium text-[#9CA3AF]">
+                {client.isRepeat ? 'Повторный' : 'Новый'} · {client.visits}{' '}
+                {visitCountLabel(client.visits)}
+              </p>
+            </div>
+            <p className="shrink-0 text-[12px] font-semibold tabular-nums text-[#6B7280]">
+              {formatDdMm(client.lastVisitDate)}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ClientsMetricsAndRosterCard({ data }: { data: ClientAnalytics }) {
+  return (
+    <section className={`overflow-hidden ${overviewDesktopCard}`}>
+      <ClientsDividedMetricsStrip
+        newClients={data.newClients}
+        repeatClients={data.repeatClients}
+        totalClients={data.totalClients}
+      />
+      <div className={`border-t ${overviewHairline}`}>
+        <ClientsRosterList roster={data.roster} />
+      </div>
+    </section>
   );
 }
 
@@ -135,86 +218,45 @@ function PercentLine({
   );
 }
 
-function ClientsHeroCard({
+function ClientsHeroPlaque({
   data,
-  embedded = false,
+  periodPreset,
 }: {
   data: ClientAnalytics;
-  embedded?: boolean;
+  periodPreset: OverviewPeriodPreset;
 }) {
+  const period = overviewPeriodLabel(periodPreset);
+
   return (
-    <section
-      className={
-        embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
-      }
-    >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-1/3 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
-
-      <div className="relative min-w-0">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
-          <HiUsers className="h-4 w-4" aria-hidden />
-          Клиенты за период
-        </p>
-
-        <p className="mt-8 text-[52px] font-black leading-none tabular-nums tracking-[-0.08em] text-white lg:text-[72px]">
+    <OverviewMetricHeroPlaque
+      value={
+        <p className="text-[48px] font-black leading-none tabular-nums tracking-[-0.08em] text-[#111827] lg:text-[64px]">
           {data.totalClients}
         </p>
-
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
-          Уникальные клиенты за выбранный период. Здесь видно, кто пришёл впервые,
-          а кто уже возвращается к вам повторно.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function ClientsEmptyHero({ embedded = false }: { embedded?: boolean }) {
-  return (
-    <section
-      className={
-        embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
       }
-    >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
-
-      <div className="relative min-w-0">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
-          <HiUsers className="h-4 w-4" aria-hidden />
-          Клиентская база
+      caption={
+        <p className="max-w-[660px] text-[15px] font-semibold leading-relaxed text-[#6B7280] lg:text-[16px]">
+          Уникальные клиенты за {period.toLowerCase()}. Видно, кто пришёл впервые, а кто уже
+          возвращается.
         </p>
-
-        <h1 className="mt-8 text-[42px] font-black leading-none tracking-[-0.08em] text-white lg:text-[64px]">
-          Клиентов пока нет
-        </h1>
-
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
-          Когда появятся первые записи, здесь будет понятная аналитика по новым
-          и повторным клиентам.
-        </p>
-      </div>
-    </section>
+      }
+    />
   );
 }
 
 function ClientsHeroShell({
   data,
+  periodPreset,
   children,
 }: {
   data: ClientAnalytics;
+  periodPreset: OverviewPeriodPreset;
   children?: ReactNode;
 }) {
   return (
     <div className={`overflow-hidden ${overviewDesktopCard}`}>
-      <ClientsHeroCard data={data} embedded />
-      <div className="bg-white px-3 pb-4 pt-1 sm:px-4">{children}</div>
+      <ClientsHeroPlaque data={data} periodPreset={periodPreset} />
+      <div className="overflow-hidden bg-white px-3 pb-4 pt-1 sm:px-4">{children}</div>
     </div>
   );
 }
@@ -261,7 +303,7 @@ function ClientsBalanceCard({
         />
       </div>
 
-      <div className="mt-6 rounded-[20px] bg-[#f6f7fb] p-5">
+      <div className="mt-6 rounded-[12px] bg-[#F6F7FB] p-5 ring-1 ring-[#EEEEEE]/80 lg:rounded-[16px] lg:ring-0">
         <p className="text-[14px] font-black text-[#111827]">Что важно смотреть?</p>
         <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
           Если повторных клиентов становится больше — значит, профиль, качество услуг
@@ -309,48 +351,54 @@ function ClientsDynamicsSection({
 
 function ClientsTrustCard() {
   return (
-    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad} h-full`}>
-      <div className="flex items-start gap-3">
-        <SoftIcon tone="green">
-          <HiCheckCircle className="h-6 w-6" aria-hidden />
-        </SoftIcon>
+    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
+      <div className="flex items-start justify-between gap-4 lg:gap-6">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+          <SoftIcon tone="green">
+            <HiCheckCircle className="h-6 w-6" aria-hidden />
+          </SoftIcon>
 
-        <div>
-          <h2 className="text-[20px] font-black tracking-[-0.05em] text-[#111827]">
-            Клиенты возвращаются
-          </h2>
-          <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
-            Повторные записи — главный показатель доверия к мастеру.
-          </p>
+          <div className="min-w-0">
+            <h2 className="text-[20px] font-black tracking-[-0.05em] text-[#111827] sm:text-[22px]">
+              Клиенты возвращаются
+            </h2>
+            <p className="mt-3 max-w-[42rem] text-[14px] leading-7 text-[#6B7280]">
+              Повторные записи — главный показатель доверия к мастеру.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-5 overflow-hidden rounded-[20px] bg-[#f6f7fb] p-4">
         <img
-          src={OVERVIEW_CLIENTS_FOOTER_SRC}
+          src={MINI_PICTURE.clientsEmpty}
           alt=""
           decoding="async"
-          className="mx-auto max-h-[220px] w-full object-contain object-center"
+          className="h-[72px] w-auto max-w-[38%] shrink-0 object-contain object-top sm:h-[100px] sm:max-w-none lg:h-[112px]"
         />
       </div>
     </section>
   );
 }
 
-function EmptyClientsPanel({ data }: { data: ClientAnalytics }) {
-  return (
-    <div className="min-w-0 space-y-5 overflow-x-hidden lg:space-y-6">
-      <div className={`overflow-hidden ${overviewDesktopCard}`}>
-        <ClientsEmptyHero embedded />
-        <div className="bg-white px-3 pb-4 pt-1 sm:px-4">
-          <ClientsMetricsCarousel newClients={0} repeatClients={0} totalClients={0} />
-        </div>
-      </div>
+function EmptyClientsPanel({
+  data,
+  periodPreset,
+}: {
+  data: ClientAnalytics;
+  periodPreset: OverviewPeriodPreset;
+}) {
+  const period = overviewPeriodLabel(periodPreset);
 
-      <OverviewEmptyState
-        icon={<HiUsers className="h-7 w-7" aria-hidden />}
+  return (
+    <div className="min-w-0 space-y-6 overflow-x-hidden lg:space-y-8">
+      <OverviewEmptyTabHero
+        metrics={
+          <ClientsDividedMetricsStrip newClients={0} repeatClients={0} totalClients={0} />
+        }
+        list={
+          data.roster.length > 0 ? <ClientsRosterList roster={data.roster} /> : undefined
+        }
         title="Клиентов пока нет"
-        text="Новые клиенты появятся здесь после первых записей."
+        caption={`Когда появятся первые записи, здесь будет аналитика по новым и повторным клиентам за ${period.toLowerCase()}.`}
       />
 
       <ClientsDynamicsSection
@@ -361,20 +409,28 @@ function EmptyClientsPanel({ data }: { data: ClientAnalytics }) {
   );
 }
 
-export function OverviewClientsPanel({ data }: { data: ClientAnalytics }) {
+export function OverviewClientsPanel({
+  data,
+  periodPreset,
+}: {
+  data: ClientAnalytics;
+  periodPreset: OverviewPeriodPreset;
+}) {
   if (!data.hasData) {
-    return <EmptyClientsPanel data={data} />;
+    return <EmptyClientsPanel data={data} periodPreset={periodPreset} />;
   }
 
   return (
-    <div className="min-w-0 space-y-5 overflow-x-hidden lg:space-y-6">
-      <ClientsHeroShell data={data}>
+    <div className="min-w-0 space-y-6 overflow-x-hidden lg:space-y-8">
+      <ClientsHeroShell data={data} periodPreset={periodPreset}>
         <ClientsMetricsCarousel
           newClients={data.newClients}
           repeatClients={data.repeatClients}
           totalClients={data.totalClients}
         />
       </ClientsHeroShell>
+
+      <ClientsMetricsAndRosterCard data={data} />
 
       <ClientsDynamicsSection
         clientsPerDay={data.clientsPerDay}

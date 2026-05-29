@@ -1,3 +1,4 @@
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import { isSameCalendarDay, addDays } from '../../../features/booking/lib/calendar';
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
 import { formatReviewsCountLabel } from '../../../features/services/model/demoMasters';
@@ -117,7 +118,7 @@ export function visitFormatChipLabel(listing: ServiceListingRecord): string {
 export function masterLocationChipLine(listing: ServiceListingRecord): string {
   const city = listing.location.city?.trim() || 'Минск';
   const district = listing.location.district?.trim();
-  if (district && district !== '—') {
+  if (district && district !== LOCATION_EMPTY_SENTINEL) {
     const short = district.length > 22 ? `${district.slice(0, 21)}…` : district;
     return `${city}, ${short}`;
   }
@@ -135,7 +136,7 @@ export function masterLocationChipLine(listing: ServiceListingRecord): string {
     return `${city}, ${shortLm}`;
   }
   const street = listing.location.street?.trim();
-  if (street && street !== '—') {
+  if (street && street !== LOCATION_EMPTY_SENTINEL) {
     const cleaned = street
       .replace(/^ул\.?\s*/i, '')
       .replace(/^улица\s*/i, '')
@@ -167,7 +168,7 @@ export function formatMasterRatingLine(listing: ServiceListingRecord): {
     return { primary: rating > 0 ? rating.toFixed(1) : 'Новый', secondary: 'Отзывы появятся скоро', isNew: true };
   }
   return {
-    primary: rating > 0 ? rating.toFixed(1) : '—',
+    primary: rating > 0 ? rating.toFixed(1) : 'Пока нет',
     secondary: formatReviewsCountLabel(reviews),
     isNew: false,
   };
@@ -227,7 +228,7 @@ export function formatSlotCardSubline(iso: string | null | undefined): string | 
 export function masterLocationShortLine(listing: ServiceListingRecord): string {
   const city = listing.location.city?.trim() || 'Минск';
   const district = masterDistrictLabel(listing);
-  if (district && district !== city && district !== '—') {
+  if (district && district !== city && district !== LOCATION_EMPTY_SENTINEL) {
     const short = district.length > 28 ? `${district.slice(0, 27)}…` : district;
     return `${city}, ${short}`;
   }
@@ -236,7 +237,7 @@ export function masterLocationShortLine(listing: ServiceListingRecord): string {
 
 export function masterDistrictLabel(listing: ServiceListingRecord): string | null {
   const street = listing.location.street?.trim();
-  if (street && street !== '—') return street;
+  if (street && street !== LOCATION_EMPTY_SENTINEL) return street;
   const city = listing.location.city?.trim();
   return city || null;
 }

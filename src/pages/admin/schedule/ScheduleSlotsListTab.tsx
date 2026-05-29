@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { HiCalendarDays, HiFunnel, HiMagnifyingGlass, HiRectangleStack, HiXMark } from 'react-icons/hi2';
+import { useMemo, useState } from 'react';
+import { HiCalendarDays, HiFunnel, HiMagnifyingGlass, HiXMark } from 'react-icons/hi2';
+import { ADMIN_SCHEDULE_PATH } from '../../../app/paths';
+import { MiniPicture } from '../../../shared/ui/MiniPicture';
+import { AdminCabinetCrossLink } from '../shared/AdminCabinetCrossLink';
 import type { ScheduleSlotsStatusFilter, ScheduleWindowView } from './scheduleTypes';
 import { ScheduleWindowCard } from './ScheduleWindowCard';
 import {
@@ -23,7 +26,6 @@ import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 type Props = {
   windows: ScheduleWindowView[];
   loading: boolean;
-  focusDayIso?: string | null;
   onWindowClick: (w: ScheduleWindowView) => void;
 };
 
@@ -62,20 +64,10 @@ type FilterChip = {
   onClear: () => void;
 };
 
-export function ScheduleSlotsListTab({ windows, loading, focusDayIso, onWindowClick }: Props) {
+export function ScheduleSlotsListTab({ windows, loading, onWindowClick }: Props) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<ScheduleSlotsFilters>(DEFAULT_SLOTS_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  useEffect(() => {
-    if (!focusDayIso?.trim()) return;
-    setFilters((prev) => ({
-      ...prev,
-      dayIso: focusDayIso.trim(),
-      status: 'free',
-      onlyUpcoming: true,
-    }));
-  }, [focusDayIso]);
 
   const counts = useMemo(
     () => ({
@@ -260,17 +252,26 @@ export function ScheduleSlotsListTab({ windows, loading, focusDayIso, onWindowCl
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-[16px] bg-white p-8 text-center ring-1 ring-[#EEEEEE]">
-          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#EBEBEB] text-[#6B7280]">
-            <HiRectangleStack className="h-7 w-7" aria-hidden />
-          </span>
-          <h3 className="mt-4 text-[18px] font-bold tracking-[-0.03em] text-[#111827]">
+          {windows.length === 0 ? (
+            <MiniPicture name="scheduleEmpty" variant="empty" className="mb-2" />
+          ) : (
+            <MiniPicture name="searchEmpty" variant="empty" className="mb-2" />
+          )}
+          <h3 className="mt-2 text-[18px] font-bold tracking-[-0.03em] text-[#111827]">
             {windows.length === 0 ? 'Окон пока нет' : 'Ничего не найдено'}
           </h3>
           <p className="mx-auto mt-2 max-w-[20rem] text-[14px] font-medium leading-relaxed text-[#6B7280]">
             {windows.length === 0
-              ? 'Создайте первое окно во вкладке «Создать»'
+              ? 'Создайте первое окно — клиенты смогут выбрать время для записи'
               : 'Измените поиск или сбросьте фильтры'}
           </p>
+          {windows.length === 0 ? (
+            <div className="mx-auto mt-5 max-w-[16rem]">
+              <AdminCabinetCrossLink to={`${ADMIN_SCHEDULE_PATH}?tab=create`}>
+                Создать окно
+              </AdminCabinetCrossLink>
+            </div>
+          ) : null}
           {windows.length > 0 && filtersActive ? (
             <button
               type="button"

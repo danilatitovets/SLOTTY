@@ -1,13 +1,13 @@
-import { resolveCategoryWorkCode } from './categoryWorkPhotos';
+import { CATEGORY_WORK_PHOTOS, resolveCategoryWorkCode } from './categoryWorkPhotos';
 
-/** Фото карточек блока «Все услуги» (`public/photos/каталог_услуги/`). Плитки категорий — `categoryWorkPhotos`. */
+/** Фото карточек услуг (`public/photos/каталог_услуги/`). */
 export const CATALOG_SERVICE_IMAGES = {
-  manicure: '/photos/каталог_услуги/manicure.webp',
-  barbers: '/photos/каталог_услуги/barbers.webp',
-  brows_lashes: '/photos/каталог_услуги/brows_lashes.webp',
-  massage: '/photos/каталог_услуги/massage.webp',
-  fitness: '/photos/каталог_услуги/fitness.webp',
-  tattoo: '/photos/каталог_услуги/tattoo.webp',
+  manicure: CATEGORY_WORK_PHOTOS.manicure,
+  barbers: CATEGORY_WORK_PHOTOS.barbers,
+  brows_lashes: CATEGORY_WORK_PHOTOS.brows_lashes,
+  massage: CATEGORY_WORK_PHOTOS.massage,
+  fitness: CATEGORY_WORK_PHOTOS.fitness,
+  tattoo: CATEGORY_WORK_PHOTOS.tattoo,
 } as const;
 
 export type CatalogServiceImageKey = keyof typeof CATALOG_SERVICE_IMAGES;
@@ -52,4 +52,15 @@ export function getCatalogServicePhotoUrl(codeOrLabel: string | null | undefined
   const code = resolveCategoryWorkCode(codeOrLabel);
   const key = codeToImageKey(code);
   return CATALOG_SERVICE_IMAGES[key];
+}
+
+/** Обложка карточки услуги: фото категории из `каталог_услуги`, не аватар мастера. */
+export function resolveServiceListingCoverUrl(listing: {
+  category?: string | null;
+  categoryCode?: string | null;
+  serviceName?: string | null;
+}): string {
+  return getCatalogServicePhotoUrl(
+    listing.categoryCode ?? listing.category ?? listing.serviceName,
+  );
 }

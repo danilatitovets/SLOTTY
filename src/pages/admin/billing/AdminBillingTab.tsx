@@ -10,9 +10,11 @@ import {
 } from '../../../features/billing/model/masterPlans';
 import {
   getBillingPlans,
+  quotePromoForCheckout,
   recordBillingCheckoutStarted,
   switchMySubscriptionMock,
   type BillingPlanDto,
+  type PromoQuoteDto,
 } from '../../../features/admin/api/adminBillingApi';
 import { getMasterDraft } from '../../../features/master/model/masterDraftStorage';
 import { ensureDemoAppointmentsSeeded } from '../../../features/master/model/demoMasterAppointments';
@@ -22,8 +24,14 @@ import { useAdminToast } from '../shared/useAdminToast';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { BillingDesktopHero } from './BillingDesktopHero';
-import { BillingLandingFreeCard } from './BillingLandingFreeCard';
-import { BillingLandingProCard } from './BillingLandingProCard';
+import {
+  LANDING_MASTER_PRO_FEATURES,
+  LANDING_PRO_DESCRIPTION,
+  LandingPricingCard,
+  LandingProTariffCard,
+  landingPlanCtaClass,
+  landingProCtaClass,
+} from '../../../features/billing/ui/landingTariffCards';
 import { BillingMobileHeader } from './BillingMobileHeader';
 import { BillingPeriodSwitch } from './BillingPeriodSwitch';
 import { BillingUsagePanel } from './BillingUsagePanel';
@@ -85,8 +93,8 @@ const PLAN_UI: Record<
     ],
   },
   pro: {
-    name: 'Pro',
-    tagline: 'Для активной работы мастера',
+    name: 'Мастер Pro',
+    tagline: 'Для активной работы: безлимит записей, расширенная сводка и полный кабинет.',
     includes: [
       'Всё из Free',
       'Безлимит услуг и записей',
@@ -103,7 +111,7 @@ const PLAN_UI: Record<
 };
 
 export function AdminBillingTab() {
-  const { useCabinetApi, subscription, refreshSubscription, cabinetLoading } = useAdminMasterCabinet();
+  const { useCabinetApi, subscription, applySubscription, cabinetLoading } = useAdminMasterCabinet();
 
   const [planState, setPlanState] = useState<MasterPlanState>(() => getCurrentMasterPlan());
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => getCurrentMasterPlan().billingPeriod);
@@ -139,6 +147,11 @@ export function AdminBillingTab() {
     };
   }, [useCabinetApi]);
 
+  useEffect(() => {
+    if (!subscription) return;
+    setBillingPeriod(subscription.billingPeriod === 'year' ? 'year' : 'month');
+  }, [subscription?.id]);
+
   const apiSub = subscription;
   const useLiveBilling = Boolean(useCabinetApi && apiSub);
 
@@ -153,9 +166,7 @@ export function AdminBillingTab() {
       }
     : planState;
 
-  const billingPeriodView: BillingPeriod = useLiveBilling && apiSub
-    ? ((apiSub.billingPeriod === 'year' ? 'year' : 'month') as BillingPeriod)
-    : billingPeriod;
+  const billingPeriodView: BillingPeriod = billingPeriod;
 
   const limits = useLiveBilling && apiSub
     ? {
@@ -169,17 +180,10 @@ export function AdminBillingTab() {
   const monthlyCount = useLiveBilling && apiSub ? apiSub.usage.monthlyAppointments : monthlyCountDemo;
 
   const persistPeriod = useCallback(
-    async (next: BillingPeriod) => {
-      if (useLiveBilling && apiSub) {
-        try {
-          await switchMySubscriptionMock(apiSub.plan.code as 'free' | 'pro', next);
-          await refreshSubscription();
-        } catch (e) {
-          showErrorToast(e instanceof Error ? e.message : 'Не удалось сохранить период');
-        }
-        return;
-      }
+    (next: BillingPeriod) => {
+      if (next === billingPeriod) return;
       setBillingPeriod(next);
+      if (useLiveBilling) return;
       const merged: MasterPlanState = {
         ...planState,
         billingPeriod: next,
@@ -188,15 +192,16 @@ export function AdminBillingTab() {
       saveCurrentMasterPlan(merged);
       setPlanState(merged);
     },
-    [apiSub, planState, refreshSubscription, showErrorToast, useLiveBilling],
+    [billingPeriod, planState, useLiveBilling],
   );
 
   const applyPlan = useCallback(
     async (plan: PlanId) => {
       if (useLiveBilling) {
         try {
-          await switchMySubscriptionMock(plan, billingPeriodView);
-          await refreshSubscription();
+          const updated = await switchMySubscriptionMock(plan, billingPeriodView);
+          applySubscription(updated);
+          setBillingPeriod(updated.billingPeriod === 'year' ? 'year' : 'month');
           showToast(plan === 'free' ? 'Тариф Free' : 'Тариф обновлён');
         } catch (e) {
           showErrorToast(e instanceof Error ? e.message : 'Не удалось сменить тариф');
@@ -211,7 +216,7 @@ export function AdminBillingTab() {
       saveCurrentMasterPlan(next);
       setPlanState(next);
     },
-    [billingPeriod, billingPeriodView, refreshSubscription, showErrorToast, showToast, useLiveBilling],
+    [applySubscription, billingPeriod, billingPeriodView, showErrorToast, showToast, useLiveBilling],
   );
 
   const confirmMockDemo = useCallback(() => {
@@ -226,20 +231,26 @@ export function AdminBillingTab() {
     showToast('Тариф Pro подключён');
   }, [billingPeriod, showToast]);
 
-  const confirmMock = useCallback(async () => {
-    if (useLiveBilling) {
-      try {
-        await switchMySubscriptionMock('pro', billingPeriodView);
-        await refreshSubscription();
-        setMockProOpen(false);
-        showToast('Тариф Pro подключён');
-      } catch (e) {
-        showErrorToast(e instanceof Error ? e.message : 'Не удалось подключить Pro');
+  const confirmMock = useCallback(
+    async (promoCode?: string | null) => {
+      if (useLiveBilling) {
+        try {
+          const updated = await switchMySubscriptionMock('pro', billingPeriodView, {
+            promoCode: promoCode ?? null,
+          });
+          applySubscription(updated);
+          setBillingPeriod(updated.billingPeriod === 'year' ? 'year' : 'month');
+          setMockProOpen(false);
+          showToast('Тариф Pro подключён');
+        } catch (e) {
+          showErrorToast(e instanceof Error ? e.message : 'Не удалось подключить Pro');
+        }
+        return;
       }
-      return;
-    }
-    confirmMockDemo();
-  }, [billingPeriodView, confirmMockDemo, refreshSubscription, showErrorToast, showToast, useLiveBilling]);
+      confirmMockDemo();
+    },
+    [applySubscription, billingPeriodView, confirmMockDemo, showErrorToast, showToast, useLiveBilling],
+  );
 
   const maxSvc = Math.max(1, limits.maxServices ?? 3);
   const maxAppt = Math.max(1, limits.maxMonthlyAppointments ?? 20);
@@ -283,7 +294,7 @@ export function AdminBillingTab() {
     <div className={billingListTray}>
       <BillingPeriodSwitch
         period={billingPeriodView}
-        onPeriod={(p) => void persistPeriod(p)}
+        onPeriod={persistPeriod}
       />
     </div>
   );
@@ -299,28 +310,58 @@ export function AdminBillingTab() {
     />
   );
 
+  const freeActive = planStateView.plan === 'free';
+  const proActive = planStateView.plan === 'pro';
+  const freePriceValue = freePriceLine.split(' / ')[0] ?? freePriceLine;
+  const freePriceUnit = freePriceLine.includes(' / ') ? ` / ${freePriceLine.split(' / ')[1]}` : '';
+  const proPriceUnit =
+    proPriceParts.unit && proPriceParts.unit.startsWith('/')
+      ? proPriceParts.unit
+      : proPriceParts.unit
+        ? ` / ${proPriceParts.unit}`
+        : '/ месяц';
+
   const planCards = (
-    <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-      <BillingLandingFreeCard
+    <div className="grid grid-cols-1 items-stretch gap-5 md:grid-cols-2 md:gap-4 lg:gap-5">
+      <LandingPricingCard
         name={PLAN_UI.free.name}
-        priceLine={freePriceLine}
-        tagline={PLAN_UI.free.tagline}
-        includes={PLAN_UI.free.includes}
-        limits={PLAN_UI.free.limits}
-        active={planStateView.plan === 'free'}
-        onSelect={() => void applyPlan('free')}
+        priceValue={freePriceValue}
+        priceUnit={freePriceUnit}
+        includesLabel="Включено:"
+        features={PLAN_UI.free.includes}
+        badge={freeActive ? 'Активен' : undefined}
+        footer={
+          <button
+            type="button"
+            disabled={freeActive}
+            onClick={() => void applyPlan('free')}
+            className={landingPlanCtaClass(false, freeActive)}
+          >
+            {freeActive ? 'Текущий тариф' : 'Перейти на Free'}
+          </button>
+        }
       />
-      <BillingLandingProCard
+      <LandingProTariffCard
         priceValue={proPriceParts.value}
-        priceUnit={proPriceParts.unit || '/ месяц'}
-        includes={PLAN_UI.pro.includes}
-        active={planStateView.plan === 'pro'}
-        onSelect={() => {
-          if (useLiveBilling) {
-            void recordBillingCheckoutStarted(billingPeriodView).catch(() => {});
-          }
-          setMockProOpen(true);
-        }}
+        priceUnit={proPriceUnit}
+        features={LANDING_MASTER_PRO_FEATURES}
+        description={LANDING_PRO_DESCRIPTION}
+        topBadge={proActive ? 'Активен' : 'Популярный'}
+        footer={
+          <button
+            type="button"
+            disabled={proActive}
+            onClick={() => {
+              if (useLiveBilling) {
+                void recordBillingCheckoutStarted(billingPeriodView).catch(() => {});
+              }
+              setMockProOpen(true);
+            }}
+            className={landingProCtaClass(proActive)}
+          >
+            {proActive ? 'Текущий тариф' : 'Открыть Pro'}
+          </button>
+        }
       />
     </div>
   );
@@ -377,6 +418,7 @@ export function AdminBillingTab() {
         <MockPaymentBody
           billingPeriod={billingPeriodView}
           proPrice={proPriceLine}
+          useCabinetApi={useLiveBilling}
           onBack={() => setMockProOpen(false)}
           onDemo={confirmMock}
         />
@@ -390,16 +432,42 @@ export function AdminBillingTab() {
 function MockPaymentBody({
   billingPeriod,
   proPrice,
+  useCabinetApi,
   onBack,
   onDemo,
 }: {
   billingPeriod: BillingPeriod;
   proPrice: string;
+  useCabinetApi: boolean;
   onBack: () => void;
-  onDemo: () => void | Promise<void>;
+  onDemo: (promoCode?: string | null) => void | Promise<void>;
 }) {
   const meta = PLAN_UI.pro;
-  const amountLabel = proPrice || `${priceForPlan('pro', billingPeriod)} BYN`;
+  const [promoInput, setPromoInput] = useState('');
+  const [quote, setQuote] = useState<PromoQuoteDto | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+
+  const amountLabel = quote
+    ? `${quote.finalAmount} BYN (скидка ${quote.discountPercent}%, было ${quote.baseAmount} BYN)`
+    : proPrice || `${priceForPlan('pro', billingPeriod)} BYN`;
+
+  async function applyPromo() {
+    if (!useCabinetApi || !promoInput.trim()) return;
+    setPromoBusy(true);
+    setPromoError(null);
+    try {
+      const q = await quotePromoForCheckout(promoInput.trim(), billingPeriod);
+      setQuote(q);
+      setPromoInput(q.code);
+    } catch (e) {
+      setQuote(null);
+      setPromoError(e instanceof Error ? e.message : 'Промокод не применился');
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-[16px] font-semibold text-[#111827]">{meta.name}</p>
@@ -409,6 +477,35 @@ function MockPaymentBody({
         {' · '}
         <span className="font-semibold text-[#111827]">{amountLabel}</span>
       </p>
+
+      {useCabinetApi ? (
+        <div className="space-y-2 rounded-[18px] bg-[#F9FAFB] p-4 ring-1 ring-[#F3F4F6]">
+          <p className="text-[13px] font-semibold text-[#374151]">Есть промокод?</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={promoInput}
+              onChange={(e) => {
+                setPromoInput(e.target.value.toUpperCase());
+                setQuote(null);
+                setPromoError(null);
+              }}
+              placeholder="КОД"
+              className="min-h-11 flex-1 rounded-xl border border-[#E5E7EB] bg-white px-3 text-[14px] uppercase outline-none focus:border-[#F47C8C]/50"
+            />
+            <button
+              type="button"
+              disabled={promoBusy || !promoInput.trim()}
+              onClick={() => void applyPromo()}
+              className={`shrink-0 px-4 ${billingOutlineBtn}`}
+            >
+              {promoBusy ? '…' : 'Применить'}
+            </button>
+          </div>
+          {promoError ? <p className="text-[13px] text-[#DC2626]">{promoError}</p> : null}
+          {quote?.title ? <p className="text-[13px] text-[#059669]">{quote.title}</p> : null}
+        </div>
+      ) : null}
       <ul className="space-y-1.5 text-[14px] text-[#374151]">
         {meta.includes.slice(0, 6).map((x) => (
           <li key={x} className="flex gap-2">
@@ -428,7 +525,7 @@ function MockPaymentBody({
         </button>
         <button
           type="button"
-          onClick={() => void Promise.resolve(onDemo())}
+          onClick={() => void Promise.resolve(onDemo(quote?.code ?? (promoInput.trim() || null)))}
           className={`min-h-12 flex-[1.15] ${billingPinkBtn}`}
         >
           Подключить в demo

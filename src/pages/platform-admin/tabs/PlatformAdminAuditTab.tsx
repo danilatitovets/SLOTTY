@@ -9,32 +9,11 @@ import {
   PlatformAdminLoading,
 } from '../shared/PlatformAdminSharedUi';
 import { PlatformAdminLoadMore } from '../shared/PlatformAdminLoadMore';
-
-const ACTION_LABELS: Record<string, string> = {
-  category_request_approved: 'Заявка на категорию одобрена',
-  category_request_rejected: 'Заявка на категорию отклонена',
-  user_blocked: 'Пользователь заблокирован',
-  user_unblocked: 'Пользователь разблокирован',
-  user_restricted: 'Доступ ограничен',
-  user_unrestricted: 'Ограничение снято',
-  master_hidden: 'Профиль мастера скрыт',
-  master_unhidden: 'Профиль мастера в каталоге',
-  master_paused: 'Профиль мастера на паузе',
-  master_unpaused: 'Пауза снята',
-  service_hidden: 'Услуга скрыта',
-  service_unhidden: 'Услуга снова видима',
-};
-
-const ENTITY_LABELS: Record<string, string> = {
-  profile: 'Пользователь',
-  master_profile: 'Мастер',
-  master_service: 'Услуга',
-  category_change_request: 'Заявка',
-};
+import { labelAdminAuditAction, labelAdminAuditEntity } from '../platformAdminLabels';
 
 function auditTargetLine(log: PlatformAuditLogItem): string | null {
   const meta = log.metadata;
-  if (!meta || typeof meta !== 'object') return ENTITY_LABELS[log.entityType] ?? null;
+  if (!meta || typeof meta !== 'object') return labelAdminAuditEntity(log.entityType);
 
   const name =
     (typeof meta.displayName === 'string' && meta.displayName) ||
@@ -43,10 +22,10 @@ function auditTargetLine(log: PlatformAuditLogItem): string | null {
     (typeof meta.fullName === 'string' && meta.fullName) ||
     (typeof meta.title === 'string' && meta.title);
 
-  const entity = ENTITY_LABELS[log.entityType];
+  const entity = labelAdminAuditEntity(log.entityType);
   if (name && entity) return `${entity}: ${name}`;
   if (name) return name;
-  return entity ?? null;
+  return entity;
 }
 
 function auditMetaDetails(meta: Record<string, unknown> | null): string[] {
@@ -62,6 +41,26 @@ function auditMetaDetails(meta: Record<string, unknown> | null): string[] {
   }
   if (typeof meta.until === 'string') {
     lines.push(`До: ${new Date(meta.until).toLocaleDateString('ru-RU')}`);
+  }
+  if (typeof meta.validUntil === 'string') {
+    lines.push(
+      `Pro действует до: ${new Date(meta.validUntil).toLocaleString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`,
+    );
+  }
+  if (typeof meta.days === 'number' && Number.isFinite(meta.days)) {
+    lines.push(`Срок: ${meta.days} дн.`);
+  }
+  if (typeof meta.planCode === 'string') {
+    lines.push(`Тариф: ${meta.planCode === 'pro' ? 'Pro' : meta.planCode}`);
+  }
+  if (typeof meta.contactName === 'string' && meta.contactName.trim()) {
+    lines.push(`Контакт: ${meta.contactName}`);
   }
   if (typeof meta.categoryBefore === 'string') {
     const after =
@@ -129,7 +128,7 @@ export function PlatformAdminAuditTab() {
                   {new Date(log.createdAt).toLocaleString('ru-RU')} · {log.adminName}
                 </p>
                 <h3 className="mt-1 text-[16px] font-bold text-[#111827]">
-                  {ACTION_LABELS[log.action] ?? log.action}
+                  {labelAdminAuditAction(log.action)}
                 </h3>
                 {target ? <p className="mt-1 text-[14px] text-[#6B7280]">{target}</p> : null}
                 {log.reason ? (

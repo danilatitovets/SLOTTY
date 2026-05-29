@@ -27,6 +27,7 @@ type Props = {
   favoriteDisabled: boolean;
   onFavoriteToggle: () => void;
   onShare: () => void;
+  onReport?: () => void;
   onChooseTime: (serviceId?: string | null) => void;
   onPhoneUnavailable: () => void;
   highlightServiceId?: string | null;
@@ -45,6 +46,7 @@ export function MasterProfileDesktop({
   favoriteDisabled,
   onFavoriteToggle,
   onShare,
+  onReport,
   onChooseTime,
   onPhoneUnavailable,
   highlightServiceId,
@@ -61,6 +63,7 @@ export function MasterProfileDesktop({
           favoriteDisabled={favoriteDisabled}
           onFavoriteToggle={onFavoriteToggle}
           onShare={onShare}
+          onReport={onReport}
         />
 
         <MasterProfileDesktopHero

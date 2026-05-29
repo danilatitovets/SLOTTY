@@ -55,12 +55,19 @@ import {
 import { masterOverviewRouter } from './masterOverview.routes.js';
 import { normalizeBelarusPhone, isOptionalBelarusPhoneValid } from '../../utils/belarusPhone.js';
 import { categoryChangeRouter } from './categoryChange.routes.js';
-import { publicCatalogRateLimit } from '../../middlewares/rateLimit.js';
+import { sponsorRequestRouter } from '../sponsors/sponsorRequest.routes.js';
+import {
+  createMasterProfileReport,
+  type MasterProfileReportReason,
+} from './masterProfileReport.service.js';
+import { mirrorPortraitToMasterStorage } from '../../lib/mirrorPortraitToStorage.js';
+import { publicCatalogRateLimit, masterProfileReportLimiter } from '../../middlewares/rateLimit.js';
 import { requireMasterProPlan } from '../../middlewares/requireMasterProPlan.js';
 import { env } from '../../config/env.js';
 
 export const mastersRouter = Router();
 mastersRouter.use(categoryChangeRouter);
+mastersRouter.use(sponsorRequestRouter);
 
 const masterImageUpload = multer({
   storage: multer.memoryStorage(),
@@ -220,6 +227,7 @@ const patchMe = z.object({
     }),
   publicationStatus: z.enum(['draft', 'published', 'hidden', 'blocked', 'paused']).optional(),
   globalBufferMinutes: z.coerce.number().int().finite().min(0).max(240).optional(),
+  portfolioCoverItemId: z.string().uuid().nullable().optional(),
 });
 
 const primaryLocationBody = z
@@ -491,6 +499,8 @@ const onboardingBody = z
     scheduleRules: z.array(onboardingScheduleItemSchema).min(1).max(56),
     services: z.array(onboardingServiceSchema).min(1).max(100),
     certificates: z.array(onboardingCertificateSchema).max(50).default([]),
+    bookingRules: z.string().max(20_000).nullable().optional(),
+    cancellationPolicy: z.string().max(20_000).nullable().optional(),
     /** Без оплаты через онбординг принимается только basic. */
     masterPlan: z.literal('basic').optional(),
     proInterested: z.boolean().optional().default(false),
@@ -599,6 +609,8 @@ mastersRouter.post(
         imageUrl: c.imageUrl === '' || c.imageUrl == null ? null : c.imageUrl,
         sortOrder: c.sortOrder,
       })),
+      bookingRules: body.bookingRules?.trim() || null,
+      cancellationPolicy: body.cancellationPolicy?.trim() || null,
       masterPlan: body.masterPlan,
       proInterested: body.proInterested,
     });
@@ -629,6 +641,9 @@ mastersRouter.patch(
         : {}),
       publicationStatus: body.publicationStatus,
       globalBufferMinutes: body.globalBufferMinutes,
+      ...(body.portfolioCoverItemId !== undefined
+        ? { portfolioCoverItemId: body.portfolioCoverItemId }
+        : {}),
     });
     res.json(out);
   }),
@@ -645,6 +660,29 @@ mastersRouter.post(
       throw ApiError.badRequest('Missing image file (multipart field: file)', 'MISSING_FILE');
     }
     const imageUrl = await uploadMasterHeroPhoto(req.user!.id, file.buffer, file.mimetype);
+    res.json({ imageUrl });
+  }),
+);
+
+const remotePhotoBody = z.object({
+  imageUrl: z.string().url().max(2000).refine((u) => u.startsWith('https://'), {
+    message: 'Разрешены только https-ссылки',
+  }),
+});
+
+mastersRouter.post(
+  '/me/photo/from-url',
+  authMiddleware,
+  requireMasterDbAccess,
+  asyncHandler(async (req, res) => {
+    const body = remotePhotoBody.parse(req.body);
+    const imageUrl = await mirrorPortraitToMasterStorage(req.user!.id, body.imageUrl);
+    if (!imageUrl) {
+      throw ApiError.badRequest(
+        'Не удалось сохранить фото. Проверьте ссылку или загрузите файл с устройства.',
+        'REMOTE_PHOTO_MIRROR_FAILED',
+      );
+    }
     res.json({ imageUrl });
   }),
 );
@@ -1010,7 +1048,6 @@ mastersRouter.use(
   '/me/overview',
   authMiddleware,
   requireMasterDbAccess,
-  requireMasterProPlan,
   masterOverviewRouter,
 );
 
@@ -1028,11 +1065,29 @@ mastersRouter.get(
 const subscriptionMockBody = z.object({
   planCode: z.enum(['free', 'pro']),
   billingPeriod: z.enum(['month', 'year']),
+  promoCode: z.string().max(64).optional().nullable(),
+});
+
+const promoQuoteBody = z.object({
+  code: z.string().min(1).max(64),
+  billingPeriod: z.enum(['month', 'year']),
 });
 
 const checkoutStartedBody = z.object({
   billingPeriod: z.enum(['month', 'year']),
 });
+
+mastersRouter.post(
+  '/me/promo-codes/quote',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  asyncHandler(async (req, res) => {
+    const body = promoQuoteBody.parse(req.body);
+    const { quotePromoForCheckout } = await import('../billing/promoCode.service.js');
+    res.json({ quote: await quotePromoForCheckout(body.code, body.billingPeriod, 'pro') });
+  }),
+);
 
 mastersRouter.post(
   '/me/billing/checkout-started',
@@ -1064,8 +1119,37 @@ mastersRouter.patch(
       );
     }
     const body = subscriptionMockBody.parse(req.body);
-    const subscription = await switchMasterSubscriptionMock(req.user!.id, body.planCode, body.billingPeriod);
+    const subscription = await switchMasterSubscriptionMock(req.user!.id, body.planCode, body.billingPeriod, {
+      promoCode: body.promoCode,
+    });
     res.json({ subscription });
+  }),
+);
+
+const masterProfileReportBody = z.object({
+  reasonCode: z.enum([
+    'fake_profile',
+    'inappropriate_photos',
+    'scam',
+    'spam',
+    'harassment',
+    'other',
+  ]),
+  reasonText: z.string().max(2000).nullable().optional(),
+});
+
+mastersRouter.post(
+  '/:masterId/report',
+  authMiddleware,
+  masterProfileReportLimiter,
+  asyncHandler(async (req, res) => {
+    const masterId = z.string().uuid().parse(req.params.masterId);
+    const body = masterProfileReportBody.parse(req.body);
+    const report = await createMasterProfileReport(masterId, req.user!.id, {
+      reasonCode: body.reasonCode as MasterProfileReportReason,
+      reasonText: body.reasonText ?? null,
+    });
+    res.status(201).json({ report });
   }),
 );
 

@@ -151,7 +151,12 @@ export function ServicesCatalogResults({
   if (servicesEmpty) {
     return (
       <CatalogEmptyPanel>
-        <EmptyState title="Пока нет доступных услуг" description="Загляните позже" variant="catalog" />
+        <EmptyState
+          title="Пока нет доступных услуг"
+          description="Загляните позже"
+          variant="catalog"
+          picture="servicesEmpty"
+        />
       </CatalogEmptyPanel>
     );
   }

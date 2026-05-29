@@ -19,6 +19,8 @@ export type MasterPortfolioItem = {
 };
 
 export type ExtendedMasterProfile = DemoMasterProfile & {
+  coverUrl?: string | null;
+  portfolioCoverItemId?: string | null;
   contacts?: MasterContact[];
   careerItems?: MasterDraftCareerItem[];
   experience?: string;

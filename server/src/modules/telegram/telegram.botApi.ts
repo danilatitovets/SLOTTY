@@ -1,6 +1,6 @@
 import { env } from '../../config/env.js';
 
-const TG_API_BASE = 'https://api.telegram.org';
+export const TG_API_BASE = 'https://api.telegram.org';
 
 export function getBotToken(): string | undefined {
   const t = env.TELEGRAM_BOT_TOKEN?.trim();

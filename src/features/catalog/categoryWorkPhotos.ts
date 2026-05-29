@@ -1,12 +1,14 @@
-/** Фото плиток категорий: `public/photos/каталог_услуги/`. */
+/** `public/photos/каталог_услуги/` — фото услуг по категории для каталога и лендинга. */
+const CATALOG_SERVICES_PHOTOS_BASE = `/photos/${encodeURIComponent('каталог_услуги')}`;
+
 export const CATEGORY_WORK_PHOTOS: Record<string, string> = {
-  manicure: '/photos/каталог_услуги/manicure.webp',
-  barbers: '/photos/каталог_услуги/barbers.webp',
-  'brows-lashes': '/photos/каталог_услуги/brows_lashes.webp',
-  brows_lashes: '/photos/каталог_услуги/brows_lashes.webp',
-  massage: '/photos/каталог_услуги/massage.webp',
-  fitness: '/photos/каталог_услуги/fitness.webp',
-  tattoo: '/photos/каталог_услуги/tattoo.webp',
+  manicure: `${CATALOG_SERVICES_PHOTOS_BASE}/manicure.webp`,
+  barbers: `${CATALOG_SERVICES_PHOTOS_BASE}/barbers.webp`,
+  'brows-lashes': `${CATALOG_SERVICES_PHOTOS_BASE}/brows_lashes.webp`,
+  brows_lashes: `${CATALOG_SERVICES_PHOTOS_BASE}/brows_lashes.webp`,
+  massage: `${CATALOG_SERVICES_PHOTOS_BASE}/massage.webp`,
+  fitness: `${CATALOG_SERVICES_PHOTOS_BASE}/fitness.webp`,
+  tattoo: `${CATALOG_SERVICES_PHOTOS_BASE}/tattoo.webp`,
 };
 
 export function getCategoryWorkPhotoUrl(code: string | null | undefined): string {
@@ -55,3 +57,4 @@ export function resolveCategoryWorkCode(labelOrCode: string | null | undefined):
   }
   return 'manicure';
 }
+

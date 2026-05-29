@@ -1,3 +1,4 @@
+import { displayOrEmpty, EMPTY_FIELD } from '../../../shared/lib/emptyDisplayText';
 import { useCallback, useEffect, useState } from 'react';
 import { getPlatformUser } from '../api/platformAdminApi';
 import type { PlatformUserDetail, PlatformUserListItem } from '../api/platformAdmin.types';
@@ -164,10 +165,10 @@ export function PlatformAdminUserDetailSheet({
                 </h3>
                 <dl className="space-y-3">
                   <DetailRow label="Имя в SLOTTY" value={detail.fullName} />
-                  <DetailRow label="Телефон" value={detail.phone ?? '—'} />
+                  <DetailRow label="Телефон" value={displayOrEmpty(detail.phone)} />
                   <DetailRow
                     label="Telegram"
-                    value={detail.telegramUsername ? `@${detail.telegramUsername}` : '—'}
+                    value={detail.telegramUsername ? `@${detail.telegramUsername}` : EMPTY_FIELD}
                   />
                   <DetailRow label="Регистрация" value={formatDate(detail.createdAt)} />
                   <DetailRow label="Записей" value={String(detail.appointmentsCount)} />

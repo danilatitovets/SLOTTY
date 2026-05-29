@@ -46,3 +46,4 @@ if (missing.length > 0) {
 if (!rootEnv.VITE_API_URL) {
   console.warn('[dev] В корневом .env добавьте: VITE_API_URL=http://localhost:4000');
 }
+

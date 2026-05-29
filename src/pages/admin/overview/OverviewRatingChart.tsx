@@ -10,6 +10,7 @@ import {
 import { HiCloud } from 'react-icons/hi2';
 import type { RatingDayStat } from './overviewReputationDemo';
 import { formatDdMm, formatDdMmYyyy } from './overviewFormat';
+import { overviewChartWell } from './adminOverviewTheme';
 import {
   ratingToneFromValue,
   ratingToneUi,
@@ -151,8 +152,10 @@ export function OverviewRatingChart({
     <div className="min-w-0">
       <div
         ref={chartRef}
-        className={`relative ${chartBoxClass} w-full min-w-0 touch-none select-none overflow-hidden rounded-[20px] bg-gradient-to-b ${palette.chartBg} ${
-          hasData ? 'cursor-crosshair' : ''
+        className={`${chartBoxClass} touch-none select-none ${
+          hasData
+            ? `relative w-full min-w-0 cursor-crosshair overflow-hidden rounded-[12px] bg-gradient-to-b ${palette.chartBg} ring-1 ring-[#EEEEEE]/80 lg:rounded-[16px] lg:ring-0`
+            : overviewChartWell
         }`}
         onPointerMove={onPointerMove}
         onPointerDown={onPointerMove}

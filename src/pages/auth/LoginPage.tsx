@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LEGAL_PD_CONSENT_PATH, LEGAL_PRIVACY_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
+import { legalReturnState } from '../legal/useLegalPageBack';
 import { useAuth } from '../../features/auth/AuthProvider';
 import { LoginAccountHint } from '../../features/auth/components/LoginAccountHint';
 import { LoginMethodsPanel } from '../../features/auth/components/LoginMethodsPanel';
@@ -28,6 +29,8 @@ export function LoginPage() {
     return <Navigate to={afterLoginPath} replace />;
   }
 
+  const legalReturn = legalReturnState(`${location.pathname}${location.search}`);
+
   return (
     <AuthSplitLayout>
       <h1 className={AUTH_TITLE_CLASS}>Войти</h1>
@@ -43,15 +46,27 @@ export function LoginPage() {
 
       <p className="mt-10 text-[12px] leading-relaxed text-[#9CA3AF]">
         Продолжая, вы соглашаетесь с{' '}
-        <Link to={LEGAL_TERMS_PATH} className="font-semibold text-[#6B7280] underline-offset-2 hover:underline">
+        <Link
+          to={LEGAL_TERMS_PATH}
+          state={legalReturn}
+          className="font-semibold text-[#6B7280] underline-offset-2 hover:underline"
+        >
           соглашением
         </Link>
         ,{' '}
-        <Link to={LEGAL_PRIVACY_PATH} className="font-semibold text-[#6B7280] underline-offset-2 hover:underline">
+        <Link
+          to={LEGAL_PRIVACY_PATH}
+          state={legalReturn}
+          className="font-semibold text-[#6B7280] underline-offset-2 hover:underline"
+        >
           политикой ПД
         </Link>{' '}
         и{' '}
-        <Link to={LEGAL_PD_CONSENT_PATH} className="font-semibold text-[#6B7280] underline-offset-2 hover:underline">
+        <Link
+          to={LEGAL_PD_CONSENT_PATH}
+          state={legalReturn}
+          className="font-semibold text-[#6B7280] underline-offset-2 hover:underline"
+        >
           согласием на обработку ПД
         </Link>
         .

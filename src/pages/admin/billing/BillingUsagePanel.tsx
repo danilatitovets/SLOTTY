@@ -4,7 +4,7 @@ import { billingPanel, billingTrayLabel } from './adminBillingTheme';
 function progressClass(ratio: number): string {
   if (ratio >= 1) return 'bg-[#EF4444]';
   if (ratio >= 0.85) return 'bg-amber-400';
-  return 'bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]';
+  return 'bg-[#F47C8C]';
 }
 
 function UsageRow({ label, value }: { label: string; value: string }) {

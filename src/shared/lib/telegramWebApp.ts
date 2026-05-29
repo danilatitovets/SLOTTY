@@ -47,6 +47,13 @@ export type TelegramUserPreview = {
   photoUrl?: string;
 };
 
+/** Telegram user id из подписанной строки initData (для сверки с JWT в Mini App). */
+export function readTelegramUserIdFromInitDataRaw(raw: string | undefined): number | null {
+  if (!raw?.trim()) return null;
+  const user = parseUserFromInitDataQuery(raw);
+  return user?.id ?? null;
+}
+
 function parseUserFromInitDataQuery(raw: string): TelegramUserPreview | null {
   try {
     const userJson = new URLSearchParams(raw.trim()).get('user');

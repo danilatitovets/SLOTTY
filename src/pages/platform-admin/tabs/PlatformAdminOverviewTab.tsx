@@ -50,22 +50,44 @@ export function PlatformAdminOverviewTab() {
 
       {!loading && !error && data ? (
         <div className="space-y-8">
-          {data.pendingCategoryRequests > 0 ? (
-            <div
-              className={`${paCard} flex flex-col gap-4 border-[#FDE8ED] bg-[#FFF8F9] p-5 sm:flex-row sm:items-center sm:justify-between`}
-            >
-              <div>
-                <p className="text-[15px] font-bold text-[#111827]">Нужно ваше решение</p>
-                <p className="mt-1 text-[14px] text-[#6B7280]">
-                  {data.pendingCategoryRequests} заявок на смену категории мастера
-                </p>
-              </div>
-              <Link
-                to={PLATFORM_ADMIN_REQUESTS_PATH}
-                className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-[#ff5f7a] px-5 py-2.5 text-[14px] font-semibold text-white"
-              >
-                Открыть заявки
-              </Link>
+          {data.pendingCategoryRequests > 0 || data.pendingSponsorRequests > 0 ? (
+            <div className="space-y-3">
+              {data.pendingCategoryRequests > 0 ? (
+                <div
+                  className={`${paCard} flex flex-col gap-4 border-[#FDE8ED] bg-[#FFF8F9] p-5 sm:flex-row sm:items-center sm:justify-between`}
+                >
+                  <div>
+                    <p className="text-[15px] font-bold text-[#111827]">Смена категории</p>
+                    <p className="mt-1 text-[14px] text-[#6B7280]">
+                      {data.pendingCategoryRequests} заявок на проверке
+                    </p>
+                  </div>
+                  <Link
+                    to={PLATFORM_ADMIN_REQUESTS_PATH}
+                    className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-[#ff5f7a] px-5 py-2.5 text-[14px] font-semibold text-white"
+                  >
+                    Открыть
+                  </Link>
+                </div>
+              ) : null}
+              {data.pendingSponsorRequests > 0 ? (
+                <div
+                  className={`${paCard} flex flex-col gap-4 border-[#FDE8ED] bg-[#FFF8F9] p-5 sm:flex-row sm:items-center sm:justify-between`}
+                >
+                  <div>
+                    <p className="text-[15px] font-bold text-[#111827]">Спонсорство SLOTTY</p>
+                    <p className="mt-1 text-[14px] text-[#6B7280]">
+                      {data.pendingSponsorRequests} заявок от мастеров
+                    </p>
+                  </div>
+                  <Link
+                    to={`${PLATFORM_ADMIN_REQUESTS_PATH}?kind=sponsor`}
+                    className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-[#ff5f7a] px-5 py-2.5 text-[14px] font-semibold text-white"
+                  >
+                    Открыть
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

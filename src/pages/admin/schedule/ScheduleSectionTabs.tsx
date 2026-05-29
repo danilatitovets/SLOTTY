@@ -9,7 +9,7 @@ const TABS: Array<{
 }> = [
   { id: 'create', label: 'Создать', Icon: HiPlusCircle },
   { id: 'calendar', label: 'Календарь', Icon: HiCalendarDays },
-  { id: 'list', label: 'Окна', Icon: HiRectangleStack },
+  { id: 'list', label: 'Список', Icon: HiRectangleStack },
 ];
 
 type Props = {

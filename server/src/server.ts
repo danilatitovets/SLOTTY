@@ -1,10 +1,20 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
+import { initSentry } from './lib/sentry.js';
 import { getGoogleOAuthDiagnostics } from './modules/auth/googleOAuth.service.js';
 import { startAppointmentRemindersScheduler } from './modules/appointments/appointmentReminders.scheduler.js';
 import { initTelegramBotTransport } from './modules/telegram/telegram.service.js';
 
+initSentry();
 const app = createApp();
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[api] unhandledRejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[api] uncaughtException:', err);
+});
 
 app.listen(env.PORT, () => {
   // Do not log secrets (DATABASE_URL, JWT_SECRET, TELEGRAM_BOT_TOKEN).

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { HiCloud } from 'react-icons/hi2';
 import type { ClientDayStat } from './overviewAnalytics';
+import { overviewChartWell } from './adminOverviewTheme';
 import { formatDdMm, formatDdMmYyyy } from './overviewFormat';
 
 type ChartPoint = { x: number; y: number; v: number };
@@ -168,7 +169,7 @@ export function OverviewClientsDynamicsChart({
 
       <div
         ref={chartRef}
-        className={`relative h-[14.5rem] w-full min-w-0 touch-none select-none overflow-hidden rounded-[20px] bg-gradient-to-b from-[#FFF5F7] to-white ${
+        className={`${overviewChartWell} h-[14.5rem] touch-none select-none ${
           hasData ? 'cursor-crosshair' : ''
         }`}
         onPointerMove={onPointerMove}

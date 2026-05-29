@@ -1,3 +1,4 @@
+import { EMPTY_BOOKING_DATE } from '../../shared/lib/emptyDisplayText';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { getProfilePath, getMasterPath, SERVICES_PATH } from '../../app/paths';
@@ -18,6 +19,7 @@ import { useAuth } from '../../features/auth/AuthProvider';
 import { useAccountAccess } from '../../features/auth/hooks/useAccountAccess';
 import { useTelegram } from '../../shared/hooks/useTelegram';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { isDevDemoAllowed } from '../../shared/lib/appMode';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
 import {
@@ -275,7 +277,7 @@ export function BookingPage() {
           const start = new Date(res.startsAt);
           const timeLabel = start.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
           const dateLabel = Number.isNaN(start.getTime())
-            ? (selectedDay?.fullDateLabel ?? '—')
+            ? (selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE)
             : start.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
           setSuccess({
             masterName: master.masterName,
@@ -290,6 +292,11 @@ export function BookingPage() {
           setSubmitting(false);
         }
       })();
+      return;
+    }
+
+    if (!isDevDemoAllowed()) {
+      setBookError('Запись недоступна: не настроен API или выбран демо-слот. Обновите страницу.');
       return;
     }
 

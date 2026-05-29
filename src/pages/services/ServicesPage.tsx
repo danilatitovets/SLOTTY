@@ -16,6 +16,7 @@ import {
 import { useIsMasterUser } from '../../features/profile/hooks/useIsMasterUser';
 import { getDemoQuickSlots } from '../../features/services/model/demoQuickSlots';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
+import { resolveServiceListingCoverUrl } from '../../features/catalog/catalogServicePhotos';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { ImageReveal } from '../../shared/ui/ImageReveal';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
@@ -540,6 +541,13 @@ function ServiceCard({
     },
   );
   const availability = getAvailability(item, isDemoAvailability);
+  const coverSrc =
+    item.serviceCoverUrl ??
+    resolveServiceListingCoverUrl({
+      category: item.category,
+      categoryCode: item.categoryCode,
+      serviceName: item.serviceName,
+    });
 
   return (
     <article
@@ -560,7 +568,7 @@ function ServiceCard({
         <div className="flex gap-4">
           <div className="h-[7.25rem] w-[7.25rem] shrink-0 overflow-hidden rounded-[26px] bg-[#F1EFEF] shadow-sm">
             <ImageReveal
-              src={item.photoUrl}
+              src={coverSrc}
               alt=""
               width={160}
               height={160}

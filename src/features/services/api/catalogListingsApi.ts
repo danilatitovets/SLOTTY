@@ -1,9 +1,10 @@
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import { apiFetch } from '../../../shared/api/backendClient';
 import { fetchPublicGetCached } from '../../../shared/api/publicGetCache';
 import type { MasterLocation } from '../../profile/model/masterLocation';
 import type { ServiceListingRecord } from '../../services/model/demoMasters';
-import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
-import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
+import { resolveServiceListingCoverUrl } from '../../catalog/catalogServicePhotos';
+import { masterListingPortraitUrl } from '../../masters/lib/masterListingPortrait';
 
 async function readApiError(res: Response): Promise<string> {
   const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -104,7 +105,7 @@ export function catalogItemToListingRecord(item: CatalogListingItemDto): Service
     ? {
         visitType,
         ...(locDto.city?.trim() ? { city: locDto.city.trim() } : {}),
-        street: (locDto.publicAddress || '').trim() || '—',
+        street: (locDto.publicAddress || '').trim() || LOCATION_EMPTY_SENTINEL,
         building: '',
         ...(typeof locDto.lat === 'number' &&
         Number.isFinite(locDto.lat) &&
@@ -113,25 +114,32 @@ export function catalogItemToListingRecord(item: CatalogListingItemDto): Service
           ? { lat: locDto.lat, lng: locDto.lng }
           : {}),
       }
-    : { visitType, street: '—', building: '' };
+    : { visitType, street: LOCATION_EMPTY_SENTINEL, building: '' };
 
   const name = item.displayName.trim() || 'Мастер';
   const price = item.minServicePrice != null && Number.isFinite(item.minServicePrice) ? item.minServicePrice : 0;
   const serviceName = (item.primaryServiceName && item.primaryServiceName.trim()) || 'Услуга';
   const categoryLabel = item.category?.name?.trim() || item.category?.code || 'Мастер';
+  const categoryCode = item.category?.code?.trim() || undefined;
 
   return {
     id: `${item.masterId}-${item.primaryServiceId ?? 'svc'}`,
     masterId: item.masterId,
     masterName: name,
     category: categoryLabel,
+    categoryCode,
     serviceName,
     rating: item.rating,
     reviewsCount: item.reviewsCount,
     isVerified: item.isVerified,
     location: baseLoc,
     priceFrom: price,
-    photoUrl: optimizeAvatarUrl((item.photoUrl && item.photoUrl.trim()) || defaultMasterAvatarUrl(name), 256),
+    photoUrl: masterListingPortraitUrl(item.photoUrl),
+    serviceCoverUrl: resolveServiceListingCoverUrl({
+      category: categoryLabel,
+      categoryCode,
+      serviceName,
+    }),
     primaryServiceId: item.primaryServiceId ?? undefined,
     nextSlotStartsAt: item.nextSlotStartsAt,
     nextSlotId: item.nextSlotId,

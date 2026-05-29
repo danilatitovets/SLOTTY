@@ -67,20 +67,6 @@ async function hammer(
   return { ok429, other, lastCode };
 }
 
-/** Догоняет лимит и останавливается на первом 429 RATE_LIMITED. */
-async function hammerUntil429(
-  maxAttempts: number,
-  fn: () => Promise<{ status: number; json: Record<string, unknown> | null }>,
-): Promise<{ hit: boolean; attempts: number }> {
-  for (let i = 0; i < maxAttempts; i++) {
-    const r = await fn();
-    if (r.status === 429 && errCode(r.json) === 'RATE_LIMITED') {
-      return { hit: true, attempts: i + 1 };
-    }
-  }
-  return { hit: false, attempts: maxAttempts };
-}
-
 async function main() {
   loadE2eEnv();
   const jwtSecret = process.env.JWT_SECRET?.trim();
@@ -141,17 +127,38 @@ async function main() {
       `${hammerLogin.ok429}×429 / ${loginN}`,
     );
 
-    const catalogLimitPerMin = process.env.NODE_ENV === 'production' ? 1000 : 5000;
-    const hammerCatalog = await hammerUntil429(catalogLimitPerMin + 25, () =>
-      fetchJson('GET', '/api/catalog/listings?limit=1'),
-    );
+    let catalogLimitPerMin = process.env.NODE_ENV === 'production' ? 1000 : 5000;
+    const firstCatalog = await fetchJson('GET', '/api/catalog/listings?limit=1');
+    const limitHeader = firstCatalog.headers.get('RateLimit-Limit');
+    if (limitHeader) {
+      const parsed = Number.parseInt(limitHeader, 10);
+      if (Number.isFinite(parsed) && parsed > 0) catalogLimitPerMin = parsed;
+    }
+
+    const catalogBurstTotal = catalogLimitPerMin + 80;
+    const batchSize = 80;
+    let catalogHit = false;
+    let catalogAttempts = 0;
+    for (let start = 0; start < catalogBurstTotal && !catalogHit; start += batchSize) {
+      const size = Math.min(batchSize, catalogBurstTotal - start);
+      const batch = await Promise.all(
+        Array.from({ length: size }, () => fetchJson('GET', '/api/catalog/listings?limit=1')),
+      );
+      catalogAttempts += size;
+      for (const r of batch) {
+        if (r.status === 429 && errCode(r.json) === 'RATE_LIMITED') {
+          catalogHit = true;
+          break;
+        }
+      }
+    }
     log(
-      hammerCatalog.hit,
+      catalogHit,
       'rate-limit',
       'catalog listings → 429 RATE_LIMITED',
-      hammerCatalog.hit
-        ? `429 after ${hammerCatalog.attempts} reqs (limit ${catalogLimitPerMin}/min per IP)`
-        : `no 429 in ${hammerCatalog.attempts} reqs (expected >${catalogLimitPerMin})`,
+      catalogHit
+        ? `429 within ${catalogAttempts} burst reqs (RateLimit-Limit=${catalogLimitPerMin}/min per IP)`
+        : `no 429 in ${catalogAttempts} burst reqs (limit header=${catalogLimitPerMin})`,
     );
 
     // --- 6. Pagination ---
@@ -204,9 +211,13 @@ async function main() {
     log(
       ov.status === 403 && errCode(ov.json) === 'PRO_REQUIRED',
       'pro-gates',
-      'free → overview 403 PRO_REQUIRED',
+      'free → overview/summary 403 PRO_REQUIRED',
       `status=${ov.status}`,
     );
+    const ovClients = await fetchJson('GET', '/api/masters/me/overview/clients', { token: freeTok });
+    log(ovClients.status === 200, 'pro-gates', 'free → overview/clients 200', `status=${ovClients.status}`);
+    const ovRep = await fetchJson('GET', '/api/masters/me/overview/reputation', { token: freeTok });
+    log(ovRep.status === 200, 'pro-gates', 'free → overview/reputation 200', `status=${ovRep.status}`);
     const sp = await fetchJson('GET', '/api/masters/me/smart-promotion-suggestions/', { token: freeTok });
     log(
       sp.status === 403 && errCode(sp.json) === 'PRO_REQUIRED',

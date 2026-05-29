@@ -15,23 +15,32 @@ import {
 import { formatReviewDayMonthRu } from './overviewFormat';
 import { ratingToneFromValue, ratingToneUi } from './overviewRatingTone';
 import {
+  MINI_PICTURE,
+  overviewCard,
   overviewDesktopCard,
   overviewDesktopCardPad,
   overviewIconCircle,
 } from './adminOverviewTheme';
 import { OverviewKpiCarousel, OverviewKpiStatCard } from './OverviewKpiBlocks';
+import type { OverviewPeriodPreset } from './overviewAnalytics';
+import { overviewPeriodLabel } from './overviewAnalytics';
+import {
+  OverviewHeroActionButton,
+  OverviewDividedMetricsGrid,
+  OverviewEmptyMetricCell,
+  OverviewEmptyTabHero,
+  OverviewMetricHeroPlaque,
+} from './OverviewSharedUi';
 
 type ReputationPanelProps = {
   data: import('./overviewReputationDemo').ReputationAnalyticsPayload;
+  periodPreset: OverviewPeriodPreset;
   periodStart?: string;
   periodEnd?: string;
   useApi?: boolean;
   onReplied?: () => void;
   onReply?: (reviewId: string, text: string) => Promise<void>;
 };
-
-const SLOTTY_GRADIENT =
-  'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
 
 function reviewsCountLabel(n: number): string {
   const mod10 = n % 10;
@@ -56,19 +65,44 @@ function unansweredActionLabel(n: number): string {
   return `Ответить на ${n} отзывов`;
 }
 
-function RatingStars({ value, light = false }: { value: number; light?: boolean }) {
+function RatingStars({
+  value,
+  light = false,
+  size = 'md',
+}: {
+  value: number;
+  light?: boolean;
+  size?: 'sm' | 'md';
+}) {
   const rounded = Math.round(value);
   const tone = ratingToneFromValue(value);
   const starClass = light ? 'text-white' : ratingToneUi[tone].stars;
+  const starSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
 
   return (
-    <div className={`flex items-center gap-0.5 ${starClass}`} aria-hidden>
+    <div className={`flex items-center justify-center gap-0.5 ${starClass}`} aria-hidden>
       {[1, 2, 3, 4, 5].map((i) => (
         <HiStar
           key={i}
-          className={`h-5 w-5 ${i <= rounded ? 'opacity-100' : 'opacity-25'}`}
+          className={`${starSize} ${i <= rounded ? 'opacity-100' : 'opacity-25'}`}
         />
       ))}
+    </div>
+  );
+}
+
+function ReputationRatingMetricCell({ average }: { average: number }) {
+  return (
+    <div className="min-w-0 text-center">
+      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] sm:text-[11px]">
+        Рейтинг
+      </p>
+      <p className="mt-2 text-[clamp(1.5rem,4vw,1.875rem)] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827]">
+        {average.toFixed(1)}
+      </p>
+      <div className="mt-2">
+        <RatingStars value={average} size="sm" />
+      </div>
     </div>
   );
 }
@@ -108,6 +142,35 @@ function SoftIcon({
     >
       {children}
     </span>
+  );
+}
+
+function ReputationEmptyMetricsStrip({
+  average,
+  reviewsCount,
+  newReviewsInPeriod,
+  unansweredReviews,
+}: {
+  average: number;
+  reviewsCount: number;
+  newReviewsInPeriod: number;
+  unansweredReviews: number;
+}) {
+  return (
+    <OverviewDividedMetricsGrid>
+      <ReputationRatingMetricCell average={average} />
+      <OverviewEmptyMetricCell label="Отзывов" value={String(reviewsCount)} hint="Всего" />
+      <OverviewEmptyMetricCell
+        label="Новые"
+        value={String(newReviewsInPeriod)}
+        hint="За период"
+      />
+      <OverviewEmptyMetricCell
+        label="Без ответа"
+        value={String(unansweredReviews)}
+        hint={unansweredReviews > 0 ? 'Нужен ответ' : 'Всё ок'}
+      />
+    </OverviewDividedMetricsGrid>
   );
 }
 
@@ -162,96 +225,49 @@ function ReputationMetricsCarousel({
   );
 }
 
-function ReputationHeroCard({
+function ReputationHeroPlaque({
   average,
   reviewsCount,
   unansweredReviews,
   onScrollToUnanswered,
-  embedded = false,
+  periodPreset,
 }: {
   average: number;
   reviewsCount: number;
   unansweredReviews: number;
   onScrollToUnanswered: () => void;
-  embedded?: boolean;
+  periodPreset: OverviewPeriodPreset;
 }) {
+  const period = overviewPeriodLabel(periodPreset);
+
   return (
-    <section
-      className={
-        embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
-      }
-    >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-1/3 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
-
-      <div className="relative min-w-0">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
-          <HiStar className="h-4 w-4" aria-hidden />
-          Репутация мастера
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-end gap-4">
-          <p className="text-[52px] font-black leading-none tabular-nums tracking-[-0.08em] text-white lg:text-[72px]">
+    <OverviewMetricHeroPlaque
+      value={
+        <div className="flex flex-wrap items-end gap-4">
+          <p className="text-[48px] font-black leading-none tabular-nums tracking-[-0.08em] text-[#111827] lg:text-[64px]">
             {average.toFixed(1)}
           </p>
-
-          <div className="pb-2">
-            <RatingStars value={average} light />
-            <p className="mt-2 text-[14px] font-semibold text-white/70">
+          <div className="pb-1">
+            <RatingStars value={average} />
+            <p className="mt-2 text-[13px] font-semibold text-[#6B7280]">
               на основе {reviewsCountLabel(reviewsCount)}
             </p>
           </div>
         </div>
-
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
-          Следите за отзывами, отвечайте клиентам и повышайте доверие к профилю.
-          Репутация напрямую влияет на решение клиента записаться.
-        </p>
-
-        {unansweredReviews > 0 ? (
-          <button
-            type="button"
-            onClick={onScrollToUnanswered}
-            className="mt-6 inline-flex items-center justify-center rounded-[20px] bg-white px-5 py-3 text-[14px] font-black text-[#111827] transition hover:-translate-y-0.5"
-          >
-            {unansweredActionLabel(unansweredReviews)}
-          </button>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function ReputationEmptyHero({ embedded = false }: { embedded?: boolean }) {
-  return (
-    <section
-      className={
-        embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
       }
-    >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
-
-      <div className="relative min-w-0">
-        <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
-          <HiStar className="h-4 w-4" aria-hidden />
-          Репутация мастера
+      caption={
+        <p className="max-w-[660px] text-[15px] font-semibold leading-relaxed text-[#6B7280] lg:text-[16px]">
+          Отзывы и рейтинг за {period.toLowerCase()}. Отвечайте клиентам — это влияет на запись.
         </p>
-
-        <h1 className="mt-8 text-[42px] font-black leading-none tracking-[-0.08em] text-white lg:text-[64px]">
-          Отзывов пока нет
-        </h1>
-
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
-          После первых оценок здесь появятся рейтинг, динамика и отзывы клиентов.
-        </p>
-      </div>
-    </section>
+      }
+      action={
+        unansweredReviews > 0 ? (
+          <OverviewHeroActionButton onClick={onScrollToUnanswered}>
+            {unansweredActionLabel(unansweredReviews)}
+          </OverviewHeroActionButton>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -261,23 +277,25 @@ function ReputationHeroShell({
   reviewsCount,
   unansweredReviews,
   onScrollToUnanswered,
+  periodPreset,
 }: {
   children: React.ReactNode;
   average: number;
   reviewsCount: number;
   unansweredReviews: number;
   onScrollToUnanswered: () => void;
+  periodPreset: OverviewPeriodPreset;
 }) {
   return (
     <div className={`overflow-hidden ${overviewDesktopCard}`}>
-      <ReputationHeroCard
-        embedded
+      <ReputationHeroPlaque
         average={average}
         reviewsCount={reviewsCount}
         unansweredReviews={unansweredReviews}
         onScrollToUnanswered={onScrollToUnanswered}
+        periodPreset={periodPreset}
       />
-      <div className="bg-white px-3 pb-4 pt-1 sm:px-4">{children}</div>
+      <div className="overflow-hidden bg-white px-3 pb-4 pt-1 sm:px-4">{children}</div>
     </div>
   );
 }
@@ -328,7 +346,7 @@ function ReviewReplyBlock({
       <button
         type="button"
         disabled={!canSubmit}
-        className="w-full rounded-[18px] bg-[#ff5f7a] px-5 py-3 text-[14px] font-black text-white shadow-[0_12px_28px_rgba(255,95,122,0.24)] transition hover:bg-[#f04f6c] disabled:cursor-not-allowed disabled:opacity-45"
+        className="w-full rounded-[18px] bg-[#ff5f7a] px-5 py-3 text-[14px] font-black text-white transition hover:bg-[#f04f6c] disabled:cursor-not-allowed disabled:opacity-45"
         onClick={() => {
           void (async () => {
             if (onReply) {
@@ -384,7 +402,7 @@ function ReviewCard({
   return (
     <article className="rounded-[24px] bg-[#F9FAFB] p-4 ring-1 ring-[#EEF0F5]">
       <div className="flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff8aa0] to-[#ff5f7a] text-[15px] font-black text-white shadow-[0_10px_24px_rgba(255,95,122,0.24)]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ff5f7a] text-[15px] font-black text-white">
           {review.authorInitial}
         </span>
 
@@ -501,29 +519,125 @@ function LatestReviewCard({
 
 function ReputationTrustCard() {
   return (
-    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad} h-full`}>
-      <div className="flex items-start gap-3">
-        <SoftIcon tone="green">
-          <HiCheckCircle className="h-6 w-6" aria-hidden />
-        </SoftIcon>
+    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
+      <div className="flex items-start justify-between gap-4 lg:gap-6">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+          <SoftIcon tone="green">
+            <HiCheckCircle className="h-6 w-6" aria-hidden />
+          </SoftIcon>
 
-        <div>
-          <h2 className="text-[20px] font-black tracking-[-0.05em] text-[#111827]">
-            Отвечайте на отзывы
-          </h2>
-          <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
-            Вежливый ответ повышает доверие и помогает новым клиентам записаться.
-          </p>
+          <div className="min-w-0">
+            <h2 className="text-[20px] font-black tracking-[-0.05em] text-[#111827] sm:text-[22px]">
+              Отвечайте на отзывы
+            </h2>
+            <p className="mt-3 max-w-[42rem] text-[14px] leading-7 text-[#6B7280]">
+              Вежливый ответ повышает доверие и помогает новым клиентам записаться.
+            </p>
+          </div>
         </div>
+
+        <img
+          src={MINI_PICTURE.reviewsEmpty}
+          alt=""
+          decoding="async"
+          className="h-[72px] w-auto max-w-[38%] shrink-0 object-contain object-top sm:h-[100px] sm:max-w-none lg:h-[112px]"
+        />
       </div>
 
-      <div className="mt-5 rounded-[20px] bg-[#f6f7fb] p-5">
+      <div className="mt-5 rounded-[12px] bg-[#F6F7FB] p-5 ring-1 ring-[#EEEEEE]/80 lg:mt-6 lg:rounded-[16px] lg:ring-0">
         <p className="text-[14px] font-black text-[#111827]">Что важно смотреть?</p>
         <p className="mt-2 text-[13px] leading-6 text-[#6B7280]">
           Стабильный рейтинг, новые отзывы и быстрые ответы — главные сигналы качества
           для клиентов в каталоге.
         </p>
       </div>
+    </section>
+  );
+}
+
+type ReviewSentimentTab = 'good' | 'poor';
+
+function reviewSentimentTabLabel(tab: ReviewSentimentTab, count: number): string {
+  if (tab === 'good') return count > 0 ? `Хорошие · ${count}` : 'Хорошие';
+  return count > 0 ? `Требуют внимания · ${count}` : 'Требуют внимания';
+}
+
+function isGoodReview(rating: number): boolean {
+  return rating >= 4;
+}
+
+function MasterReviewsBySentimentCard({
+  reviews,
+  onReplied,
+  onReply,
+}: {
+  reviews: MasterOverviewReview[];
+  onReplied: () => void;
+  onReply?: (reviewId: string, text: string) => Promise<void>;
+}) {
+  const good = useMemo(() => reviews.filter((r) => isGoodReview(r.rating)), [reviews]);
+  const poor = useMemo(() => reviews.filter((r) => !isGoodReview(r.rating)), [reviews]);
+  const [tab, setTab] = useState<ReviewSentimentTab>(() =>
+    poor.length > 0 && good.length === 0 ? 'poor' : 'good',
+  );
+  const list = tab === 'good' ? good : poor;
+
+  return (
+    <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-[22px] font-black tracking-[-0.05em] text-[#111827]">Все отзывы</h2>
+          <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
+            4–5★ — хорошие, 1–3★ — требуют внимания и ответа.
+          </p>
+        </div>
+        <SoftIcon>
+          <HiStar className="h-6 w-6" />
+        </SoftIcon>
+      </div>
+
+      <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Тип отзывов">
+        {(['good', 'poor'] as const).map((id) => {
+          const count = id === 'good' ? good.length : poor.length;
+          const active = tab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${
+                active
+                  ? id === 'good'
+                    ? 'bg-[#ECFDF5] text-[#059669] ring-1 ring-[#A7F3D0]'
+                    : 'bg-[#FFF1F4] text-[#F47C8C] ring-1 ring-[#FDE8ED]'
+                  : 'bg-white text-[#6B7280] ring-1 ring-[#E5E7EB] hover:bg-[#FAFAFA]'
+              }`}
+              onClick={() => setTab(id)}
+            >
+              {reviewSentimentTabLabel(id, count)}
+            </button>
+          );
+        })}
+      </div>
+
+      {list.length === 0 ? (
+        <p className="rounded-[16px] bg-[#FAFAFA] px-4 py-8 text-center text-[14px] text-[#6B7280]">
+          {tab === 'good' ? 'Пока нет отзывов 4–5★ за период' : 'Нет отзывов 1–3★ — отлично!'}
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {list.map((review) => (
+            <ReviewCard
+              key={review.id}
+              review={review}
+              onReplied={onReplied}
+              onReply={onReply}
+              showReply
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -569,40 +683,49 @@ function UnansweredReviewsCard({
   );
 }
 
-function EmptyReputationPanel() {
+function EmptyReputationPanel({ periodPreset }: { periodPreset: OverviewPeriodPreset }) {
+  const period = overviewPeriodLabel(periodPreset);
+
   return (
-    <div className="min-w-0 space-y-5 overflow-x-hidden lg:space-y-6">
-      <div className={`overflow-hidden ${overviewDesktopCard}`}>
-        <ReputationEmptyHero embedded />
-        <div className="bg-white px-3 pb-4 pt-1 sm:px-4">
-          <ReputationMetricsCarousel
+    <div className="min-w-0 space-y-6 overflow-x-hidden lg:space-y-8">
+      <OverviewEmptyTabHero
+        metrics={
+          <ReputationEmptyMetricsStrip
             average={0}
-            ratingUi={ratingToneUi.empty}
             reviewsCount={0}
-            totalReviewsDelta={0}
             newReviewsInPeriod={0}
-            newReviewsDelta={0}
             unansweredReviews={0}
           />
-        </div>
-      </div>
+        }
+        title="Отзывов пока нет"
+        caption={`После первых оценок здесь появятся рейтинг, динамика и отзывы за ${period.toLowerCase()}.`}
+      />
 
-      <section className={`${overviewDesktopCard} ${overviewDesktopCardPad}`}>
-        <div className="flex items-start gap-3">
-          <span className={`${overviewIconCircle} h-11 w-11 shrink-0 rounded-[18px]`}>
-            <HiStar className="h-5 w-5" aria-hidden />
-          </span>
+      <section className={`${overviewCard} p-5 sm:p-8`}>
+        <div className="flex items-start justify-between gap-4 lg:gap-6">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+            <span className={`${overviewIconCircle} h-10 w-10 shrink-0 rounded-[16px] sm:h-11 sm:w-11 sm:rounded-[18px]`}>
+              <HiStar className="h-5 w-5" aria-hidden />
+            </span>
 
-          <div>
-            <h2 className="text-[22px] font-black tracking-[-0.05em] text-[#111827]">
-              Как повысить доверие
-            </h2>
+            <div className="min-w-0">
+              <h2 className="pt-0.5 text-[18px] font-black leading-snug tracking-[-0.05em] text-[#111827] sm:text-[22px] sm:leading-tight">
+                Как повысить доверие
+              </h2>
 
-            <p className="mt-2 max-w-[720px] text-[14px] leading-7 text-[#6B7280]">
-              Заполните профиль, добавьте портфолио, услуги, график и правила записи.
-              Когда клиенты начнут оставлять отзывы, отвечайте им в спокойном и дружелюбном стиле.
-            </p>
+              <p className="mt-3 max-w-[42rem] text-[14px] leading-[1.65] text-[#6B7280] sm:mt-4 sm:leading-7">
+                Заполните профиль, добавьте портфолио, услуги, график и правила записи.
+                Когда клиенты начнут оставлять отзывы, отвечайте им в спокойном и дружелюбном стиле.
+              </p>
+            </div>
           </div>
+
+          <img
+            src={MINI_PICTURE.trust}
+            alt=""
+            decoding="async"
+            className="h-[72px] w-auto max-w-[38%] shrink-0 object-contain object-top sm:h-[100px] sm:max-w-none lg:h-[112px]"
+          />
         </div>
       </section>
     </div>
@@ -611,6 +734,7 @@ function EmptyReputationPanel() {
 
 export function OverviewReputationPanel({
   data: dataProp,
+  periodPreset,
   periodStart,
   periodEnd,
   useApi = false,
@@ -643,7 +767,7 @@ export function OverviewReputationPanel({
   }, [data.latestReview?.id, data.unansweredList]);
 
   if (!data.hasReviews) {
-    return <EmptyReputationPanel />;
+    return <EmptyReputationPanel periodPreset={periodPreset} />;
   }
 
   const average = data.averageRating ?? 0;
@@ -657,12 +781,13 @@ export function OverviewReputationPanel({
     });
 
   return (
-    <div className="min-w-0 space-y-5 overflow-x-hidden lg:space-y-6">
+    <div className="min-w-0 space-y-6 overflow-x-hidden lg:space-y-8">
       <ReputationHeroShell
         average={average}
         reviewsCount={data.reviewsCount}
         unansweredReviews={data.unansweredReviews}
         onScrollToUnanswered={scrollToUnanswered}
+        periodPreset={periodPreset}
       >
         <ReputationMetricsCarousel
           average={average}
@@ -676,6 +801,12 @@ export function OverviewReputationPanel({
       </ReputationHeroShell>
 
       <RatingChartCard data={data} ratingTone={ratingTone} />
+
+      <MasterReviewsBySentimentCard
+        reviews={data.reviews}
+        onReplied={refresh}
+        onReply={onReply}
+      />
 
       <section className="grid gap-5 lg:grid-cols-2 lg:items-stretch">
         {data.latestReview ? (

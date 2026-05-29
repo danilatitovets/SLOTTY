@@ -10,7 +10,7 @@ export type AdminToastState = {
 const DEFAULT_DURATION_MS = 3000;
 
 export function useAdminToast(durationMs = DEFAULT_DURATION_MS) {
-  const timerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const timerRef = useRef<number | null>(null);
   const [toast, setToast] = useState<AdminToastState | null>(null);
 
   const clearToast = useCallback(() => {

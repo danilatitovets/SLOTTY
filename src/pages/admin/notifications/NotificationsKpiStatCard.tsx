@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { overviewDesktopKpiCarouselCard } from '../overview/adminOverviewTheme';
+import { overviewDesktopKpiTile } from '../overview/adminOverviewTheme';
 import { notifKpiIcon } from './adminNotificationsTheme';
 
 type Props = {
@@ -12,25 +12,23 @@ type Props = {
 
 export function NotificationsKpiStatCard({ label, value, hint, icon, accentValue }: Props) {
   return (
-    <article
-      className={`${overviewDesktopKpiCarouselCard} flex min-h-[7.5rem] flex-col justify-between`}
-    >
+    <article className={`${overviewDesktopKpiTile} flex min-h-[6.5rem] flex-col justify-between`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+        <p className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9CA3AF]">
           {label}
         </p>
-        <span className={`${notifKpiIcon} h-10 w-10`}>{icon}</span>
+        <span className={`${notifKpiIcon} h-9 w-9 rounded-[12px]`}>{icon}</span>
       </div>
       <div className="min-w-0">
         <p
-          className={`truncate text-[clamp(1.35rem,2.2vw,1.65rem)] font-black tabular-nums leading-none tracking-[-0.06em] ${
+          className={`truncate text-[1.5rem] font-bold tabular-nums leading-none tracking-[-0.04em] sm:text-[1.65rem] ${
             accentValue ? 'text-[#F47C8C]' : 'text-[#111827]'
           }`}
         >
           {value}
         </p>
         {hint ? (
-          <p className="mt-1.5 line-clamp-2 text-[12px] font-medium text-[#6B7280]">{hint}</p>
+          <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#6B7280]">{hint}</p>
         ) : null}
       </div>
     </article>

@@ -150,7 +150,11 @@ export function MasterProfileContactsBlock({
             const showErr = showRowError(row.id) && err;
             if (isCatalog) {
               return (
-                <li key={row.id}>
+                <li
+                  key={row.id}
+                  data-onboarding-field={row.id}
+                  className="scroll-mt-28 rounded-[4px] transition-shadow duration-300 data-[onboarding-highlight]:shadow-[0_0_0_3px_rgba(226,149,149,0.45)] lg:scroll-mt-32"
+                >
                   <div className={catalogContactRowClass}>
                     <span className="flex shrink-0 items-center justify-center" aria-hidden>
                       <ContactChannelBrandIcon type={row.type} className="h-5 w-5" />

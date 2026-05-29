@@ -18,7 +18,7 @@ type Props = {
   profile: BackendProfile | null;
   isAuthenticated: boolean;
   refreshProfile: () => Promise<void>;
-  telegramUserPhotoUrl: string | null;
+  telegramUserPhotoUrl: string | null;  
 };
 
 export function ProfileEditModal({

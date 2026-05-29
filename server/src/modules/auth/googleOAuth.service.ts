@@ -86,22 +86,29 @@ export function signGoogleOAuthState(state: GoogleOAuthState): string {
   return jwt.sign(state, env.JWT_SECRET, { expiresIn: '15m' });
 }
 
-export function signGoogleLinkHandoff(profileId: string): string {
-  return jwt.sign({ purpose: 'google_link_handoff', profileId: profileId.trim() }, env.JWT_SECRET, {
-    expiresIn: '15m',
-  });
+export function signGoogleLinkHandoff(profileId: string, jti: string): string {
+  return jwt.sign(
+    { purpose: 'google_link_handoff', profileId: profileId.trim(), jti: jti.trim() },
+    env.JWT_SECRET,
+    { expiresIn: '15m' },
+  );
 }
 
-export function verifyGoogleLinkHandoff(token: string): string {
+export function verifyGoogleLinkHandoff(token: string): { profileId: string; jti: string } {
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as {
       purpose?: string;
       profileId?: string;
+      jti?: string;
     };
-    if (payload.purpose !== 'google_link_handoff' || !payload.profileId?.trim()) {
+    if (
+      payload.purpose !== 'google_link_handoff' ||
+      !payload.profileId?.trim() ||
+      !payload.jti?.trim()
+    ) {
       throw new Error('invalid handoff');
     }
-    return payload.profileId.trim();
+    return { profileId: payload.profileId.trim(), jti: payload.jti.trim() };
   } catch {
     throw ApiError.badRequest('Ссылка для привязки Google устарела. Откройте снова из Telegram.', 'GOOGLE_LINK_HANDOFF_INVALID');
   }

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { HiArrowLeft, HiHeart, HiShare } from 'react-icons/hi2';
+import { HiArrowLeft, HiFlag, HiHeart, HiShare } from 'react-icons/hi2';
 import { MASTERS_PATH } from '../../../app/paths';
 
 type Props = {
@@ -8,6 +8,7 @@ type Props = {
   isFavorite: boolean;
   onFavoriteToggle: () => void;
   onShare: () => void;
+  onReport?: () => void;
   favoriteDisabled?: boolean;
   actionSize?: 'sm' | 'md';
 };
@@ -18,6 +19,7 @@ export function MasterProfileToolbarInner({
   isFavorite,
   onFavoriteToggle,
   onShare,
+  onReport,
   favoriteDisabled = false,
   actionSize = 'sm',
 }: Props) {
@@ -46,6 +48,11 @@ export function MasterProfileToolbarInner({
       )}
 
       <div className="flex shrink-0 items-center gap-2">
+        {onReport ? (
+          <button type="button" onClick={onReport} aria-label="Пожаловаться на профиль" className={btnClass}>
+            <HiFlag className={iconClass} />
+          </button>
+        ) : null}
         <button type="button" onClick={onShare} aria-label="Поделиться" className={btnClass}>
           <HiShare className={iconClass} />
         </button>

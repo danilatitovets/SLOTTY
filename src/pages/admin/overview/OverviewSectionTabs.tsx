@@ -12,7 +12,7 @@ const TABS: Array<{
   label: string;
   Icon: ComponentType<{ className?: string }>;
 }> = [
-  { id: 'summary', label: 'Обзор', Icon: HiChartBarSquare },
+  { id: 'summary', label: 'Сводка', Icon: HiChartBarSquare },
   { id: 'revenue', label: 'Доход', Icon: HiWallet },
   { id: 'clients', label: 'Клиенты', Icon: HiUsers },
   { id: 'reputation', label: 'Репутация', Icon: HiStar },

@@ -2,6 +2,15 @@ import type { CatalogListingsParams } from '../../../features/services/api/catal
 import type { ServiceCatalogChip } from '../lib/filterServices';
 
 export type CatalogSortBy = NonNullable<CatalogListingsParams['sortBy']>;
+
+const CATALOG_SORT_VALUES = new Set<CatalogSortBy>([
+  'recommended',
+  'soonest',
+  'rating',
+  'price_asc',
+  'price_desc',
+  'reviews',
+]);
 export type CatalogDateRange = NonNullable<CatalogListingsParams['dateRange']>;
 export type CatalogTimeOfDay = NonNullable<CatalogListingsParams['timeOfDay']>;
 export type CatalogVisitType = NonNullable<CatalogListingsParams['visitType']>;
@@ -187,3 +196,26 @@ export const SORT_OPTIONS: Array<{ value: CatalogSortBy; label: string }> = [
   { value: 'price_desc', label: 'Сначала дороже' },
   { value: 'reviews', label: 'Больше отзывов' },
 ];
+
+export function parseCatalogFiltersFromSearch(
+  searchParams: URLSearchParams,
+): CatalogFiltersState {
+  const chips = new Set<ServiceCatalogChip>();
+  const tab = searchParams.get('tab');
+  if (tab === 'popular') chips.add('popular');
+  if (tab === 'promo') chips.add('promo');
+  if (tab === 'new') chips.add('new');
+
+  const sortRaw = searchParams.get('sort');
+  const sortBy =
+    sortRaw && CATALOG_SORT_VALUES.has(sortRaw as CatalogSortBy)
+      ? (sortRaw as CatalogSortBy)
+      : 'recommended';
+
+  return {
+    ...DEFAULT_CATALOG_FILTERS,
+    chips,
+    sortBy,
+    promotionOnly: chips.has('promo'),
+  };
+}

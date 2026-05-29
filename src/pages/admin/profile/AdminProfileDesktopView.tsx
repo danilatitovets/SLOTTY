@@ -7,18 +7,17 @@ import { HiArrowRight, HiBriefcase, HiEnvelope } from 'react-icons/hi2';
 import { BY } from 'country-flag-icons/react/1x1';
 import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
-import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
 import type { MasterDraft, MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
-import { ProfileAvatarImage } from './adminProfileMedia';
-import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { MasterCabinetAvatar, MasterCabinetCoverBanner } from './adminProfilePortrait';
 import { formatDurationRu, formatServicePrice, type ManagedService } from '../services/servicesFormat';
 import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
 import { useAuth } from '../../../features/auth/AuthProvider';
+import { valueOrEmptyField, EMPTY_FIELD } from '../../../shared/lib/emptyDisplayText';
 import { MasterVerificationStatusBadge } from '../../../shared/ui/MasterVerificationStatusBadge';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { CabinetIcon } from './cabinetIcons';
-import { type ProfileStatsRatingMeta } from './AdminProfileCabinetUi';
+import { ScheduleWorkCard, type ProfileStatsRatingMeta } from './AdminProfileCabinetUi';
 import { MasterCategorySection } from './MasterCategorySection';
 import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
 import { ProfileInformationPanel, ProfileSectionHeading } from './ProfileInformationPanel';
@@ -38,10 +37,6 @@ function profileCityDisplay(loc: MasterLocation | undefined): string {
   return c || 'Минск';
 }
 
-function valueOrDash(value?: string | null): string {
-  const trimmed = value?.trim() ?? '';
-  return trimmed || '—';
-}
 
 function ProfileDashboardHeroWrapper({
   draft,
@@ -67,7 +62,7 @@ function ProfileDashboardHeroWrapper({
         <HeroInfoBlock draft={draft} onEditMain={onEditMain} />
       </section>
       <div
-        className={`${profileDashboardCard} ${profileDesktopTabsSticky} rounded-t-none`}
+        className={`${profileDashboardCard} ${profileDesktopTabsSticky}`}
       >
         <ProfileSectionTabs
           active={tabs.activeSection}
@@ -94,10 +89,7 @@ function HeroCoverBlock({
   onPickCover: () => void;
   onCoverFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const photoSrc = draft.photoUrl?.trim() || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const dedicatedCover = resolveCoverUrl(draft);
-  const coverSrc = dedicatedCover || photoSrc;
-  const useBlur = !dedicatedCover;
 
   return (
     <div className="relative">
@@ -110,20 +102,11 @@ function HeroCoverBlock({
         tabIndex={-1}
         onChange={onCoverFileChange}
       />
-      <div className="group relative h-[300px] w-full overflow-hidden bg-[#f0f1f5] sm:h-[320px]">
-        <ImageReveal
-          src={coverSrc}
-          alt=""
-          className={`absolute inset-0 h-full w-full max-h-full max-w-full object-cover object-center ${useBlur ? 'scale-110 blur-md' : ''}`}
-          style={{ objectFit: 'cover', objectPosition: 'center' }}
-          onError={(event) => {
-            (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent"
-          aria-hidden
-        />
+      <MasterCabinetCoverBanner
+        name={draft.name}
+        dedicatedCoverUrl={dedicatedCover}
+        photoUrl={draft.photoUrl}
+      >
         <button
           type="button"
           onClick={(e) => {
@@ -136,7 +119,7 @@ function HeroCoverBlock({
         >
           <HiCamera className="h-5 w-5" aria-hidden />
         </button>
-      </div>
+      </MasterCabinetCoverBanner>
       {coverError ? (
         <p className="px-6 pb-2 pt-2 text-[13px] font-medium text-[#DC2626]">{coverError}</p>
       ) : null}
@@ -154,24 +137,21 @@ function HeroInfoBlock({
   const { profile: authProfile } = useAuth();
   const { verified, pendingSteps } = useAccountVerificationStatus();
 
-  const photoSrc = draft.photoUrl?.trim() || defaultMasterAvatarUrl(draft.name || 'Мастер');
   const displayName = draft.name.trim() || 'Мастер';
-  const city = valueOrDash(profileCityDisplay(draft.location));
-  const phone = valueOrDash(draft.phone);
-  const email = valueOrDash(authProfile?.account_email);
+  const city = valueOrEmptyField(profileCityDisplay(draft.location));
+  const phone = valueOrEmptyField(draft.phone);
+  const email = valueOrEmptyField(authProfile?.account_email);
 
   return (
     <div className="relative bg-white px-6 pb-2 pt-0 md:px-8">
       <div className="-mt-[4.5rem] flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-5">
-          <ProfileAvatarImage
-            src={photoSrc}
-            alt=""
+          <MasterCabinetAvatar
+            name={displayName}
+            photoUrl={draft.photoUrl}
             sizeClass="h-[120px] w-[120px]"
             ringClassName="bg-white ring-4 ring-white"
-            onError={(event) => {
-              (event.target as HTMLImageElement).src = defaultMasterAvatarUrl(draft.name || 'Мастер');
-            }}
+            initialsClassName="text-[40px]"
           />
           <div className="min-w-0 pt-14 sm:pt-16">
             <div className="flex flex-wrap items-center gap-2">
@@ -187,7 +167,7 @@ function HeroInfoBlock({
             <p className="mt-1 text-[14px] font-medium text-[#6B7280]">Кабинет мастера</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[13px] text-[#6B7280]">
               <span className="inline-flex items-center gap-1.5">
-                {phone !== '—' ? (
+                {phone !== EMPTY_FIELD ? (
                   <>
                     <BY title="Беларусь" className="h-3.5 w-3.5 shrink-0 rounded-full object-cover" />
                     {phone}
@@ -249,10 +229,12 @@ export function AdminProfileDesktopMainGrid({
   draft,
   appointments,
   ratingMeta,
+  onEditSchedule,
 }: {
   draft: MasterDraft;
   appointments: DemoMasterAppointment[];
   ratingMeta?: ProfileStatsRatingMeta;
+  onEditSchedule: () => void;
 }) {
   const { publicationStatus, useCabinetApi } = useAdminMasterCabinet();
   const allServices = draft.services ?? [];
@@ -290,6 +272,8 @@ export function AdminProfileDesktopMainGrid({
           publicationStatus={publicationStatus}
         />
       </div>
+
+      <ScheduleWorkCard draft={draft} onEditSchedule={onEditSchedule} />
 
       <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
         <div className="flex items-center justify-between gap-3">
@@ -334,6 +318,7 @@ type DesktopShellProps = {
   appointments: DemoMasterAppointment[];
   ratingMeta?: ProfileStatsRatingMeta;
   onEditMain: () => void;
+  onEditSchedule: () => void;
   section: ReactNode;
   completionHandlers: ProfileCompletionHandlers;
 };
@@ -343,6 +328,7 @@ export function AdminProfileDesktopShell({
   appointments,
   ratingMeta,
   onEditMain,
+  onEditSchedule,
   section,
   completionHandlers,
 }: DesktopShellProps) {
@@ -364,6 +350,7 @@ export function AdminProfileDesktopShell({
             draft={draft}
             appointments={appointments}
             ratingMeta={ratingMeta}
+            onEditSchedule={onEditSchedule}
           />
           <ProfileCompletionBlock
             draft={draft}

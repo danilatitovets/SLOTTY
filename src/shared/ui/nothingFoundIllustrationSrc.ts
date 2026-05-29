@@ -1,2 +1,4 @@
-/** `public/photos/ничего не нашли.webp` — единая иллюстрация для пустых результатов и «не найдено». */
-export const NOTHING_FOUND_ILLUSTRATION_SRC = `/photos/${encodeURIComponent('ничего не нашли.webp')}`;
+import { MINI_PICTURE } from './miniPictureSrc';
+
+/** Пустые результаты поиска / каталога. */
+export const NOTHING_FOUND_ILLUSTRATION_SRC = MINI_PICTURE.searchEmpty;

@@ -8,6 +8,16 @@ import {
   listCategoryChangeRequestsForAdmin,
   rejectCategoryChangeRequest,
 } from '../masters/categoryChangeRequest.service.js';
+import {
+  listSponsorRequestsForAdmin,
+  updateSponsorRequestStatus,
+  type SponsorRequestStatus,
+} from '../sponsors/sponsorRequest.service.js';
+import {
+  listMasterProfileReportsForAdmin,
+  updateMasterProfileReportStatus,
+  type MasterProfileReportStatus,
+} from '../masters/masterProfileReport.service.js';
 import { getPlatformAdminOverview } from './platformAdmin.overview.service.js';
 import { listPlatformAuditLogs } from './platformAdmin.audit.service.js';
 import {
@@ -23,6 +33,7 @@ import {
   pausePlatformMaster,
   unhidePlatformMaster,
   unpausePlatformMaster,
+  grantComplimentaryProToMaster,
 } from './platformAdmin.masters.service.js';
 import {
   hidePlatformService,
@@ -38,6 +49,15 @@ import {
   unrestrictPlatformUser,
 } from './platformAdmin.users.service.js';
 import { platformAdminMutationLimiter } from '../../middlewares/rateLimit.js';
+import {
+  createPromoCodeForAdmin,
+  listPromoCodesForAdmin,
+  setPromoCodeActiveForAdmin,
+} from './platformAdmin.promo.service.js';
+import {
+  getPlatformPurchasesSummary,
+  listPlatformPurchases,
+} from './platformAdmin.purchases.service.js';
 
 export const platformAdminRouter = Router();
 
@@ -56,6 +76,16 @@ const restrictBody = z.object({
   until: z.string().datetime().optional().nullable(),
 });
 const rejectBody = z.object({ adminComment: z.string().min(1).max(2000) });
+
+const createPromoBody = z.object({
+  code: z.string().min(3).max(64),
+  title: z.string().max(200).optional().nullable(),
+  discountPercent: z.coerce.number().int().min(1).max(100),
+  billingPeriod: z.enum(['month', 'year']).optional().nullable(),
+  maxRedemptions: z.coerce.number().int().min(1).optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
+  validUntil: z.string().datetime().optional().nullable(),
+});
 
 platformAdminRouter.get(
   '/overview',
@@ -89,6 +119,68 @@ platformAdminRouter.post(
     const id = z.string().uuid().parse(req.params.id);
     const body = rejectBody.parse(req.body);
     await rejectCategoryChangeRequest(id, req.user!.id, body.adminComment);
+    res.json({ ok: true });
+  }),
+);
+
+const sponsorStatusBody = z.object({
+  status: z.enum(['in_review', 'closed', 'rejected']),
+  adminComment: z.string().max(2000).optional().nullable(),
+});
+
+platformAdminRouter.get(
+  '/sponsor-requests',
+  asyncHandler(async (req, res) => {
+    const status = z
+      .enum(['all', 'pending', 'in_review', 'closed', 'rejected'])
+      .optional()
+      .parse(req.query.status);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listSponsorRequestsForAdmin(status ?? 'pending', { limit, offset }));
+  }),
+);
+
+platformAdminRouter.patch(
+  '/sponsor-requests/:id/status',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = sponsorStatusBody.parse(req.body);
+    await updateSponsorRequestStatus(id, req.user!.id, {
+      status: body.status as SponsorRequestStatus,
+      adminComment: body.adminComment,
+    });
+    res.json({ ok: true });
+  }),
+);
+
+const profileReportStatusBody = z.object({
+  status: z.enum(['in_review', 'closed', 'rejected']),
+  adminComment: z.string().max(2000).optional().nullable(),
+});
+
+platformAdminRouter.get(
+  '/profile-reports',
+  asyncHandler(async (req, res) => {
+    const status = z
+      .enum(['all', 'pending', 'in_review', 'closed', 'rejected'])
+      .optional()
+      .parse(req.query.status);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listMasterProfileReportsForAdmin(status ?? 'pending', { limit, offset }));
+  }),
+);
+
+platformAdminRouter.patch(
+  '/profile-reports/:id/status',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = profileReportStatusBody.parse(req.body);
+    await updateMasterProfileReportStatus(id, req.user!.id, {
+      status: body.status as MasterProfileReportStatus,
+      adminComment: body.adminComment,
+    });
     res.json({ ok: true });
   }),
 );
@@ -216,6 +308,20 @@ platformAdminRouter.post(
   }),
 );
 
+const grantProBody = z.object({
+  days: z.coerce.number().int().min(1).max(365),
+  reason: z.string().min(3).max(2000),
+});
+
+platformAdminRouter.post(
+  '/masters/:id/grant-pro',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = grantProBody.parse(req.body);
+    res.json(await grantComplimentaryProToMaster(id, req.user!.id, body));
+  }),
+);
+
 platformAdminRouter.get(
   '/services',
   asyncHandler(async (req, res) => {
@@ -279,6 +385,47 @@ platformAdminRouter.get(
   asyncHandler(async (req, res) => {
     const id = z.string().uuid().parse(req.params.id);
     res.json({ booking: await getPlatformBooking(id) });
+  }),
+);
+
+platformAdminRouter.get(
+  '/promo-codes',
+  asyncHandler(async (_req, res) => {
+    res.json({ promoCodes: await listPromoCodesForAdmin() });
+  }),
+);
+
+platformAdminRouter.post(
+  '/promo-codes',
+  asyncHandler(async (req, res) => {
+    const body = createPromoBody.parse(req.body);
+    res.status(201).json({ promoCode: await createPromoCodeForAdmin(req.user!.id, body) });
+  }),
+);
+
+platformAdminRouter.patch(
+  '/promo-codes/:id/active',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const isActive = z.object({ isActive: z.boolean() }).parse(req.body).isActive;
+    await setPromoCodeActiveForAdmin(req.user!.id, id, isActive);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.get(
+  '/purchases/summary',
+  asyncHandler(async (_req, res) => {
+    res.json(await getPlatformPurchasesSummary());
+  }),
+);
+
+platformAdminRouter.get(
+  '/purchases',
+  asyncHandler(async (req, res) => {
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listPlatformPurchases({ limit, offset }));
   }),
 );
 

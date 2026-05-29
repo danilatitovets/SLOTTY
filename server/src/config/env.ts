@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { assertProductionEnvironment } from './productionGuards.js';
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 const serverRoot = path.resolve(configDir, '../..');
@@ -123,6 +124,25 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(3).optional(),
   ),
+  /** Sentry DSN (backend). Без DSN — только warning при старте. */
+  SENTRY_DSN: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().url().optional(),
+  ),
+  SENTRY_ENVIRONMENT: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  /** Google link handoff: memory (single instance) or redis (production multi-instance). */
+  GOOGLE_LINK_HANDOFF_STORE: z
+    .enum(['memory', 'redis'])
+    .default('memory'),
+  REDIS_URL: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  /** >1 запрещает in-memory handoff в production (см. productionGuards). */
+  API_REPLICA_COUNT: z.coerce.number().int().min(1).max(64).default(1),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -137,3 +157,4 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+assertProductionEnvironment(env);

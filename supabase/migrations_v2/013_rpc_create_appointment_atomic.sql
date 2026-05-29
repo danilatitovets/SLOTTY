@@ -65,6 +65,21 @@ begin
     raise exception 'service_does_not_fit_slot';
   end if;
 
+  if exists (
+    select
+      1
+    from
+      public.appointments a
+    where
+      a.slot_id = p_slot_id
+      and a.status in (
+        'pending'::public.appointment_status,
+        'confirmed'::public.appointment_status
+      )
+  ) then
+    raise exception 'slot_already_booked';
+  end if;
+
   v_master := v_slot.master_id;
   v_starts := v_slot.starts_at;
   v_ends := v_slot.starts_at + (v_service.duration_minutes * interval '1 minute');

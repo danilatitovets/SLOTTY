@@ -470,6 +470,7 @@ function AdminProfileReadView({
         appointments={appointments}
         ratingMeta={ratingMeta}
         onEditMain={onEditMain}
+        onEditSchedule={onEditSchedule}
         section={activeSection === 'main' ? null : section}
         completionHandlers={{
           onEditMain,
@@ -507,8 +508,8 @@ export function AdminProfileSection() {
     draft,
     persistDraft,
     commitDraftBaseline,
-    flushDraftToBackend,
     flushScheduleToBackend,
+    flushLocationToBackend,
     patchProfileToBackend,
     refreshDraft,
   } = useAdminMasterDraft();
@@ -607,7 +608,10 @@ export function AdminProfileSection() {
         const next: MasterDraft = { ...draft, portfolioCoverId: id };
         try {
           if (useCabinetApi) {
+            const { patchMasterMe } = await import('../../../features/admin/api/masterCabinetApi');
+            await patchMasterMe({ portfolioCoverItemId: id });
             commitDraftBaseline(next);
+            persistDraft(next);
           } else {
             persistDraft(next);
           }
@@ -631,7 +635,7 @@ export function AdminProfileSection() {
           return;
         }
         try {
-          await flushDraftToBackend({ ...draft, location });
+          await flushLocationToBackend({ ...draft, location });
           closeSheet();
           showSaved();
         } catch (e) {
@@ -639,7 +643,7 @@ export function AdminProfileSection() {
         }
       });
     },
-    [closeSheet, draft, flushDraftToBackend, persistDraft, runSheetPersist, showSaved, useCabinetApi],
+    [closeSheet, draft, flushLocationToBackend, persistDraft, runSheetPersist, showSaved, useCabinetApi],
   );
 
   const saveSchedule = useCallback(

@@ -6,12 +6,13 @@ import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { PlatformAdminLayout } from './PlatformAdminLayout';
 import { PlatformAdminForbidden } from './PlatformAdminForbidden';
 import { PlatformAdminOverviewTab } from './tabs/PlatformAdminOverviewTab';
-import { PlatformAdminRequestsTab } from './tabs/PlatformAdminRequestsTab';
+import { PlatformAdminRequestsHub } from './tabs/PlatformAdminRequestsHub';
 import { PlatformAdminUsersTab } from './tabs/PlatformAdminUsersTab';
 import { PlatformAdminMastersTab } from './tabs/PlatformAdminMastersTab';
 import { PlatformAdminServicesTab } from './tabs/PlatformAdminServicesTab';
 import { PlatformAdminBookingsTab } from './tabs/PlatformAdminBookingsTab';
 import { PlatformAdminAuditTab } from './tabs/PlatformAdminAuditTab';
+import { PlatformAdminBillingHub } from './tabs/PlatformAdminBillingHub';
 
 export function PlatformAdminPage() {
   const { profile, isLoading, isAuthenticated } = useAuth();
@@ -41,11 +42,12 @@ export function PlatformAdminPage() {
     <Routes>
       <Route element={<PlatformAdminLayout />}>
         <Route index element={<PlatformAdminOverviewTab />} />
-        <Route path="requests" element={<PlatformAdminRequestsTab />} />
+        <Route path="requests" element={<PlatformAdminRequestsHub />} />
         <Route path="users" element={<PlatformAdminUsersTab />} />
         <Route path="masters" element={<PlatformAdminMastersTab />} />
         <Route path="services" element={<PlatformAdminServicesTab />} />
         <Route path="bookings" element={<PlatformAdminBookingsTab />} />
+        <Route path="billing" element={<PlatformAdminBillingHub />} />
         <Route path="audit" element={<PlatformAdminAuditTab />} />
         <Route path="*" element={<Navigate to={PLATFORM_ADMIN_PATH} replace />} />
       </Route>

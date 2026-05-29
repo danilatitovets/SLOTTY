@@ -9,9 +9,13 @@ import {
 } from './adminScheduleTheme';
 import type { WindowTemplate } from './scheduleTypes';
 import { templateDisplayLabel } from './scheduleUtils';
+import { scheduleCabinetSecondaryBtn } from './scheduleUi';
 import { WindowTemplateCard } from './WindowTemplateCard';
 
 const SEARCH_THRESHOLD = 5;
+
+const schedulePrimaryBtn =
+  'inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#ff5f7a] px-4 py-2.5 text-[14px] font-bold text-white transition hover:opacity-95 active:scale-[0.98]';
 
 type Props = {
   templates: WindowTemplate[];
@@ -19,6 +23,7 @@ type Props = {
   onSelect: (id: string) => void;
   onOpenMenu: (template: WindowTemplate) => void;
   onCreate: () => void;
+  onOpenWithoutTemplate: () => void;
   fullWidth?: boolean;
 };
 
@@ -28,6 +33,7 @@ export function WindowTemplateList({
   onSelect,
   onOpenMenu,
   onCreate,
+  onOpenWithoutTemplate,
   fullWidth = false,
 }: Props) {
   const [query, setQuery] = useState('');
@@ -53,26 +59,27 @@ export function WindowTemplateList({
 
   return (
     <section className="w-full min-w-0 space-y-4 lg:space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3 lg:gap-4">
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:gap-4">
+        <div className="min-w-0">
           <h3 className="text-[17px] font-bold tracking-[-0.03em] text-[#111827] lg:text-[22px] lg:tracking-[-0.05em]">
             Шаблоны окон
           </h3>
-          <p className="mt-1 text-[13px] font-medium leading-relaxed text-[#6B7280] lg:hidden">
-            Тап по шаблону — сразу форма окна
-          </p>
+          image.png
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {templates.length > 0 ? (
-            <span className="rounded-full bg-[#EBEBEB] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280] lg:bg-[#F6F7FB] lg:ring-1 lg:ring-[#EEEEEE]">
+            <span className="rounded-full bg-[#EBEBEB] px-3 py-1.5 text-[12px] font-semibold text-[#6B7280]">
               {countLabel}
             </span>
           ) : null}
           <button
             type="button"
-            onClick={onCreate}
-            className="hidden items-center gap-2 rounded-[10px] bg-[#F47C8C] px-4 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-95 active:scale-[0.98] lg:inline-flex"
+            onClick={onOpenWithoutTemplate}
+            className={`${scheduleCabinetSecondaryBtn} !w-auto max-w-full shrink px-3 py-2.5 text-left text-[13px] leading-snug sm:max-w-none sm:px-4 sm:text-[14px]`}
           >
+            Без шаблона — указать время вручную
+          </button>
+          <button type="button" onClick={onCreate} className={schedulePrimaryBtn}>
             <HiPlus className="h-5 w-5" aria-hidden />
             Новый шаблон
           </button>
@@ -80,18 +87,14 @@ export function WindowTemplateList({
       </div>
 
       {templates.length === 0 ? (
-        <div className="w-full rounded-[16px] bg-white px-4 py-8 text-center ring-1 ring-[#EEEEEE] lg:rounded-[22px] lg:py-12 lg:ring-[#EAECEF]">
-          <p className="text-[14px] font-medium text-[#6B7280]">
-            Шаблонов пока нет — создайте первый для частой услуги
+        <div className="w-full rounded-[18px] bg-[#F6F7FB] px-4 py-10 text-center lg:py-12">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#FFF1F4] text-[#ff5f7a]">
+            <HiPlus className="h-7 w-7" aria-hidden />
+          </span>
+          <p className="mt-4 text-[16px] font-bold text-[#111827]">Пока нет шаблонов</p>
+          <p className="mx-auto mt-2 max-w-[18rem] text-[14px] font-medium leading-snug text-[#6B7280]">
+            Нажмите «Новый шаблон» или «Без шаблона» выше
           </p>
-          <button
-            type="button"
-            onClick={onCreate}
-            className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-[#F47C8C] px-5 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-95 active:scale-[0.98]"
-          >
-            <HiPlus className="h-5 w-5" aria-hidden />
-            Создать шаблон
-          </button>
         </div>
       ) : null}
 
@@ -108,14 +111,14 @@ export function WindowTemplateList({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Найти шаблон…"
-                className={`${catalogSheetField} pl-11`}
+                className={`${catalogSheetField} border-0 bg-[#EBEBEB] pl-11 focus:bg-[#E4E4E4]`}
               />
             </label>
           ) : null}
 
           <div className="w-full min-w-0" role="list" aria-label="Шаблоны окон">
             {filtered.length === 0 ? (
-              <p className="rounded-[10px] bg-[#EBEBEB] px-4 py-3 text-[13px] font-medium text-[#6B7280] lg:bg-white lg:ring-1 lg:ring-[#EEEEEE]">
+              <p className="rounded-[12px] bg-[#EBEBEB] px-4 py-3 text-center text-[13px] font-medium text-[#6B7280]">
                 Ничего не найдено
               </p>
             ) : (
@@ -134,10 +137,10 @@ export function WindowTemplateList({
                     </div>
                   ))}
                   <button type="button" onClick={onCreate} className={scheduleTemplateAddBtn}>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white text-[#6B7280] ring-1 ring-[#EEEEEE] lg:h-10 lg:w-10 lg:rounded-[12px] lg:bg-[#FFF1F4] lg:text-[#F47C8C] lg:ring-0">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white text-[#ff5f7a]">
                       <HiPlus className="h-5 w-5" aria-hidden />
                     </span>
-                    <span>Шаблон</span>
+                    <span>Добавить</span>
                   </button>
                 </div>
               </div>

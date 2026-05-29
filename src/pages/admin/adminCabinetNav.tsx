@@ -80,6 +80,14 @@ export function IconNavSupport({ className }: { className?: string }) {
   );
 }
 
+export function IconNavSponsor({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
+      <path d="M12 3l1.4 4.3H18l-3.6 2.6 1.4 4.3L12 11.6 8.2 14.2l1.4-4.3L6 7.3h4.6L12 3z" />
+    </svg>
+  );
+}
+
 export function IconNavDocuments({ className }: { className?: string }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...iconStroke}>
@@ -105,10 +113,86 @@ export type AdminNavItem = {
   icon: (p: { className?: string }) => ReactNode;
 };
 
+export type AdminSectionMeta = {
+  title: string;
+  description: string;
+};
+
+export const ADMIN_SECTION_META: Record<string, AdminSectionMeta> = {
+  [ADMIN_PATH]: {
+    title: 'Профиль мастера',
+    description:
+      'Имя, фото, портфолио, адрес и правила — то, что клиенты видят в каталоге. Заполните профиль, чтобы получать записи.',
+  },
+  [ADMIN_PROFILE_COMPLETION_PATH]: {
+    title: 'Заполненность профиля',
+    description: 'Чек-лист: что ещё добавить, чтобы профиль был заметнее в каталоге и принимал записи.',
+  },
+  [ADMIN_SERVICES_PATH]: {
+    title: 'Услуги',
+    description:
+      'Каталог услуг, цены, наборы и акции. Без услуг клиент не сможет выбрать, на что записаться.',
+  },
+  [ADMIN_SCHEDULE_PATH]: {
+    title: 'Расписание',
+    description:
+      'Создайте окна для записи: когда вы свободны, клиенты смогут выбрать время в каталоге.',
+  },
+  [ADMIN_OVERVIEW_PATH]: {
+    title: 'Сводка',
+    description:
+      'Цифры по доходу, клиентам и рейтингу. Помогает понять, как идут дела и что улучшить.',
+  },
+  [ADMIN_APPOINTMENTS_PATH]: {
+    title: 'Записи',
+    description:
+      'Заявки от клиентов, предстоящие визиты и история. Подтверждайте заявки, чтобы они попали в календарь.',
+  },
+  [ADMIN_BILLING_PATH]: {
+    title: 'Мой тариф',
+    description: 'Тариф Free или Pro, лимиты кабинета и оплата подписки.',
+  },
+  [ADMIN_NOTIFICATIONS_PATH]: {
+    title: 'Уведомления',
+    description: 'Новые заявки, изменения записей и важные события по вашему кабинету.',
+  },
+  [ADMIN_SETTINGS_PATH]: {
+    title: 'Настройки',
+    description: 'Способы входа, справка по сервису и заявка на партнёрство SLOTTY.',
+  },
+};
+
+/** Подразделы настроек (pathname содержит сегмент). */
+const SETTINGS_SECTION_META: Record<string, AdminSectionMeta> = {
+  'login-methods': {
+    title: 'Способы входа',
+    description: 'Telegram, Google и email — как вы заходите в кабинет и восстанавливаете доступ.',
+  },
+  support: {
+    title: 'Справка',
+    description: 'Ответы на частые вопросы и юридические документы сервиса.',
+  },
+  sponsor: {
+    title: 'Спонсор SLOTTY',
+    description: 'Заявка на партнёрство и продвижение вашего бренда вместе с платформой.',
+  },
+};
+
+export function resolveAdminSectionMeta(pathname: string): AdminSectionMeta | null {
+  if (pathname.startsWith(ADMIN_SETTINGS_PATH)) {
+    if (pathname.includes('/sponsor')) return SETTINGS_SECTION_META.sponsor;
+    if (pathname.includes('/support')) return SETTINGS_SECTION_META.support;
+    if (pathname.includes('/login-methods')) return SETTINGS_SECTION_META['login-methods'];
+    return ADMIN_SECTION_META[ADMIN_SETTINGS_PATH];
+  }
+  if (ADMIN_SECTION_META[pathname]) return ADMIN_SECTION_META[pathname];
+  return null;
+}
+
 export const ADMIN_MAIN_NAV: AdminNavItem[] = [
   { to: ADMIN_PATH, label: 'Профиль мастера', end: true, icon: IconNavProfile },
   { to: ADMIN_SERVICES_PATH, label: 'Услуги', icon: IconNavServices },
-  { to: ADMIN_SCHEDULE_PATH, label: 'Окна', icon: IconNavSchedule },
+  { to: ADMIN_SCHEDULE_PATH, label: 'Расписание', icon: IconNavSchedule },
   { to: ADMIN_OVERVIEW_PATH, label: 'Сводка', icon: IconNavOverview },
   { to: ADMIN_APPOINTMENTS_PATH, label: 'Записи', icon: IconNavAppointments },
 ];
@@ -143,13 +227,13 @@ export const ADMIN_SETTINGS_NAV = {
 export const ADMIN_HUB_PATH = HUB_PATH;
 
 export const ADMIN_PAGE_TITLES: Record<string, string> = {
-  [ADMIN_PATH]: 'Профиль мастера',
-  [ADMIN_PROFILE_COMPLETION_PATH]: 'Заполненность профиля',
-  [ADMIN_OVERVIEW_PATH]: 'Сводка',
-  [ADMIN_SERVICES_PATH]: 'Услуги',
-  [ADMIN_SCHEDULE_PATH]: 'Окна записи',
-  [ADMIN_APPOINTMENTS_PATH]: 'Записи',
-  [ADMIN_BILLING_PATH]: 'Мой тариф',
-  [ADMIN_NOTIFICATIONS_PATH]: 'Уведомления',
-  [ADMIN_SETTINGS_PATH]: 'Настройки',
+  [ADMIN_PATH]: ADMIN_SECTION_META[ADMIN_PATH].title,
+  [ADMIN_PROFILE_COMPLETION_PATH]: ADMIN_SECTION_META[ADMIN_PROFILE_COMPLETION_PATH].title,
+  [ADMIN_OVERVIEW_PATH]: ADMIN_SECTION_META[ADMIN_OVERVIEW_PATH].title,
+  [ADMIN_SERVICES_PATH]: ADMIN_SECTION_META[ADMIN_SERVICES_PATH].title,
+  [ADMIN_SCHEDULE_PATH]: ADMIN_SECTION_META[ADMIN_SCHEDULE_PATH].title,
+  [ADMIN_APPOINTMENTS_PATH]: ADMIN_SECTION_META[ADMIN_APPOINTMENTS_PATH].title,
+  [ADMIN_BILLING_PATH]: ADMIN_SECTION_META[ADMIN_BILLING_PATH].title,
+  [ADMIN_NOTIFICATIONS_PATH]: ADMIN_SECTION_META[ADMIN_NOTIFICATIONS_PATH].title,
+  [ADMIN_SETTINGS_PATH]: ADMIN_SECTION_META[ADMIN_SETTINGS_PATH].title,
 };

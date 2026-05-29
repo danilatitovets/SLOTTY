@@ -6,9 +6,19 @@ import {
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { uploadMasterPortfolioImageFile } from '../../../features/admin/api/masterCabinetApi';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
+import { masterListingPortraitUrl } from '../../../features/masters/lib/masterListingPortrait';
+import {
+  MASTER_PROFILE_COVER_TITLE,
+} from '../../../features/admin/lib/masterPortfolioCover';
+import { patchMasterMe } from '../../../features/admin/api/masterCabinetApi';
 import type { MasterDraft, MasterPortfolioItem } from '../../../features/profile/lib/demoMasterStorage';
 
-export const MASTER_PROFILE_COVER_TITLE = 'Обложка профиля';
+export { MASTER_PROFILE_COVER_TITLE };
+
+async function persistPortfolioCoverIdToServer(coverItemId: string | undefined): Promise<void> {
+  if (!coverItemId?.trim()) return;
+  await patchMasterMe({ portfolioCoverItemId: coverItemId.trim() });
+}
 
 export function resolveCoverUrl(draft: MasterDraft): string | null {
   const coverId = draft.portfolioCoverId?.trim();
@@ -17,7 +27,7 @@ export function resolveCoverUrl(draft: MasterDraft): string | null {
     const url = item?.imageUrl?.trim();
     if (url) return url;
   }
-  const photo = draft.photoUrl?.trim();
+  const photo = masterListingPortraitUrl(draft.photoUrl);
   return photo || null;
 }
 
@@ -98,6 +108,7 @@ export function useMasterCoverUpload() {
       try {
         const next = await applyMasterCoverFromFile(draft, file, useCabinetApi);
         if (useCabinetApi) {
+          await persistPortfolioCoverIdToServer(next.portfolioCoverId);
           commitDraftBaseline(next);
           persistDraft(next);
           await refreshDraft();

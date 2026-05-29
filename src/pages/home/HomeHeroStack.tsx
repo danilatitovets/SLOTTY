@@ -3,7 +3,7 @@ import { HomeHero, type HomeHeroProps } from './HomeHero';
 import { HomeTooHero } from './HomeTooHero';
 
 const belowHeroShell =
-  'mx-auto w-full max-w-[1320px] px-4 pb-3 sm:px-6 sm:pb-6 xl:px-10';
+  'relative z-20 mx-auto -mt-10 w-full max-w-[1320px] px-4 sm:-mt-14 sm:px-6 xl:px-10';
 
 export const HomeHeroStack: FC<HomeHeroProps> = (props) => {
   return (

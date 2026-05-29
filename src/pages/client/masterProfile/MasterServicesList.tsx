@@ -17,6 +17,8 @@ type Props = {
   onSelect: (service: DemoMasterService) => void;
   onViewAll?: () => void;
   layout?: 'stack' | 'desktop';
+  /** Только карточка без «Подробнее» и стрелки (превью в онбординге). */
+  previewMode?: boolean;
 };
 
 function servicesCountLabel(count: number): string {
@@ -39,6 +41,7 @@ export function MasterServicesList({
   onSelect,
   onViewAll,
   layout = 'stack',
+  previewMode = false,
 }: Props) {
   const workPhotoCode = resolveCategoryWorkCode(categoryCode ?? categoryLabel);
   const workPhotoUrl = getCategoryWorkPhotoUrl(workPhotoCode);
@@ -66,9 +69,11 @@ export function MasterServicesList({
       <SectionHeading
         title="Услуги мастера"
         subtitle={
-          isDesktop
-            ? `${servicesCountLabel(services.length)} · выберите и запишитесь`
-            : 'Выберите услугу и запишитесь'
+          previewMode
+            ? servicesCountLabel(services.length)
+            : isDesktop
+              ? `${servicesCountLabel(services.length)} · выберите и запишитесь`
+              : 'Выберите услугу и запишитесь'
         }
         linkLabel={isDesktop ? undefined : 'Все услуги'}
         onLinkClick={isDesktop ? undefined : onViewAll}
@@ -78,39 +83,39 @@ export function MasterServicesList({
       <ul className={isDesktop ? 'space-y-3' : 'space-y-3'}>
         {visible.map((service) => {
           const highlighted = service.id === highlightServiceId;
-          return (
-            <li key={service.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(service)}
-                className={
-                  isDesktop
-                    ? `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] transition hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25 lg:p-5 ${
-                        highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
-                      }`
-                    : `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] transition active:scale-[0.99] hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25 ${
-                        highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
-                      }`
-                }
-              >
-                <ImageReveal
-                  src={workPhotoUrl}
-                  alt=""
-                  className={`shrink-0 rounded-[14px] object-cover ring-2 ring-white ${
-                    isDesktop ? 'h-[72px] w-[72px]' : 'h-16 w-16'
-                  }`}
-                  loading="lazy"
-                />
+          const cardClass = isDesktop
+            ? `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] lg:p-5 ${
+                highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
+              } ${previewMode ? '' : 'transition hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25'}`
+            : `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] ${
+                highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
+              } ${previewMode ? '' : 'transition active:scale-[0.99] hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25'}`;
 
-                <div className="min-w-0 flex-1">
-                  <p className={`font-bold leading-snug text-[#111827] ${isDesktop ? 'text-[17px]' : 'text-[16px]'}`}>
-                    {service.title}
-                  </p>
-                  <p className="mt-1 inline-flex rounded-[8px] bg-[#F5F5F5] px-2 py-0.5 text-[12px] font-semibold text-[#6B7280] group-hover:bg-white/80">
-                    {serviceDurationLabel(service.duration)}
-                  </p>
-                </div>
+          const cardBody = (
+            <>
+              <ImageReveal
+                src={workPhotoUrl}
+                alt=""
+                className={`shrink-0 rounded-[14px] object-cover ring-2 ring-white ${
+                  isDesktop ? 'h-[72px] w-[72px]' : 'h-16 w-16'
+                }`}
+                loading="lazy"
+              />
 
+              <div className="min-w-0 flex-1">
+                <p className={`font-bold leading-snug text-[#111827] ${isDesktop ? 'text-[17px]' : 'text-[16px]'}`}>
+                  {service.title}
+                </p>
+                <p className="mt-1 inline-flex rounded-[8px] bg-[#F5F5F5] px-2 py-0.5 text-[12px] font-semibold text-[#6B7280] group-hover:bg-white/80">
+                  {serviceDurationLabel(service.duration)}
+                </p>
+              </div>
+
+              {previewMode ? (
+                <p className="shrink-0 text-right text-[18px] font-bold text-[#111827]">
+                  {formatServicePrice(service)}
+                </p>
+              ) : (
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="text-right">
                     <p className={`font-bold text-[#111827] ${isDesktop ? 'text-[18px]' : 'text-[17px]'}`}>
@@ -122,7 +127,19 @@ export function MasterServicesList({
                     <HiChevronRight className="h-5 w-5" aria-hidden />
                   </span>
                 </div>
-              </button>
+              )}
+            </>
+          );
+
+          return (
+            <li key={service.id}>
+              {previewMode ? (
+                <div className={cardClass}>{cardBody}</div>
+              ) : (
+                <button type="button" onClick={() => onSelect(service)} className={cardClass}>
+                  {cardBody}
+                </button>
+              )}
             </li>
           );
         })}

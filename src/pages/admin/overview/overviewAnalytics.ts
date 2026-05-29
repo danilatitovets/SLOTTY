@@ -35,6 +35,22 @@ function overviewChartWindow(
 export type OverviewPeriodPreset = 'today' | 'week' | 'month' | 'all';
 export type OverviewAnalyticsTab = 'summary' | 'revenue' | 'clients' | 'reputation';
 
+/** Вкладки, для которых нужна подписка Pro (доход и KPI-сводка). */
+export function isOverviewProTab(tab: OverviewAnalyticsTab): boolean {
+  return tab === 'summary' || tab === 'revenue';
+}
+
+export const OVERVIEW_PERIOD_LABELS: Record<OverviewPeriodPreset, string> = {
+  today: 'Сегодня',
+  week: 'Неделя',
+  month: 'Месяц',
+  all: 'Всё время',
+};
+
+export function overviewPeriodLabel(preset: OverviewPeriodPreset): string {
+  return OVERVIEW_PERIOD_LABELS[preset];
+}
+
 export function overviewPeriodRange(
   preset: OverviewPeriodPreset,
   appointments: DemoMasterAppointment[],
@@ -232,21 +248,77 @@ function aggregateClientsPerDay(
   });
 }
 
-export type ClientAnalytics = {
+export type ClientCounts = {
   newClients: number;
   repeatClients: number;
   totalClients: number;
+};
+
+export type OverviewClientRosterItem = {
+  key: string;
+  name: string;
+  visits: number;
+  isRepeat: boolean;
+  lastVisitDate: string;
+};
+
+export type ClientAnalytics = ClientCounts & {
+  roster: OverviewClientRosterItem[];
   visitsPerDay: OverviewDayStat[];
   clientsPerDay: ClientDayStat[];
   chartIsTruncated: boolean;
   hasData: boolean;
+  newClientsDelta: number;
+  repeatClientsDelta: number;
+  totalClientsDelta: number;
 };
 
-export function computeClientAnalytics(
+function buildClientRoster(
   appointments: DemoMasterAppointment[],
   start: string,
   end: string,
-): ClientAnalytics {
+): OverviewClientRosterItem[] {
+  const hadBefore = new Set(
+    appointments
+      .filter((r) => isClientVisitRow(r) && r.date < start)
+      .map((r) => normalizeClient(r.clientName)),
+  );
+  const inRange = appointments.filter(
+    (r) => isClientVisitRow(r) && r.date >= start && r.date <= end,
+  );
+  const byClient = new Map<string, { name: string; visits: number; lastDate: string }>();
+
+  for (const row of inRange) {
+    const key = normalizeClient(row.clientName);
+    const displayName = row.clientName.trim() || 'Клиент';
+    const cur = byClient.get(key);
+    if (!cur) {
+      byClient.set(key, { name: displayName, visits: 1, lastDate: row.date });
+      continue;
+    }
+    cur.visits += 1;
+    if (row.date > cur.lastDate) cur.lastDate = row.date;
+  }
+
+  return [...byClient.entries()]
+    .map(([key, v]) => ({
+      key,
+      name: v.name,
+      visits: v.visits,
+      isRepeat: hadBefore.has(key),
+      lastVisitDate: v.lastDate,
+    }))
+    .sort(
+      (a, b) =>
+        b.lastVisitDate.localeCompare(a.lastVisitDate) || b.visits - a.visits || a.name.localeCompare(b.name),
+    );
+}
+
+function clientCountsInPeriod(
+  appointments: DemoMasterAppointment[],
+  start: string,
+  end: string,
+): ClientCounts {
   const completedInRange = appointments.filter(
     (r) => isClientVisitRow(r) && r.date >= start && r.date <= end,
   );
@@ -269,6 +341,24 @@ export function computeClientAnalytics(
     else newClients += 1;
   }
 
+  return {
+    newClients,
+    repeatClients,
+    totalClients: byClient.size,
+  };
+}
+
+export function computeClientAnalytics(
+  appointments: DemoMasterAppointment[],
+  start: string,
+  end: string,
+): ClientAnalytics {
+  const { newClients, repeatClients, totalClients } = clientCountsInPeriod(appointments, start, end);
+  const prev = previousOverviewReportPeriod(start, end);
+  const prevCounts = prev
+    ? clientCountsInPeriod(appointments, prev.start, prev.end)
+    : { newClients: 0, repeatClients: 0, totalClients: 0 };
+
   const chartRange = overviewChartWindow(start, end, OVERVIEW_MAX_RANGE_DAYS);
   const visitsPerDay = aggregateOverviewByDay(appointments, chartRange.chartStart, chartRange.chartEnd);
   const clientsPerDay = aggregateClientsPerDay(
@@ -280,12 +370,16 @@ export function computeClientAnalytics(
   return {
     newClients,
     repeatClients,
-    totalClients: byClient.size,
+    totalClients,
+    roster: buildClientRoster(appointments, start, end),
+    newClientsDelta: newClients - prevCounts.newClients,
+    repeatClientsDelta: repeatClients - prevCounts.repeatClients,
+    totalClientsDelta: totalClients - prevCounts.totalClients,
     visitsPerDay,
     clientsPerDay,
     chartIsTruncated: chartRange.chartStart > start,
     hasData:
-      byClient.size > 0 ||
+      totalClients > 0 ||
       clientsPerDay.some((d) => d.newClients > 0 || d.repeatClients > 0),
   };
 }

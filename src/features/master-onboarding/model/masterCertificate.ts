@@ -44,3 +44,23 @@ export function parseHttpsCertificateImageUrl(raw: string): string | undefined {
     return undefined;
   }
 }
+
+export function isLocalCertificateImageUrl(url: string | undefined): boolean {
+  const t = url?.trim();
+  if (!t) return false;
+  return t.startsWith('blob:') || t.startsWith('data:image/');
+}
+
+export function isPersistableCertificateImageUrl(url: string | undefined): boolean {
+  const t = url?.trim();
+  if (!t) return false;
+  if (t.startsWith('blob:')) return false;
+  return t.startsWith('https:') || t.startsWith('http:') || t.startsWith('data:image/');
+}
+
+export async function certificateLocalUrlToFile(url: string): Promise<File> {
+  const blob = await fetch(url).then((r) => r.blob());
+  const type = blob.type || 'image/jpeg';
+  const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg';
+  return new File([blob], `certificate.${ext}`, { type });
+}

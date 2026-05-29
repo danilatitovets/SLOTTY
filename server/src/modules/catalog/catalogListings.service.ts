@@ -126,7 +126,33 @@ function orderBySql(sortBy: CatalogListingsQuery['sortBy']): string {
   `;
 }
 
+import {
+  isMissingRpcError,
+  searchCatalogListingsRpc,
+  suggestMasterLocationsRpc,
+} from './catalogListings.rpc.js';
+
+export async function searchCatalogListings(q: CatalogListingsQuery): Promise<CatalogListingsResult> {
+  try {
+    return await searchCatalogListingsRpc(q);
+  } catch (err) {
+    if (!isMissingRpcError(err)) throw err;
+    console.warn('[catalog] RPC catalog_search_listings missing — apply migration 038; using legacy SQL');
+    return searchCatalogListingsLegacy(q);
+  }
+}
+
 export async function suggestMasterLocations(rawQuery: string, limit: number): Promise<LocationSuggestion[]> {
+  try {
+    return await suggestMasterLocationsRpc(rawQuery, limit);
+  } catch (err) {
+    if (!isMissingRpcError(err)) throw err;
+    console.warn('[catalog] RPC catalog_suggest_locations missing — apply migration 038; using legacy SQL');
+    return suggestMasterLocationsLegacy(rawQuery, limit);
+  }
+}
+
+async function suggestMasterLocationsLegacy(rawQuery: string, limit: number): Promise<LocationSuggestion[]> {
   const frag = safeIlikeFragment(rawQuery);
   if (!frag) return [];
 
@@ -194,7 +220,7 @@ export async function suggestMasterLocations(rawQuery: string, limit: number): P
   });
 }
 
-export async function searchCatalogListings(q: CatalogListingsQuery): Promise<CatalogListingsResult> {
+async function searchCatalogListingsLegacy(q: CatalogListingsQuery): Promise<CatalogListingsResult> {
   const page = clampInt(q.page, 1, 500);
   const limit = clampInt(q.limit, 1, 80);
   const offset = (page - 1) * limit;

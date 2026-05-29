@@ -9,7 +9,7 @@ import type { OverviewAnalyticsTab } from './overviewAnalytics';
 import { OverviewSectionTabs } from './OverviewSectionTabs';
 
 const TABS = [
-  { id: 'summary' as const, label: 'Обзор', Icon: HiChartBarSquare },
+  { id: 'summary' as const, label: 'Сводка', Icon: HiChartBarSquare },
   { id: 'revenue' as const, label: 'Доход', Icon: HiWallet },
   { id: 'clients' as const, label: 'Клиенты', Icon: HiUsers },
   { id: 'reputation' as const, label: 'Репутация', Icon: HiStar },

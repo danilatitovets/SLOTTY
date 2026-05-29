@@ -259,23 +259,17 @@ function aggregateClientsPerDay(
   });
 }
 
-export type OverviewClientsDto = {
+type OverviewClientCounts = {
   newClients: number;
   repeatClients: number;
   totalClients: number;
-  visitsPerDay: OverviewDayStat[];
-  clientsPerDay: ClientDayStat[];
-  chartIsTruncated: boolean;
-  hasData: boolean;
-  periodStart: string;
-  periodEnd: string;
 };
 
-export function computeOverviewClients(
+function clientCountsInPeriod(
   appointments: OverviewAppointmentRow[],
   start: string,
   end: string,
-): OverviewClientsDto {
+): OverviewClientCounts {
   const completedInRange = appointments.filter(
     (r) => isClientVisitRow(r) && r.date >= start && r.date <= end,
   );
@@ -298,6 +292,86 @@ export function computeOverviewClients(
     else newClients += 1;
   }
 
+  return {
+    newClients,
+    repeatClients,
+    totalClients: byClient.size,
+  };
+}
+
+export type OverviewClientRosterItem = {
+  key: string;
+  name: string;
+  visits: number;
+  isRepeat: boolean;
+  lastVisitDate: string;
+};
+
+function buildClientRoster(
+  appointments: OverviewAppointmentRow[],
+  start: string,
+  end: string,
+): OverviewClientRosterItem[] {
+  const hadBefore = new Set(
+    appointments
+      .filter((r) => isClientVisitRow(r) && r.date < start)
+      .map((r) => normalizeClient(r.clientName)),
+  );
+  const inRange = appointments.filter(
+    (r) => isClientVisitRow(r) && r.date >= start && r.date <= end,
+  );
+  const byClient = new Map<string, { name: string; visits: number; lastDate: string }>();
+
+  for (const row of inRange) {
+    const key = normalizeClient(row.clientName);
+    const displayName = row.clientName.trim() || 'Клиент';
+    const cur = byClient.get(key);
+    if (!cur) {
+      byClient.set(key, { name: displayName, visits: 1, lastDate: row.date });
+      continue;
+    }
+    cur.visits += 1;
+    if (row.date > cur.lastDate) cur.lastDate = row.date;
+  }
+
+  return [...byClient.entries()]
+    .map(([key, v]) => ({
+      key,
+      name: v.name,
+      visits: v.visits,
+      isRepeat: hadBefore.has(key),
+      lastVisitDate: v.lastDate,
+    }))
+    .sort(
+      (a, b) =>
+        b.lastVisitDate.localeCompare(a.lastVisitDate) || b.visits - a.visits || a.name.localeCompare(b.name),
+    );
+}
+
+export type OverviewClientsDto = OverviewClientCounts & {
+  roster: OverviewClientRosterItem[];
+  visitsPerDay: OverviewDayStat[];
+  clientsPerDay: ClientDayStat[];
+  chartIsTruncated: boolean;
+  hasData: boolean;
+  newClientsDelta: number;
+  repeatClientsDelta: number;
+  totalClientsDelta: number;
+  periodStart: string;
+  periodEnd: string;
+};
+
+export function computeOverviewClients(
+  appointments: OverviewAppointmentRow[],
+  start: string,
+  end: string,
+): OverviewClientsDto {
+  const { newClients, repeatClients, totalClients } = clientCountsInPeriod(appointments, start, end);
+  const prev = previousOverviewReportPeriod(start, end);
+  const prevCounts = prev
+    ? clientCountsInPeriod(appointments, prev.start, prev.end)
+    : { newClients: 0, repeatClients: 0, totalClients: 0 };
+
   const chartRange = overviewChartWindow(start, end, OVERVIEW_MAX_RANGE_DAYS);
   const visitsPerDay = aggregateOverviewByDay(appointments, chartRange.chartStart, chartRange.chartEnd);
   const clientsPerDay = aggregateClientsPerDay(
@@ -309,12 +383,16 @@ export function computeOverviewClients(
   return {
     newClients,
     repeatClients,
-    totalClients: byClient.size,
+    totalClients,
+    roster: buildClientRoster(appointments, start, end),
+    newClientsDelta: newClients - prevCounts.newClients,
+    repeatClientsDelta: repeatClients - prevCounts.repeatClients,
+    totalClientsDelta: totalClients - prevCounts.totalClients,
     visitsPerDay,
     clientsPerDay,
     chartIsTruncated: chartRange.chartStart > start,
     hasData:
-      byClient.size > 0 || clientsPerDay.some((d) => d.newClients > 0 || d.repeatClients > 0),
+      totalClients > 0 || clientsPerDay.some((d) => d.newClients > 0 || d.repeatClients > 0),
     periodStart: start,
     periodEnd: end,
   };

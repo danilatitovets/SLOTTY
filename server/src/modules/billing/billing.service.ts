@@ -3,6 +3,7 @@ import { query } from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { recordBillingEvent } from './billingEvents.service.js';
+import { quotePromoForCheckout, recordPromoRedemption } from './promoCode.service.js';
 
 function num(v: string): number {
   return Number(v);
@@ -130,7 +131,10 @@ function mapJoinedPlanRow(row: {
 export async function assertMasterHasProPlan(masterId: string): Promise<void> {
   const sub = await getMasterSubscriptionWithUsage(masterId);
   if (sub.plan.code.toLowerCase() !== 'pro') {
-    throw ApiError.forbidden('Акции и наборы доступны на тарифе Pro', 'PRO_REQUIRED');
+    throw ApiError.forbidden(
+      'Функция доступна по подписке «Мастер Pro». Подключите тариф в разделе «Тарифы».',
+      'PRO_REQUIRED',
+    );
   }
 }
 
@@ -213,6 +217,7 @@ export async function switchMasterSubscriptionMock(
   masterId: string,
   planCode: 'free' | 'pro',
   billingPeriod: 'month' | 'year',
+  options?: { promoCode?: string | null },
 ): Promise<MasterSubscriptionWithUsageDto> {
   if (!isSubscriptionMockSwitchAllowed()) {
     throw ApiError.forbidden('Переключение тарифа (mock) отключено в этой среде', 'SUBSCRIPTION_MOCK_DISABLED');
@@ -237,27 +242,51 @@ export async function switchMasterSubscriptionMock(
     [planRow.id, billingPeriod, masterId],
   );
 
-  const amount =
+  let amount =
     planCode === 'pro'
       ? billingPeriod === 'year'
         ? Number(planRow.price_year)
         : Number(planRow.price_month)
       : 0;
 
+  let eventMetadata: Record<string, unknown> = {
+    fromPlan: before.plan.code,
+    toPlan: planCode,
+    fromPeriod: before.billingPeriod,
+    toPeriod: billingPeriod,
+  };
+
+  if (planCode === 'pro' && options?.promoCode?.trim()) {
+    const quote = await quotePromoForCheckout(options.promoCode.trim(), billingPeriod, 'pro');
+    amount = quote.finalAmount;
+    eventMetadata = {
+      ...eventMetadata,
+      promoCode: quote.code,
+      promoCodeId: quote.promoCodeId,
+      discountPercent: quote.discountPercent,
+      baseAmount: quote.baseAmount,
+      discountAmount: quote.discountAmount,
+      finalAmount: quote.finalAmount,
+    };
+    await recordPromoRedemption({
+      promoCodeId: quote.promoCodeId,
+      masterId,
+      billingPeriod,
+      baseAmount: quote.baseAmount,
+      discountAmount: quote.discountAmount,
+      finalAmount: quote.finalAmount,
+    });
+  }
+
   await recordBillingEvent({
     masterId,
-    eventType: 'plan_changed',
+    eventType: planCode === 'pro' ? 'subscription_purchased' : 'plan_changed',
     planCode,
     billingPeriod,
     amount,
     status: 'succeeded',
     source: 'mock',
-    metadata: {
-      fromPlan: before.plan.code,
-      toPlan: planCode,
-      fromPeriod: before.billingPeriod,
-      toPeriod: billingPeriod,
-    },
+    metadata: eventMetadata,
   });
 
   if (planCode === 'pro') {

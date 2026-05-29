@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
+import { isDevDemoAllowed, isProductionApiMisconfigured } from '../../shared/lib/appMode';
 import { getMySubscription, type MasterSubscriptionDto } from '../../features/admin/api/adminBillingApi';
 import {
   deleteMasterService,
@@ -65,11 +66,16 @@ export type MasterProfilePatch = Partial<
   >
 >;
 
+/** Пустой черновик до ответа API или после 404 — не кэшируем как «реальный» кабинет. */
+function isPlaceholderCabinetDraft(draft: MasterDraft): boolean {
+  return !draft.name?.trim() && draft.services.length === 0;
+}
+
 /** Плейсхолдер до первого ответа API — не подмешиваем local demo draft с пустыми услугами. */
 function pendingCabinetDraft(masterId: string): MasterDraft {
   return {
     masterId,
-    category: '—',
+    category: '',
     name: '',
     description: '',
     contact: '',
@@ -97,6 +103,8 @@ type Ctx = {
   flushDraftToBackend: (next: MasterDraft) => Promise<void>;
   /** Только недельные правила (`PUT .../schedule-rules`), без профиля и адреса — чтобы сохранение расписания не зависело от первичной локации. */
   flushScheduleToBackend: (next: MasterDraft) => Promise<void>;
+  /** Только первичный адрес (`PUT .../primary-location`), без профиля и расписания. */
+  flushLocationToBackend: (next: MasterDraft) => Promise<void>;
   /** Только поля профиля (без адреса, расписания и услуг) — быстрее, чем полный flush. */
   patchProfileToBackend: (patch: MasterProfilePatch) => Promise<void>;
   /** Перечитать черновик с сервера без «полной загрузки» (без блокирующего cabinetLoading). */
@@ -110,6 +118,8 @@ type Ctx = {
   useCabinetApi: boolean;
   subscription: MasterSubscriptionDto | null;
   refreshSubscription: () => Promise<void>;
+  /** Обновить подписку из ответа API без повторного GET. */
+  applySubscription: (sub: MasterSubscriptionDto) => void;
   publicationStatus: MasterPublicationStatus | null;
   setPublicationStatus: (status: MasterPublicationStatus) => void;
   /** Рейтинг и отзывы из API кабинета (без отдельного запроса). */
@@ -218,14 +228,17 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       if (!silent) setCabinetLoading(true);
       setCabinetError(null);
       try {
-        const [cabinet, rows] = await Promise.all([fetchMasterCabinet(), fetchMasterAppointments()]);
+        const [cabinet, apptPage] = await Promise.all([
+          fetchMasterCabinet(),
+          fetchMasterAppointments({ tab: 'active', limit: 200, offset: 0 }),
+        ]);
         const mapped = cabinetDtoToMasterDraft(cabinet);
         const pub = (cabinet.profile.publicationStatus as MasterPublicationStatus) || 'draft';
         const meta = {
           rating: cabinet.profile.rating,
           reviewsCount: cabinet.profile.reviewsCount,
         };
-        const appts = rows.map(mapMasterAppointmentRowToDemo);
+        const appts = apptPage.appointments.map(mapMasterAppointmentRowToDemo);
         let sub: MasterSubscriptionDto | null = null;
         try {
           sub = await getMySubscription();
@@ -252,10 +265,10 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
           lastSyncedSnapshotRef.current = null;
           setDraft(pendingCabinetDraft(masterId));
         }
-        if (!silent) {
+        if (!silent || notFound) {
           setCabinetError(
             notFound
-              ? 'Профиль мастера не найден для этого входа. Выйдите и войдите через email, с которым регистрировались, или привяжите Google в «Способы входа».'
+              ? 'Профиль мастера не найден для этого входа. Выйдите и войдите через Telegram или email, с которым регистрировались.'
               : msg,
           );
         }
@@ -269,7 +282,10 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
   const reloadCabinetFromApiSilent = useCallback(async () => {
     if (!masterId) return;
     try {
-      const [cabinet, rows] = await Promise.all([fetchMasterCabinet(), fetchMasterAppointments()]);
+      const [cabinet, apptPage] = await Promise.all([
+        fetchMasterCabinet(),
+        fetchMasterAppointments({ tab: 'active', limit: 200, offset: 0 }),
+      ]);
       const mapped = cabinetDtoToMasterDraft(cabinet);
       try {
         setSubscription(await getMySubscription());
@@ -281,7 +297,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         rating: cabinet.profile.rating,
         reviewsCount: cabinet.profile.reviewsCount,
       };
-      const appts = rows.map(mapMasterAppointmentRowToDemo);
+      const appts = apptPage.appointments.map(mapMasterAppointmentRowToDemo);
       setPublicationStatus(pub);
       setCabinetProfileMeta(meta);
       setDraft((prev) => {
@@ -317,6 +333,15 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         return undefined;
       }
 
+      if (!isDevDemoAllowed() || isProductionApiMisconfigured()) {
+        setCabinetError(
+          'Кабинет мастера недоступен: не задан VITE_API_URL. Настройте API для production.',
+        );
+        setDraft(pendingCabinetDraft(profile?.id ?? 'unknown'));
+        setAppointments([]);
+        return undefined;
+      }
+
       if (!getStoredMasterDraft()) {
         persistMasterDraft(getMasterDraft());
         setDraft(getMasterDraft());
@@ -338,14 +363,19 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     prevMasterIdRef.current = masterId;
 
     const cached = readAdminCabinetSessionCache(masterId);
-    if (cached) {
+    if (cached && isPlaceholderCabinetDraft(cached.draft)) {
+      clearAdminCabinetSessionCache();
+    }
+    const cachedUsable =
+      cached && !isPlaceholderCabinetDraft(cached.draft) ? cached : null;
+    if (cachedUsable) {
       cabinetReadyRef.current = true;
-      setDraft(cached.draft);
-      setAppointments(cached.appointments);
-      setPublicationStatus(cached.publicationStatus);
-      setCabinetProfileMeta(cached.cabinetProfileMeta);
-      setSubscription(cached.subscription);
-      lastSyncedSnapshotRef.current = cloneDraft(cached.draft);
+      setDraft(cachedUsable.draft);
+      setAppointments(cachedUsable.appointments);
+      setPublicationStatus(cachedUsable.publicationStatus);
+      setCabinetProfileMeta(cachedUsable.cabinetProfileMeta);
+      setSubscription(cachedUsable.subscription);
+      lastSyncedSnapshotRef.current = cloneDraft(cachedUsable.draft);
       setCabinetLoading(false);
       void loadFromApi({ silent: true });
     } else {
@@ -360,13 +390,28 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
   }, [useCabinetApi, authLoading, hasApi, profile, loadFromApi, masterId, reloadCabinetFromApiSilent]);
 
   const pushDraftToBackend = useCallback(async (next: MasterDraft) => {
-    await patchMasterMe({
+    if (isPlaceholderCabinetDraft(next)) {
+      return;
+    }
+
+    const contacts = next.contacts?.filter((row) => row.value.trim()) ?? [];
+    const contactLine =
+      contacts.length > 0
+        ? contactsToLegacyContactLine(contacts) ?? ''
+        : (next.contact ?? '').trim();
+
+    const patchBody: Parameters<typeof patchMasterMe>[0] = {
       displayName: next.name.trim() || 'Мастер',
       bio: next.description,
-      phone: next.phone?.trim() ? next.phone.trim() : null,
-      contact: next.contact?.trim() ? next.contact.trim() : null,
-      photoUrl: next.photoUrl?.trim() ? next.photoUrl.trim() : null,
-    });
+    };
+    if (next.phone?.trim()) patchBody.phone = next.phone.trim();
+    if (next.photoUrl?.trim()) patchBody.photoUrl = next.photoUrl.trim();
+    if (contacts.length) {
+      patchBody.contacts = contacts.map((row) => ({ type: row.type, value: row.value.trim() }));
+    }
+    if (contactLine) patchBody.contact = contactLine;
+
+    await patchMasterMe(patchBody);
     await putMasterPrimaryLocation(draftToPrimaryLocationBody(next.location));
     const rules = draftScheduleToApiRules(next.schedule);
     if (rules.length) {
@@ -516,6 +561,37 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     [useCabinetApi, reloadCabinetFromApiSilent],
   );
 
+  const flushLocationToBackend = useCallback(
+    async (next: MasterDraft) => {
+      if (!useCabinetApi) {
+        persistMasterDraft(next);
+        setDraft(getMasterDraft());
+        return;
+      }
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current);
+        syncTimer.current = null;
+      }
+      setDraft(next);
+      try {
+        await putMasterPrimaryLocation(draftToPrimaryLocationBody(next.location));
+        if (lastSyncedSnapshotRef.current) {
+          lastSyncedSnapshotRef.current = cloneDraft({
+            ...lastSyncedSnapshotRef.current,
+            location: next.location,
+          });
+        }
+        setCabinetError(null);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Ошибка сохранения';
+        setCabinetError(msg);
+        await reloadCabinetFromApiSilent();
+        throw e;
+      }
+    },
+    [useCabinetApi, reloadCabinetFromApiSilent],
+  );
+
   const patchProfileToBackend = useCallback(
     async (patch: MasterProfilePatch) => {
       const contacts = patch.contacts;
@@ -547,11 +623,19 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         const apiBody: Parameters<typeof patchMasterMe>[0] = {
           displayName: next.name.trim() || 'Мастер',
           bio: next.description,
-          phone: next.phone?.trim() ? next.phone.trim() : null,
-          contacts: contacts?.length ? contacts : null,
-          contact: contactLine.trim() ? contactLine.trim() : null,
-          photoUrl: next.photoUrl?.trim() ? next.photoUrl.trim() : null,
         };
+        if (patch.phone !== undefined) {
+          apiBody.phone = next.phone?.trim() ? next.phone.trim() : null;
+        }
+        if (patch.photoUrl !== undefined) {
+          apiBody.photoUrl = next.photoUrl?.trim() ? next.photoUrl.trim() : null;
+        }
+        if (patch.contacts !== undefined) {
+          apiBody.contacts = contacts?.length ? contacts : null;
+          apiBody.contact = contactLine.trim() ? contactLine.trim() : null;
+        } else if (patch.contact !== undefined) {
+          apiBody.contact = contactLine.trim() ? contactLine.trim() : null;
+        }
         if (patch.primaryCategoryCode !== undefined) {
           apiBody.primaryCategoryCode = patch.primaryCategoryCode;
         }
@@ -588,6 +672,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
   const scheduleSync = useCallback(
     (syncDraft: MasterDraft) => {
       if (!useCabinetApi || !cabinetReadyRef.current) return;
+      if (isPlaceholderCabinetDraft(syncDraft)) return;
       if (syncTimer.current) clearTimeout(syncTimer.current);
       syncTimer.current = setTimeout(() => {
         syncTimer.current = null;
@@ -632,6 +717,17 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       /* keep previous */
     }
   }, [useCabinetApi]);
+
+  const applySubscription = useCallback(
+    (sub: MasterSubscriptionDto) => {
+      setSubscription(sub);
+      if (!masterId) return;
+      const cached = readAdminCabinetSessionCache(masterId);
+      if (!cached) return;
+      writeAdminCabinetSessionCache({ ...cached, subscription: sub });
+    },
+    [masterId],
+  );
 
   const refreshDraft = useCallback(async () => {
     if (useCabinetApi) {
@@ -683,13 +779,21 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         }
       }
 
-      setAppointments(rows);
+      if (calls.length) {
+        setAppointments((prev) =>
+          prev.map((a) => {
+            const row = rows.find((r) => r.id === a.id);
+            return row && row.status !== a.status ? row : a;
+          }),
+        );
+      }
+
       if (!calls.length) return;
 
       try {
         await Promise.all(calls);
-        const fresh = await fetchMasterAppointments();
-        setAppointments(fresh.map(mapMasterAppointmentRowToDemo));
+        const fresh = await fetchMasterAppointments({ tab: 'active', limit: 200, offset: 0 });
+        setAppointments(fresh.appointments.map(mapMasterAppointmentRowToDemo));
         try {
           setSubscription(await getMySubscription());
         } catch {
@@ -713,6 +817,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       commitDraftBaseline,
       flushDraftToBackend,
       flushScheduleToBackend,
+      flushLocationToBackend,
       patchProfileToBackend,
       refreshDraft,
       appointments,
@@ -723,6 +828,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       useCabinetApi,
       subscription,
       refreshSubscription,
+      applySubscription,
       publicationStatus,
       setPublicationStatus,
       cabinetProfileMeta,
@@ -734,6 +840,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       commitDraftBaseline,
       flushDraftToBackend,
       flushScheduleToBackend,
+      flushLocationToBackend,
       patchProfileToBackend,
       refreshDraft,
       appointments,
@@ -744,6 +851,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       useCabinetApi,
       subscription,
       refreshSubscription,
+      applySubscription,
       publicationStatus,
       cabinetProfileMeta,
       categoryChangePolicy,

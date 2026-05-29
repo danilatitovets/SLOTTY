@@ -5,13 +5,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { getBookingPath, MASTERS_PATH } from '../app/paths';
 import { fetchPublicSlots, type PublicSlotDto } from '../features/booking/api/publicSlotsApi';
 import { getLocalTodayIsoRange } from '../features/landing/homeLandingBounds';
-import { defaultMasterAvatarUrl } from '../features/master/model/masterDraftStorage';
+import { masterListingPortraitUrl } from '../features/masters/lib/masterListingPortrait';
+import { MasterCardPortrait } from './client/components/MasterCardPortrait';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { fetchPublishedMasters, type PublishedMasterDto } from '../features/services/api/publishedMastersApi';
 import { formatReviewsCountLabel } from '../features/services/model/demoMasters';
 import { getApiBaseUrl } from '../shared/api/backendClient';
-import { optimizeAvatarUrl } from '../shared/lib/optimizeAvatarUrl';
-import { ImageReveal } from '../shared/ui/ImageReveal';
 import { LoadingVideo } from '../shared/ui/LoadingVideo';
 import {
   homeCard,
@@ -33,6 +32,7 @@ function IconStar({ className }: { className?: string }) {
 type QuickRow = {
   key: string;
   slot: PublicSlotDto;
+  masterName: string;
   photoUrl: string;
   rating: number;
   reviewsCount: number;
@@ -60,19 +60,19 @@ function buildRows(slots: PublicSlotDto[], masters: PublishedMasterDto[]): Quick
     let rating = 0;
     let reviewsCount = 0;
 
+    const masterName = (m?.displayName ?? slot.masterDisplayName).trim() || 'Мастер';
     if (m) {
-      const name = m.displayName.trim() || 'Мастер';
-      photoUrl = optimizeAvatarUrl((m.photoUrl && m.photoUrl.trim()) || defaultMasterAvatarUrl(name), 220);
+      photoUrl = masterListingPortraitUrl(m.photoUrl);
       rating = m.rating;
       reviewsCount = m.reviewsCount;
     } else {
-      const name = slot.masterDisplayName.trim() || 'Мастер';
-      photoUrl = optimizeAvatarUrl(defaultMasterAvatarUrl(name), 220);
+      photoUrl = '';
     }
 
     return {
       key: slot.id,
       slot,
+      masterName,
       photoUrl,
       rating,
       reviewsCount,
@@ -169,17 +169,13 @@ export const HomeQuickSlots: FC = () => {
                   <p className="mt-0.5 truncate text-[15px] font-semibold text-[#111827]">{slot.serviceTitle}</p>
 
                   <div className="mt-3 flex gap-3">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-[#F1EFEF]">
-                      <ImageReveal
-                        src={row.photoUrl}
-                        alt=""
-                        width={48}
-                        height={48}
-                        className="h-full w-full object-cover"
-                        loading={eager ? 'eager' : 'lazy'}
-                        fetchPriority={eager ? 'high' : 'low'}
-                      />
-                    </div>
+                    <MasterCardPortrait
+                      masterName={row.masterName}
+                      photoUrl={row.photoUrl}
+                      className="relative h-12 w-12 shrink-0 overflow-hidden"
+                      imageClassName="h-12 w-12 rounded-2xl object-cover"
+                      loading={eager ? 'eager' : 'lazy'}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-[#9CA3AF]">Мастер</p>
                       <p className="truncate text-[14px] font-semibold text-[#111827]">{slot.masterDisplayName}</p>

@@ -9,12 +9,17 @@ export type YandexGeocodeHit = GeocodeSuggestHit;
 
 const MINSK_BBOX = '27.35,53.75~27.72,54.05';
 
-function apiKey(): string | undefined {
+/** Ключ JavaScript API / HTTP Геокодера (Vite: только `VITE_*`). */
+export function readYandexMapsApiKey(): string | undefined {
   const vite = import.meta.env.VITE_YANDEX_MAPS_API_KEY as string | undefined;
   if (vite && vite.trim()) return vite.trim();
   const next = import.meta.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY as string | undefined;
   if (next && next.trim()) return next.trim();
   return undefined;
+}
+
+function apiKey(): string | undefined {
+  return readYandexMapsApiKey();
 }
 
 function parseGeoObject(raw: unknown): YandexGeocodeHit | null {

@@ -15,6 +15,8 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_APP_URL?: string;
   /** Google OAuth Web client id (Google Cloud Console). */
   readonly VITE_GOOGLE_CLIENT_ID?: string;
+  readonly VITE_SENTRY_DSN?: string;
+  readonly VITE_SENTRY_ENVIRONMENT?: string;
 }
 
 interface ImportMeta {

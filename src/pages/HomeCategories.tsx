@@ -1,18 +1,14 @@
 import type { FC } from 'react';
 import { ImageReveal } from '../shared/ui/ImageReveal';
-import {
-  CLIENT_DESKTOP_SHELL_BLEED_CLASS,
-  CLIENT_DESKTOP_SHELL_BLEED_PAD_CLASS,
-} from '../shared/layout/clientShellLayout';
 import { homeSection } from './home/homeTheme';
 
 const CATEGORIES = [
-  { key: 'manicure', label: 'Маникюр', image: '/photos/лендинг/каталог/маникюр.png' },
-  { key: 'barbers', label: 'Барберы', image: '/photos/лендинг/каталог/барберы.png' },
-  { key: 'brows-lashes', label: 'Брови и ресницы', image: '/photos/лендинг/каталог/брови.png' },
-  { key: 'massage', label: 'Массаж', image: '/photos/лендинг/каталог/массаж.png' },
-  { key: 'fitness', label: 'Фитнес', image: '/photos/лендинг/каталог/фитнес.png' },
-  { key: 'tattoo', label: 'Тату', image: '/photos/лендинг/каталог/тату.png' },
+  { key: 'manicure', label: 'Маникюр', image: '/photos/лендинг/каталог/маникюр.webp' },
+  { key: 'barbers', label: 'Барберы', image: '/photos/лендинг/каталог/барберы.webp' },
+  { key: 'brows-lashes', label: 'Брови и ресницы', image: '/photos/лендинг/каталог/брови.webp' },
+  { key: 'massage', label: 'Массаж', image: '/photos/лендинг/каталог/массаж.webp' },
+  { key: 'fitness', label: 'Фитнес', image: '/photos/лендинг/каталог/фитнес.webp' },
+  { key: 'tattoo', label: 'Тату', image: '/photos/лендинг/каталог/тату.webp' },
 ] as const;
 
 function categoryImageSrc(category: (typeof CATEGORIES)[number]): string {
@@ -30,21 +26,17 @@ export const HomeCategories: FC<HomeCategoriesProps> = ({ onCategory }) => {
       style={{ animationDelay: '120ms' }}
       aria-labelledby="home-categories-heading"
     >
-      <div className="mx-auto max-w-[40rem] text-center">
-        <h2
-          id="home-categories-heading"
-          className="text-[clamp(2rem,6vw,3.25rem)] font-bold leading-[1.05] tracking-[-0.04em] text-[#111827]"
-        >
-          Выберите услугу
-        </h2>
-      </div>
+      <h2
+        id="home-categories-heading"
+        className="text-left text-[clamp(2rem,6vw,3.25rem)] font-bold leading-[1.05] tracking-[-0.04em] text-[#111827]"
+      >
+        Выберите услугу
+      </h2>
 
       <div
-        className={`${CLIENT_DESKTOP_SHELL_BLEED_CLASS} mt-10 overflow-x-auto [scrollbar-width:none] sm:mt-14 [&::-webkit-scrollbar]:hidden`}
+        className="mt-10 mr-[calc(50%-50vw)] overflow-x-auto [scrollbar-width:none] sm:mt-14 [&::-webkit-scrollbar]:hidden"
       >
-        <ul
-          className={`flex list-none snap-x snap-mandatory scroll-pl-6 gap-5 pb-2 xl:scroll-pl-10 sm:gap-6 ${CLIENT_DESKTOP_SHELL_BLEED_PAD_CLASS} pr-[max(1.25rem,env(safe-area-inset-right))]`}
-        >
+        <ul className="flex w-max list-none snap-x snap-mandatory gap-5 pb-2 sm:gap-6">
           {CATEGORIES.map((category, index) => (
             <li key={category.key} className="w-[min(17.5rem,82vw)] shrink-0 snap-start sm:w-[19.5rem]">
               <button

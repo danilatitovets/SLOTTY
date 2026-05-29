@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { requireMasterProPlan } from '../../middlewares/requireMasterProPlan.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import {
   getMasterOverviewBundle,
@@ -22,6 +23,7 @@ const replyBody = z.object({
 
 masterOverviewRouter.get(
   '/bundle',
+  requireMasterProPlan,
   asyncHandler(async (req, res) => {
     const q = periodQuery.parse(req.query);
     const data = await getMasterOverviewBundle(req.user!.id, q.period);
@@ -31,6 +33,7 @@ masterOverviewRouter.get(
 
 masterOverviewRouter.get(
   '/summary',
+  requireMasterProPlan,
   asyncHandler(async (req, res) => {
     const q = periodQuery.parse(req.query);
     const data = await getMasterOverviewSummary(req.user!.id, q.period);
@@ -40,6 +43,7 @@ masterOverviewRouter.get(
 
 masterOverviewRouter.get(
   '/revenue',
+  requireMasterProPlan,
   asyncHandler(async (req, res) => {
     const q = periodQuery.parse(req.query);
     const data = await getMasterOverviewRevenue(req.user!.id, q.period);

@@ -65,6 +65,22 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled_by_client: 'Отмена клиентом',
   cancelled_by_master: 'Отмена мастером',
   no_show: 'Неявка',
+  in_review: 'В работе',
+  closed: 'Закрыта',
+};
+
+const SPONSOR_STATUS_LABELS: Record<string, string> = {
+  pending: 'Новая',
+  in_review: 'В работе',
+  closed: 'Закрыта',
+  rejected: 'Отклонена',
+};
+
+const SPONSOR_STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-amber-50 text-amber-800',
+  in_review: 'bg-sky-50 text-sky-800',
+  closed: 'bg-emerald-50 text-emerald-800',
+  rejected: 'bg-rose-50 text-rose-800',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -90,6 +106,16 @@ const STATUS_COLORS: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   const label = STATUS_LABELS[status] ?? status;
   const color = STATUS_COLORS[status] ?? 'bg-slate-100 text-slate-700';
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold ${color}`}>
+      {label}
+    </span>
+  );
+}
+
+export function SponsorStatusBadge({ status }: { status: string }) {
+  const label = SPONSOR_STATUS_LABELS[status] ?? status;
+  const color = SPONSOR_STATUS_COLORS[status] ?? 'bg-slate-100 text-slate-700';
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold ${color}`}>
       {label}

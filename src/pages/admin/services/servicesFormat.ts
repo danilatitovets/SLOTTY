@@ -1,3 +1,4 @@
+import { EMPTY_DURATION } from '../../../shared/lib/emptyDisplayText';
 import {
   getCategoryWorkPhotoUrl,
   resolveCategoryWorkCode,
@@ -35,7 +36,7 @@ export function formatServicePrice(service: ManagedService): string {
 }
 
 export function formatDurationRu(minutes: number): string {
-  if (!Number.isFinite(minutes) || minutes <= 0) return '—';
+  if (!Number.isFinite(minutes) || minutes <= 0) return EMPTY_DURATION;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h <= 0) return `${m} мин`;

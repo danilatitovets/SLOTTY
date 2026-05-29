@@ -2,8 +2,8 @@ import type { FC } from 'react';
 import { ImageReveal } from '../shared/ui/ImageReveal';
 import { homeSection } from './home/homeTheme';
 
-const TRUST_IMAGE_DESKTOP = '/photos/Онлайн-запись.png';
-const TRUST_IMAGE_MOBILE = '/photos/онлайнзаписьмбилка.png';
+const TRUST_IMAGE_DESKTOP = '/photos/Онлайн-запись.webp';
+const TRUST_IMAGE_MOBILE = '/photos/онлайнзаписьмбилка.webp';
 
 const STATS = ['6 категорий', 'Онлайн-запись 24/7', 'Telegram-напоминания'] as const;
 

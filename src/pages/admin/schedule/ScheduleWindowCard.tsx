@@ -1,6 +1,7 @@
 import { HiClock, HiUser } from 'react-icons/hi2';
 import {
   scheduleWindowCardShell,
+  scheduleWindowCardShellFlat,
   scheduleWindowStatusPill,
   scheduleWindowTimeStrip,
 } from './adminScheduleTheme';
@@ -9,6 +10,8 @@ import type { ScheduleWindowView } from './scheduleTypes';
 type Props = {
   window: ScheduleWindowView;
   onClick: () => void;
+  /** Без обводки — панель календаря. */
+  flat?: boolean;
 };
 
 const STATUS_LABEL: Record<ScheduleWindowView['status'], string> = {
@@ -17,11 +20,12 @@ const STATUS_LABEL: Record<ScheduleWindowView['status'], string> = {
   blocked: 'Закрыто',
 };
 
-export function ScheduleWindowCard({ window: w, onClick }: Props) {
+export function ScheduleWindowCard({ window: w, onClick, flat }: Props) {
   const stripClass = scheduleWindowTimeStrip(w.status);
+  const shell = flat ? scheduleWindowCardShellFlat : scheduleWindowCardShell;
 
   return (
-    <button type="button" onClick={onClick} className={`text-left ${scheduleWindowCardShell}`}>
+    <button type="button" onClick={onClick} className={`text-left ${shell}`}>
       <div
         className={`flex w-[4.75rem] shrink-0 flex-col items-center justify-center gap-0.5 self-stretch py-3 sm:w-20 ${stripClass}`}
       >

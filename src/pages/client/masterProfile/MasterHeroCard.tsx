@@ -1,11 +1,12 @@
+import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import type { ReactNode } from 'react';
 import { HiCalendarDays, HiClock, HiHomeModern, HiMapPin, HiStar } from 'react-icons/hi2';
 import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
 import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
-import { ImageReveal } from '../../../shared/ui/ImageReveal';
-import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
+import { MasterCardPortrait } from '../components/MasterCardPortrait';
 import { formatReviewsCountLabel } from '../../../features/services/model/demoMasters';
+import { EMPTY_DISTANCE, EMPTY_METRIC } from '../../../shared/lib/emptyDisplayText';
 import {
   estimatedBookingsCount,
   formatDistanceKm,
@@ -28,16 +29,10 @@ type Props = {
   onChooseTime?: () => void;
 };
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
-  return (name[0] ?? 'M').toUpperCase();
-}
-
 function formatProfileLocationChip(location: MasterLocation): string {
   const city = location.city?.trim() || 'Минск';
   const district = location.district?.trim();
-  if (district && district !== '—') {
+  if (district && district !== LOCATION_EMPTY_SENTINEL) {
     const short = district.length > 24 ? `${district.slice(0, 23)}…` : district;
     return `${city}, ${short}`;
   }
@@ -51,7 +46,7 @@ function formatProfileLocationChip(location: MasterLocation): string {
     }
   }
   const street = location.street?.trim();
-  if (street && street !== '—') {
+  if (street && street !== LOCATION_EMPTY_SENTINEL) {
     const cleaned = street
       .replace(/^ул\.?\s*/i, '')
       .replace(/^улица\s*/i, '')
@@ -112,28 +107,21 @@ export function MasterHeroCard({
   return (
     <section className={`overflow-hidden ${catalogDesktopPanel}`}>
       <div className="flex gap-3.5 p-4">
-        <div className="relative h-[8.5rem] w-[7rem] shrink-0">
-          <div className="h-full w-full overflow-hidden rounded-[16px] bg-[#FFF1F4]">
-            {master.photoUrl ? (
-              <ImageReveal
-                src={optimizeAvatarUrl(master.photoUrl, 400)}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="eager"
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-[22px] font-bold text-[#F47C8C]">
-                {initials(master.masterName)}
+        <MasterCardPortrait
+          masterName={master.masterName}
+          photoUrl={master.photoUrl}
+          className="relative h-[8.5rem] w-[7rem] shrink-0"
+          imageClassName="h-full w-full rounded-[16px] object-cover"
+          loading="eager"
+          badge={
+            hasSlot ? (
+              <span className="absolute bottom-2 left-1.5 right-1.5 flex items-center justify-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#15803D] shadow-sm">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
+                Свободна
               </span>
-            )}
-          </div>
-          {hasSlot ? (
-            <span className="absolute bottom-2 left-1.5 right-1.5 flex items-center justify-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#15803D] shadow-sm">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
-              Свободна
-            </span>
-          ) : null}
-        </div>
+            ) : undefined
+          }
+        />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-1">
@@ -160,7 +148,7 @@ export function MasterHeroCard({
                 value={
                   <span className="inline-flex items-center justify-center gap-0.5">
                     <HiStar className="h-4 w-4 text-amber-400" aria-hidden />
-                    {master.rating > 0 ? master.rating.toFixed(1) : '—'}
+                    {master.rating > 0 ? master.rating.toFixed(1) : EMPTY_METRIC}
                   </span>
                 }
                 label={
@@ -174,11 +162,11 @@ export function MasterHeroCard({
             {bookingsCount != null ? (
               <StatCell value={String(bookingsCount)} label="записей" />
             ) : (
-              <StatCell value="—" label="записей" valueClassName="text-[17px] font-bold text-[#D1D5DB]" />
+              <StatCell value={EMPTY_METRIC} label="записей" valueClassName="text-[15px] font-bold text-[#9CA3AF]" />
             )}
             <StatDivider />
             <StatCell
-              value={distanceLabel ?? '—'}
+              value={distanceLabel ?? EMPTY_DISTANCE}
               label={distanceLabel ? 'от вас' : 'расстояние'}
               valueClassName={
                 distanceLabel

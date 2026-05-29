@@ -27,6 +27,7 @@ export type ServerClientAppointment = {
   location_lat: number | string | null;
   location_lng: number | string | null;
   voucher_number: string | null;
+  has_review?: boolean;
 };
 
 export type ClientAppointmentsState = {
@@ -130,6 +131,63 @@ export function mapServerAppointmentToRecord(
     status: mapDbStatus(row.status),
     type: tab,
     voucherNumber: row.voucher_number ?? undefined,
+    hasReview: Boolean(row.has_review),
+  };
+}
+
+export function mergeClientAppointmentsState(
+  prev: ClientAppointmentsState,
+  chunk: ClientAppointmentsState,
+): ClientAppointmentsState {
+  const seen = new Set([...prev.upcoming, ...prev.past].map((a) => a.id));
+  const upcoming = [...prev.upcoming];
+  const past = [...prev.past];
+  for (const row of chunk.upcoming) {
+    if (seen.has(row.id)) continue;
+    upcoming.push(row);
+    seen.add(row.id);
+  }
+  for (const row of chunk.past) {
+    if (seen.has(row.id)) continue;
+    past.push(row);
+    seen.add(row.id);
+  }
+  return { upcoming, past };
+}
+
+export type ClientAppointmentsPageResult = {
+  state: ClientAppointmentsState;
+  total: number;
+  hasMore: boolean;
+  loaded: number;
+};
+
+export async function fetchClientAppointmentsPage(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<ClientAppointmentsPageResult> {
+  const sp = new URLSearchParams();
+  const limit = params?.limit ?? 30;
+  const offset = params?.offset ?? 0;
+  sp.set('limit', String(limit));
+  sp.set('offset', String(offset));
+  const res = await apiFetch(`/api/me/appointments?${sp.toString()}`);
+  if (!res.ok) throw new Error(await readSlottyApiErrorMessage(res));
+  const data = (await res.json()) as {
+    appointments?: ServerClientAppointment[];
+    total?: number;
+    hasMore?: boolean;
+    offset?: number;
+  };
+  const appointments = data.appointments ?? [];
+  const total = data.total ?? appointments.length;
+  const loaded = (data.offset ?? offset) + appointments.length;
+  const hasMore = data.hasMore ?? loaded < total;
+  return {
+    state: splitClientAppointments(appointments),
+    total,
+    hasMore,
+    loaded,
   };
 }
 

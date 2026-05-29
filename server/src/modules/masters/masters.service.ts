@@ -7,6 +7,33 @@ import { contactsToLegacyContactLine, type MasterContactPayload } from './master
 import { decodePaymentNote, listMasterPaymentMethodNames } from './masterTrustProfile.service.js';
 import { sanitizeMasterLocationForViewer } from '../../lib/sanitizeMasterLocation.js';
 
+const MASTER_PROFILE_COVER_TITLE = 'Обложка профиля';
+
+async function resolveMasterPublicCoverUrl(
+  masterId: string,
+  portfolioCoverItemId: string | null,
+): Promise<string | null> {
+  if (portfolioCoverItemId?.trim()) {
+    const r = await query<{ image_url: string | null }>(
+      `select image_url from public.master_portfolio_items
+        where id = $1 and master_id = $2
+        limit 1`,
+      [portfolioCoverItemId.trim(), masterId],
+    );
+    const url = r.rows[0]?.image_url?.trim();
+    if (url) return url;
+  }
+
+  const byTitle = await query<{ image_url: string | null }>(
+    `select image_url from public.master_portfolio_items
+      where master_id = $1 and trim(coalesce(title, '')) = $2
+      order by sort_order asc, created_at asc
+      limit 1`,
+    [masterId, MASTER_PROFILE_COVER_TITLE],
+  );
+  return byTitle.rows[0]?.image_url?.trim() || null;
+}
+
 function num(v: string | number | null | undefined): number | null {
   if (v == null || v === '') return null;
   if (typeof v === 'number') return Number.isFinite(v) ? v : null;
@@ -59,7 +86,7 @@ function mapPublicMasterLocation(row: PublicMasterLocationRow) {
       lng: row.lng,
       showExactAddressAfterBooking: row.show_exact_address_after_booking,
     },
-    { isPublicCatalog: false },
+    { isPublicCatalog: false, isPublicMasterProfile: true },
   );
 }
 
@@ -115,7 +142,13 @@ export async function listPublishedMasters(filters: { category?: string; search?
         where s.master_id = mp.master_id
           and s.status = 'available'
           and s.starts_at > now()
-      ) as next_slot_starts_at
+      ) as next_slot_starts_at,
+      (
+        select count(*)::int
+        from public.appointments a
+        where a.master_id = mp.master_id
+          and a.status = 'completed'
+      ) as completed_bookings_count
     from public.master_profiles mp
     left join public.service_categories sc on sc.id = mp.primary_category_id
     left join public.master_locations ml on ml.master_id = mp.master_id and ml.is_primary = true
@@ -148,6 +181,7 @@ export async function listPublishedMasters(filters: { category?: string; search?
     primary_service_title: string | null;
     primary_service_price: string | null;
     next_slot_starts_at: Date | string | null;
+    completed_bookings_count: number;
   }>(sql, params);
 
   return r.rows.map((row) => {
@@ -181,6 +215,7 @@ export async function listPublishedMasters(filters: { category?: string; search?
         row.next_slot_starts_at != null
           ? new Date(row.next_slot_starts_at as Date).toISOString()
           : null,
+      completedBookingsCount: Number(row.completed_bookings_count ?? 0),
     };
   });
 }
@@ -254,6 +289,9 @@ type ReviewRow = {
 };
 
 export async function getMasterDetail(masterId: string) {
+  const { stabilizePortraitForProfile } = await import('../../lib/stabilizePortraitForProfile.js');
+  await stabilizePortraitForProfile(masterId);
+
   const mp = await query<{
     master_id: string;
     display_name: string;
@@ -267,9 +305,11 @@ export async function getMasterDetail(masterId: string) {
     phone: string | null;
     contact: string | null;
     is_verified: boolean;
+    portfolio_cover_item_id: string | null;
   }>(
     `select master_id, display_name, bio, photo_url, slug, rating_avg::text, reviews_count,
-            publication_status::text, primary_category_id, phone, contact, is_verified
+            publication_status::text, primary_category_id, phone, contact, is_verified,
+            portfolio_cover_item_id
        from public.master_profiles
       where master_id = $1`,
     [masterId],
@@ -370,6 +410,8 @@ export async function getMasterDetail(masterId: string) {
     : paymentDecodedPublic.paymentMethods;
 
   const locRows = locations.rows as PublicMasterLocationRow[];
+  const coverUrl = await resolveMasterPublicCoverUrl(master.master_id, master.portfolio_cover_item_id);
+  const coverId = master.portfolio_cover_item_id?.trim() || null;
 
   return {
     master: {
@@ -377,6 +419,8 @@ export async function getMasterDetail(masterId: string) {
       displayName: master.display_name,
       bio: master.bio,
       photoUrl: master.photo_url,
+      coverUrl,
+      portfolioCoverItemId: coverId,
       slug: master.slug,
       phone: master.phone,
       contact: master.contact,
@@ -484,8 +528,15 @@ export async function upsertMyMasterProfile(
 }
 
 export async function getMyMasterProfile(profileId: string) {
+  const { backfillMasterProfileMediaFromUserProfile, fetchUserProfileMediaFallback } =
+    await import('../profiles/profiles.service.js');
+  const { stabilizePortraitForProfile } = await import('../../lib/stabilizePortraitForProfile.js');
+
+  await stabilizePortraitForProfile(profileId);
+
   const r = await query(
     `select master_id, display_name, slug, primary_category_id, bio, phone, contact, contacts, photo_url,
+            portfolio_cover_item_id,
             publication_status::text, is_profile_active, rating_avg::text, reviews_count, global_buffer_minutes
        from public.master_profiles
       where master_id = $1`,
@@ -502,6 +553,7 @@ export async function getMyMasterProfile(profileId: string) {
         contact: string | null;
         contacts: unknown | null;
         photo_url: string | null;
+        portfolio_cover_item_id: string | null;
         publication_status: string;
         is_profile_active: boolean;
         rating_avg: string;
@@ -512,16 +564,47 @@ export async function getMyMasterProfile(profileId: string) {
   if (!row) {
     throw ApiError.notFound('Master profile not found');
   }
+
+  let portfolioCoverItemId = row.portfolio_cover_item_id;
+  if (!portfolioCoverItemId) {
+    const inferred = await query<{ id: string }>(
+      `select id from public.master_portfolio_items
+        where master_id = $1 and trim(coalesce(title, '')) = $2
+        order by sort_order asc, created_at asc
+        limit 1`,
+      [profileId, 'Обложка профиля'],
+    );
+    const inferredId = inferred.rows[0]?.id;
+    if (inferredId) {
+      await query(
+        `update public.master_profiles set portfolio_cover_item_id = $2, updated_at = now() where master_id = $1`,
+        [profileId, inferredId],
+      );
+      portfolioCoverItemId = inferredId;
+    }
+  }
+
+  const needsPhoto = !row.photo_url?.trim();
+  const needsPhone = !row.phone?.trim();
+  if (needsPhoto || needsPhone) {
+    await backfillMasterProfileMediaFromUserProfile(profileId);
+  }
+  const fallback = needsPhoto || needsPhone ? await fetchUserProfileMediaFallback(profileId) : null;
+
+  const phone = row.phone?.trim() || fallback?.phone || null;
+  const photoUrl = row.photo_url?.trim() || fallback?.avatarUrl || null;
+
   return {
     masterId: row.master_id,
     displayName: row.display_name,
     slug: row.slug,
     primaryCategoryId: row.primary_category_id,
     bio: row.bio,
-    phone: row.phone,
+    phone,
     contact: row.contact,
     contacts: row.contacts ?? null,
-    photoUrl: row.photo_url,
+    photoUrl,
+    portfolioCoverItemId,
     publicationStatus: row.publication_status,
     isProfileActive: row.is_profile_active,
     rating: num(row.rating_avg) ?? 0,
@@ -543,6 +626,7 @@ export async function patchMyMasterProfile(
     primaryCategoryCode?: string | null;
     publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
     globalBufferMinutes?: number;
+    portfolioCoverItemId?: string | null;
   },
 ) {
   const exists = await query<{ publication_status: string }>(
@@ -640,6 +724,20 @@ export async function patchMyMasterProfile(
     }
   }
   if (patch.globalBufferMinutes !== undefined) push('global_buffer_minutes', patch.globalBufferMinutes);
+  if (patch.portfolioCoverItemId !== undefined) {
+    if (patch.portfolioCoverItemId === null) {
+      push('portfolio_cover_item_id', null);
+    } else {
+      const owned = await query<{ id: string }>(
+        `select id from public.master_portfolio_items where id = $1 and master_id = $2`,
+        [patch.portfolioCoverItemId, profileId],
+      );
+      if (!owned.rows[0]) {
+        throw ApiError.badRequest('Фото обложки не найдено в портфолио', 'portfolio_cover_not_found');
+      }
+      push('portfolio_cover_item_id', patch.portfolioCoverItemId);
+    }
+  }
 
   if (fields.length) {
     vals.push(profileId);
@@ -782,8 +880,29 @@ export async function getMyMasterCabinet(masterId: string) {
     }
   }
 
-  const { buildCategoryChangePolicy } = await import('./categoryChangePolicy.service.js');
-  const categoryChangePolicy = await buildCategoryChangePolicy(masterId);
+  let categoryChangePolicy: Awaited<
+    ReturnType<(typeof import('./categoryChangePolicy.service.js'))['buildCategoryChangePolicy']>
+  >;
+  try {
+    const { buildCategoryChangePolicy } = await import('./categoryChangePolicy.service.js');
+    categoryChangePolicy = await buildCategoryChangePolicy(masterId);
+  } catch (e) {
+    console.error('[masters] buildCategoryChangePolicy failed:', e instanceof Error ? e.message : e);
+    categoryChangePolicy = {
+      canChangeDirectly: true,
+      needsRequest: false,
+      reason: 'draft_profile',
+      hasActiveRequest: false,
+      activeRequest: null,
+      activity: {
+        servicesCount: services.length,
+        activeWindowsCount: 0,
+        futureBookingsCount: 0,
+        completedBookingsCount: 0,
+        reviewsCount: profile.reviewsCount,
+      },
+    };
+  }
 
   return {
     profile: profileOut,

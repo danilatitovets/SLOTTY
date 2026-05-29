@@ -1,6 +1,7 @@
 import {
   profileDashboardCard,
   profileDashboardCardPad,
+  profileDesktopTabsSticky,
   PROFILE_DESKTOP_PAGE_BG,
 } from '../profile/adminProfileDashboardTheme';
 
@@ -30,8 +31,7 @@ export const servicesTabContentPad = 'space-y-4 max-lg:p-0 lg:space-y-5 lg:p-6';
 
 export const servicesShellCard = 'hidden w-full min-w-0 lg:block';
 
-export const servicesDesktopTabsSticky =
-  'sticky z-20 overflow-hidden bg-white top-[var(--slotty-admin-desktop-topbar-h,4.75rem)]';
+export const servicesDesktopTabsSticky = profileDesktopTabsSticky;
 
 export const SLOTTY_GRADIENT =
   'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
@@ -48,17 +48,17 @@ export const SERVICES_TAB_BAR_SCROLL_PAD = `calc(${SERVICES_TAB_BAR_HEIGHT} + 1.
 export const servicesCard =
   'rounded-[22px] border border-[#EAECEF] bg-white shadow-[0_8px_28px_rgba(17,24,39,0.05)]';
 
-/** Карточка услуги в каталоге — мобилка: как панели кабинета. */
-export const servicesCatalogCardMobile = 'w-full overflow-hidden rounded-[16px] bg-white p-4';
+/** Карточка услуги в каталоге — без рамок, мягкая серая плашка. */
+export const servicesCatalogCardMobile =
+  'w-full overflow-hidden rounded-[16px] bg-[#F6F7FB] p-4 lg:rounded-[18px] lg:px-5 lg:py-4';
 
 export const servicesCatalogSearchInput =
-  'w-full rounded-[10px] border-0 bg-[#EBEBEB] py-3 pl-11 pr-4 text-[15px] font-medium text-[#111827] outline-none transition placeholder:text-[#8E8E93] focus:bg-[#E4E4E4]';
+  'w-full rounded-[10px] border-0 bg-[#EBEBEB] py-3 pl-11 pr-4 text-[15px] font-medium text-[#111827] outline-none transition placeholder:text-[#8E8E93] focus:bg-[#E4E4E4] lg:min-h-[48px] lg:rounded-[14px] lg:pl-12 lg:text-[15px]';
 
 export const servicesCatalogFilterBtn =
-  'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#6B7280] transition active:scale-[0.96] lg:h-[52px] lg:w-[52px] lg:rounded-[18px] lg:border lg:border-[#EAECEF] lg:bg-white';
+  'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] border-0 bg-[#EBEBEB] text-[#6B7280] transition active:scale-[0.96] lg:h-12 lg:w-12 lg:rounded-[14px]';
 
-export const servicesCatalogFilterBtnActive =
-  'bg-[#F47C8C] text-white lg:border-[#FDE8ED] lg:bg-[#FFF1F4] lg:text-[#F47C8C] lg:shadow-[inset_0_0_0_1px_rgba(244,124,140,0.12)]';
+export const servicesCatalogFilterBtnActive = 'bg-[#F47C8C] text-white';
 
 export const servicesCardPad = 'p-4';
 

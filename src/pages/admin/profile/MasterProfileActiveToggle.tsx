@@ -98,7 +98,7 @@ export function MasterProfileActiveToggle({
             onClick={onToggleClick}
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition active:scale-[0.96] ${
               active
-                ? 'border-[#ff5f7a] bg-[#ff5f7a] text-white shadow-[0_4px_14px_rgba(255,95,122,0.35)]'
+                ? 'border-[#ff5f7a] bg-[#ff5f7a] text-white'
                 : 'border-[#D1D5DB] bg-white text-transparent'
             } ${disabled || adminPaused ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:border-[#ff5f7a]/60'}`}
           >

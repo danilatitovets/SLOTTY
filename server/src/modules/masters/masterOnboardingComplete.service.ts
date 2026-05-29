@@ -68,6 +68,8 @@ export type CompleteMasterOnboardingInput = {
   scheduleRules: OnboardingScheduleRuleInput[];
   services: OnboardingServiceInput[];
   certificates: OnboardingCertificateInput[];
+  bookingRules?: string | null;
+  cancellationPolicy?: string | null;
   /** Через онбординг без оплаты сохраняется только basic. */
   masterPlan?: 'basic';
   proInterested?: boolean;
@@ -220,6 +222,27 @@ async function insertServiceRow(
       svc.priceType ?? 'fixed',
       svc.sortOrder ?? fallbackOrder,
     ],
+  );
+}
+
+async function upsertBookingRulesTx(
+  client: PoolClient,
+  masterId: string,
+  bookingRules: string | null,
+  cancellationPolicy: string | null,
+): Promise<void> {
+  const rules = bookingRules?.trim() || null;
+  const cancel = cancellationPolicy?.trim() || null;
+  if (!rules && !cancel) return;
+
+  await client.query(
+    `insert into public.master_booking_rules (master_id, booking_rules, cancellation_policy, payment_note)
+     values ($1, $2, $3, null)
+     on conflict (master_id) do update set
+       booking_rules = excluded.booking_rules,
+       cancellation_policy = excluded.cancellation_policy,
+       updated_at = now()`,
+    [masterId, rules, cancel],
   );
 }
 
@@ -482,7 +505,8 @@ export async function completeMyMasterOnboarding(masterId: string, body: Complet
     }
 
     await replaceCertificatesTx(client, masterId, body.certificates);
-        await ensureMasterSubscriptionWithClient(client, masterId);
+    await upsertBookingRulesTx(client, masterId, body.bookingRules ?? null, body.cancellationPolicy ?? null);
+    await ensureMasterSubscriptionWithClient(client, masterId);
 
     return loadOnboardingResult(client, masterId);
   });

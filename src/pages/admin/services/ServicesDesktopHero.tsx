@@ -4,22 +4,30 @@ import {
   HiEye,
   HiEyeSlash,
   HiGift,
+  HiLockClosed,
   HiReceiptPercent,
   HiScissors,
   HiSquares2X2,
   HiWallet,
 } from 'react-icons/hi2';
+import { Link } from 'react-router-dom';
+import { ADMIN_BILLING_PATH } from '../../../app/paths';
 import { OverviewKpiCarousel, OverviewKpiStatCard } from '../overview/OverviewKpiBlocks';
 import {
-  servicesDesktopCard,
-  SLOTTY_GRADIENT,
-} from './adminServicesTheme';
+  formatOptionalByn,
+  formatOptionalPriceRange,
+  EMPTY_METRIC,
+} from '../../../shared/lib/emptyDisplayText';
+import { servicesDesktopCard, SLOTTY_GRADIENT } from './adminServicesTheme';
+import { MASTER_PRO_PLAN_NAME, servicesProUpsellCopy } from './servicesProUpsell';
 import type { ServicesTabMetrics } from './servicesTabMetrics';
 import type { ServicesTabId } from './servicesTypes';
 
 type Props = {
   tab: ServicesTabId;
   metrics: ServicesTabMetrics;
+  /** Free: на вкладках наборов/акций — без счётчиков «0 активных», только пояснение Pro. */
+  extrasLocked?: boolean;
 };
 
 function HeroShell({ children, hero }: { children: ReactNode; hero: ReactNode }) {
@@ -119,7 +127,7 @@ function CatalogHero({ metrics }: { metrics: ServicesTabMetrics['catalog'] }) {
         <OverviewKpiStatCard
           surface="carousel"
           label="Средняя цена"
-          value={m.avgPrice > 0 ? `${m.avgPrice} BYN` : '—'}
+          value={formatOptionalByn(m.avgPrice)}
           hint="По всем услугам"
           icon={<HiWallet className="h-5 w-5" aria-hidden />}
         />
@@ -130,12 +138,7 @@ function CatalogHero({ metrics }: { metrics: ServicesTabMetrics['catalog'] }) {
 
 function PriceHero({ metrics }: { metrics: ServicesTabMetrics['price'] }) {
   const m = metrics;
-  const range =
-    m.total > 0 && m.minPrice !== m.maxPrice
-      ? `${m.minPrice}–${m.maxPrice} BYN`
-      : m.total > 0
-        ? `${m.minPrice} BYN`
-        : '—';
+  const range = formatOptionalPriceRange(m.minPrice, m.maxPrice, m.total);
 
   return (
     <HeroShell
@@ -160,7 +163,7 @@ function PriceHero({ metrics }: { metrics: ServicesTabMetrics['price'] }) {
         <OverviewKpiStatCard
           surface="carousel"
           label="Средняя"
-          value={m.avgPrice > 0 ? `${m.avgPrice} BYN` : '—'}
+          value={formatOptionalByn(m.avgPrice)}
           hint="По каталогу"
           icon={<HiWallet className="h-5 w-5" aria-hidden />}
         />
@@ -232,6 +235,69 @@ function BundlesHero({ metrics }: { metrics: ServicesTabMetrics['bundles'] }) {
   );
 }
 
+function ProLockedExtrasHero({ tab }: { tab: 'bundles' | 'promotions' }) {
+  const isPromos = tab === 'promotions';
+  const copy = servicesProUpsellCopy(tab);
+
+  return (
+    <HeroShell
+      hero={
+        <section className="bg-[#F6F7FB] p-5 lg:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-2 text-[12px] font-bold text-[#6B7280]">
+                <HiLockClosed className="h-4 w-4 text-[#ff5f7a]" aria-hidden />
+                {copy.title}
+              </p>
+              <p className="mt-3 text-[15px] font-semibold leading-relaxed text-[#6B7280] lg:max-w-[40rem]">
+                {copy.lead}
+              </p>
+              <p className="mt-2 text-[13px] font-medium text-[#9CA3AF]">{copy.exampleNote}</p>
+            </div>
+            <Link
+              to={ADMIN_BILLING_PATH}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center self-start rounded-[14px] bg-[#ff5f7a] px-5 text-[14px] font-bold text-white transition hover:bg-[#f04f6c] active:scale-[0.98]"
+            >
+              {copy.cta}
+            </Link>
+          </div>
+        </section>
+      }
+    >
+      <OverviewKpiCarousel>
+        <OverviewKpiStatCard
+          surface="carousel"
+          label="Ваш тариф"
+          value="Free"
+          hint={`Нужен ${MASTER_PRO_PLAN_NAME}`}
+          icon={<HiLockClosed className="h-5 w-5" aria-hidden />}
+        />
+        <OverviewKpiStatCard
+          surface="carousel"
+          label="Создано"
+          value="0"
+          hint={isPromos ? 'Ваших акций' : 'Ваших наборов'}
+          icon={isPromos ? <HiReceiptPercent className="h-5 w-5" aria-hidden /> : <HiGift className="h-5 w-5" aria-hidden />}
+        />
+        <OverviewKpiStatCard
+          surface="carousel"
+          label="Примеры"
+          value="2"
+          hint="Только для ознакомления"
+          icon={<HiEyeSlash className="h-5 w-5" aria-hidden />}
+        />
+        <OverviewKpiStatCard
+          surface="carousel"
+          label="Услуги"
+          value={EMPTY_METRIC}
+          hint="Каталог доступен на Free"
+          icon={<HiScissors className="h-5 w-5" aria-hidden />}
+        />
+      </OverviewKpiCarousel>
+    </HeroShell>
+  );
+}
+
 function PromotionsHero({ metrics }: { metrics: ServicesTabMetrics['promotions'] }) {
   const m = metrics;
 
@@ -281,7 +347,14 @@ function PromotionsHero({ metrics }: { metrics: ServicesTabMetrics['promotions']
   );
 }
 
-export function ServicesDesktopHero({ tab, metrics }: Props) {
+export function ServicesDesktopHero({ tab, metrics, extrasLocked = false }: Props) {
+  if (extrasLocked && tab === 'bundles') {
+    return <ProLockedExtrasHero tab="bundles" />;
+  }
+  if (extrasLocked && tab === 'promotions') {
+    return <ProLockedExtrasHero tab="promotions" />;
+  }
+
   switch (tab) {
     case 'price':
       return <PriceHero metrics={metrics.price} />;

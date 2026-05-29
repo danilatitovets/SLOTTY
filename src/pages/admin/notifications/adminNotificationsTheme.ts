@@ -14,9 +14,6 @@ export const notificationsDesktopCard = profileDashboardCard;
 
 export const notificationsShellCard = 'hidden w-full min-w-0 lg:block';
 
-export const NOTIFICATIONS_GRADIENT =
-  'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
-
 /** Панель фильтров ленты. */
 export const notifListToolbar =
   'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:rounded-[20px] lg:p-5';

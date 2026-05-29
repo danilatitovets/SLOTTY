@@ -20,10 +20,13 @@ import {
   WEEKDAY_LABELS_SHORT,
 } from '../../../features/master/model/masterDraftStorage';
 import { mergeScheduleTimeSelectOptions } from '../schedule/scheduleTimeSelectOptions';
-import { validateMasterAddressForm } from '../../../features/profile/lib/masterAddressValidation';
+import {
+  AT_HOME_ROOM_MAX,
+  sanitizeAtHomeRoomInput,
+  validateMasterAddressForm,
+} from '../../../features/profile/lib/masterAddressValidation';
 import type { MasterVisitType } from '../../../features/profile/model/masterLocation';
 import { masterVisitTypeLabel } from '../../../features/profile/model/masterLocation';
-import { defaultMasterAvatarUrl } from '../../../features/master/model/masterDraftStorage';
 import { BY } from 'country-flag-icons/react/1x1';
 import {
   canAddContactChannel,
@@ -62,7 +65,7 @@ import {
 } from './adminProfileCabinetTheme';
 import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
-import { ProfilePreviewImage } from './adminProfileMedia';
+import { MasterCabinetPhotoPreview } from './adminProfilePortrait';
 
 const VISIT_TYPES: MasterVisitType[] = ['studio', 'at_home'];
 
@@ -327,8 +330,6 @@ export function SheetMainInfo({
     }
   }, [telegramUserPhotoUrl, uploadHeroPhoto]);
 
-  const preview = photoUrl.trim() || defaultMasterAvatarUrl(name || draft.name);
-
   const save = async () => {
     setSubmitAttempted(true);
     const errs: Record<string, string> = {};
@@ -390,14 +391,7 @@ export function SheetMainInfo({
           onChange={onPhotoChange}
         />
         <div className="relative mx-auto w-full max-w-[320px]">
-          <ProfilePreviewImage
-            src={preview}
-            alt=""
-            aspectClass="aspect-[16/10]"
-            onError={(ev) => {
-              (ev.target as HTMLImageElement).src = defaultMasterAvatarUrl(name || 'Мастер');
-            }}
-          />
+          <MasterCabinetPhotoPreview name={name || draft.name} photoUrl={photoUrl} />
           <div className="absolute bottom-2 right-2 flex max-w-[calc(100%-0.5rem)] flex-wrap justify-end gap-1.5">
             {telegramUserPhotoUrl ? (
               <button
@@ -802,34 +796,31 @@ export function SheetAddress({
         {visitType === 'studio' ? (
           <p className={sheetHintClass}>Метка у входа в салон — так проще найти вас на месте.</p>
         ) : null}
-        <div className="overflow-hidden rounded-[12px]">
-          <OnboardingAddressMap
-            key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
-            city={MASTER_CABINET_CITY}
-            visitType={visitType}
-            street={street}
-            onStreetChange={onStreetLineChange}
-            inputLabel="Адрес"
-            inputPlaceholder="Начните вводить — подсказки под полем. Точку можно уточнить на карте."
-            inputClassName={sheetFieldClass}
-            suppressSuggestUntilFocus
-            initialLat={lat ?? null}
-            initialLng={lng ?? null}
-            inputError={showErr('street')}
-            coordsError={showErr('coords')}
-            onMapAvailabilityChange={setMapScriptOk}
-            onPick={(res) => {
-              const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
-              setStreet(s);
-              setBuilding(b);
-              setLat(res.lat);
-              setLng(res.lng);
-              setAddressPinnedToMap(true);
-              clearFieldError('street');
-              clearFieldError('coords');
-            }}
-          />
-        </div>
+        <OnboardingAddressMap
+          key={`${visitType}-${draft.masterId ?? 'local'}-${locationSyncFingerprint}`}
+          city={MASTER_CABINET_CITY}
+          visitType={visitType}
+          street={street}
+          onStreetChange={onStreetLineChange}
+          inputPlaceholder="Введите улицу и дом"
+          inputClassName={sheetFieldClass}
+          suppressSuggestUntilFocus
+          initialLat={lat ?? null}
+          initialLng={lng ?? null}
+          inputError={showErr('street')}
+          coordsError={showErr('coords')}
+          onMapAvailabilityChange={setMapScriptOk}
+          onPick={(res) => {
+            const { street: s, building: b } = splitReferenceLabelToStreetBuilding(res.addressLine);
+            setStreet(s);
+            setBuilding(b);
+            setLat(res.lat);
+            setLng(res.lng);
+            setAddressPinnedToMap(true);
+            clearFieldError('street');
+            clearFieldError('coords');
+          }}
+        />
       </div>
 
       {visitType === 'at_home' ? (
@@ -929,9 +920,12 @@ export function SheetAddress({
             <input
               value={room}
               onChange={(e) => {
-                setRoom(e.target.value);
+                setRoom(
+                  isHome ? sanitizeAtHomeRoomInput(e.target.value) : e.target.value.slice(0, 80),
+                );
                 clearFieldError('room');
               }}
+              maxLength={isHome ? AT_HOME_ROOM_MAX : 80}
               className={sheetFieldClass}
               placeholder={visitType === 'at_home' ? 'Например, 42' : 'Например, 3'}
             />

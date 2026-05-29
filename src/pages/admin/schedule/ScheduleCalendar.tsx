@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { HiChevronLeft, HiChevronRight } from 'react-icons/hi2';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { HiArrowDownTray, HiChevronLeft, HiChevronRight } from 'react-icons/hi2';
+import { downloadScheduleMonthWordReport } from './exportScheduleWordReport';
 import type { ScheduleWindowView } from './scheduleTypes';
 import { ScheduleWindowCard } from './ScheduleWindowCard';
 import {
@@ -7,7 +8,10 @@ import {
   scheduleBusyDaysStrip,
   scheduleCalendarCard,
   scheduleCalendarDayPanel,
+  scheduleCalendarIconBtn,
 } from './adminScheduleTheme';
+import { ScheduleCalendarTabStats } from './ScheduleCalendarTabStats';
+import type { ScheduleTabMetrics } from './scheduleTabMetrics';
 import { sheetChipClass } from '../profile/adminProfileCabinetTheme';
 import {
   addMonths,
@@ -15,6 +19,7 @@ import {
   formatGroupHeader,
   formatMonthYearLabel,
   indexWindowsByDate,
+  isLocalDateIsoBeforeToday,
   isTodayIso,
   parseIsoDate,
   startOfMonth,
@@ -27,7 +32,12 @@ import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 type Props = {
   windows: ScheduleWindowView[];
   loading: boolean;
+  calendarMetrics: ScheduleTabMetrics['calendar'];
   onWindowClick: (w: ScheduleWindowView) => void;
+  onCreateForDay?: (dateIso: string) => void;
+  canCreateForDay?: boolean;
+  createForDayDisabledTitle?: string;
+  masterName?: string;
 };
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
@@ -82,6 +92,7 @@ function CalendarDayCell({
   cell,
   stats,
   isToday,
+  isPast,
   isSelected,
   onSelect,
 }: {
@@ -89,44 +100,52 @@ function CalendarDayCell({
   cell: { dateIso: string; inCurrentMonth: boolean };
   stats: DayWindowStats | undefined;
   isToday: boolean;
+  isPast: boolean;
   isSelected: boolean;
   onSelect: () => void;
 }) {
   const hasSlots = (stats?.total ?? 0) > 0;
   const dense = (stats?.total ?? 0) >= 6;
+  const pastMuted = isPast && !isSelected;
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`relative flex min-h-[3.25rem] flex-col items-center justify-center rounded-[14px] px-0.5 py-1.5 transition active:scale-[0.96] sm:min-h-[3.5rem] ${
+      className={`relative flex flex-col items-center justify-center rounded-[12px] px-0.5 transition active:scale-[0.96] ${
+        pastMuted ? 'min-h-[2.35rem] py-1 opacity-70 sm:min-h-[2.5rem]' : 'min-h-[3.25rem] py-1.5 sm:min-h-[3.5rem]'
+      } ${
         isSelected
-          ? 'bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_8px_20px_rgba(255,95,122,0.35)]'
+          ? 'bg-[#ff5f7a] text-white'
           : isToday
-            ? 'bg-[#FFF1F4] text-[#ff5f7a] ring-2 ring-[#ff5f7a]/30'
-            : hasSlots
-              ? 'bg-white text-[#111827] ring-1 ring-[#FDE8ED] hover:bg-[#FFF9FB]'
-              : cell.inCurrentMonth
-                ? 'bg-[#f6f7fb] text-[#374151] hover:bg-[#FFF1F4]'
-                : 'bg-transparent text-[#D1D5DB]'
+            ? 'bg-[#FFF1F4] text-[#ff5f7a]'
+            : pastMuted
+              ? hasSlots
+                ? 'bg-[#EBEBEB] text-[#6B7280] hover:bg-[#E4E4E4]'
+                : 'bg-transparent text-[#9CA3AF] hover:bg-[#EBEBEB]/60'
+              : hasSlots
+                ? 'bg-white text-[#111827] hover:bg-[#FFF1F4]'
+                : cell.inCurrentMonth
+                  ? 'bg-[#F6F7FB] text-[#374151] ring-1 ring-inset ring-[#EEEEEE] hover:bg-[#FFF1F4]'
+                  : 'bg-transparent text-[#D1D5DB]'
       }`}
       aria-label={`${dayNum}, ${windowsCountRu(stats?.total ?? 0)}`}
       aria-pressed={isSelected}
     >
       <span
-        className={`text-[14px] font-black tabular-nums leading-none sm:text-[15px] ${
-          !cell.inCurrentMonth && !isSelected ? 'opacity-45' : ''
-        }`}
+        className={`font-black tabular-nums leading-none ${
+          pastMuted ? 'text-[12px] sm:text-[13px]' : 'text-[14px] sm:text-[15px]'
+        } ${!cell.inCurrentMonth && !isSelected ? 'opacity-45' : ''}`}
       >
         {dayNum}
       </span>
 
       {hasSlots && stats ? (
-        <div className="mt-1 flex w-full flex-col items-center px-1">
+        <div className={`flex w-full flex-col items-center px-1 ${pastMuted ? 'mt-0.5' : 'mt-1'}`}>
           <span
-            className={`text-[10px] font-black leading-none tabular-nums ${
-              isSelected ? 'text-white' : dense ? 'text-[#ff5f7a]' : 'text-[#6B7280]'
-            }`}
+            className={`font-black leading-none tabular-nums ${
+              pastMuted ? 'text-[9px]' : 'text-[10px]'
+            } ${isSelected ? 'text-white' : dense ? 'text-[#ff5f7a]' : 'text-[#6B7280]'}`}
           >
             {formatCountBadge(stats.total)}
           </span>
@@ -152,27 +171,25 @@ function ScheduleWindowRowCompact({ window: w, onClick }: { window: ScheduleWind
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-[16px] border px-3 py-2.5 text-left transition active:scale-[0.99] ${
+      className={`flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left transition active:scale-[0.99] ${
         booked
-          ? 'border-transparent bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_6px_18px_rgba(255,95,122,0.22)]'
+          ? 'bg-[#FFF1F4] text-[#111827]'
           : w.status === 'blocked'
-            ? 'border-[#EAECEF] bg-[#f6f7fb] text-[#6B7280]'
-            : 'border-[#FDE8ED] bg-white text-[#111827] shadow-[0_4px_12px_rgba(255,95,122,0.06)]'
+            ? 'bg-[#EBEBEB] text-[#6B7280]'
+            : 'bg-white text-[#111827]'
       }`}
     >
       <span
-        className={`shrink-0 text-[13px] font-black tabular-nums tracking-[-0.03em] ${
-          booked ? 'text-white' : 'text-[#ff5f7a]'
-        }`}
+        className="shrink-0 text-[13px] font-black tabular-nums tracking-[-0.03em] text-[#ff5f7a]"
       >
         {w.startTime}
       </span>
-      <span className={`min-w-0 flex-1 truncate text-[13px] font-bold ${booked ? 'text-white' : 'text-[#111827]'}`}>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-[#111827]">
         {w.serviceName}
       </span>
       <span
         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-          booked ? 'bg-white/20 text-white' : 'bg-[#FFF1F4] text-[#ff5f7a]'
+          booked ? 'bg-[#ff5f7a] text-white' : 'bg-[#EBEBEB] text-[#6B7280]'
         }`}
       >
         {STATUS_SHORT[w.status]}
@@ -181,7 +198,18 @@ function ScheduleWindowRowCompact({ window: w, onClick }: { window: ScheduleWind
   );
 }
 
-export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
+export function ScheduleCalendar({
+  windows,
+  loading,
+  calendarMetrics,
+  onWindowClick,
+  onCreateForDay,
+  canCreateForDay = true,
+  createForDayDisabledTitle,
+  masterName = 'Мастер',
+}: Props) {
+  const [exportingWord, setExportingWord] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [monthAnchor, setMonthAnchor] = useState(() => startOfMonth(new Date()));
   const [selectedIso, setSelectedIso] = useState(todayIso);
   const [dayFilter, setDayFilter] = useState<'all' | ScheduleWindowView['status']>('all');
@@ -257,16 +285,44 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
   };
 
   const useCompactList = selectedWindows.length >= COMPACT_DAY_THRESHOLD;
+  const selectedIsPast = isLocalDateIsoBeforeToday(selectedIso);
+  const showCreateForDayLink =
+    Boolean(onCreateForDay) && !selectedIsPast && selectedWindowsAll.length === 0;
+
+  const handleWordExport = useCallback(async () => {
+    setExportError(null);
+    setExportingWord(true);
+    try {
+      await downloadScheduleMonthWordReport({
+        windows,
+        monthAnchor,
+        masterName,
+      });
+    } catch {
+      setExportError('Не удалось сформировать отчёт Word');
+    } finally {
+      setExportingWord(false);
+    }
+  }, [masterName, monthAnchor, windows]);
 
   return (
-    <section className="space-y-4 lg:space-y-5">
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+    <section className="space-y-4 lg:space-y-6">
+      <header className="min-w-0">
+        <h2 className="text-[20px] font-black tracking-[-0.04em] text-[#111827] lg:text-[24px] lg:tracking-[-0.05em]">
+          Календарь
+        </h2>
+
+      </header>
+
+      <ScheduleCalendarTabStats metrics={calendarMetrics} />
+
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
         <div className={`${scheduleCalendarCard} lg:sticky lg:top-[calc(var(--slotty-admin-desktop-topbar-h,4.75rem)+7rem)]`}>
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => setMonthAnchor((m) => addMonths(m, -1))}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-[#FDE8ED] bg-[#FFF1F4] text-[#ff5f7a] transition hover:bg-[#FFE4EA] active:scale-[0.97]"
+              className={scheduleCalendarIconBtn}
               aria-label="Предыдущий месяц"
             >
               <HiChevronLeft className="h-5 w-5" aria-hidden />
@@ -286,7 +342,7 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
             <button
               type="button"
               onClick={() => setMonthAnchor((m) => addMonths(m, 1))}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-[#FDE8ED] bg-[#FFF1F4] text-[#ff5f7a] transition hover:bg-[#FFE4EA] active:scale-[0.97]"
+              className={scheduleCalendarIconBtn}
               aria-label="Следующий месяц"
             >
               <HiChevronRight className="h-5 w-5" aria-hidden />
@@ -323,6 +379,7 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
               {monthCells.map((cell) => {
                 const stats = statsByDate.get(cell.dateIso);
                 const isToday = isTodayIso(cell.dateIso);
+                const isPast = isLocalDateIsoBeforeToday(cell.dateIso);
                 const isSelected = selectedIso === cell.dateIso;
                 const dayNum = parseIsoDate(cell.dateIso).getDate();
 
@@ -333,6 +390,7 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
                     cell={cell}
                     stats={stats}
                     isToday={isToday}
+                    isPast={isPast}
                     isSelected={isSelected}
                     onSelect={() => setSelectedIso(cell.dateIso)}
                   />
@@ -357,7 +415,7 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
           </div>
 
           {busyDaysInMonth.length >= BUSY_DAYS_SECTION_THRESHOLD ? (
-            <div className="mt-4 border-t border-[#EEEEEE] pt-4 pb-1 lg:hidden">
+            <div className="mt-4 border-t border-[#EBEBEB] pt-4 pb-1 lg:hidden">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
                   Дни с окнами
@@ -407,28 +465,46 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
               </h3>
               <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
                 {selectedWindowsAll.length === 0
-                  ? 'На этот день окна не добавлены'
+                  ? selectedIsPast
+                    ? 'День завершён — окон не было'
+                    : 'На этот день окна не добавлены'
                   : windowsCountRu(selectedWindowsAll.length)}
                 {selectedWindowsAll.length > 0 && dayFilter !== 'all'
                   ? ` · показано ${selectedWindows.length}`
                   : null}
               </p>
             </div>
-            {selectedDayStats && selectedDayStats.total > 0 ? (
-              <div className="flex shrink-0 flex-wrap gap-1.5">
-                {selectedDayStats.free > 0 ? (
-                  <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] max-lg:ring-1 max-lg:ring-[#EEEEEE] lg:bg-[#FFF1F4] lg:font-bold lg:text-[#ff5f7a] lg:ring-0">
-                    {selectedDayStats.free} св.
-                  </span>
-                ) : null}
-                {selectedDayStats.booked > 0 ? (
-                  <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] max-lg:ring-1 max-lg:ring-[#EEEEEE] lg:bg-gradient-to-r lg:from-[#ff6f88] lg:to-[#ff5f7a] lg:font-bold lg:text-white lg:ring-0">
-                    {selectedDayStats.booked} зап.
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
+            <div className="flex shrink-0 items-start gap-2">
+              {selectedDayStats && selectedDayStats.total > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedDayStats.free > 0 ? (
+                    <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] lg:bg-[#FFF1F4] lg:font-bold lg:text-[#ff5f7a]">
+                      {selectedDayStats.free} св.
+                    </span>
+                  ) : null}
+                  {selectedDayStats.booked > 0 ? (
+                    <span className="rounded-full bg-[#EBEBEB] px-2.5 py-1 text-[11px] font-semibold text-[#111827] lg:bg-[#ff5f7a] lg:font-bold lg:text-white">
+                      {selectedDayStats.booked} зап.
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void handleWordExport()}
+                disabled={exportingWord || loading}
+                title="Скачать отчёт Word за месяц"
+                aria-label="Скачать отчёт Word за месяц"
+                className={`${scheduleCalendarIconBtn} text-[#ff5f7a]`}
+              >
+                <HiArrowDownTray className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
           </div>
+
+          {exportError ? (
+            <p className="mt-2 text-[13px] font-semibold text-[#B45309]">{exportError}</p>
+          ) : null}
 
           {selectedWindowsAll.length > 2 ? (
             <div
@@ -472,13 +548,26 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
               <LoadingVideo size="sm" />
             </div>
           ) : selectedWindows.length === 0 ? (
-            <p className="mt-4 rounded-[20px] border border-dashed border-[#FDE8ED] bg-[#FFF9FB] px-4 py-6 text-center text-[14px] font-semibold leading-snug text-[#6B7280]">
-              {selectedWindowsAll.length === 0
-                ? windows.length === 0
-                  ? 'Пока нет окон — добавьте во вкладке «Создать».'
-                  : 'На этот день слотов нет. Выберите другой день или добавьте окно.'
-                : 'Нет окон с таким статусом — смените фильтр.'}
-            </p>
+            <div className="mt-4 rounded-[16px] bg-[#EBEBEB]/60 px-4 py-6 text-center lg:bg-white">
+              <p className="text-[14px] font-semibold leading-snug text-[#6B7280]">
+                {selectedWindowsAll.length === 0
+                  ? selectedIsPast
+                    ? 'На этот день окон не было. Выберите другой день в календаре.'
+                    : 'Окон на этот день пока нет.'
+                  : 'Нет окон с таким статусом — смените фильтр.'}
+              </p>
+              {showCreateForDayLink ? (
+                <button
+                  type="button"
+                  disabled={!canCreateForDay}
+                  title={!canCreateForDay ? createForDayDisabledTitle : undefined}
+                  onClick={() => onCreateForDay?.(selectedIso)}
+                  className="mt-3 text-[14px] font-bold text-[#ff5f7a] underline decoration-[#ffb3c1] underline-offset-2 transition hover:text-[#ff6f88] disabled:cursor-not-allowed disabled:text-[#9CA3AF] disabled:no-underline"
+                >
+                  Создать окно на этот день
+                </button>
+              ) : null}
+            </div>
           ) : (
             <ul
               className={`mt-4 flex flex-col gap-2 ${
@@ -492,7 +581,7 @@ export function ScheduleCalendar({ windows, loading, onWindowClick }: Props) {
                   {useCompactList ? (
                     <ScheduleWindowRowCompact window={w} onClick={() => onWindowClick(w)} />
                   ) : (
-                    <ScheduleWindowCard window={w} onClick={() => onWindowClick(w)} />
+                    <ScheduleWindowCard flat window={w} onClick={() => onWindowClick(w)} />
                   )}
                 </li>
               ))}

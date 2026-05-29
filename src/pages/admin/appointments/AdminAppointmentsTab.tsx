@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiInbox } from 'react-icons/hi2';
-import { ADMIN_BILLING_PATH } from '../../../app/paths';
+import { ADMIN_BILLING_PATH, ADMIN_SCHEDULE_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
 import { planBadgeLabel } from '../../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../../features/billing/useMasterPlanEntitlements';
 import type {
@@ -65,9 +65,17 @@ import type {
   RequestsSort,
   UpcomingSort,
 } from './appointmentsTypes';
+import { AppointmentsLoadMore } from './AppointmentsLoadMore';
+import { useMasterAppointmentsPage } from './useMasterAppointmentsPage';
+import { useAdminSectionTab } from '../useAdminSectionTab';
+import { AdminCabinetCrossLink } from '../shared/AdminCabinetCrossLink';
+
+const APPOINTMENTS_TABS = ['requests', 'upcoming', 'history'] as const satisfies readonly AppointmentsTabId[];
 
 type Props = {
   appointments: DemoMasterAppointment[];
+  /** API-режим: списки с сервера по вкладкам + пагинация. */
+  useRemoteList?: boolean;
   onChangeAppointments: (
     rows: DemoMasterAppointment[],
     options?: { cancelReason?: string },
@@ -91,10 +99,13 @@ function apptLimitProgressClass(ratio: number): string {
 
 export function AdminAppointmentsTab({
   appointments,
+  useRemoteList = false,
   onChangeAppointments,
   onOpenDetail,
 }: Props) {
-  const [tab, setTab] = useState<AppointmentsTabId>('requests');
+  const [tab, setTab] = useAdminSectionTab('tab', 'requests', APPOINTMENTS_TABS);
+  const remote = useMasterAppointmentsPage({ enabled: useRemoteList, tab });
+  const listAppointments = useRemoteList ? remote.items : appointments;
   const [actionConfig, setActionConfig] = useState<AppointmentActionConfig | null>(null);
   const [actionApiError, setActionApiError] = useState<string | null>(null);
   const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
@@ -114,26 +125,35 @@ export function AdminAppointmentsTab({
   }, [tab]);
 
   const stats = useMemo(() => {
+    if (useRemoteList && remote.stats) {
+      return {
+        requests: remote.stats.pending,
+        upcoming: remote.stats.upcoming,
+        history: remote.stats.history,
+      };
+    }
     const requests = appointments.filter((a) => a.status === 'pending').length;
     const upcoming = appointments.filter((a) => isUpcomingConfirmed(a)).length;
     const history = appointments.filter(
       (a) => a.status === 'completed' || a.status === 'cancelled',
     ).length;
     return { requests, upcoming, history };
-  }, [appointments]);
+  }, [appointments, remote.stats, useRemoteList]);
 
-  const pendingRows = useMemo(
-    () => appointments.filter((a) => a.status === 'pending'),
-    [appointments],
-  );
-  const upcomingRows = useMemo(
-    () => appointments.filter((a) => isUpcomingConfirmed(a)),
-    [appointments],
-  );
-  const historyRows = useMemo(
-    () => appointments.filter((a) => a.status === 'completed' || a.status === 'cancelled'),
-    [appointments],
-  );
+  const pendingRows = useMemo(() => {
+    if (useRemoteList && tab === 'requests') return listAppointments;
+    return listAppointments.filter((a) => a.status === 'pending');
+  }, [listAppointments, tab, useRemoteList]);
+
+  const upcomingRows = useMemo(() => {
+    if (useRemoteList && tab === 'upcoming') return listAppointments;
+    return listAppointments.filter((a) => isUpcomingConfirmed(a));
+  }, [listAppointments, tab, useRemoteList]);
+
+  const historyRows = useMemo(() => {
+    if (useRemoteList && tab === 'history') return listAppointments;
+    return listAppointments.filter((a) => a.status === 'completed' || a.status === 'cancelled');
+  }, [listAppointments, tab, useRemoteList]);
 
   const requestsFiltered = useMemo(() => {
     let rows = pendingRows;
@@ -197,6 +217,13 @@ export function AdminAppointmentsTab({
   );
 
   const historySummary = useMemo(() => {
+    if (useRemoteList && remote.stats) {
+      return {
+        completedCount: remote.stats.completedCount,
+        cancelledCount: remote.stats.cancelledCount,
+        earnedTotal: remote.stats.earnedTotal,
+      };
+    }
     const completed = historyRows.filter((a) => a.status === 'completed');
     const cancelled = historyRows.filter((a) => a.status === 'cancelled');
     const earned = completed.reduce((s, a) => s + (Number.isFinite(a.priceByn) ? a.priceByn : 0), 0);
@@ -205,7 +232,7 @@ export function AdminAppointmentsTab({
       cancelledCount: cancelled.length,
       earnedTotal: earned,
     };
-  }, [historyRows]);
+  }, [historyRows, remote.stats, useRemoteList]);
 
   const {
     planId: billingPlanId,
@@ -240,6 +267,9 @@ export function AdminAppointmentsTab({
               nextStatus === 'cancelled' ? rejectReason?.trim() : undefined,
           }),
         );
+        if (useRemoteList) {
+          await remote.reload();
+        }
         if (nextStatus === 'confirmed') {
           showToast('Запись подтверждена');
           setTab('upcoming');
@@ -258,8 +288,29 @@ export function AdminAppointmentsTab({
         showErrorToast(e instanceof Error ? e.message : 'Не удалось обновить запись');
       }
     },
-    [actionConfig, appointments, onChangeAppointments, showErrorToast, showToast],
+    [actionConfig, listAppointments, onChangeAppointments, remote, showErrorToast, showToast, useRemoteList],
   );
+
+  const listPagination = useRemoteList ? (
+    <AppointmentsLoadMore
+      hasMore={remote.hasMore}
+      loading={remote.loadingMore}
+      loadedCount={remote.items.length}
+      total={remote.total}
+      onLoadMore={remote.loadMore}
+    />
+  ) : null;
+
+  const listLoadingBlock =
+    useRemoteList && remote.loading && remote.items.length === 0 ? (
+      <p className="py-10 text-center text-[14px] font-medium text-[#9CA3AF]">Загрузка записей…</p>
+    ) : null;
+
+  const listErrorBlock = useRemoteList && remote.error ? (
+    <p className="rounded-[18px] bg-[#FFF0F0] px-4 py-3 text-center text-[14px] font-semibold text-[#9B2C2C]">
+      {remote.error}
+    </p>
+  ) : null;
 
   const servicePills = (rows: DemoMasterAppointment[]) => [
     { id: 'all', label: 'Все услуги' },
@@ -301,65 +352,81 @@ export function AdminAppointmentsTab({
   }, [tab]);
 
   const renderRequests = () => {
+    if (listLoadingBlock) return listLoadingBlock;
+    if (listErrorBlock) return listErrorBlock;
     if (!requestsFiltered.length) {
       return (
         <AppointmentsEmptyState
           title="Новых заявок пока нет"
           text="Когда клиент отправит заявку на запись, она появится здесь"
-          hint="Заявку можно будет подтвердить или отклонить"
+          hint="Чтобы клиенты могли записаться, проверьте услуги и откройте окна в расписании"
           icon={
             <span className={apptEmptyIcon}>
               <HiInbox className="h-8 w-8" aria-hidden />
             </span>
           }
+          action={
+            <div className="flex w-full flex-col gap-2">
+              <AdminCabinetCrossLink to={ADMIN_SCHEDULE_PATH}>Открыть расписание</AdminCabinetCrossLink>
+              <AdminCabinetCrossLink to={ADMIN_SERVICES_PATH}>Настроить услуги</AdminCabinetCrossLink>
+            </div>
+          }
         />
       );
     }
     return (
-      <ul className={apptListGap}>
-        {requestsFiltered.map((a) => (
-          <li key={a.id}>
-            <AppointmentsRequestCard
-              appointment={a}
-              onConfirm={() =>
-                openAction({
-                  kind: 'confirm',
-                  title: 'Подтвердить заявку?',
-                  text: `Клиент ${a.clientName} увидит, что запись подтверждена.`,
-                  buttonLabel: 'Подтвердить',
-                  nextStatus: 'confirmed',
-                  appointment: a,
-                })
-              }
-              onReject={() =>
-                openAction({
-                  kind: 'reject',
-                  title: 'Отклонить заявку?',
-                  text: `Заявка клиента ${a.clientName} будет перенесена в историю.`,
-                  buttonLabel: 'Отклонить',
-                  nextStatus: 'cancelled',
-                  appointment: a,
-                })
-              }
-            />
-          </li>
-        ))}
-      </ul>
+      <>
+        <ul className={apptListGap}>
+          {requestsFiltered.map((a) => (
+            <li key={a.id}>
+              <AppointmentsRequestCard
+                appointment={a}
+                onConfirm={() =>
+                  openAction({
+                    kind: 'confirm',
+                    title: 'Подтвердить заявку?',
+                    text: `Клиент ${a.clientName} увидит, что запись подтверждена.`,
+                    buttonLabel: 'Подтвердить',
+                    nextStatus: 'confirmed',
+                    appointment: a,
+                  })
+                }
+                onReject={() =>
+                  openAction({
+                    kind: 'reject',
+                    title: 'Отклонить заявку?',
+                    text: `Заявка клиента ${a.clientName} будет перенесена в историю.`,
+                    buttonLabel: 'Отклонить',
+                    nextStatus: 'cancelled',
+                    appointment: a,
+                  })
+                }
+              />
+            </li>
+          ))}
+        </ul>
+        {listPagination}
+      </>
     );
   };
 
   const renderUpcoming = () => {
+    if (listLoadingBlock) return listLoadingBlock;
+    if (listErrorBlock) return listErrorBlock;
     if (!upcomingFiltered.length) {
       return (
         <AppointmentsEmptyState
+          picture="appointmentsEmpty"
           title="Предстоящих записей нет"
-          text="Подтверждённые записи появятся здесь"
+          text="Подтверждённые записи появятся здесь после того, как вы примете заявку"
           action={
             stats.requests > 0 ? (
               <button type="button" onClick={() => setTab('requests')} className={apptPinkBtn}>
                 Перейти к заявкам ({stats.requests})
               </button>
-            ) : undefined
+            ) : (
+              <AdminCabinetCrossLink to={ADMIN_SCHEDULE_PATH}>Открыть расписание</AdminCabinetCrossLink>
+            )
           }
         />
       );
@@ -379,14 +446,18 @@ export function AdminAppointmentsTab({
             </ul>
           </section>
         ))}
+        {listPagination}
       </div>
     );
   };
 
   const renderHistory = () => {
+    if (listLoadingBlock) return listLoadingBlock;
+    if (listErrorBlock) return listErrorBlock;
     if (!historyRows.length) {
       return (
         <AppointmentsEmptyState
+          picture="clientsEmpty"
           title="Истории записей пока нет"
           text="Завершённые и отменённые записи появятся здесь"
         />
@@ -395,6 +466,7 @@ export function AdminAppointmentsTab({
     if (!historyFiltered.length) {
       return (
         <AppointmentsEmptyState
+          picture="searchEmpty"
           title="Ничего не найдено"
           text="Попробуйте изменить фильтры статуса или периода"
         />
@@ -463,6 +535,7 @@ export function AdminAppointmentsTab({
             </ul>
           </section>
         ))}
+        {listPagination}
       </div>
     );
   };

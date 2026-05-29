@@ -16,6 +16,7 @@ import {
 } from '../profile/lib/favoriteMastersResolve';
 import { apiFetch, getApiBaseUrl, getStoredAuthToken, setStoredAuthToken } from '../../shared/api/backendClient';
 import { useTelegram } from '../../shared/hooks/useTelegram';
+import { readTelegramUserIdFromInitDataRaw } from '../../shared/lib/telegramWebApp';
 import type { AuthSessionResponse, BackendProfile } from './types';
 import { normalizeBackendProfile, sessionRefreshToken } from './types';
 
@@ -113,21 +114,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const existing = getStoredAuthToken();
+        const initDataTelegramUserId =
+          initDataRaw && isTelegramWebApp ? readTelegramUserIdFromInitDataRaw(initDataRaw) : null;
+
         if (existing) {
           const res = await apiFetch('/api/me');
           if (res.ok) {
             const me = (await res.json()) as BackendProfile;
-            if (!cancelled) {
-              applyMePayload(me);
+            const profileTgId = me.telegram_user_id;
+            const jwtMatchesTelegram =
+              initDataTelegramUserId == null ||
+              (profileTgId != null && profileTgId === initDataTelegramUserId);
+
+            if (jwtMatchesTelegram) {
+              if (!cancelled) {
+                applyMePayload(me);
+              }
+              await syncLocalFavoritesToServer();
+              preloadFavoriteMasterIds();
+              return;
             }
-            await syncLocalFavoritesToServer();
-            preloadFavoriteMasterIds();
-            return;
+            setStoredAuthToken(null);
+          } else {
+            setStoredAuthToken(null);
           }
-          setStoredAuthToken(null);
         }
 
-        // Автовход только в Telegram Web App и только без сохранённого JWT.
+        // Автовход в Telegram Web App: без JWT или JWT от другого аккаунта (например Google в браузере).
         if (initDataRaw && isTelegramWebApp) {
           const res = await apiFetch('/api/auth/telegram', {
             method: 'POST',

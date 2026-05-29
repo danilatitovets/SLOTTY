@@ -19,7 +19,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'barbers',
     label: 'Барбершоп',
-    image: `${PLAN}/барбер.png`,
+    image: `${PLAN}/барбер.webp`,
     variant: 'dark',
     accent: '#FFE566',
     scrim: 'bg-black/25',
@@ -27,7 +27,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'tattoo',
     label: 'Тату',
-    image: `${PLAN}/тату.png`,
+    image: `${PLAN}/тату.webp`,
     variant: 'dark',
     accent: '#F0C8A8',
     scrim: 'bg-black/30',
@@ -35,7 +35,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'massage',
     label: 'Массаж',
-    image: `${PLAN}/массаж.png`,
+    image: `${PLAN}/массаж.webp`,
     variant: 'light',
     accent: '#3D6B52',
     scrim: 'bg-white/15',
@@ -43,7 +43,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'manicure',
     label: 'Маникюр',
-    image: `${PLAN}/маниюко.png`,
+    image: `${PLAN}/маниюко.webp`,
     variant: 'light',
     accent: '#C45C7A',
     scrim: 'bg-white/20',
@@ -51,7 +51,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'brows',
     label: 'Брови и ресницы',
-    image: `${PLAN}/брови.png`,
+    image: `${PLAN}/брови.webp`,
     variant: 'light',
     accent: '#8B4A5C',
     scrim: 'bg-white/18',
@@ -59,7 +59,7 @@ export const MASTER_PRO_CATEGORY_THEMES: CategoryTheme[] = [
   {
     key: 'fitness',
     label: 'Фитнес',
-    image: `${PLAN}/фитнес.png`,
+    image: `${PLAN}/фитнес.webp`,
     variant: 'dark',
     accent: '#7EC8FF',
     scrim: 'bg-black/35',
@@ -102,6 +102,15 @@ function textPalette(variant: ThemeVariant) {
     ctaBg: '#111827',
     ctaText: '#FFFFFF',
   };
+}
+
+function accentGlow(hex: string, alpha: number): string {
+  const raw = hex.replace('#', '');
+  if (raw.length !== 6) return `rgba(244, 124, 140, ${alpha})`;
+  const r = Number.parseInt(raw.slice(0, 2), 16);
+  const g = Number.parseInt(raw.slice(2, 4), 16);
+  const b = Number.parseInt(raw.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function IconCheck({ className, color }: { className?: string; color: string }) {
@@ -155,6 +164,13 @@ export function MasterProRotatingCard({
   }, []);
 
   useEffect(() => {
+    MASTER_PRO_CATEGORY_THEMES.forEach((item) => {
+      const img = new Image();
+      img.src = item.image;
+    });
+  }, []);
+
+  useEffect(() => {
     if (!motionOk) return;
     const id = window.setInterval(() => {
       setActiveIndex((i) => (i + 1) % MASTER_PRO_CATEGORY_THEMES.length);
@@ -166,15 +182,19 @@ export function MasterProRotatingCard({
   const colors = textPalette(theme.variant);
   const isDark = theme.variant === 'dark';
 
+  const cardShadow = isDark
+    ? '0 20px 56px rgba(0,0,0,0.35)'
+    : '0 20px 56px rgba(17,24,39,0.14)';
+
   return (
-    <article
-      className={`relative flex min-h-[20rem] flex-col overflow-hidden rounded-[26px] px-5 pb-6 pt-5 ring-2 transition-[box-shadow] duration-700 ${
-        isDark ? 'ring-white/15' : 'ring-[#111827]/10'
-      }`}
+    <div
+      className="rounded-[22px] p-[2px] transition-[background-color,box-shadow] duration-700 ease-in-out sm:rounded-[22px]"
       style={{
-        boxShadow: isDark ? '0 20px 56px rgba(0,0,0,0.35)' : '0 20px 56px rgba(17,24,39,0.14)',
+        backgroundColor: theme.accent,
+        boxShadow: `0 0 32px ${accentGlow(theme.accent, 0.55)}, ${cardShadow}`,
       }}
     >
+      <article className="relative flex min-h-[20rem] flex-col overflow-hidden rounded-[20px] px-5 pb-6 pt-5 sm:rounded-[20px] sm:p-7">
       {MASTER_PRO_CATEGORY_THEMES.map((item, index) => (
         <div
           key={item.key}
@@ -273,6 +293,7 @@ export function MasterProRotatingCard({
             ) : null)}
         </div>
       </div>
-    </article>
+      </article>
+    </div>
   );
 }

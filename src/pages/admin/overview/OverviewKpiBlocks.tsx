@@ -92,11 +92,24 @@ export function OverviewKpiGrid({
   return <section className={`grid grid-cols-1 gap-3 ${colClass}`}>{children}</section>;
 }
 
+const KPI_CAROUSEL_AUTOPLAY_MS = 4500;
+
 /** Одна KPI-карточка на экран + точки-индикатор (сводка). */
-export function OverviewKpiCarousel({ children }: { children: ReactNode }) {
+export function OverviewKpiCarousel({
+  children,
+  autoPlay = true,
+  autoPlayIntervalMs = KPI_CAROUSEL_AUTOPLAY_MS,
+}: {
+  children: ReactNode;
+  /** Автолистание слайдов (пауза при наведении и если включён reduced motion). */
+  autoPlay?: boolean;
+  autoPlayIntervalMs?: number;
+}) {
   const slides = Children.toArray(children);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
+  const pauseAutoPlayRef = useRef(false);
 
   const syncActiveFromScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -104,6 +117,7 @@ export function OverviewKpiCarousel({ children }: { children: ReactNode }) {
     const w = el.clientWidth;
     if (w <= 0) return;
     const index = Math.min(slides.length - 1, Math.max(0, Math.round(el.scrollLeft / w)));
+    activeRef.current = index;
     setActive(index);
   }, [slides.length]);
 
@@ -120,18 +134,54 @@ export function OverviewKpiCarousel({ children }: { children: ReactNode }) {
     };
   }, [syncActiveFromScroll]);
 
-  const goTo = (index: number) => {
+  const goTo = useCallback((index: number) => {
     const el = scrollRef.current;
     if (!el) return;
+    const safe = Math.min(slides.length - 1, Math.max(0, index));
     const w = el.clientWidth;
-    el.scrollTo({ left: index * w, behavior: 'smooth' });
-    setActive(index);
-  };
+    el.scrollTo({ left: safe * w, behavior: 'smooth' });
+    activeRef.current = safe;
+    setActive(safe);
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (!autoPlay || slides.length <= 1) return undefined;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reducedMotion.matches) return undefined;
+
+    const tick = () => {
+      if (pauseAutoPlayRef.current || document.visibilityState === 'hidden') return;
+      const next = activeRef.current >= slides.length - 1 ? 0 : activeRef.current + 1;
+      goTo(next);
+    };
+
+    const id = window.setInterval(tick, autoPlayIntervalMs);
+    return () => window.clearInterval(id);
+  }, [autoPlay, autoPlayIntervalMs, goTo, slides.length]);
 
   if (slides.length === 0) return null;
 
   return (
-    <section className="min-w-0" aria-roledescription="carousel" aria-label="Показатели сводки">
+    <section
+      className="min-w-0 overflow-hidden"
+      aria-roledescription="carousel"
+      aria-label="Показатели сводки"
+      onPointerEnter={() => {
+        pauseAutoPlayRef.current = true;
+      }}
+      onPointerLeave={() => {
+        pauseAutoPlayRef.current = false;
+      }}
+      onFocusCapture={() => {
+        pauseAutoPlayRef.current = true;
+      }}
+      onBlurCapture={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          pauseAutoPlayRef.current = false;
+        }
+      }}
+    >
       <div
         ref={scrollRef}
         className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -162,9 +212,15 @@ export function OverviewKpiCarousel({ children }: { children: ReactNode }) {
               role="tab"
               aria-selected={selected}
               aria-label={`Показатель ${index + 1} из ${slides.length}`}
-              onClick={() => goTo(index)}
+              onClick={() => {
+                pauseAutoPlayRef.current = true;
+                goTo(index);
+                window.setTimeout(() => {
+                  pauseAutoPlayRef.current = false;
+                }, autoPlayIntervalMs);
+              }}
               className={`h-2.5 w-2.5 shrink-0 rounded-full bg-[#ff5f7a] transition hover:opacity-90 ${
-                selected ? 'opacity-100 ring-2 ring-[#ff5f7a]/25 ring-offset-2 ring-offset-white' : 'opacity-45'
+                selected ? 'opacity-100' : 'opacity-45'
               }`}
             />
           );

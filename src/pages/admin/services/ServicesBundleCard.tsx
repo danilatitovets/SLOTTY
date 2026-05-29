@@ -17,6 +17,8 @@ type Props = {
   serviceTitleById: Map<string, string>;
   onMenu?: () => void;
   className?: string;
+  /** Превью Pro: без статусов «Виден» / «Черновик» — только «Только пример». */
+  examplePreview?: boolean;
 };
 
 function statusBadgeClass(status: ServiceBundle['status']): string {
@@ -37,13 +39,16 @@ export function ServicesBundleCard({
   serviceTitleById,
   onMenu,
   className = '',
+  examplePreview = false,
 }: Props) {
   const img = resolveBundleDisplayImage(bundle, services, draft);
   const showDeal = bundleHasDiscount(bundle.originalPrice, bundle.bundlePrice);
 
   return (
     <article
-      className={`flex w-full overflow-hidden rounded-[16px] bg-white lg:rounded-[24px] lg:border lg:border-[#EAECEF] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] ${className}`}
+      className={`flex w-full overflow-hidden rounded-[16px] bg-white lg:rounded-[24px] lg:border lg:border-[#EAECEF] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] ${
+        examplePreview ? 'ring-2 ring-dashed ring-[#D1D5DB]' : ''
+      } ${className}`}
     >
       <div className="relative flex w-[6.25rem] shrink-0 self-stretch bg-[#EBEBEB] sm:w-28 lg:w-[5.5rem] lg:min-h-[120px]">
         {img ? (
@@ -60,16 +65,24 @@ export function ServicesBundleCard({
       <div className="flex min-w-0 flex-1 flex-col p-3.5 lg:justify-center lg:px-6 lg:py-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              {showDeal ? (
-                <span className="inline-flex rounded-full bg-[#FFF1F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#F47C8C]">
-                  Выгодно
+              {examplePreview ? (
+                <span className="inline-flex rounded-full bg-[#FFFBEB] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#92400E] ring-1 ring-[#FDE68A]">
+                  Только пример
                 </span>
-              ) : null}
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusBadgeClass(bundle.status)}`}
-              >
-                {bundleStatusLabel(bundle.status)}
-              </span>
+              ) : (
+                <>
+                  {showDeal ? (
+                    <span className="inline-flex rounded-full bg-[#FFF1F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#F47C8C]">
+                      Выгодно
+                    </span>
+                  ) : null}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusBadgeClass(bundle.status)}`}
+                  >
+                    {bundleStatusLabel(bundle.status)}
+                  </span>
+                </>
+              )}
             </div>
             {onMenu ? (
               <button

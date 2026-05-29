@@ -45,11 +45,14 @@ export function useMasterPublicProfile(masterId: string) {
         const detail = await fetchMasterPublicDetail(masterId);
         if (cancelled) return;
         const base = mapMasterDetailToDemoProfile(detail);
+        const coverItemId = detail.master.portfolioCoverItemId?.trim() || null;
         setApiProfile({
           ...base,
+          coverUrl: detail.master.coverUrl?.trim() || null,
+          portfolioCoverItemId: coverItemId,
           careerItems: mapCareerToDraftItems(detail.career),
           certificates: mapCertificatesFromDetail(detail),
-          portfolio: mapPortfolioFromDetail(detail),
+          portfolio: mapPortfolioFromDetail(detail, { excludeCoverItemId: coverItemId }),
           bookingRules: detail.bookingRules?.bookingRules ?? undefined,
           cancellationPolicy: detail.bookingRules?.cancellationPolicy ?? undefined,
           paymentNote: detail.bookingRules?.paymentNote ?? undefined,

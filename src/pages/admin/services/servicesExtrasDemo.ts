@@ -24,8 +24,11 @@ export function demoBundlesForPreview(services: ManagedService[]): ServiceBundle
   return [
     {
       id: 'preview-bundle-1',
-      title: first && second ? `Комбо: ${first.title} + ${second.title}` : 'Комбо из двух услуг',
-      description: 'Популярный набор со скидкой — клиент видит выгоду при записи.',
+      title:
+        first && second
+          ? `Пример: ${first.title} + ${second.title}`
+          : 'Пример: комбо из двух услуг',
+      description: 'Карточка для наглядности — не сохраняется и клиентам не показывается.',
       serviceIds: [first?.id ?? 's1', second?.id ?? 's2'],
       originalPrice: original,
       bundlePrice: comboPrice,
@@ -39,8 +42,8 @@ export function demoBundlesForPreview(services: ManagedService[]): ServiceBundle
     },
     {
       id: 'preview-bundle-2',
-      title: first ? `${first.title} · экспресс` : 'Экспресс-набор',
-      description: 'Второй пример набора — так будет выглядеть карточка в каталоге.',
+      title: first ? `Пример: ${first.title}` : 'Пример: набор из одной услуги',
+      description: 'Второй пример — иллюстрация интерфейса Pro.',
       serviceIds: [first?.id ?? 's1'],
       originalPrice: p1,
       bundlePrice: Math.max(10, Math.round(p1 * 0.9)),
@@ -64,10 +67,10 @@ export function demoPromotionsForPreview(services: ManagedService[]): ServicePro
     {
       id: 'preview-promo-1',
       template: 'first_visit',
-      title: 'Скидка на первый визит',
-      description: 'Клиент увидит баннер в каталоге и при выборе услуги.',
+      title: 'Пример: скидка на первый визит',
+      description: 'Так будет выглядеть баннер в каталоге — текст и скидку задаёте вы.',
       serviceId,
-      serviceTitle,
+      serviceTitle: serviceTitle ? `Пример услуги: ${serviceTitle}` : 'Пример услуги из каталога',
       discountType: 'percent',
       discountValue: 15,
       discountLabel: '-15%',
@@ -80,10 +83,10 @@ export function demoPromotionsForPreview(services: ManagedService[]): ServicePro
     {
       id: 'preview-promo-2',
       template: 'happy_hours',
-      title: 'Счастливые часы',
-      description: 'Запланированная акция — пример того, как это выглядит в Pro.',
+      title: 'Пример: счастливые часы',
+      description: 'Второй баннер — иллюстрация, клиентам не показывается.',
       serviceId,
-      serviceTitle,
+      serviceTitle: 'Сроки и услугу выберете при создании',
       discountType: 'money',
       discountValue: 10,
       discountLabel: '-10 BYN',

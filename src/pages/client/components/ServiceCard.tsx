@@ -1,3 +1,4 @@
+import { EMPTY_PRICE, EMPTY_SLOT } from '../../../shared/lib/emptyDisplayText';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -95,7 +96,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             <div className="min-w-[100px] border-l border-[#EEEEEE] px-5 first:border-l-0 first:pl-0">
               <p className="text-[13px] text-[#8E8E93]">Цена</p>
               <p className="mt-0.5 text-[15px] font-bold tabular-nums text-[#111827]">
-                {service.minPrice > 0 ? formatPriceFrom(service.minPrice) : '—'}
+                {service.minPrice > 0 ? formatPriceFrom(service.minPrice) : EMPTY_PRICE}
               </p>
             </div>
             <div className="min-w-[88px] border-l border-[#EEEEEE] px-5">
@@ -107,7 +108,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             <div className="min-w-[120px] border-l border-[#EEEEEE] px-5">
               <p className="text-[13px] text-[#8E8E93]">Окно</p>
               <p className={`mt-0.5 text-[15px] font-semibold ${hasSlot ? 'text-[#111827]' : 'text-[#8E8E93]'}`}>
-                {hasSlot ? slotLine : '—'}
+                {hasSlot ? slotLine : EMPTY_SLOT}
               </p>
             </div>
           </div>

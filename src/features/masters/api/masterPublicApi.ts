@@ -4,9 +4,8 @@ import type { MasterLocation } from '../../profile/model/masterLocation';
 import type { DemoMasterProfile, DemoMasterService, DemoReview } from '../../services/model/demoMasters';
 import { normalizeMasterCareerItemType } from '../../profile/lib/demoMasterStorage';
 import type { MasterDraftCareerItem } from '../../profile/lib/demoMasterStorage';
-import { defaultMasterAvatarUrl } from '../../master/model/masterDraftStorage';
+import { masterListingPortraitUrl } from '../lib/masterListingPortrait';
 import { resolveFilledContacts } from '../../master-onboarding/model/masterContacts';
-import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 
 async function readApiError(res: Response): Promise<string> {
   const j = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
@@ -43,6 +42,8 @@ export type MasterPublicDetailDto = {
     displayName: string;
     bio: string;
     photoUrl: string | null;
+    coverUrl?: string | null;
+    portfolioCoverItemId?: string | null;
     slug: string | null;
     phone: string | null;
     contact: string | null;
@@ -125,7 +126,7 @@ function locationDtoToModel(loc: MasterPublicLocationDto | undefined): MasterLoc
     city: loc.city?.trim() || '',
     street: loc.street?.trim() || loc.publicAddress?.trim() || '',
     building: loc.building?.trim() || '',
-    showExactAddressAfterBooking: loc.showExactAddressAfterBooking === true,
+    showExactAddressAfterBooking: visit === 'at_home' ? loc.showExactAddressAfterBooking !== false : false,
   };
   if (typeof loc.lat === 'number' && Number.isFinite(loc.lat) && typeof loc.lng === 'number' && Number.isFinite(loc.lng)) {
     base.lat = loc.lat;
@@ -205,10 +206,7 @@ export function mapMasterDetailToDemoProfile(detail: MasterPublicDetailDto): Dem
     rating: master.rating,
     reviewsCount: master.reviewsCount,
     location,
-    photoUrl: optimizeAvatarUrl(
-      (master.photoUrl && master.photoUrl.trim()) || defaultMasterAvatarUrl(master.displayName),
-      400,
-    ),
+    photoUrl: masterListingPortraitUrl(master.photoUrl),
     bio: master.bio?.trim() ?? '',
     phone: master.phone?.trim() || undefined,
     contact: master.contact?.trim() || undefined,
@@ -245,11 +243,17 @@ export function mapCertificatesFromDetail(detail: MasterPublicDetailDto) {
   }));
 }
 
-export function mapPortfolioFromDetail(detail: MasterPublicDetailDto) {
-  return detail.portfolio.map((p) => ({
-    id: p.id,
-    title: p.title ?? undefined,
-    imageUrl: p.imageUrl,
-    description: p.description ?? undefined,
-  }));
+export function mapPortfolioFromDetail(
+  detail: MasterPublicDetailDto,
+  options?: { excludeCoverItemId?: string | null },
+) {
+  const excludeId = options?.excludeCoverItemId?.trim();
+  return detail.portfolio
+    .filter((p) => !excludeId || p.id !== excludeId)
+    .map((p) => ({
+      id: p.id,
+      title: p.title ?? undefined,
+      imageUrl: p.imageUrl,
+      description: p.description ?? undefined,
+    }));
 }

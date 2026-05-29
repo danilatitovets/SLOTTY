@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAdminSectionTab } from '../useAdminSectionTab';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
@@ -23,7 +24,10 @@ import {
   scheduleDesktopCard,
   scheduleDesktopTabsSticky,
   scheduleShellCard,
+  scheduleTabContentPad,
   scheduleTabPanelShell,
+  scheduleTabPanelShellCalendar,
+  scheduleTabPanelShellCreate,
 } from './adminScheduleTheme';
 import { SchedulePageHeader } from './SchedulePageHeader';
 import { computeScheduleTabMetrics } from './scheduleTabMetrics';
@@ -48,9 +52,8 @@ import {
   DUPLICATE_WINDOW_TEMPLATE_MSG,
   isDuplicateWindowTemplate,
 } from './windowTemplateStorage';
-import { SmartPromotionSuggestionsPanel } from './SmartPromotionSuggestionsPanel';
-import { useSmartPromotionSuggestions } from './useSmartPromotionSuggestions';
-import type { SmartPromotionSuggestionDto } from '../../../features/admin/api/smartPromotionSuggestionsApi';
+
+const SCHEDULE_TABS = ['create', 'calendar', 'list'] as const satisfies readonly SchedulePageTab[];
 
 type Props = {
   draft: MasterDraft;
@@ -73,6 +76,7 @@ function todayIso(): string {
 type OpenAddSheetOptions = {
   templateId?: string;
   withoutTemplate?: boolean;
+  dateIso?: string;
 };
 
 export function AdminScheduleTab({ draft }: Props) {
@@ -92,14 +96,9 @@ export function AdminScheduleTab({ draft }: Props) {
     createSlots,
     updateSlot,
     removeSlot,
-    reloadSlots,
   } = useScheduleData(masterId, visibleServices, useCabinetApi, appointments);
 
-  const smartPromo = useSmartPromotionSuggestions(useCabinetApi);
-  const [dismissedSuggestionIds, setDismissedSuggestionIds] = useState<Set<string>>(() => new Set());
-  const [listFocusDayIso, setListFocusDayIso] = useState<string | null>(null);
-
-  const [pageTab, setPageTab] = useState<SchedulePageTab>('create');
+  const [pageTab, setPageTab] = useAdminSectionTab('tab', 'create', SCHEDULE_TABS);
 
   const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
   const [createError, setCreateError] = useState<string | null>(null);
@@ -124,27 +123,6 @@ export function AdminScheduleTab({ draft }: Props) {
     if (!editWindow) return null;
     return windows.find((w) => w.id === editWindow.id) ?? editWindow;
   }, [editWindow, windows]);
-
-  const dismissSuggestion = useCallback((id: string) => {
-    setDismissedSuggestionIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
-  const onViewSuggestionWindows = useCallback((suggestion: SmartPromotionSuggestionDto) => {
-    const dayIso = suggestion.promotionDraft.startsAt;
-    setListFocusDayIso(dayIso);
-    setPageTab('list');
-    showToast('Свободные окна в списке');
-  }, [showToast]);
-
-  const onSmartPromotionCreated = useCallback(async () => {
-    if (useCabinetApi) {
-      await reloadSlots();
-    }
-  }, [reloadSlots, useCabinetApi]);
 
   const serviceOptions = useMemo(
     () => [
@@ -237,6 +215,9 @@ export function AdminScheduleTab({ draft }: Props) {
   const openAddSheet = useCallback(
     (opts?: OpenAddSheetOptions) => {
       setCreateError(null);
+      if (opts?.dateIso) {
+        setDateIso(opts.dateIso);
+      }
       if (opts?.templateId) {
         applyTemplate(opts.templateId);
       } else if (opts?.withoutTemplate) {
@@ -464,65 +445,38 @@ export function AdminScheduleTab({ draft }: Props) {
     }
   };
 
-  const promoAside = (
-    <SmartPromotionSuggestionsPanel
-      state={smartPromo.state}
-      dismissedIds={dismissedSuggestionIds}
-      onDismiss={dismissSuggestion}
-      onReload={smartPromo.reload}
-      onViewWindows={onViewSuggestionWindows}
-      onPromotionCreated={() => void onSmartPromotionCreated()}
-      showToast={showToast}
-      layout="sidebar"
-    />
-  );
-
-  const promoStackMobile = (
-    <div className="lg:hidden">
-      <SmartPromotionSuggestionsPanel
-        state={smartPromo.state}
-        dismissedIds={dismissedSuggestionIds}
-        onDismiss={dismissSuggestion}
-        onReload={smartPromo.reload}
-        onViewWindows={onViewSuggestionWindows}
-        onPromotionCreated={() => void onSmartPromotionCreated()}
-        showToast={showToast}
-        layout="stack"
-      />
-    </div>
-  );
-
   const tabPanels = (
     <>
       <AdminTabContentTransition activeKey={pageTab}>
         {pageTab === 'create' ? (
-          <>
-            {promoStackMobile}
-            <div className={scheduleTabPanelShell}>
-              <ScheduleCreateTab
-                templates={templates}
-                selectedTemplateId={selectedTemplateId}
-                onTemplateSelect={(id) => {
-                  applyTemplate(id);
-                  openAddSheet({ templateId: id });
-                }}
-                onTemplateMenu={setTemplateMenuTarget}
-                onCreateTemplate={() => setTemplateSheetOpen(true)}
-                onOpenWithoutTemplate={() => openAddSheet({ withoutTemplate: true })}
-                onOpenNewWindow={() => openAddSheet()}
-                aside={promoAside}
-              />
-            </div>
-          </>
+          <div className={scheduleTabPanelShellCreate}>
+            <ScheduleCreateTab
+              templates={templates}
+              selectedTemplateId={selectedTemplateId}
+              createMetrics={tabMetrics.create}
+              onTemplateSelect={(id) => {
+                applyTemplate(id);
+                openAddSheet({ templateId: id });
+              }}
+              onTemplateMenu={setTemplateMenuTarget}
+              onCreateTemplate={() => setTemplateSheetOpen(true)}
+              onOpenWithoutTemplate={() => openAddSheet({ withoutTemplate: true })}
+            />
+          </div>
         ) : null}
 
         {pageTab === 'calendar' ? (
-          <div className={scheduleTabPanelShell}>
-            <div className="lg:p-6">
+          <div className={scheduleTabPanelShellCalendar}>
+            <div className={scheduleTabContentPad}>
               <ScheduleCalendar
                 windows={windows}
                 loading={loading}
+                calendarMetrics={tabMetrics.calendar}
+                masterName={draft.name?.trim() || 'Мастер'}
                 onWindowClick={(w) => setEditWindow(w)}
+                onCreateForDay={(iso) => openAddSheet({ dateIso: iso })}
+                canCreateForDay={masterWrite.canMutate}
+                createForDayDisabledTitle={masterWrite.mutateDisabledTitle}
               />
             </div>
           </div>
@@ -534,7 +488,6 @@ export function AdminScheduleTab({ draft }: Props) {
               <ScheduleSlotsListTab
                 windows={windows}
                 loading={loading}
-                focusDayIso={listFocusDayIso}
                 onWindowClick={(w) => setEditWindow(w)}
               />
             </div>
@@ -551,7 +504,9 @@ export function AdminScheduleTab({ draft }: Props) {
       <section
         className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem+env(safe-area-inset-bottom,0px))] lg:hidden ${SCHEDULE_MOBILE_CANVAS}`}
       >
-        <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
+        {pageTab !== 'create' && pageTab !== 'calendar' ? (
+          <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
+        ) : null}
         {tabPanels}
       </section>
 
@@ -561,7 +516,9 @@ export function AdminScheduleTab({ draft }: Props) {
         </div>
 
         <div className="min-w-0 w-full max-w-none space-y-6">
-          <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
+          {pageTab !== 'create' && pageTab !== 'calendar' ? (
+            <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
+          ) : null}
           {tabPanels}
         </div>
       </div>

@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { isProfileEmptyDuplicate } from '../modules/auth/profileDuplicatePolicy.js';
+import { resolveCanonicalProfileId } from '../modules/auth/authIdentities.service.js';
 import { loadProfileAuthContext } from '../modules/profiles/profileAccount.service.js';
 import type { ProfileAccountStatus } from '../modules/profiles/profileAccount.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -50,7 +52,11 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     if (!decoded.sub) {
       return next(ApiError.unauthorized('Invalid token payload', 'BAD_PAYLOAD'));
     }
-    const ctx = await loadProfileAuthContext(decoded.sub);
+    let profileId = decoded.sub;
+    if (await isProfileEmptyDuplicate(profileId)) {
+      profileId = await resolveCanonicalProfileId(profileId);
+    }
+    const ctx = await loadProfileAuthContext(profileId);
     const blockedErr = applyBlockedDeleted(ctx);
     if (blockedErr) {
       return next(blockedErr);
@@ -81,7 +87,11 @@ export async function optionalAuthMiddleware(req: Request, _res: Response, next:
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtClaims;
     if (!decoded.sub) return next();
-    const ctx = await loadProfileAuthContext(decoded.sub);
+    let profileId = decoded.sub;
+    if (await isProfileEmptyDuplicate(profileId)) {
+      profileId = await resolveCanonicalProfileId(profileId);
+    }
+    const ctx = await loadProfileAuthContext(profileId);
     if (ctx.accountStatus === 'blocked' || ctx.accountStatus === 'deleted') {
       return next();
     }

@@ -29,6 +29,8 @@ export type SanitizeLocationContext = {
   /** confirmed | completed — полный адрес клиенту этой записи */
   appointmentStatus?: string | null;
   isPublicCatalog?: boolean;
+  /** Публичная страница мастера без контекста записи */
+  isPublicMasterProfile?: boolean;
 };
 
 export type SanitizedMasterLocation = {
@@ -71,14 +73,21 @@ export function clientMaySeeExactAddress(appointmentStatus?: string | null): boo
   return appointmentStatus === 'confirmed' || appointmentStatus === 'completed';
 }
 
+function atHomeHideUntilBooking(location: MasterLocationSource): boolean {
+  return location.showExactAddressAfterBooking !== false;
+}
+
 function shouldHideExactDetails(location: MasterLocationSource, context: SanitizeLocationContext): boolean {
   if (isStudioVisit(location.visitType)) {
     return false;
   }
-  if (location.visitType === 'at_home' && !location.showExactAddressAfterBooking) {
+  if (location.visitType === 'at_home' && !atHomeHideUntilBooking(location)) {
     return false;
   }
-  if (context.isPublicCatalog) {
+  if (context.isPublicCatalog || context.isPublicMasterProfile) {
+    if (clientMaySeeExactAddress(context.appointmentStatus)) {
+      return false;
+    }
     return true;
   }
   if (clientMaySeeExactAddress(context.appointmentStatus)) {
@@ -117,6 +126,7 @@ export function sanitizeMasterLocationForViewer(
     lng: hide ? null : rawLng,
     distanceLat,
     distanceLng,
-    showExactAddressAfterBooking: location.showExactAddressAfterBooking === true,
+    showExactAddressAfterBooking:
+      location.visitType === 'at_home' ? atHomeHideUntilBooking(location) : false,
   };
 }

@@ -31,6 +31,7 @@ export function AdminAppointmentsSection() {
       ) : null}
       <AdminAppointmentsTab
         appointments={appointments}
+        useRemoteList={useCabinetApi}
         onChangeAppointments={persistAppointments}
         onOpenDetail={setDetailAppt}
       />

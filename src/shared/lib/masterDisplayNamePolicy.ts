@@ -48,7 +48,7 @@ export function getMasterDisplayNameQualityError(trimmed: string): string | null
   }
 
   if (GARBAGE_MASTER_NAMES.has(lower)) {
-    return 'Укажите настоящее имя или название студии.';
+    return 'Укажите настоящее имя или название, под которым вас увидят клиенты.';
   }
 
   return null;

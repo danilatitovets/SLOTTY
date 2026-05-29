@@ -10,8 +10,22 @@ import {
   isProfileEmptyDuplicate,
   isProfileSubstantial,
 } from './profileDuplicatePolicy.js';
+import { mergeLinkedProfileIntoTarget, pickMergedAvatarUrl } from './accountProfileMerge.service.js';
+import { fetchTelegramUserPortraitUrl } from '../telegram/telegramPortrait.api.js';
+import { resolveStablePortraitUrl } from '../../lib/mirrorPortraitToStorage.js';
+import { pickPortraitUrlOnTelegramSync } from '../../lib/profileAvatarUrlPolicy.js';
 
 const EMAIL_PROVIDER_USER_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Internal alias on orphan profile shells after identity consolidation (not a login method). */
+export const CANONICAL_PROFILE_ALIAS_PREFIX = 'canonical-ref:';
+
+export function parseCanonicalProfileAliasTarget(providerUserId: string): string | null {
+  const id = providerUserId.trim();
+  if (!id.startsWith(CANONICAL_PROFILE_ALIAS_PREFIX)) return null;
+  const target = id.slice(CANONICAL_PROFILE_ALIAS_PREFIX.length).trim();
+  return target.length > 0 ? target : null;
+}
 
 export function normalizeAuthEmail(raw: string): string {
   const e = raw.trim().toLowerCase();
@@ -95,15 +109,21 @@ async function upsertIdentity(
     credentialHash?: string | null;
   },
 ): Promise<void> {
+  await assertIdentityNotLinkedToOtherProfile(
+    client,
+    params.provider,
+    params.providerUserId,
+    params.profileId,
+  );
   await client.query(
     `insert into public.auth_identities (
        profile_id, provider, provider_user_id, email, credential_hash
      ) values ($1, $2::public.auth_provider, $3, $4, $5)
      on conflict (provider, provider_user_id) do update set
-       profile_id = excluded.profile_id,
        email = coalesce(excluded.email, public.auth_identities.email),
        credential_hash = coalesce(excluded.credential_hash, public.auth_identities.credential_hash),
-       updated_at = now()`,
+       updated_at = now()
+     where public.auth_identities.profile_id = excluded.profile_id`,
     [
       params.profileId,
       params.provider,
@@ -146,17 +166,69 @@ async function syncTelegramProfileColumns(
   fullName: string,
 ): Promise<void> {
   const tgUsername = user.username?.trim() || null;
-  const avatarUrl = user.photo_url?.trim() || null;
+  let incomingTelegram = user.photo_url?.trim() || null;
+  if (!incomingTelegram) {
+    incomingTelegram = await fetchTelegramUserPortraitUrl(user.id);
+  }
+
+  const currentR = await client.query<{ avatar_url: string | null; photo_url: string | null }>(
+    `select p.avatar_url, mp.photo_url
+       from public.profiles p
+       left join public.master_profiles mp on mp.master_id = p.id
+      where p.id = $1`,
+    [profileId],
+  );
+  const currentAvatar = currentR.rows[0]?.avatar_url;
+  const currentMasterPhoto = currentR.rows[0]?.photo_url;
+
+  const nextAvatarPick = pickPortraitUrlOnTelegramSync(currentAvatar, incomingTelegram);
+  const nextMasterPhotoPick = pickPortraitUrlOnTelegramSync(currentMasterPhoto, incomingTelegram);
+
+  const nextAvatar = await resolveStablePortraitUrl({
+    userId: profileId,
+    currentUrl: currentAvatar,
+    incomingUrl: nextAvatarPick,
+    target: 'profile',
+  });
+
+  let nextMasterPhoto: string | null = null;
+  const hasMaster = await client.query<{ ok: number }>(
+    `select 1 as ok from public.master_profiles where master_id = $1 limit 1`,
+    [profileId],
+  );
+  if ((hasMaster.rowCount ?? 0) > 0) {
+    nextMasterPhoto = await resolveStablePortraitUrl({
+      userId: profileId,
+      currentUrl: currentMasterPhoto,
+      incomingUrl: nextMasterPhotoPick,
+      target: 'master',
+    });
+  }
+
   await client.query(
     `update public.profiles set
        telegram_user_id = $2,
        telegram_username = $3,
        full_name = coalesce(nullif(trim(full_name), ''), $4),
-       avatar_url = coalesce(nullif(trim(avatar_url), ''), $5),
+       avatar_url = $5,
        updated_at = now()
      where id = $1`,
-    [profileId, user.id, tgUsername, fullName, avatarUrl],
+    [profileId, user.id, tgUsername, fullName, nextAvatar],
   );
+
+  if (nextMasterPhoto) {
+    await client.query(
+      `update public.master_profiles set
+         photo_url = case
+           when nullif(trim(photo_url), '') is null then $2
+           when photo_url ~* '/storage/v1/object/public/' then photo_url
+           else $2
+         end,
+         updated_at = now()
+       where master_id = $1`,
+      [profileId, nextMasterPhoto],
+    );
+  }
 }
 
 /** Все profiles.id, связанные с этим аккаунтом через email / TG / Google. */
@@ -174,6 +246,10 @@ export async function collectLinkedProfileCandidates(profileId: string): Promise
   );
 
   for (const row of identityRows.rows) {
+    if (row.provider === 'email') {
+      const aliasTarget = parseCanonicalProfileAliasTarget(row.provider_user_id);
+      if (aliasTarget) ids.add(aliasTarget);
+    }
     const linked = await findProfileIdByIdentity(row.provider, row.provider_user_id);
     if (linked) ids.add(linked);
     if (row.email) {
@@ -201,9 +277,35 @@ export async function collectLinkedProfileCandidates(profileId: string): Promise
   return [...ids];
 }
 
+export type PickPreferredProfileOptions = {
+  /** При входе через TG/Google — профиль с этой привязкой важнее «голого» Google-дубля. */
+  preferProvider?: AuthProvider;
+};
+
 export async function resolveCanonicalProfileId(profileId: string): Promise<string> {
-  const candidates = await collectLinkedProfileCandidates(profileId);
-  return (await pickPreferredProfileIdAmong(candidates)) ?? profileId;
+  try {
+    const candidates = [...new Set(await collectLinkedProfileCandidates(profileId))];
+
+    if (await isProfileSubstantial(profileId)) {
+      for (const otherId of candidates) {
+        if (otherId === profileId) continue;
+        await mergeLinkedProfileIntoTarget(profileId, otherId);
+        await consolidateProfileIdentitiesToCanonical(profileId, otherId);
+      }
+      return profileId;
+    }
+
+    const picked = (await pickPreferredProfileIdAmong(candidates)) ?? profileId;
+    for (const otherId of candidates) {
+      if (otherId === picked) continue;
+      await mergeLinkedProfileIntoTarget(picked, otherId);
+      await consolidateProfileIdentitiesToCanonical(picked, otherId);
+    }
+    return picked;
+  } catch (e) {
+    console.error('[auth] resolveCanonicalProfileId failed:', e instanceof Error ? e.message : e);
+    return profileId;
+  }
 }
 
 async function consolidateProfileIdentitiesToCanonical(
@@ -255,6 +357,20 @@ async function consolidateProfileIdentitiesToCanonical(
         [staleProfileId, provider, row.provider_user_id],
       );
     }
+
+    await client.query(
+      `delete from public.auth_identities
+        where profile_id = $1
+          and provider = 'email'::public.auth_provider
+          and provider_user_id like $2`,
+      [staleProfileId, `${CANONICAL_PROFILE_ALIAS_PREFIX}%`],
+    );
+    await upsertIdentity(client, {
+      profileId: staleProfileId,
+      provider: 'email',
+      providerUserId: `${CANONICAL_PROFILE_ALIAS_PREFIX}${canonicalId}`,
+      email: null,
+    });
   });
 }
 
@@ -264,9 +380,6 @@ export async function issueSessionForProfile(profileId: string) {
   const { signAccessToken } = await import('./authTokens.js');
 
   const canonicalId = await resolveCanonicalProfileId(profileId);
-  if (canonicalId !== profileId) {
-    await consolidateProfileIdentitiesToCanonical(canonicalId, profileId);
-  }
 
   await assertProfileCanAuthenticate(canonicalId);
   const profile = await getProfileById(canonicalId);
@@ -305,9 +418,17 @@ async function collectTelegramLoginCandidateProfileIds(
 export async function loginOrRegisterWithTelegram(user: TelegramWebAppUser, fullName: string) {
   const providerUserId = String(user.id);
   const candidates = await collectTelegramLoginCandidateProfileIds(user);
-  const preferredProfileId = await pickPreferredProfileIdAmong(candidates);
+  const preferredProfileId = await pickPreferredProfileIdAmong(candidates, {
+    preferProvider: 'telegram',
+  });
 
   if (preferredProfileId) {
+    for (const otherId of candidates) {
+      if (otherId === preferredProfileId) continue;
+      await mergeLinkedProfileIntoTarget(preferredProfileId, otherId);
+      await consolidateProfileIdentitiesToCanonical(preferredProfileId, otherId);
+    }
+
     await withTransaction(async (client) => {
       await client.query(
         `delete from public.auth_identities
@@ -330,7 +451,7 @@ export async function loginOrRegisterWithTelegram(user: TelegramWebAppUser, full
   const profileId = await withTransaction(async (client) => {
     const id = await createProfileRow(client, {
       fullName,
-      avatarUrl: user.photo_url?.trim() || null,
+      avatarUrl: null,
       telegramUserId: user.id,
       telegramUsername: user.username?.trim() || null,
     });
@@ -340,6 +461,7 @@ export async function loginOrRegisterWithTelegram(user: TelegramWebAppUser, full
       providerUserId,
       email: null,
     });
+    await syncTelegramProfileColumns(client, id, user, fullName);
     return id;
   });
 
@@ -357,27 +479,34 @@ export async function linkTelegramToProfile(profileId: string, user: TelegramWeb
     return listAuthIdentitiesForProfile(profileId);
   }
 
-  if (existingProfileId) {
-    const preferred = await pickPreferredProfileIdAmong([profileId, existingProfileId]);
-    if (preferred === profileId) {
-      await withTransaction(async (client) => {
-        await client.query(
-          `delete from public.auth_identities
-            where provider = 'telegram'::public.auth_provider
-              and provider_user_id = $1
-              and profile_id <> $2`,
-          [providerUserId, profileId],
-        );
-        await upsertIdentity(client, {
-          profileId,
-          provider: 'telegram',
-          providerUserId,
-          email: null,
-        });
-        await syncTelegramProfileColumns(client, profileId, user, fullName);
-      });
-      return listAuthIdentitiesForProfile(profileId);
+  if (existingProfileId && existingProfileId !== profileId) {
+    const existingIsEmptyDup = await isProfileEmptyDuplicate(existingProfileId);
+    if (existingIsEmptyDup || !(await isProfileSubstantial(existingProfileId))) {
+      await mergeLinkedProfileIntoTarget(profileId, existingProfileId);
+      await consolidateProfileIdentitiesToCanonical(profileId, existingProfileId);
+    } else if (await isProfileSubstantial(existingProfileId)) {
+      throw ApiError.conflict(
+        'Этот Telegram уже привязан к другому аккаунту с данными. Войдите через Telegram или обратитесь в поддержку.',
+        'TELEGRAM_ALREADY_LINKED',
+      );
     }
+    await withTransaction(async (client) => {
+      await client.query(
+        `delete from public.auth_identities
+          where provider = 'telegram'::public.auth_provider
+            and provider_user_id = $1
+            and profile_id <> $2`,
+        [providerUserId, profileId],
+      );
+      await upsertIdentity(client, {
+        profileId,
+        provider: 'telegram',
+        providerUserId,
+        email: null,
+      });
+      await syncTelegramProfileColumns(client, profileId, user, fullName);
+    });
+    return listAuthIdentitiesForProfile(profileId);
   }
 
   await withTransaction(async (client) => {
@@ -396,7 +525,9 @@ export async function linkTelegramToProfile(profileId: string, user: TelegramWeb
 export async function loginOrRegisterWithGoogle(payload: GoogleIdTokenPayload) {
   const providerUserId = payload.sub;
   const candidates = await collectGoogleLoginCandidateProfileIds(payload);
-  let preferredProfileId = await pickPreferredProfileIdAmong(candidates);
+  let preferredProfileId = await pickPreferredProfileIdAmong(candidates, {
+    preferProvider: 'google',
+  });
 
   if (preferredProfileId && (await isProfileEmptyDuplicate(preferredProfileId))) {
     const expanded = new Set(candidates);
@@ -410,7 +541,9 @@ export async function loginOrRegisterWithGoogle(payload: GoogleIdTokenPayload) {
         /* skip */
       }
     }
-    const better = await pickPreferredProfileIdAmong([...expanded]);
+    const better = await pickPreferredProfileIdAmong([...expanded], {
+      preferProvider: 'google',
+    });
     if (better && better !== preferredProfileId && !(await isProfileEmptyDuplicate(better))) {
       preferredProfileId = better;
     }
@@ -439,15 +572,32 @@ export async function loginOrRegisterWithGoogle(payload: GoogleIdTokenPayload) {
   }
 
   if (preferredProfileId) {
+    for (const otherId of candidates) {
+      if (otherId === preferredProfileId) continue;
+      await mergeLinkedProfileIntoTarget(preferredProfileId, otherId);
+      await consolidateProfileIdentitiesToCanonical(preferredProfileId, otherId);
+    }
+
     if (payload.name || payload.picture) {
+      const cur = await query<{ avatar_url: string | null }>(
+        `select avatar_url from public.profiles where id = $1`,
+        [preferredProfileId],
+      );
+      const avatar = pickMergedAvatarUrl(cur.rows[0]?.avatar_url, payload.picture ?? null);
       await query(
         `update public.profiles set
            full_name = coalesce(nullif(trim($2), ''), full_name),
-           avatar_url = coalesce(nullif(trim(avatar_url), ''), $3),
+           avatar_url = $3,
            updated_at = now()
          where id = $1`,
-        [preferredProfileId, payload.name ?? null, payload.picture ?? null],
+        [preferredProfileId, payload.name ?? null, avatar],
       );
+      if (payload.picture?.trim()) {
+        const { backfillMasterProfileMediaFromUserProfile } = await import(
+          '../profiles/profiles.service.js'
+        );
+        await backfillMasterProfileMediaFromUserProfile(preferredProfileId, avatar);
+      }
     }
 
     await withTransaction(async (client) => {
@@ -503,11 +653,12 @@ export async function linkGoogleToProfile(profileId: string, payload: GoogleIdTo
     return listAuthIdentitiesForProfile(profileId);
   }
 
-  if (existingProfileId) {
+  if (existingProfileId && existingProfileId !== profileId) {
     const existingIsEmptyDup = await isProfileEmptyDuplicate(existingProfileId);
-    const preferred = await pickPreferredProfileIdAmong([profileId, existingProfileId]);
-    if (preferred === profileId || existingIsEmptyDup) {
+    if (existingIsEmptyDup || !(await isProfileSubstantial(existingProfileId))) {
       await assertGoogleEmailLinkSafe(profileId, payload.email, existingProfileId);
+      await mergeLinkedProfileIntoTarget(profileId, existingProfileId);
+      await consolidateProfileIdentitiesToCanonical(profileId, existingProfileId);
       await withTransaction(async (client) => {
         await reassignGoogleIdentityToProfile(
           client,
@@ -515,14 +666,29 @@ export async function linkGoogleToProfile(profileId: string, payload: GoogleIdTo
           profileId,
           payload.email ?? null,
         );
-        if (payload.name) {
+        if (payload.name || payload.picture) {
+          const cur = await client.query<{ avatar_url: string | null }>(
+            `select avatar_url from public.profiles where id = $1`,
+            [profileId],
+          );
+          const avatar = pickMergedAvatarUrl(cur.rows[0]?.avatar_url, payload.picture ?? null);
           await client.query(
             `update public.profiles set
                full_name = coalesce(nullif(trim($2), ''), full_name),
+               avatar_url = $3,
                updated_at = now()
              where id = $1`,
-            [profileId, payload.name ?? null],
+            [profileId, payload.name ?? null, avatar],
           );
+          if (avatar) {
+            await client.query(
+              `update public.master_profiles set
+                 photo_url = coalesce(nullif(trim(photo_url), ''), $2),
+                 updated_at = now()
+               where master_id = $1`,
+              [profileId, avatar],
+            );
+          }
         }
       });
       return listAuthIdentitiesForProfile(profileId);
@@ -544,14 +710,29 @@ export async function linkGoogleToProfile(profileId: string, payload: GoogleIdTo
       providerUserId: payload.sub,
       email: payload.email ?? null,
     });
-    if (payload.name) {
+    if (payload.name || payload.picture) {
+      const cur = await client.query<{ avatar_url: string | null }>(
+        `select avatar_url from public.profiles where id = $1`,
+        [profileId],
+      );
+      const avatar = pickMergedAvatarUrl(cur.rows[0]?.avatar_url, payload.picture ?? null);
       await client.query(
         `update public.profiles set
            full_name = coalesce(nullif(trim($2), ''), full_name),
+           avatar_url = $3,
            updated_at = now()
          where id = $1`,
-        [profileId, payload.name ?? null],
+        [profileId, payload.name ?? null, avatar],
       );
+      if (avatar) {
+        await client.query(
+          `update public.master_profiles set
+             photo_url = coalesce(nullif(trim(photo_url), ''), $2),
+             updated_at = now()
+           where master_id = $1`,
+          [profileId, avatar],
+        );
+      }
     }
   });
   return listAuthIdentitiesForProfile(profileId);
@@ -584,15 +765,25 @@ async function findProfileIdsMatchingEmail(email: string): Promise<string[]> {
  * Один аккаунт на email/Telegram/Google: при нескольких profiles выбираем тот,
  * где уже есть кабинет мастера (данные), а не пустой client-only от «Войти через Google».
  */
-export async function pickPreferredProfileIdAmong(profileIds: string[]): Promise<string | null> {
+export async function pickPreferredProfileIdAmong(
+  profileIds: string[],
+  options?: PickPreferredProfileOptions,
+): Promise<string | null> {
   if (profileIds.length === 0) return null;
   if (profileIds.length === 1) return profileIds[0];
+
+  const preferProvider = options?.preferProvider ?? null;
 
   const r = await query<{ id: string }>(
     `select p.id
        from public.profiles p
       where p.id = any($1::uuid[])
       order by
+        case when $2::text is not null and exists (
+          select 1 from public.auth_identities ai
+           where ai.profile_id = p.id
+             and ai.provider = $2::public.auth_provider
+        ) then 1 else 0 end desc,
         (exists (
           select 1 from public.master_profiles mp
            where mp.master_id = p.id
@@ -613,12 +804,12 @@ export async function pickPreferredProfileIdAmong(profileIds: string[]): Promise
         ) desc,
         (exists (
           select 1 from public.auth_identities ai
-           where ai.profile_id = p.id and ai.provider = 'google'::public.auth_provider
+           where ai.profile_id = p.id and ai.provider = 'telegram'::public.auth_provider
         )) desc,
-        case p.role when 'master' then 0 when 'client' then 1 else 2 end,
+        case p.role when 'master' then 0 when 'platform_admin' then 1 when 'client' then 2 end,
         p.created_at asc
       limit 1`,
-    [profileIds],
+    [profileIds, preferProvider],
   );
   return r.rows[0]?.id ?? profileIds[0];
 }
@@ -768,6 +959,13 @@ export async function registerWithEmailIdentity(emailRaw: string, password: stri
 
 export async function linkEmailToProfile(profileId: string, emailRaw: string, password: string) {
   const email = normalizeAuthEmail(emailRaw);
+  const existingOwner = await findProfileIdByIdentity('email', email);
+  if (existingOwner && existingOwner !== profileId) {
+    throw ApiError.conflict(
+      'Этот email уже привязан к другому аккаунту. Войдите через него или используйте другой email.',
+      'EMAIL_ALREADY_LINKED',
+    );
+  }
   const hash = await hashEmailPassword(password);
   await withTransaction(async (client) => {
     await assignEmailIdentityToProfile(client, profileId, email, hash);

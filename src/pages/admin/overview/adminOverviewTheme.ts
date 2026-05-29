@@ -4,7 +4,9 @@ import {
   PROFILE_DESKTOP_PAGE_BG,
   profileDashboardCard,
   profileDashboardCardPad,
+  profileDesktopTabsSticky,
 } from '../profile/adminProfileDashboardTheme';
+import { MINI_PICTURE } from '../../../shared/ui/miniPictureSrc';
 
 export const OVERVIEW_CANVAS_HEX = '#F6F7FB';
 
@@ -20,14 +22,18 @@ export const ADMIN_CABINET_SHELL_MAX = 'w-full max-w-[460px] lg:max-w-none';
 export const overviewShellCard = 'hidden w-full min-w-0 lg:block';
 
 /** Липкие табы сразу под AdminDesktopTopBar (см. --slotty-admin-desktop-topbar-h). */
-export const overviewDesktopTabsSticky =
-  'sticky z-20 overflow-hidden bg-white top-[var(--slotty-admin-desktop-topbar-h,4.75rem)]';
+export const overviewDesktopTabsSticky = profileDesktopTabsSticky;
 
-/** Mobile: плоская белая панель (как кабинет). Desktop: с лёгкой тенью. */
+/** Mobile: белая карточка на сером полотне. Desktop: лёгкая тень. */
 export const overviewCard =
-  'overflow-hidden rounded-[16px] bg-white lg:rounded-[28px] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)]';
+  'overflow-hidden rounded-[16px] bg-white ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:rounded-[28px] lg:shadow-[0_2px_16px_rgba(17,24,39,0.04)] lg:ring-0';
 
-export const overviewDesktopCard = profileDashboardCard;
+/** Секции сводки: на мобилке с обводкой, на desktop — плоская белая панель. */
+export const overviewDesktopCard = `${profileDashboardCard} ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:ring-0`;
+
+/** Лоток под график (светло-серый, как Binance). */
+export const overviewChartWell =
+  'relative w-full min-w-0 overflow-hidden rounded-[12px] bg-[#F6F7FB] ring-1 ring-[#EEEEEE]/80 lg:rounded-[16px] lg:ring-0';
 
 export const overviewDesktopCardPad = profileDashboardCardPad;
 
@@ -79,8 +85,7 @@ export const overviewFilterChipActive =
 export const overviewFilterChipIdle =
   'border-[#EAECEF] bg-white text-[#6B7280] hover:border-[#FDE8ED] hover:bg-[#FAFAFA] hover:text-[#374151] lg:bg-white';
 
-export const overviewEmptyIllustrationSrc =
-  '/photos/' + encodeURIComponent('ничего не нашли.webp');
+export const overviewEmptyIllustrationSrc = MINI_PICTURE.searchEmpty;
 
 const overviewSvodkaDir = '/photos/' + encodeURIComponent('сводка') + '/';
 
@@ -90,4 +95,7 @@ export function overviewSvodkaPhotoSrc(fileName: string): string {
 
 export const OVERVIEW_WELCOME_IMAGE_SRC = overviewSvodkaPhotoSrc('обзор.webp');
 
-export const OVERVIEW_CLIENTS_FOOTER_SRC = '/photos/KLIENT.webp';
+/** @deprecated use MINI_PICTURE.clientsEmpty */
+export const OVERVIEW_CLIENTS_FOOTER_SRC = MINI_PICTURE.clientsEmpty;
+
+export { MINI_PICTURE } from '../../../shared/ui/miniPictureSrc';

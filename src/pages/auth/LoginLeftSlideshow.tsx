@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const LOGIN_SLIDES = [1, 2, 3, 4, 5, 6].map((n) => `/photos/login/${n}.png`);
+const LOGIN_SLIDES = [1, 2, 3, 4, 5, 6].map((n) => `/photos/login/${n}.webp`);
 const SLIDE_MS = 5000;
 const FADE_MS = 900;
 

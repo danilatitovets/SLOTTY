@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAdminSectionTab } from '../useAdminSectionTab';
 import { preloadTabIntroImages } from '../useTabIntroImage';
 import { useSingleFlight } from '../shared/useSingleFlight';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +15,7 @@ import {
   postMasterService,
 } from '../../../features/admin/api/masterCabinetApi';
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
+import { isProRequiredApiMessage } from '../../../features/billing/masterProUpsell';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import {
   SERVICE_DELETE_BLOCKED_MESSAGE,
@@ -33,6 +35,8 @@ import {
 } from '../profile/adminProfileCabinetTheme';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
+import { managedServiceToClientPreview } from '../../../features/admin/lib/managedServiceToClientPreview';
+import { MasterServiceClientPreview } from '../../../features/profile/components/MasterServiceClientPreview';
 import {
   SERVICES_MOBILE_CANVAS,
   servicesDesktopCard,
@@ -62,9 +66,21 @@ import {
   postMasterBundle,
   postMasterPromotion,
 } from '../../../features/admin/api/masterServiceExtrasApi';
-import { getServiceTitlePlaceholder } from '../../../constants/serviceTemplates';
+import {
+  getServiceTitlePlaceholder,
+  templatePriceTypeToApp,
+  type ServiceTemplate,
+} from '../../../constants/serviceTemplates';
+import { PopularServiceTemplatesChips } from '../../../features/catalog/PopularServiceTemplatesChips';
 import { loadServiceBundles, loadServicePromotions, saveServiceBundles, saveServicePromotions } from './servicesStorage';
+import {
+  cabinetServiceDtoToManaged,
+  draftWithServices,
+  reindexManagedServices,
+} from './servicesCabinetSync';
 import type { ServiceBundle, ServicePromotion, ServicesTabId } from './servicesTypes';
+
+const SERVICES_TABS = ['catalog', 'price', 'bundles', 'promotions'] as const satisfies readonly ServicesTabId[];
 
 type PriceType = 'fixed' | 'from';
 
@@ -109,21 +125,9 @@ function normalizeService(service: MasterOnboardingService, index: number): Mana
   };
 }
 
-function formatPrice(service: ManagedService): string {
-  const prefix = service.priceType === 'from' ? 'от ' : '';
-  return `${prefix}${service.priceByn} BYN`;
-}
-
-function reindexServices(list: ManagedService[]): ManagedService[] {
-  return list.map((service, index) => ({
-    ...service,
-    sortOrder: index,
-  }));
-}
-
 export function AdminServicesTab({ draft, onPersist }: Props) {
   const navigate = useNavigate();
-  const { useCabinetApi, refreshDraft, commitDraftBaseline, appointments } = useAdminMasterCabinet();
+  const { useCabinetApi, commitDraftBaseline, appointments } = useAdminMasterCabinet();
   const { canUseBundlesAndPromotions, freeServiceLimitReached } = useMasterPlanEntitlements();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetMode, setSheetMode] = useState<ServiceSheetMode>('full');
@@ -136,7 +140,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ServicesTabId>('catalog');
+  const [activeTab, setActiveTab] = useAdminSectionTab('tab', 'catalog', SERVICES_TABS);
   const [menuTarget, setMenuTarget] = useState<ManagedService | null>(null);
   const [bundles, setBundles] = useState<ServiceBundle[]>(() => loadServiceBundles());
   const [promotions, setPromotions] = useState<ServicePromotion[]>(() => loadServicePromotions());
@@ -175,8 +179,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   }, [useCabinetApi]);
 
   useEffect(() => {
+    if (!useCabinetApi) {
+      setBundles(loadServiceBundles());
+      setPromotions(loadServicePromotions());
+      return;
+    }
+    if (extrasLocked) return;
     void reloadServiceExtras();
-  }, [reloadServiceExtras]);
+  }, [extrasLocked, reloadServiceExtras, useCabinetApi]);
 
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
@@ -184,6 +194,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   const [isActive, setIsActive] = useState(true);
   const [desc, setDesc] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [templateHighlightId, setTemplateHighlightId] = useState<string | null>(null);
   const { busy: serviceActionBusy, run: runServiceAction } = useSingleFlight();
 
   const services = useMemo(
@@ -194,17 +205,25 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     [draft.services],
   );
 
+  const serviceCategoryCode = draft.primaryCategoryCode ?? draft.category;
+
   const serviceTitlePlaceholder = useMemo(
-    () => getServiceTitlePlaceholder(draft.primaryCategoryCode ?? draft.category),
-    [draft.primaryCategoryCode, draft.category],
+    () => getServiceTitlePlaceholder(serviceCategoryCode),
+    [serviceCategoryCode],
   );
+
+  const applyServiceTemplate = useCallback((tm: ServiceTemplate) => {
+    setTitle(tm.title);
+    setPrice(String(tm.price));
+    setPriceType(templatePriceTypeToApp(tm.priceType));
+    setDesc(tm.description ?? '');
+    setTemplateHighlightId(tm.id);
+    setFormError(null);
+  }, []);
 
   const persistServices = useCallback(
     (nextServices: ManagedService[], message?: string) => {
-      onPersist({
-        ...draft,
-        services: reindexServices(nextServices),
-      });
+      onPersist(draftWithServices(draft, nextServices));
 
       if (message) {
         setToast(message);
@@ -212,6 +231,17 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       }
     },
     [draft, onPersist],
+  );
+
+  const commitServices = useCallback(
+    (nextServices: ManagedService[]) => {
+      if (useCabinetApi) {
+        commitDraftBaseline(draftWithServices(draft, nextServices));
+        return;
+      }
+      persistServices(nextServices);
+    },
+    [commitDraftBaseline, draft, persistServices, useCabinetApi],
   );
 
   const showSuccessToast = useCallback((message: string) => {
@@ -227,6 +257,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setIsActive(true);
     setDesc('');
     setFormError(null);
+    setTemplateHighlightId(null);
   }, []);
 
   const loadServiceIntoForm = useCallback((service: ManagedService) => {
@@ -237,6 +268,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setIsActive(service.isActive ?? true);
     setDesc(service.description ?? '');
     setFormError(null);
+    setTemplateHighlightId(null);
   }, []);
 
   const openCreate = useCallback(() => {
@@ -350,8 +382,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
     setFormError(null);
     try {
+      let syncedServices = nextServices;
+
       if (editingId && isUuid(editingId)) {
-        await patchMasterService(editingId, {
+        const row = await patchMasterService(editingId, {
           title: preparedTitle,
           description: preparedDescription,
           durationMinutes: durationNumber,
@@ -360,8 +394,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           isActive: activeFlag,
           sortOrder: nextService.sortOrder ?? 0,
         });
+        const mapped = cabinetServiceDtoToManaged(row, nextService.sortOrder ?? 0);
+        syncedServices = services.map((service) => (service.id === editingId ? mapped : service));
       } else if (!editingId) {
-        await postMasterService({
+        const row = await postMasterService({
           categoryId: catId,
           title: preparedTitle,
           description: preparedDescription,
@@ -370,12 +406,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           priceType: priceTypeValue,
           sortOrder: nextService.sortOrder ?? 0,
         });
+        syncedServices = [...services, cabinetServiceDtoToManaged(row, services.length)];
       } else {
         persistServices(nextServices, okMsg);
         closeSheet();
         return;
       }
-      await refreshDraft();
+
+      commitServices(syncedServices);
       showSuccessToast(okMsg);
       closeSheet();
     } catch (e) {
@@ -388,10 +426,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     draft.primaryCategoryId,
     editingId,
     isActive,
+    commitServices,
     persistServices,
     price,
     priceType,
-    refreshDraft,
     runServiceAction,
     services,
     sheetMode,
@@ -421,16 +459,23 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         return;
       }
 
+      const previous = services;
+      commitServices(nextServices);
       setListError(null);
       try {
-        await patchMasterService(service.id, { isActive: !service.isActive });
-        await refreshDraft();
+        const row = await patchMasterService(service.id, { isActive: !service.isActive });
+        commitServices(
+          previous.map((item) =>
+            item.id === service.id ? cabinetServiceDtoToManaged(row, item.sortOrder ?? 0) : item,
+          ),
+        );
         showSuccessToast(service.isActive ? 'Услуга скрыта' : 'Услуга снова видна');
       } catch (e) {
+        commitServices(previous);
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить');
       }
     },
-    [persistServices, refreshDraft, services, showSuccessToast, useCabinetApi],
+    [commitServices, persistServices, services, showSuccessToast, useCabinetApi],
   );
 
   const duplicateService = useCallback(
@@ -458,7 +503,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         return;
       }
 
-      setFormError(null);
+      setListError(null);
       try {
         const created = await postMasterService({
           categoryId: catId,
@@ -469,14 +514,17 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
           priceType: copy.priceType === 'from' ? 'from' : 'fixed',
           sortOrder: copy.sortOrder ?? 0,
         });
-        await patchMasterService(created.id, { isActive: false });
-        await refreshDraft();
+        const hidden = await patchMasterService(created.id, { isActive: false });
+        commitServices([
+          ...services,
+          { ...cabinetServiceDtoToManaged(hidden, services.length), isActive: false },
+        ]);
         showSuccessToast('Услуга продублирована');
       } catch (e) {
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить');
       }
     },
-    [draft.primaryCategoryId, persistServices, refreshDraft, services, showSuccessToast, useCabinetApi],
+    [commitServices, draft.primaryCategoryId, persistServices, services, showSuccessToast, useCabinetApi],
   );
 
   const moveService = useCallback(
@@ -495,31 +543,41 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       nextServices[index] = target;
       nextServices[targetIndex] = current;
 
-      const reindexed = reindexServices(nextServices);
+      const reindexed = reindexManagedServices(nextServices);
 
       if (!useCabinetApi) {
         persistServices(reindexed, 'Порядок обновлен');
         return;
       }
 
+      const previous = services;
+      commitServices(reindexed);
       setListError(null);
       try {
         const prevById = new Map(services.map((s) => [s.id, s]));
-        const patches: Promise<unknown>[] = [];
+        const patches: Promise<ManagedService>[] = [];
         for (const s of reindexed) {
           if (!isUuid(s.id)) continue;
           const old = prevById.get(s.id);
           if (!old || (old.sortOrder ?? 0) === (s.sortOrder ?? 0)) continue;
-          patches.push(patchMasterService(s.id, { sortOrder: s.sortOrder ?? 0 }));
+          patches.push(
+            patchMasterService(s.id, { sortOrder: s.sortOrder ?? 0 }).then((row) =>
+              cabinetServiceDtoToManaged(row, s.sortOrder ?? 0),
+            ),
+          );
         }
-        await Promise.all(patches);
-        await refreshDraft();
+        if (patches.length > 0) {
+          const updatedRows = await Promise.all(patches);
+          const byId = new Map(updatedRows.map((row) => [row.id, row]));
+          commitServices(reindexed.map((s) => byId.get(s.id) ?? s));
+        }
         showSuccessToast('Порядок обновлен');
       } catch (e) {
+        commitServices(previous);
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить');
       }
     },
-    [persistServices, refreshDraft, services, showSuccessToast, useCabinetApi],
+    [commitServices, persistServices, services, showSuccessToast, useCabinetApi],
   );
 
   const isServiceDeleteBlocked = useCallback(
@@ -563,12 +621,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     try {
       if (isUuid(deleteTarget.id)) {
         await deleteMasterService(deleteTarget.id);
-        const filtered = reindexServices(services.filter((service) => service.id !== deleteTarget.id));
-        commitDraftBaseline({ ...draft, services: filtered });
+        commitServices(services.filter((service) => service.id !== deleteTarget.id));
         setDeleteTarget(null);
         setDeleteError(null);
         showSuccessToast('Услуга удалена');
-        void refreshDraft();
       } else {
         persistServices(services.filter((service) => service.id !== deleteTarget.id), 'Услуга удалена');
         setDeleteTarget(null);
@@ -579,12 +635,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     }
     });
   }, [
-    commitDraftBaseline,
+    commitServices,
     deleteTarget,
-    draft,
     isServiceDeleteBlocked,
     persistServices,
-    refreshDraft,
     runServiceAction,
     services,
     showSuccessToast,
@@ -600,6 +654,48 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     setBundles(rows);
     saveServiceBundles(rows);
   }, []);
+
+  const upsertBundle = useCallback((saved: ServiceBundle, existed: boolean) => {
+    setBundles((prev) => {
+      const next = existed
+        ? prev.map((row) => (row.id === saved.id ? saved : row))
+        : [saved, ...prev];
+      if (!useCabinetApi) saveServiceBundles(next);
+      return next;
+    });
+  }, [useCabinetApi]);
+
+  const removeBundle = useCallback(
+    (id: string) => {
+      setBundles((prev) => {
+        const next = prev.filter((row) => row.id !== id);
+        if (!useCabinetApi) saveServiceBundles(next);
+        return next;
+      });
+    },
+    [useCabinetApi],
+  );
+
+  const upsertPromotion = useCallback((saved: ServicePromotion, existed: boolean) => {
+    setPromotions((prev) => {
+      const next = existed
+        ? prev.map((row) => (row.id === saved.id ? saved : row))
+        : [saved, ...prev];
+      if (!useCabinetApi) saveServicePromotions(next);
+      return next;
+    });
+  }, [useCabinetApi]);
+
+  const removePromotion = useCallback(
+    (id: string) => {
+      setPromotions((prev) => {
+        const next = prev.filter((row) => row.id !== id);
+        if (!useCabinetApi) saveServicePromotions(next);
+        return next;
+      });
+    },
+    [useCabinetApi],
+  );
 
   const bundleApiBody = (bundle: ServiceBundle) => ({
     title: bundle.title,
@@ -655,19 +751,18 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       setListError(null);
       try {
         const body = bundleApiBody(bundle);
-        if (exists && isUuid(bundle.id)) {
-          await patchMasterBundle(bundle.id, body);
-        } else {
-          await postMasterBundle(body);
-        }
-        await reloadServiceExtras();
+        const saved =
+          exists && isUuid(bundle.id)
+            ? await patchMasterBundle(bundle.id, body)
+            : await postMasterBundle(body);
+        upsertBundle(saved, exists && isUuid(bundle.id));
         showSuccessToast(toastMsg);
       } catch (e) {
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить набор');
         throw e;
       }
     },
-    [bundles, extrasLocked, persistBundlesLocal, reloadServiceExtras, showSuccessToast, useCabinetApi],
+    [bundles, extrasLocked, persistBundlesLocal, showSuccessToast, upsertBundle, useCabinetApi],
   );
 
   const deleteBundle = useCallback(
@@ -684,10 +779,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       if (isUuid(id)) {
         await deleteMasterBundle(id);
       }
-      await reloadServiceExtras();
+      removeBundle(id);
       showSuccessToast('Набор удалён');
     },
-    [bundles, extrasLocked, persistBundlesLocal, reloadServiceExtras, showSuccessToast, useCabinetApi],
+    [extrasLocked, persistBundlesLocal, removeBundle, showSuccessToast, useCabinetApi],
   );
 
   const openPromoCreate = useCallback(() => {
@@ -757,13 +852,11 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       setListError(null);
       try {
         const body = promoApiBody(promo, publish);
-        const exists = editingPromo && isUuid(editingPromo.id);
-        if (exists) {
-          await patchMasterPromotion(editingPromo.id, body);
-        } else {
-          await postMasterPromotion(body);
-        }
-        await reloadServiceExtras();
+        const exists = Boolean(editingPromo && isUuid(editingPromo.id));
+        const saved = exists
+          ? await patchMasterPromotion(editingPromo!.id, body)
+          : await postMasterPromotion(body);
+        upsertPromotion(saved, exists);
         setPromoFormOpen(false);
         setEditingPromo(null);
         showSuccessToast(publish ? 'Акция опубликована' : 'Черновик сохранён');
@@ -771,7 +864,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить акцию');
       }
     },
-    [editingPromo, extrasLocked, persistPromotionsLocal, promotions, reloadServiceExtras, showSuccessToast, useCabinetApi],
+    [editingPromo, extrasLocked, persistPromotionsLocal, showSuccessToast, upsertPromotion, useCabinetApi],
   );
 
   const deletePromo = useCallback(
@@ -788,10 +881,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       if (isUuid(id)) {
         await deleteMasterPromotion(id);
       }
-      await reloadServiceExtras();
+      removePromotion(id);
       showSuccessToast('Акция удалена');
     },
-    [extrasLocked, persistPromotionsLocal, promotions, reloadServiceExtras, showSuccessToast, useCabinetApi],
+    [extrasLocked, persistPromotionsLocal, removePromotion, showSuccessToast, useCabinetApi],
   );
 
   const menuIndex = menuTarget ? services.findIndex((s) => s.id === menuTarget.id) : -1;
@@ -801,11 +894,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     [bundles, promotions, services],
   );
 
+  const blockingAlert =
+    listError ?? (extrasError && !isProRequiredApiMessage(extrasError) ? extrasError : null);
+
   const statusAlerts = (
     <>
-      {listError || extrasError ? (
-        <p className="rounded-[16px] border border-[#FDE8ED] bg-[#FFF1F4] px-4 py-3 text-[14px] font-semibold text-[#B45309] lg:rounded-[20px]">
-          {listError ?? extrasError}
+      {blockingAlert ? (
+        <p className="rounded-[16px] border border-[#FEE2E2] bg-[#FEF2F2] px-4 py-3 text-[14px] font-semibold text-[#B91C1C] lg:rounded-[20px]">
+          {blockingAlert}
         </p>
       ) : null}
 
@@ -874,7 +970,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       <section
         className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${SERVICES_MOBILE_CANVAS}`}
       >
-        <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} />
+        {activeTab !== 'catalog' ? (
+          <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} extrasLocked={extrasLocked} />
+        ) : null}
         {statusAlerts}
         <AdminTabContentTransition activeKey={activeTab}>{tabPanels}</AdminTabContentTransition>
       </section>
@@ -885,7 +983,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         </div>
 
         <div className="min-w-0 space-y-6">
-          <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} />
+          {activeTab !== 'catalog' ? (
+            <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} extrasLocked={extrasLocked} />
+          ) : null}
           {statusAlerts}
           <AdminTabContentTransition activeKey={activeTab} className="min-w-0 space-y-6">
             {tabPanels}
@@ -1030,6 +1130,16 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
           {sheetMode === 'full' || sheetMode === 'create' ? (
           <AdminFormSheetSection title="Основное" description="Название и цена для каталога">
+          <PopularServiceTemplatesChips
+            collapsible
+            collapsibleCompact
+            variant="cabinet"
+            categoryCode={serviceCategoryCode}
+            categoryLabel={draft.category}
+            selectedId={templateHighlightId}
+            onSelect={applyServiceTemplate}
+            className="mb-4"
+          />
           <label className="block">
             <AdminSheetFieldLabel required className={sheetLabelClass}>
               Название услуги
@@ -1037,7 +1147,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
             <input
               value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setTemplateHighlightId(null);
+              }}
               className={fieldClass()}
               placeholder={serviceTitlePlaceholder}
             />
@@ -1153,7 +1266,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         open={Boolean(previewTarget)}
         onClose={() => setPreviewTarget(null)}
         title="Как увидит клиент"
-        subtitle="Так карточка выглядит в поиске и при записи"
+        subtitle="Так услуга в списке на странице мастера при записи"
         footer={
           <button
             type="button"
@@ -1165,44 +1278,20 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         }
       >
         {previewTarget ? (
-          <div>
           <AdminFormSheetSection>
-            <div className="rounded-[24px] bg-[#f6f7fb] p-4 lg:p-5">
-            <div className="rounded-[22px] bg-white p-5 shadow-[0_8px_28px_rgba(17,24,39,0.06)] lg:p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[20px] font-semibold tracking-[-0.045em] text-neutral-950">
-                      {previewTarget.title}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                      previewTarget.isActive
-                        ? 'bg-[#EAFBF2] text-[#2F8A5B]'
-                        : 'bg-[#F3F1F1] text-neutral-500'
-                    }`}
-                  >
-                    {previewTarget.isActive ? 'видно' : 'скрыта'}
-                  </span>
-                </div>
-
-                {previewTarget.description ? (
-                  <p className="mt-4 text-[14px] leading-relaxed text-neutral-600">
-                    {previewTarget.description}
+            <MasterServiceClientPreview
+              service={managedServiceToClientPreview(previewTarget)}
+              categoryCode={serviceCategoryCode ?? undefined}
+              categoryLabel={draft.category}
+              notice={
+                previewTarget.isActive === false ? (
+                  <p className="rounded-[12px] bg-[#FFF4E8] px-3.5 py-2.5 text-[13px] font-semibold leading-snug text-[#B66A24]">
+                    Услуга скрыта — клиенты не увидят её в профиле и не смогут записаться.
                   </p>
-                ) : null}
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[22px] font-semibold tracking-[-0.05em] text-neutral-950">
-                    {formatPrice(previewTarget)}
-                  </p>
-
-                </div>
-              </div>
-            </div>
+                ) : null
+              }
+            />
           </AdminFormSheetSection>
-          </div>
         ) : null}
       </AdminBottomSheet>
 
@@ -1271,7 +1360,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         variant="catalog"
         open={extrasProOpen}
         onClose={() => setExtrasProOpen(false)}
-        title="Наборы и акции в Pro"
+        title="Мастер Pro"
         footer={
           <div className="flex w-full gap-3">
             <button type="button" onClick={() => setExtrasProOpen(false)} className={catalogSheetSecondaryBtn}>
@@ -1285,13 +1374,14 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
               }}
               className={catalogSheetPrimaryBtn}
             >
-              Подключить Pro
+              Перейти к тарифам
             </button>
           </div>
         }
       >
         <p className="text-[15px] leading-relaxed text-[#6B7280]">
-          На тарифе Free доступны каталог и прайс. Наборы услуг и акции открываются после подключения Pro.
+          На бесплатном тарифе доступны каталог услуг и прайс. Наборы и акции — в подписке «Мастер Pro»: их
+          можно создавать, редактировать и показывать клиентам при записи.
         </p>
       </AdminBottomSheet>
 

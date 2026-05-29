@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import {
   HiArrowTrendingUp,
   HiChartBarSquare,
@@ -6,6 +6,8 @@ import {
   HiUsers,
   HiWallet,
 } from 'react-icons/hi2';
+import type { OverviewPeriodPreset } from './overviewAnalytics';
+import { overviewPeriodLabel } from './overviewAnalytics';
 import {
   OVERVIEW_WELCOME_IMAGE_SRC,
   overviewCard,
@@ -13,6 +15,197 @@ import {
   overviewEmptyIllustrationSrc,
   overviewIconCircle,
 } from './adminOverviewTheme';
+
+/** Заголовок вкладки сводки без градиента + бейдж периода. */
+export function OverviewPanelHeader({
+  title,
+  subtitle,
+  periodPreset,
+}: {
+  title: string;
+  subtitle?: string;
+  periodPreset: OverviewPeriodPreset;
+}) {
+  const period = overviewPeriodLabel(periodPreset);
+
+  return (
+    <header className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-[20px] font-black tracking-[-0.04em] text-[#111827] lg:text-[24px] lg:tracking-[-0.05em]">
+          {title}
+        </h2>
+        <span className="rounded-full bg-[#FFF1F4] px-3 py-1 text-[12px] font-bold text-[#ff5f7a]">
+          {period}
+        </span>
+      </div>
+      {subtitle ? (
+        <p className="mt-1 text-[13px] font-semibold text-[#6B7280] lg:text-[14px]">{subtitle}</p>
+      ) : null}
+    </header>
+  );
+}
+
+/** Верхняя плашка с главной цифрой (клиенты / рейтинг). */
+export function OverviewMetricHeroPlaque({
+  eyebrow,
+  value,
+  caption,
+  trailing,
+  action,
+}: {
+  eyebrow?: ReactNode;
+  value: ReactNode;
+  caption: ReactNode;
+  trailing?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="bg-white p-6 lg:bg-[#F6F7FB] lg:p-8">
+      {eyebrow || trailing ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          {eyebrow ? <div className="min-w-0 flex-1">{eyebrow}</div> : null}
+          {trailing ? <div className="shrink-0">{trailing}</div> : null}
+        </div>
+      ) : null}
+      <div className={eyebrow || trailing ? 'mt-6' : undefined}>{value}</div>
+      <div className="mt-3">{caption}</div>
+      {action ? <div className="mt-5">{action}</div> : null}
+    </div>
+  );
+}
+
+/** Тонкая линия-разделитель как в таблицах (Binance-style). */
+export const overviewHairline = 'border-[#EAECEF]';
+
+export function OverviewDividedMetricsRow({ children }: { children: ReactNode }) {
+  const items = Children.toArray(children);
+
+  return (
+    <div className="flex w-full">
+      {items.map((child, index) => (
+        <div
+          key={index}
+          className={`min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-7 ${
+            index < items.length - 1 ? `border-r ${overviewHairline}` : ''
+          }`}
+        >
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 4 метрики: 2×2 на мобиле, одна строка с разделителями на sm+. */
+export function OverviewDividedMetricsGrid({ children }: { children: ReactNode }) {
+  const items = Children.toArray(children);
+  const count = items.length;
+
+  return (
+    <div
+      className={`grid w-full ${
+        count === 4 ? 'grid-cols-2 sm:grid-cols-4' : count === 3 ? 'grid-cols-3' : 'grid-cols-2'
+      }`}
+    >
+      {items.map((child, index) => {
+        const mobileRightDivider = count === 4 && index % 2 === 0 && index < count - 1;
+        const mobileBottomDivider = count === 4 && index < 2;
+        const desktopRightDivider = index < count - 1;
+
+        return (
+          <div
+            key={index}
+            className={[
+              'min-w-0 px-4 py-6 sm:px-5 sm:py-7 lg:px-6',
+              mobileRightDivider ? `border-r ${overviewHairline}` : '',
+              mobileBottomDivider ? `border-b sm:border-b-0 ${overviewHairline}` : '',
+              desktopRightDivider ? `sm:border-r ${overviewHairline}` : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {child}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function OverviewEmptyMetricCell({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: ReactNode;
+}) {
+  return (
+    <div className="min-w-0 text-center">
+      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF] sm:text-[11px]">
+        {label}
+      </p>
+      <p className="mt-2 text-[clamp(1.5rem,4vw,1.875rem)] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827]">
+        {value}
+      </p>
+      {hint ? (
+        <div className="mt-2 text-[11px] font-medium leading-snug text-[#6B7280] sm:text-[12px]">
+          {hint}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Пустое состояние вкладок «Клиенты» / «Репутация»: белая карточка без рамок. */
+export function OverviewEmptyTabHero({
+  metrics,
+  list,
+  title,
+  caption,
+}: {
+  metrics: ReactNode;
+  /** Список под метриками (клиенты и т.п.). */
+  list?: ReactNode;
+  title: string;
+  caption: string;
+}) {
+  return (
+    <div className={`overflow-hidden bg-white ${overviewCard}`}>
+      <div>{metrics}</div>
+      {list ? <div className={`border-t ${overviewHairline}`}>{list}</div> : null}
+      <div
+        className={`border-t ${overviewHairline} px-6 py-10 text-center sm:px-10 sm:py-12 lg:px-12 lg:py-14`}
+      >
+        <p className="text-[clamp(1.75rem,4.5vw,2.25rem)] font-black leading-tight tracking-[-0.06em] text-[#111827]">
+          {title}
+        </p>
+        <p className="mx-auto mt-4 max-w-[34rem] text-[15px] font-semibold leading-relaxed text-[#6B7280] lg:mt-5 lg:text-[16px] lg:leading-7">
+          {caption}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function OverviewHeroActionButton({
+  children,
+  onClick,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center justify-center rounded-[14px] bg-[#ff5f7a] px-5 py-3 text-[14px] font-black text-white transition hover:bg-[#f04f6c] active:scale-[0.98]"
+    >
+      {children}
+    </button>
+  );
+}
 
 export { OverviewLineChart } from './OverviewLineChart';
 export { OverviewClientsDynamicsChart } from './OverviewClientsDynamicsChart';

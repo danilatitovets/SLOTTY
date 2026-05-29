@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { preloadTabIntroImages } from '../useTabIntroImage';
+import { useAdminSectionTab } from '../useAdminSectionTab';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { postOverviewReviewReply } from '../../../features/admin/api/masterOverviewApi';
@@ -12,7 +13,11 @@ import {
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
 import { OVERVIEW_TAB_INTRO_IMAGES } from './OverviewTabIntro';
-import type { OverviewAnalyticsTab, OverviewPeriodPreset } from './overviewAnalytics';
+import {
+  isOverviewProTab,
+  type OverviewAnalyticsTab,
+  type OverviewPeriodPreset,
+} from './overviewAnalytics';
 import { OverviewClientsPanel } from './OverviewClientsPanel';
 import { OverviewReputationPanel } from './OverviewReputationPanel';
 import { OverviewRevenuePanel } from './OverviewRevenuePanel';
@@ -20,6 +25,11 @@ import { OverviewSummaryPanel } from './OverviewTabPanels';
 import { useOverviewTabData } from './useOverviewTabData';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { LoadingPanel } from '../../../shared/ui/LoadingVideo';
+import { isProRequiredApiMessage } from '../../../features/billing/masterProUpsell';
+import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
+import { MasterProUpsellBanner } from '../shared/MasterProUpsellBanner';
+
+const OVERVIEW_TABS = ['summary', 'revenue', 'clients', 'reputation'] as const satisfies readonly OverviewAnalyticsTab[];
 
 type Props = {
   draft: MasterDraft;
@@ -31,8 +41,9 @@ type Props = {
 
 function OverviewPanelContent({
   loading,
-  tabRefreshing,
+  awaitingSubscription,
   error,
+  proAnalyticsLocked,
   activeTab,
   draft,
   summary,
@@ -52,8 +63,9 @@ function OverviewPanelContent({
   refreshReputation,
 }: {
   loading: boolean;
-  tabRefreshing?: boolean;
+  awaitingSubscription?: boolean;
   error: string | null;
+  proAnalyticsLocked: boolean;
   activeTab: OverviewAnalyticsTab;
   draft: MasterDraft;
   summary: ReturnType<typeof useOverviewTabData>['summary'];
@@ -72,7 +84,11 @@ function OverviewPanelContent({
   onOpenNearest: () => void;
   refreshReputation: () => void;
 }) {
-  if (loading) {
+  if (proAnalyticsLocked && isOverviewProTab(activeTab)) {
+    return <MasterProUpsellBanner variant="analytics" />;
+  }
+
+  if (loading || awaitingSubscription) {
     return (
       <LoadingPanel
         className="border-[#F3F4F6] lg:border-0 lg:shadow-none"
@@ -84,7 +100,10 @@ function OverviewPanelContent({
   let content: ReactNode;
 
   if (error) {
-    content = (
+    content =
+      isProRequiredApiMessage(error) && isOverviewProTab(activeTab) ? (
+        <MasterProUpsellBanner variant="analytics" />
+      ) : (
       <div className="rounded-[24px] border border-[#FEE2E2] bg-[#FEF2F2] p-5">
         <p className="text-[14px] font-semibold text-[#B91C1C]">{error}</p>
       </div>
@@ -104,12 +123,13 @@ function OverviewPanelContent({
         );
         break;
       case 'clients':
-        content = <OverviewClientsPanel data={clients} />;
+        content = <OverviewClientsPanel data={clients} periodPreset={periodPreset} />;
         break;
       case 'reputation':
         content = (
           <OverviewReputationPanel
             data={reputation}
+            periodPreset={periodPreset}
             useApi={useCabinetApi}
             onReplied={refreshReputation}
             onReply={async (reviewId, text) => {
@@ -133,19 +153,7 @@ function OverviewPanelContent({
     }
   }
 
-  return (
-    <div className="relative min-w-0">
-      {tabRefreshing ? (
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-0.5 overflow-hidden rounded-full bg-[#F3F4F6] lg:block"
-          aria-hidden
-        >
-          <div className="h-full w-1/3 animate-pulse rounded-full bg-[#F47C8C]" />
-        </div>
-      ) : null}
-      {content}
-    </div>
-  );
+  return <div className="relative min-w-0">{content}</div>;
 }
 
 export function AdminOverviewTab({
@@ -155,8 +163,16 @@ export function AdminOverviewTab({
   onOpenAppointment,
   useCabinetApi,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<OverviewAnalyticsTab>('summary');
+  const [activeTab, setActiveTab] = useAdminSectionTab('tab', 'summary', OVERVIEW_TABS);
   const [periodPreset, setPeriodPreset] = useState<OverviewPeriodPreset>('month');
+  const { subscription, cabinetLoading } = useAdminMasterCabinet();
+
+  const awaitingSubscription = useCabinetApi && cabinetLoading && subscription == null;
+  const overviewReady = !useCabinetApi || !cabinetLoading;
+  const proAnalyticsLocked =
+    useCabinetApi &&
+    overviewReady &&
+    (subscription?.plan.code.toLowerCase() !== 'pro');
 
   useEffect(() => {
     preloadTabIntroImages(OVERVIEW_TAB_INTRO_IMAGES);
@@ -164,7 +180,6 @@ export function AdminOverviewTab({
 
   const {
     loading,
-    tabRefreshing,
     error,
     summary,
     dayStats,
@@ -178,6 +193,8 @@ export function AdminOverviewTab({
     periodPreset,
     appointments,
     useCabinetApi,
+    proAnalyticsLocked,
+    overviewReady,
   });
 
   const serviceCount = draft.services?.length ?? 0;
@@ -186,8 +203,9 @@ export function AdminOverviewTab({
     () => (
       <OverviewPanelContent
         loading={loading}
-        tabRefreshing={tabRefreshing}
+        awaitingSubscription={awaitingSubscription}
         error={error}
+        proAnalyticsLocked={proAnalyticsLocked}
         activeTab={activeTab}
         draft={draft}
         summary={summary}
@@ -211,6 +229,9 @@ export function AdminOverviewTab({
     ),
     [
       activeTab,
+      proAnalyticsLocked,
+      overviewReady,
+      awaitingSubscription,
       appointmentsPath,
       appointments,
       clients,
@@ -218,7 +239,6 @@ export function AdminOverviewTab({
       draft,
       error,
       loading,
-      tabRefreshing,
       onOpenAppointment,
       periodPreset,
       setPeriodPreset,
@@ -239,10 +259,10 @@ export function AdminOverviewTab({
     <>
       {/* Mobile: период, контент, таббар снизу */}
       <section
-        className={`min-w-0 space-y-4 overflow-x-hidden pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+1.25rem)] lg:hidden`}
+        className={`min-w-0 space-y-5 overflow-x-hidden pb-[calc(${OVERVIEW_TAB_BAR_HEIGHT}+1.25rem)] lg:hidden`}
       >
         <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
-        <AdminTabContentTransition activeKey={transitionKey} className="min-w-0 space-y-4">
+        <AdminTabContentTransition activeKey={transitionKey} className="min-w-0 space-y-5">
           {panel}
         </AdminTabContentTransition>
       </section>

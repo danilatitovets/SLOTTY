@@ -153,6 +153,12 @@ async function mapRequestRow(row: {
     mapCategoryRow(row.current_category_id),
     mapCategoryRow(row.requested_category_id),
   ]);
+  const fallbackRequested: CategoryDto = requestedCategory ?? {
+    id: row.requested_category_id,
+    code: 'unknown',
+    name: 'Категория',
+  };
+
   return {
     id: row.id,
     status: row.status as CategoryChangeRequestDto['status'],
@@ -161,7 +167,7 @@ async function mapRequestRow(row: {
     createdAt: new Date(row.created_at).toISOString(),
     reviewedAt: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : null,
     currentCategory,
-    requestedCategory: requestedCategory!,
+    requestedCategory: fallbackRequested,
   };
 }
 

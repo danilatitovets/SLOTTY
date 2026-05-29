@@ -94,6 +94,7 @@ export function normalizeMasterCareerItemType(raw: string | undefined): MasterCa
 
 export function isDemoMaster(): boolean {
   if (typeof window === 'undefined') return false;
+  if (import.meta.env.PROD) return false;
   try {
     return window.localStorage.getItem(IS_MASTER_KEY) === 'true';
   } catch {

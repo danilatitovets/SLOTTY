@@ -21,6 +21,7 @@ export type MasterCabinetProfileDto = {
   rating: number;
   reviewsCount: number;
   globalBufferMinutes: number;
+  portfolioCoverItemId?: string | null;
 };
 
 export type MasterCabinetCategoryDto = { code: string; name: string } | null;
@@ -128,6 +129,7 @@ export async function patchMasterMe(body: {
   photoUrl?: string | null;
   primaryCategoryCode?: string | null;
   publicationStatus?: 'draft' | 'published' | 'hidden' | 'blocked' | 'paused';
+  portfolioCoverItemId?: string | null;
 }): Promise<void> {
   const res = await apiFetch('/api/masters/me', { method: 'PATCH', body: JSON.stringify(body) });
   if (!res.ok) throw new Error(await readApiError(res));
@@ -169,25 +171,20 @@ export async function uploadMasterHeroPhotoFromDataUrl(dataUrl: string): Promise
 }
 
 /**
- * Фото из Telegram (https) → загрузка в Storage.
- * При CORS-ошибке в браузере возвращает исходный URL (сохранится в photo_url).
+ * Фото из Telegram (https) → сервер скачивает и кладёт в Storage (без протухающих CDN-ссылок).
  */
 export async function uploadMasterHeroPhotoFromRemoteUrl(imageUrl: string): Promise<string> {
   const url = imageUrl.trim();
   if (!url.startsWith('https://')) {
     throw new Error('Некорректная ссылка на фото');
   }
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-    if (!blob.type.startsWith('image/')) throw new Error('not image');
-    const ext = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg';
-    const file = new File([blob], `telegram.${ext}`, { type: blob.type || 'image/jpeg' });
-    return uploadMasterHeroPhotoFile(file);
-  } catch {
-    return url;
-  }
+  const res = await apiFetch('/api/masters/me/photo/from-url', {
+    method: 'POST',
+    body: JSON.stringify({ imageUrl: url }),
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as { imageUrl: string };
+  return j.imageUrl;
 }
 
 export async function putMasterPrimaryLocation(body: PrimaryLocationBody): Promise<void> {
@@ -224,11 +221,72 @@ export type MasterAppointmentListRow = {
   client_avatar_url?: string | null;
 };
 
-export async function fetchMasterAppointments(): Promise<MasterAppointmentListRow[]> {
-  const res = await apiFetch('/api/masters/me/appointments');
+export type MasterAppointmentsTab = 'pending' | 'upcoming' | 'history' | 'active' | 'all';
+
+export type MasterAppointmentsListResult = {
+  appointments: MasterAppointmentListRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+export type MasterAppointmentStatsDto = {
+  pending: number;
+  upcoming: number;
+  history: number;
+  completedCount: number;
+  cancelledCount: number;
+  earnedTotal: number;
+};
+
+function buildAppointmentsQuery(params?: {
+  limit?: number;
+  offset?: number;
+  tab?: MasterAppointmentsTab;
+}): string {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.offset != null) sp.set('offset', String(params.offset));
+  if (params?.tab) sp.set('tab', params.tab);
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export async function fetchMasterAppointments(
+  params?: { limit?: number; offset?: number; tab?: MasterAppointmentsTab },
+): Promise<MasterAppointmentsListResult> {
+  const res = await apiFetch(`/api/masters/me/appointments${buildAppointmentsQuery(params)}`);
   if (!res.ok) throw new Error(await readApiError(res));
-  const j = (await res.json()) as { appointments?: MasterAppointmentListRow[] };
-  return j.appointments ?? [];
+  const j = (await res.json()) as {
+    appointments?: MasterAppointmentListRow[];
+    total?: number;
+    limit?: number;
+    offset?: number;
+    hasMore?: boolean;
+  };
+  const appointments = j.appointments ?? [];
+  const limit = j.limit ?? params?.limit ?? appointments.length;
+  const offset = j.offset ?? params?.offset ?? 0;
+  const total = j.total ?? appointments.length;
+  const hasMore = j.hasMore ?? offset + appointments.length < total;
+  return { appointments, total, limit, offset, hasMore };
+}
+
+export async function fetchMasterAppointmentStats(): Promise<MasterAppointmentStatsDto> {
+  const res = await apiFetch('/api/masters/me/appointments/stats');
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as { stats?: MasterAppointmentStatsDto };
+  return (
+    j.stats ?? {
+      pending: 0,
+      upcoming: 0,
+      history: 0,
+      completedCount: 0,
+      cancelledCount: 0,
+      earnedTotal: 0,
+    }
+  );
 }
 
 export async function patchMasterAppointmentConfirm(appointmentId: string): Promise<void> {
@@ -290,12 +348,13 @@ export async function patchMasterService(
     isActive?: boolean;
     categoryId?: string;
   },
-): Promise<void> {
+): Promise<MasterServiceCreatedDto> {
   const res = await apiFetch(`/api/masters/me/services/${serviceId}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await readApiError(res));
+  return (await res.json()) as MasterServiceCreatedDto;
 }
 
 export async function deleteMasterService(serviceId: string): Promise<void> {

@@ -113,12 +113,34 @@ export const SERVICE_TEMPLATES_BY_CATEGORY: Record<ServiceCategorySlug, ServiceT
   ],
 };
 
-export function getServiceTemplatesForCategoryCode(categoryCode: string): ServiceTemplate[] {
-  const slug = normalizeCategoryCode(categoryCode);
-  if (slug in SERVICE_TEMPLATES_BY_CATEGORY) {
-    return SERVICE_TEMPLATES_BY_CATEGORY[slug as ServiceCategorySlug];
+const CATEGORY_CODE_ALIASES: Record<string, ServiceCategorySlug> = {
+  barber: 'barbers',
+  barbershop: 'barbers',
+  brows: 'brows-lashes',
+  lashes: 'brows-lashes',
+  'brow-lashes': 'brows-lashes',
+  'brows-lash': 'brows-lashes',
+  nail: 'manicure',
+  nails: 'manicure',
+  trainer: 'fitness',
+  gym: 'fitness',
+  tatoo: 'tattoo',
+};
+
+export function resolveServiceCategorySlug(
+  categoryCode: string | null | undefined,
+): ServiceCategorySlug | null {
+  const normalized = normalizeCategoryCode(categoryCode ?? '');
+  if (!normalized) return null;
+  if (normalized in SERVICE_TEMPLATES_BY_CATEGORY) {
+    return normalized as ServiceCategorySlug;
   }
-  return [];
+  return CATEGORY_CODE_ALIASES[normalized] ?? null;
+}
+
+export function getServiceTemplatesForCategoryCode(categoryCode: string): ServiceTemplate[] {
+  const slug = resolveServiceCategorySlug(categoryCode);
+  return slug ? SERVICE_TEMPLATES_BY_CATEGORY[slug] : [];
 }
 
 /** Пример названия услуги в поле ввода — по категории из профиля мастера. */
@@ -132,11 +154,11 @@ const DEFAULT_SERVICE_TITLE_PLACEHOLDER: Record<ServiceCategorySlug, string> = {
 };
 
 export function getServiceTitlePlaceholder(categoryCode: string | null | undefined): string {
-  const slug = normalizeCategoryCode(categoryCode ?? '');
-  if (slug in DEFAULT_SERVICE_TITLE_PLACEHOLDER) {
-    return DEFAULT_SERVICE_TITLE_PLACEHOLDER[slug as ServiceCategorySlug];
+  const slug = resolveServiceCategorySlug(categoryCode);
+  if (slug && slug in DEFAULT_SERVICE_TITLE_PLACEHOLDER) {
+    return DEFAULT_SERVICE_TITLE_PLACEHOLDER[slug];
   }
-  const templates = getServiceTemplatesForCategoryCode(slug);
+  const templates = getServiceTemplatesForCategoryCode(categoryCode ?? '');
   return templates[0]?.title ?? 'Название услуги';
 }
 

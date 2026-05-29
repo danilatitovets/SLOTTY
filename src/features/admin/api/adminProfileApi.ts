@@ -248,12 +248,16 @@ export async function syncCareerItems(
   for (const p of prev) {
     if (!nextIds.has(p.id)) await deleteCareerItem(p.id);
   }
-  for (const n of next) {
+  for (let i = 0; i < next.length; i += 1) {
+    const n = next[i]!;
     const old = prev.find((x) => x.id === n.id);
+    const sortOrder = i;
     if (!old) {
-      await createCareerItem(careerPayload(n));
+      await createCareerItem({ ...careerPayload(n), sortOrder });
     } else if (!careerEqual(old, n)) {
-      await updateCareerItem(n.id, careerPayload(n));
+      await updateCareerItem(n.id, { ...careerPayload(n), sortOrder });
+    } else if (prev.indexOf(old) !== i) {
+      await updateCareerItem(n.id, { sortOrder });
     }
   }
 }
@@ -295,21 +299,26 @@ export async function syncCertificates(
   for (const p of prev) {
     if (!next.some((n) => n.id === p.id)) await deleteCertificate(p.id);
   }
-  for (const n of next) {
+  for (let i = 0; i < next.length; i += 1) {
+    const n = next[i]!;
     const old = prev.find((x) => x.id === n.id);
+    const sortOrder = i;
     if (!old) {
-      await createCertificate(certPayload(n));
+      await createCertificate({ ...certPayload(n), sortOrder });
     } else if (!certEqual(old, n)) {
-      await updateCertificate(n.id, certPayload(n));
+      await updateCertificate(n.id, { ...certPayload(n), sortOrder });
+    } else if (prev.indexOf(old) !== i) {
+      await updateCertificate(n.id, { sortOrder });
     }
   }
 }
 
-function portfolioPayload(p: { title?: string; description?: string; imageUrl: string }) {
+function portfolioPayload(p: { title?: string; description?: string; imageUrl: string }, sortOrder: number) {
   return {
     imageUrl: p.imageUrl.trim(),
     title: p.title?.trim() || null,
     description: p.description?.trim() || null,
+    sortOrder,
   };
 }
 
@@ -331,12 +340,16 @@ export async function syncPortfolioItems(
   for (const p of prev) {
     if (!next.some((n) => n.id === p.id)) await deletePortfolioItem(p.id);
   }
-  for (const n of next) {
+  for (let i = 0; i < next.length; i += 1) {
+    const n = next[i]!;
     const old = prev.find((x) => x.id === n.id);
+    const sortOrder = i;
     if (!old) {
-      await createPortfolioItem(portfolioPayload(n));
+      await createPortfolioItem(portfolioPayload(n, sortOrder));
     } else if (!portfolioEqual(old, n)) {
-      await updatePortfolioItem(n.id, portfolioPayload(n));
+      await updatePortfolioItem(n.id, portfolioPayload(n, sortOrder));
+    } else if (prev.indexOf(old) !== i) {
+      await updatePortfolioItem(n.id, { sortOrder });
     }
   }
 }

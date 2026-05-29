@@ -8,9 +8,17 @@ type Props = {
   index: number;
   onClose: () => void;
   onIndexChange: (index: number) => void;
+  /** Подпись в шапке, когда одно изображение (по умолчанию «Фото»). */
+  singleLabel?: string;
 };
 
-export function PortfolioImagePreview({ urls, index, onClose, onIndexChange }: Props) {
+export function PortfolioImagePreview({
+  urls,
+  index,
+  onClose,
+  onIndexChange,
+  singleLabel = 'Фото',
+}: Props) {
   const prev = useCallback(() => {
     onIndexChange(index <= 0 ? urls.length - 1 : index - 1);
   }, [index, onIndexChange, urls.length]);
@@ -64,7 +72,7 @@ export function PortfolioImagePreview({ urls, index, onClose, onIndexChange }: P
             {index + 1} / {urls.length}
           </span>
         ) : (
-          <span className="text-[14px] font-medium text-white/80">Фото</span>
+          <span className="text-[14px] font-medium text-white/80">{singleLabel}</span>
         )}
         <span className="w-11" />
       </div>

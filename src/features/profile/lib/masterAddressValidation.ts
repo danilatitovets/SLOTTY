@@ -1,8 +1,19 @@
+import { isEmptyDisplayValue } from '../../../shared/lib/emptyDisplayText';
 import type { MasterVisitType } from '../model/masterLocation';
 
 export const AT_HOME_ENTRANCE_MAX = 10;
-export const AT_HOME_ROOM_MAX = 20;
+/** Номер квартиры: 45, 12А, 3/2 — не длиннее 6 символов. */
+export const AT_HOME_ROOM_MAX = 6;
 export const AT_HOME_INTERCOM_MAX = 20;
+
+/** Допустимый формат квартиры: 1–4 цифры, опционально буква или дробь. */
+const AT_HOME_ROOM_RE = /^\d{1,4}([а-яА-Яa-zA-Z]|\/\d{1,2})?$/u;
+
+export function sanitizeAtHomeRoomInput(raw: string): string {
+  return raw
+    .replace(/[^\dа-яА-Яa-zA-Z/-]/gu, '')
+    .slice(0, AT_HOME_ROOM_MAX);
+}
 
 export function validateAtHomeEntrance(value: string): string | null {
   const t = value.trim();
@@ -27,6 +38,7 @@ export function validateAtHomeRoom(value: string): string | null {
   if (!t) return 'Укажите квартиру';
   if (t.length > AT_HOME_ROOM_MAX) return `Не длиннее ${AT_HOME_ROOM_MAX} символов`;
   if (!/^[\dа-яА-Яa-zA-Z/-]+$/u.test(t)) return 'Только цифры и буквы';
+  if (!AT_HOME_ROOM_RE.test(t)) return 'Например: 45, 12А или 3/2';
   return null;
 }
 
@@ -84,7 +96,7 @@ export function validateMasterAddressForm(
     values;
 
   const streetTrim = street.trim();
-  if (!streetTrim || streetTrim === '—') {
+  if (isEmptyDisplayValue(streetTrim)) {
     errs.street = visitType === 'studio' ? 'Укажите адрес салона' : 'Укажите адрес приёма';
   } else if (streetTrim.length > 200) {
     errs.street = 'Не длиннее 200 символов';
@@ -122,14 +134,12 @@ export function validateMasterAddressForm(
   if (values.landmark.trim().length > 240) errs.landmark = 'Не длиннее 240 символов';
 
   const mapScriptOk = opts?.mapScriptOk === true;
-  if (mapScriptOk) {
+  const requirePinnedPoint = mapScriptOk && opts?.addressPinnedToMap === true;
+  if (requirePinnedPoint) {
     const hasCoords =
       lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng);
     if (!hasCoords) {
       errs.coords = 'Уточните точку на карте';
-    } else if (opts?.addressPinnedToMap !== true) {
-      errs.coords =
-        'Подтвердите адрес: выберите вариант из подсказок или уточните метку на карте';
     }
   }
 

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import { MiniPicture } from './MiniPicture';
 import { NOTHING_FOUND_ILLUSTRATION_SRC } from './nothingFoundIllustrationSrc';
+import type { MiniPictureKey } from './miniPictureSrc';
 
 type Props = {
   title: string;
@@ -9,13 +11,18 @@ type Props = {
   /** Кнопка или ссылка под текстом */
   action?: ReactNode;
   className?: string;
+  /** Мини-иллюстрация из `public/photos/minipicture`. */
+  picture?: MiniPictureKey;
 };
 
-export function NothingFoundCard({ title, text, hint, action, className = '' }: Props) {
+export function NothingFoundCard({ title, text, hint, action, className = '', picture }: Props) {
   return (
     <div
       className={`rounded-[34px] bg-[#F1EFEF] px-6 py-10 text-center shadow-[0_12px_40px_rgba(17,17,17,0.045)] ${className}`.trim()}
     >
+      {picture ? (
+        <MiniPicture name={picture} variant="empty" className="mb-6 max-w-[17.5rem]" />
+      ) : (
       <img
         src={NOTHING_FOUND_ILLUSTRATION_SRC}
         alt=""
@@ -24,6 +31,7 @@ export function NothingFoundCard({ title, text, hint, action, className = '' }: 
         decoding="async"
         className="mx-auto mb-6 w-full max-w-[17.5rem] select-none object-contain"
       />
+      )}
       <h2 className="text-[22px] font-semibold tracking-[-0.05em] text-neutral-950">{title}</h2>
       {text ? (
         <p className="mx-auto mt-3 max-w-[21rem] text-[15px] leading-relaxed text-neutral-500">{text}</p>
