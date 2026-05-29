@@ -56,6 +56,7 @@ import { masterOverviewRouter } from './masterOverview.routes.js';
 import { normalizeBelarusPhone, isOptionalBelarusPhoneValid } from '../../utils/belarusPhone.js';
 import { categoryChangeRouter } from './categoryChange.routes.js';
 import { sponsorRequestRouter } from '../sponsors/sponsorRequest.routes.js';
+import { proManualPaymentRouter } from '../billing/proManualPayment.routes.js';
 import {
   createMasterProfileReport,
   type MasterProfileReportReason,
@@ -68,6 +69,7 @@ import { env } from '../../config/env.js';
 export const mastersRouter = Router();
 mastersRouter.use(categoryChangeRouter);
 mastersRouter.use(sponsorRequestRouter);
+mastersRouter.use(proManualPaymentRouter);
 
 const masterImageUpload = multer({
   storage: multer.memoryStorage(),

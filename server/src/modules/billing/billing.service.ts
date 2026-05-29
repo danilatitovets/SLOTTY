@@ -317,6 +317,67 @@ export async function switchMasterSubscriptionMock(
   return getMasterSubscriptionWithUsage(masterId);
 }
 
+/** Активация Pro после ручного подтверждения оплаты админом (не mock). */
+export async function activateMasterProFromManualPayment(
+  masterId: string,
+  billingPeriod: 'month' | 'year',
+  options: {
+    amount: number;
+    metadata: Record<string, unknown>;
+    durationDays?: number;
+  },
+): Promise<MasterSubscriptionWithUsageDto> {
+  await ensureMasterSubscription(masterId);
+
+  const planRow = await query<{ id: string; price_month: string; price_year: string }>(
+    `select id, price_month::text, price_year::text
+       from public.subscription_plans
+      where code = 'pro' and is_active = true
+      limit 1`,
+  );
+  const plan = planRow.rows[0];
+  if (!plan) {
+    throw ApiError.internal('План Pro не найден');
+  }
+
+  const durationDays = Math.min(Math.max(options.durationDays ?? 30, 1), 366);
+
+  await query(
+    `update public.master_subscriptions
+        set plan_id = $1,
+            billing_period = $2::public.billing_period,
+            current_period_start = now(),
+            current_period_end = now() + ($3::int || ' days')::interval,
+            updated_at = now()
+      where master_id = $4`,
+    [plan.id, billingPeriod, durationDays, masterId],
+  );
+
+  await recordBillingEvent({
+    masterId,
+    eventType: 'subscription_purchased',
+    planCode: 'pro',
+    billingPeriod,
+    amount: options.amount,
+    status: 'succeeded',
+    source: 'manual_payment',
+    metadata: { ...options.metadata, durationDays },
+  });
+
+  await query(
+    `update public.master_profiles
+        set master_plan = 'pro',
+            pro_status = 'active',
+            pro_started_at = coalesce(pro_started_at, now()),
+            pro_expires_at = now() + ($2::int || ' days')::interval,
+            updated_at = now()
+      where master_id = $1`,
+    [masterId, durationDays],
+  );
+
+  return getMasterSubscriptionWithUsage(masterId);
+}
+
 export async function recordMasterCheckoutStarted(
   masterId: string,
   billingPeriod: 'month' | 'year',

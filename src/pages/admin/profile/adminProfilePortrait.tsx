@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
+import type { BackendProfile } from '../../../features/auth/types';
 import {
   masterCardAvatarColor,
   masterCardInitials,
   masterListingPortraitUrl,
 } from '../../../features/masters/lib/masterListingPortrait';
+import { accountAvatarUrl } from '../../../features/profile/lib/profileDisplayAvatar';
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { ProfileAvatarImage, ProfileCoverImage, ProfileMediaFrame, ProfilePreviewImage } from './adminProfileMedia';
 
@@ -12,24 +14,36 @@ export function resolveMasterCabinetPortraitUrl(photoUrl?: string | null): strin
   return url || null;
 }
 
+/** GET /api/me → header_avatar_url; иначе фото кабинета мастера. */
+export function resolveAccountOrCabinetPortraitUrl(
+  profile: BackendProfile | null | undefined,
+  masterPhotoUrl?: string | null,
+): string | null {
+  const account = accountAvatarUrl(profile);
+  if (account) return account;
+  return resolveMasterCabinetPortraitUrl(masterPhotoUrl);
+}
+
 type AvatarProps = {
   name: string;
   photoUrl?: string | null;
+  accountProfile?: BackendProfile | null;
   sizeClass?: string;
   ringClassName?: string;
   initialsClassName?: string;
 };
 
-/** Аватар кабинета: своё фото / Telegram / storage или цветной круг с инициалами (без Google). */
+/** Аватар кабинета: GET /api/me, иначе photo кабинета / инициалы. */
 export function MasterCabinetAvatar({
   name,
   photoUrl,
+  accountProfile,
   sizeClass = 'h-[88px] w-[88px]',
   ringClassName = 'ring-4 ring-white',
   initialsClassName = 'text-[clamp(22px,5vw,32px)]',
 }: AvatarProps) {
   const displayName = name.trim() || 'Мастер';
-  const src = resolveMasterCabinetPortraitUrl(photoUrl);
+  const src = resolveAccountOrCabinetPortraitUrl(accountProfile, photoUrl);
 
   if (src) {
     return (
@@ -60,23 +74,25 @@ type CoverProps = {
   name: string;
   dedicatedCoverUrl?: string | null;
   photoUrl?: string | null;
+  accountProfile?: BackendProfile | null;
   heightClass?: string;
   aspectClass?: string;
   children?: ReactNode;
 };
 
-/** Обложка: загруженная обложка, иначе своё фото, иначе фирменный фон с инициалами. */
+/** Обложка: загруженная обложка, иначе фото аккаунта / кабинета, иначе фон с инициалами. */
 export function MasterCabinetCoverBanner({
   name,
   dedicatedCoverUrl,
   photoUrl,
+  accountProfile,
   heightClass = 'h-[300px] sm:h-[320px]',
   aspectClass,
   children,
 }: CoverProps) {
   const displayName = name.trim() || 'Мастер';
   const cover = dedicatedCoverUrl?.trim();
-  const portrait = resolveMasterCabinetPortraitUrl(photoUrl);
+  const portrait = resolveAccountOrCabinetPortraitUrl(accountProfile, photoUrl);
   const color = masterCardAvatarColor(displayName);
   const initials = masterCardInitials(displayName);
 

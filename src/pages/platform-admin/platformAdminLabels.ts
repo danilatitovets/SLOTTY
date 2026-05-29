@@ -69,6 +69,7 @@ export function labelBillingEventType(eventType: string): string {
 export function labelBillingSource(source: string): string {
   const map: Record<string, string> = {
     mock: 'тест',
+    manual_payment: 'ручная оплата',
     system: 'система',
     platform_admin: 'админка',
     payment: 'оплата',

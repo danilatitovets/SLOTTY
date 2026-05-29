@@ -143,6 +143,34 @@ const envSchema = z.object({
   ),
   /** >1 запрещает in-memory handoff в production (см. productionGuards). */
   API_REPLICA_COUNT: z.coerce.number().int().min(1).max(64).default(1),
+  MANUAL_PAYMENT_RECIPIENT_FULL_NAME: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_BANK_NAME: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_IBAN: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_BIC: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_CURRENCY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_PRO_AMOUNT: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  MANUAL_PAYMENT_FEE_COVERED_BY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
 });
 
 const parsed = envSchema.safeParse(process.env);

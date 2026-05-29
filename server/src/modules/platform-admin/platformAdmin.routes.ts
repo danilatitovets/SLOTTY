@@ -58,6 +58,12 @@ import {
   getPlatformPurchasesSummary,
   listPlatformPurchases,
 } from './platformAdmin.purchases.service.js';
+import {
+  approveProManualPaymentRequest,
+  listProManualPaymentRequestsForAdmin,
+  rejectProManualPaymentRequest,
+  type ProManualPaymentStatus,
+} from '../billing/proManualPayment.service.js';
 
 export const platformAdminRouter = Router();
 
@@ -427,6 +433,75 @@ platformAdminRouter.get(
     const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
     res.json(await listPlatformPurchases({ limit, offset }));
   }),
+);
+
+const approveProPaymentBody = z.object({
+  receivedAmount: z.coerce.number().positive().max(999_999.99).optional().nullable(),
+  adminNote: z.string().max(4000).optional().nullable(),
+  taxReceiptCreated: z.boolean().optional(),
+  taxReceiptNote: z.string().max(2000).optional().nullable(),
+  durationDays: z.coerce.number().int().min(1).max(366).optional(),
+});
+
+const rejectProPaymentBody = z.object({
+  rejectionReason: z.string().min(5).max(2000),
+  adminNote: z.string().max(4000).optional().nullable(),
+});
+
+async function listManualPaymentRequestsHandler(req: import('express').Request, res: import('express').Response) {
+  const status = z
+    .enum(['all', 'pending', 'approved', 'rejected', 'cancelled'])
+    .optional()
+    .parse(req.query.status);
+  const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+  const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+  res.json(
+    await listProManualPaymentRequestsForAdmin(
+      (status ?? 'pending') as 'all' | ProManualPaymentStatus,
+      { limit, offset },
+    ),
+  );
+}
+
+async function approveManualPaymentHandler(req: import('express').Request, res: import('express').Response) {
+  const id = z.string().uuid().parse(req.params.id);
+  const body = approveProPaymentBody.parse(req.body);
+  await approveProManualPaymentRequest(id, req.user!.id, body);
+  res.json({ ok: true });
+}
+
+async function rejectManualPaymentHandler(req: import('express').Request, res: import('express').Response) {
+  const id = z.string().uuid().parse(req.params.id);
+  const body = rejectProPaymentBody.parse(req.body);
+  await rejectProManualPaymentRequest(id, req.user!.id, body);
+  res.json({ ok: true });
+}
+
+platformAdminRouter.get('/pro-payment-requests', asyncHandler(listManualPaymentRequestsHandler));
+
+platformAdminRouter.get(
+  '/billing/manual-payment-requests',
+  asyncHandler(listManualPaymentRequestsHandler),
+);
+
+platformAdminRouter.post(
+  '/pro-payment-requests/:id/approve',
+  asyncHandler(approveManualPaymentHandler),
+);
+
+platformAdminRouter.post(
+  '/billing/manual-payment-requests/:id/approve',
+  asyncHandler(approveManualPaymentHandler),
+);
+
+platformAdminRouter.post(
+  '/pro-payment-requests/:id/reject',
+  asyncHandler(rejectManualPaymentHandler),
+);
+
+platformAdminRouter.post(
+  '/billing/manual-payment-requests/:id/reject',
+  asyncHandler(rejectManualPaymentHandler),
 );
 
 platformAdminRouter.get(

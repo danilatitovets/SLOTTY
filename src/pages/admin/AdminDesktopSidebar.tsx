@@ -8,7 +8,6 @@ import { useAuth } from '../../features/auth/AuthProvider';
 import { isPlatformAdmin } from '../../features/auth/lib/isPlatformAdmin';
 import {
   MasterCabinetAvatar,
-  resolveMasterCabinetPortraitUrl,
 } from './profile/adminProfilePortrait';
 import { useAdminNotifications } from './notifications/AdminNotificationsContext';
 import { useAdminMasterCabinet } from './AdminMasterCabinetContext';
@@ -43,7 +42,6 @@ export function AdminDesktopSidebar() {
   const { profile } = useAuth();
 
   const displayName = draft.name?.trim() || profile?.full_name?.trim() || 'Мастер';
-  const photoSrc = resolveMasterCabinetPortraitUrl(draft.photoUrl);
   const showPlatformAdmin = isPlatformAdmin(profile);
 
   return (
@@ -176,22 +174,14 @@ export function AdminDesktopSidebar() {
         </Link>
 
         <Link to={ADMIN_PATH} className={adminSidebarFooterCard}>
-          {photoSrc ? (
-            <img
-              src={photoSrc}
-              alt=""
-              className="h-10 w-10 shrink-0 rounded-full object-cover object-center"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <MasterCabinetAvatar
-              name={displayName}
-              photoUrl={draft.photoUrl}
-              sizeClass="h-10 w-10"
-              ringClassName="ring-0"
-              initialsClassName="text-[13px]"
-            />
-          )}
+          <MasterCabinetAvatar
+            name={displayName}
+            photoUrl={draft.photoUrl}
+            accountProfile={profile}
+            sizeClass="h-10 w-10"
+            ringClassName="ring-0"
+            initialsClassName="text-[13px]"
+          />
           <div className="min-w-0 flex-1 text-left">
             <p className="truncate text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
               {displayName}

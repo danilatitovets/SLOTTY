@@ -17,6 +17,7 @@ import type {
   PromoCodeAdmin,
   PlatformPurchaseRow,
   PlatformPurchasesSummary,
+  ProManualPaymentRequestAdmin,
   ProfileReportAdmin,
 } from './platformAdmin.types';
 
@@ -412,6 +413,58 @@ export async function getPlatformPurchases(params?: {
   const res = await apiFetch(`/api/platform-admin/purchases?${q}`);
   if (!res.ok) throw new Error(await readErr(res));
   return (await res.json()) as { purchases: PlatformPurchaseRow[]; total: number };
+}
+
+export async function getProPaymentRequests(
+  status: 'all' | 'pending' | 'approved' | 'rejected' | 'cancelled' = 'pending',
+  params?: { limit?: number; offset?: number },
+): Promise<PlatformPagedResult<ProManualPaymentRequestAdmin> & { requests: ProManualPaymentRequestAdmin[] }> {
+  const q = new URLSearchParams();
+  if (status !== 'all') q.set('status', status);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/billing/manual-payment-requests?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    requests: ProManualPaymentRequestAdmin[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
+  return {
+    requests: data.requests,
+    items: data.requests,
+    total: data.total,
+    limit: data.limit,
+    offset: data.offset,
+  };
+}
+
+export async function approveProPaymentRequest(
+  id: string,
+  body: {
+    receivedAmount?: number | null;
+    adminNote?: string | null;
+    taxReceiptCreated?: boolean;
+    taxReceiptNote?: string | null;
+  },
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/billing/manual-payment-requests/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function rejectProPaymentRequest(
+  id: string,
+  body: { rejectionReason: string; adminNote?: string | null },
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/billing/manual-payment-requests/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
 }
 
 export async function getAuditLogs(params?: {

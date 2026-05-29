@@ -268,6 +268,32 @@ export type PlatformPurchasesSummary = {
   purchasesThisMonth: number;
 };
 
+export type ProManualPaymentRequestAdmin = {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  payerFullName: string;
+  tariffAmount: number;
+  declaredPaidAmount: number;
+  receivedAmount: number | null;
+  bankFeeAmount: number | null;
+  feeCoveredBy: string;
+  currency: string;
+  billingPeriod: 'month' | 'year';
+  paidAt: string | null;
+  paymentComment: string;
+  receiptUrl: string | null;
+  receiptFilePath: string | null;
+  adminNote: string | null;
+  rejectionReason: string | null;
+  taxReceiptCreated: boolean;
+  taxReceiptNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  masterId: string;
+  masterName: string;
+  profileUrl: string;
+};
+
 export type PlatformAuditLogItem = {
   id: string;
   adminUserId: string;

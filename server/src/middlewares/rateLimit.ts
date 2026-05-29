@@ -132,6 +132,13 @@ export const masterProfileReportLimiter = createLimiter({
   label: '1 ч',
 });
 
+/** POST /api/masters/me/pro-payment/request */
+export const masterProPaymentRequestLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxProd: 5,
+  label: '1 ч',
+});
+
 /** GET /api/geo/search, /api/geo/reverse */
 export const geoRateLimit = createLimiter({
   windowMs: 60 * 1000,

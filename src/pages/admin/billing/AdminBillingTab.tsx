@@ -35,6 +35,9 @@ import {
 import { BillingMobileHeader } from './BillingMobileHeader';
 import { BillingPeriodSwitch } from './BillingPeriodSwitch';
 import { BillingUsagePanel } from './BillingUsagePanel';
+import { ProManualPaymentSheet } from './ProManualPaymentSheet';
+import { getProManualPaymentState } from '../../../features/billing/api/proPaymentRequestApi';
+import { isDevDemoAllowed } from '../../../shared/lib/appMode';
 import {
   billingErrorBanner,
   billingListTray,
@@ -116,6 +119,7 @@ export function AdminBillingTab() {
   const [planState, setPlanState] = useState<MasterPlanState>(() => getCurrentMasterPlan());
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>(() => getCurrentMasterPlan().billingPeriod);
   const [mockProOpen, setMockProOpen] = useState(false);
+  const [proPaymentPending, setProPaymentPending] = useState(false);
   const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
 
   const [plansError, setPlansError] = useState(false);
@@ -167,6 +171,25 @@ export function AdminBillingTab() {
     : planState;
 
   const billingPeriodView: BillingPeriod = billingPeriod;
+
+  useEffect(() => {
+    if (!useLiveBilling) {
+      setProPaymentPending(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await getProManualPaymentState(billingPeriodView);
+        if (!cancelled) setProPaymentPending(Boolean(st.pendingRequest));
+      } catch {
+        if (!cancelled) setProPaymentPending(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [useLiveBilling, billingPeriodView, mockProOpen, subscription?.plan.code]);
 
   const limits = useLiveBilling && apiSub
     ? {
@@ -366,9 +389,21 @@ export function AdminBillingTab() {
     </div>
   );
 
-  const demoNote = !isPro ? (
+  const demoNote = !isPro && !useLiveBilling ? (
     <p className={billingSoftNote}>
       Оплата картой появится позже. Сейчас Pro можно активировать в demo-режиме для проверки кабинета.
+    </p>
+  ) : null;
+
+  const proPaymentPendingBanner = useLiveBilling && proPaymentPending && !isPro ? (
+    <p className="rounded-[18px] bg-[#FFFBEB] px-4 py-3 text-[14px] font-semibold text-[#92400E] ring-1 ring-[#FDE68A]">
+      Заявка на проверке. Мы проверяем оплату и активируем Pro после подтверждения.
+    </p>
+  ) : null;
+
+  const liveBillingNote = useLiveBilling && !isPro && !proPaymentPending ? (
+    <p className={billingSoftNote}>
+      После оплаты отправьте заявку. Мы проверим поступление и активируем Pro.
     </p>
   ) : null;
 
@@ -381,6 +416,8 @@ export function AdminBillingTab() {
           <>
             {periodTray}
             {usageBlock}
+            {proPaymentPendingBanner}
+            {liveBillingNote}
             {demoNote}
             {planCards}
           </>
@@ -402,6 +439,8 @@ export function AdminBillingTab() {
             <>
               {periodTray}
               {usageBlock}
+              {proPaymentPendingBanner}
+              {liveBillingNote}
               {demoNote}
               {planCards}
             </>
@@ -412,16 +451,30 @@ export function AdminBillingTab() {
       <AdminBottomSheet
         open={mockProOpen}
         onClose={() => setMockProOpen(false)}
-        title="Подключить Pro"
+        title={useLiveBilling ? 'Оплата Pro по реквизитам' : 'Подключить Pro'}
         variant="catalog"
       >
-        <MockPaymentBody
-          billingPeriod={billingPeriodView}
-          proPrice={proPriceLine}
-          useCabinetApi={useLiveBilling}
-          onBack={() => setMockProOpen(false)}
-          onDemo={confirmMock}
-        />
+        {useLiveBilling ? (
+          <ProManualPaymentSheet
+            billingPeriod={billingPeriodView}
+            subscription={apiSub ?? null}
+            showMockDemo={isDevDemoAllowed()}
+            onBack={() => setMockProOpen(false)}
+            onMockDemo={() => confirmMock()}
+            onSubmitted={() => {
+              setProPaymentPending(true);
+              showToast('Заявка отправлена на проверку');
+            }}
+          />
+        ) : (
+          <MockPaymentBody
+            billingPeriod={billingPeriodView}
+            proPrice={proPriceLine}
+            useCabinetApi={useLiveBilling}
+            onBack={() => setMockProOpen(false)}
+            onDemo={confirmMock}
+          />
+        )}
       </AdminBottomSheet>
 
       <AdminToast toast={toast} onDismiss={clearToast} />

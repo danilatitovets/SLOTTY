@@ -112,14 +112,13 @@ export async function backfillMasterProfileMediaFromUserProfile(
 
 export async function resolveHeaderAvatarUrl(
   profileId: string,
-  role: string,
   avatarUrl: string | null,
+  hasMasterProfile: boolean,
 ): Promise<string | null> {
-  if (role === 'master' || role === 'platform_admin') {
-    const masterPhoto = await fetchMasterCabinetPhotoUrl(profileId);
-    if (masterPhoto) return masterPhoto;
-  }
-  return avatarUrl?.trim() || null;
+  const accountAvatar = avatarUrl?.trim() || null;
+  if (accountAvatar) return accountAvatar;
+  if (!hasMasterProfile) return null;
+  return fetchMasterCabinetPhotoUrl(profileId);
 }
 
 function toTelegramUserIdNumber(raw: string | null): number | null {
@@ -286,7 +285,7 @@ export async function getProfileById(profileId: string): Promise<ProfileDto> {
   const has_master_profile = await profileHasMasterProfile(profileId);
 
   const [header_avatar_url, account_email, masterPersonal] = await Promise.all([
-    resolveHeaderAvatarUrl(profileId, row.role, row.avatar_url),
+    resolveHeaderAvatarUrl(profileId, row.avatar_url, has_master_profile),
     resolveAccountEmail(profileId),
     has_master_profile ? fetchMasterCabinetPersonalFields(profileId) : Promise.resolve(null),
   ]);
@@ -382,5 +381,8 @@ export async function updateProfile(
     `update public.profiles set ${fields.join(', ')}, updated_at = now() where id = $${i}`,
     vals,
   );
+  if (patch.avatar_url !== undefined) {
+    await backfillMasterProfileMediaFromUserProfile(profileId, patch.avatar_url);
+  }
   return getProfileById(profileId);
 }

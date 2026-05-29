@@ -1,5 +1,8 @@
-import { HiUser } from 'react-icons/hi2';
 import type { BackendProfile } from '../../../features/auth/types';
+import {
+  accountAvatarUrl,
+  profileDisplayInitials,
+} from '../../../features/profile/lib/profileDisplayAvatar';
 
 const avatarImgClass =
   'block h-7 w-7 min-h-7 min-w-7 shrink-0 aspect-square rounded-full object-cover object-center';
@@ -14,11 +17,24 @@ type Props = {
 };
 
 export function HeaderProfileAvatar({ profile, fill = false }: Props) {
-  const src = profile?.header_avatar_url?.trim() || null;
+  const src = accountAvatarUrl(profile);
 
-  if (!src) {
-    return <HiUser className="h-5 w-5 shrink-0" aria-hidden />;
+  if (src) {
+    return <img src={src} alt="" className={fill ? avatarFillClass : avatarImgClass} />;
   }
 
-  return <img src={src} alt="" className={fill ? avatarFillClass : avatarImgClass} />;
+  const letter = profileDisplayInitials(profile?.full_name ?? '')[0] ?? '?';
+
+  return (
+    <span
+      className={
+        fill
+          ? 'flex h-full w-full items-center justify-center rounded-full bg-[#F47C8C] text-[13px] font-semibold text-white'
+          : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F47C8C] text-[11px] font-semibold text-white'
+      }
+      aria-hidden
+    >
+      {letter}
+    </span>
+  );
 }

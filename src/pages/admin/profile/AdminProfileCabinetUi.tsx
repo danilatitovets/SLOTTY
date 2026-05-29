@@ -20,6 +20,7 @@ import { MasterContactsChips } from '../../master-onboarding/MasterContactsChips
 import { HiCamera } from 'react-icons/hi2';
 import { MasterCabinetAvatar, MasterCabinetCoverBanner } from './adminProfilePortrait';
 import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
+import { useAuth } from '../../../features/auth/AuthProvider';
 import { MasterVerificationStatusBadge } from '../../../shared/ui/MasterVerificationStatusBadge';
 import { resolveCoverUrl, useMasterCoverUpload } from './masterProfileCover';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
@@ -149,6 +150,7 @@ export function AdminProfileHero({
   stats: ProfileStats;
   bottomSlot?: ReactNode;
 }) {
+  const { profile } = useAuth();
   const { coverInputRef, coverBusy, coverError, onCoverFileChange, pickCover } = useMasterCoverUpload();
   const { verified, pendingSteps } = useAccountVerificationStatus();
   const dedicatedCover = resolveCoverUrl(draft);
@@ -169,6 +171,7 @@ export function AdminProfileHero({
         name={displayName}
         dedicatedCoverUrl={dedicatedCover}
         photoUrl={draft.photoUrl}
+        accountProfile={profile}
         aspectClass="aspect-[16/9] w-full"
       >
         <button
@@ -190,6 +193,7 @@ export function AdminProfileHero({
           <MasterCabinetAvatar
             name={displayName}
             photoUrl={draft.photoUrl}
+            accountProfile={profile}
             sizeClass="h-[88px] w-[88px]"
             ringClassName="bg-white ring-4 ring-white"
           />

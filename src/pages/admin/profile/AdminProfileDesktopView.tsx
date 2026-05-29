@@ -89,6 +89,7 @@ function HeroCoverBlock({
   onPickCover: () => void;
   onCoverFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const { profile } = useAuth();
   const dedicatedCover = resolveCoverUrl(draft);
 
   return (
@@ -106,6 +107,7 @@ function HeroCoverBlock({
         name={draft.name}
         dedicatedCoverUrl={dedicatedCover}
         photoUrl={draft.photoUrl}
+        accountProfile={profile}
       >
         <button
           type="button"
@@ -149,6 +151,7 @@ function HeroInfoBlock({
           <MasterCabinetAvatar
             name={displayName}
             photoUrl={draft.photoUrl}
+            accountProfile={authProfile}
             sizeClass="h-[120px] w-[120px]"
             ringClassName="bg-white ring-4 ring-white"
             initialsClassName="text-[40px]"

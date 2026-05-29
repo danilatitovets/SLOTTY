@@ -1,4 +1,5 @@
 import type { BackendProfile } from '../../auth/types';
+import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
 
 /** Сгенерированные аватарки по имени — не считаем загруженным фото. */
 export function isGeneratedPlaceholderAvatarUrl(url: string | null | undefined): boolean {
@@ -59,16 +60,18 @@ export function profileDisplayInitials(name: string): string {
   return (first ?? 'S').toLocaleUpperCase('ru-RU');
 }
 
-/** Фото для карточки профиля: кабинет мастера → загруженное в профиле. */
-export function profileDisplayAvatarUrl(profile: BackendProfile | null | undefined): string | null {
+/**
+ * Единый URL аватара аккаунта из GET /api/me (`header_avatar_url`, fallback `avatar_url`).
+ * Используйте в хедере, клиентском профиле и кабинете мастера.
+ */
+export function accountAvatarUrl(profile: BackendProfile | null | undefined): string | null {
   if (!profile) return null;
-  const header = profile.header_avatar_url?.trim();
-  if (header && isUserUploadedAvatarUrl(header) && !isGeneratedPlaceholderAvatarUrl(header)) {
-    return header;
-  }
-  const avatar = profile.avatar_url?.trim();
-  if (avatar && isUserUploadedAvatarUrl(avatar) && !isGeneratedPlaceholderAvatarUrl(avatar)) {
-    return avatar;
-  }
-  return null;
+  const raw = (profile.header_avatar_url ?? profile.avatar_url)?.trim() || null;
+  if (!raw || isGeneratedPlaceholderAvatarUrl(raw)) return null;
+  return optimizeAvatarUrl(raw, 256) || raw;
+}
+
+/** @deprecated alias — accountAvatarUrl */
+export function profileDisplayAvatarUrl(profile: BackendProfile | null | undefined): string | null {
+  return accountAvatarUrl(profile);
 }
