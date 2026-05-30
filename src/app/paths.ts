@@ -138,6 +138,14 @@ export const PLATFORM_ADMIN_SERVICES_PATH = '/platform-admin/services';
 export const PLATFORM_ADMIN_BOOKINGS_PATH = '/platform-admin/bookings';
 export const PLATFORM_ADMIN_AUDIT_PATH = '/platform-admin/audit';
 export const PLATFORM_ADMIN_BILLING_PATH = '/platform-admin/billing';
+export const PLATFORM_ADMIN_NOTIFICATIONS_PATH = '/platform-admin/notifications';
+
+/** Отписка от newsletter по токену из письма. */
+export const UNSUBSCRIBE_NEWSLETTER_PATH = '/unsubscribe/newsletter/:token';
+
+export function getUnsubscribeNewsletterPath(token: string): string {
+  return `/unsubscribe/newsletter/${encodeURIComponent(token)}`;
+}
 
 /** Разделы кабинета (отдельные страницы). */
 export const ADMIN_SERVICES_PATH = '/admin/services';

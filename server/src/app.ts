@@ -20,6 +20,7 @@ import { publicRouter } from './modules/public/public.routes.js';
 import { geoRouter } from './modules/geo/geo.routes.js';
 import { legalRouter } from './modules/legal/legal.routes.js';
 import { platformAdminRouter } from './modules/platform-admin/platformAdmin.routes.js';
+import { newsletterRouter } from './modules/newsletter/newsletter.routes.js';
 import { resolveTrustProxySetting } from './lib/clientIp.js';
 
 export function createApp() {
@@ -47,6 +48,7 @@ export function createApp() {
   api.use('/slots', slotsPublicRouter);
   api.use('/billing', billingRouter);
   api.use('/platform-admin', platformAdminRouter);
+  api.use('/newsletter', newsletterRouter);
   api.use('/telegram/webhook', telegramWebhookRouter);
 
   app.use('/api', api);

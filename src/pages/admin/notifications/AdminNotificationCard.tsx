@@ -22,6 +22,7 @@ function notificationIconClass(type: string): string {
     case 'billing':
       return 'bg-[#F5F3FF] text-[#7C3AED] ring-[#DDD6FE]';
     case 'appointment_new':
+    case 'appointment_pending':
       return 'bg-[#FFF1F4] text-[#F47C8C] ring-[#FDE8ED]';
     default:
       return '';

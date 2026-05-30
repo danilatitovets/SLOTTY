@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { useState, type FormEvent, type FC } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BECOME_MASTER_PATH,
@@ -10,8 +10,10 @@ import {
   LEGAL_TERMS_PATH,
   SERVICES_PATH,
 } from '../app/paths';
+import { subscribeToNewsletter } from '../features/newsletter/api/newsletterApi';
 import { homeShell } from './home/homeLayout';
 import { TIVONIX_SITE_URL } from './legal/legalSiteInfo';
+
 const FOOTER_MARQUEE_SERVICES = [
   'Лимфодренаж',
   'Кератин',
@@ -44,10 +46,10 @@ const navLinkClass =
   'text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80';
 
 const inputClass =
-  'h-10 w-full rounded-full bg-white/12 px-4 text-[13px] text-white placeholder:text-white/55 outline-none ring-1 ring-inset ring-white/12 transition focus:ring-white/30';
+  'h-10 w-full rounded-full bg-white/12 px-4 text-[13px] text-white placeholder:text-white/55 outline-none ring-1 ring-inset ring-white/12 transition focus:ring-white/30 disabled:opacity-60';
 
 const ctaClass =
-  'inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#171717] transition hover:bg-white/90 active:opacity-80';
+  'inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#171717] transition hover:bg-white/90 active:opacity-80 disabled:cursor-not-allowed disabled:opacity-60';
 
 function FooterLinkList({ items }: { items: readonly { key: string; label: string; to: string }[] }) {
   return (
@@ -63,10 +65,39 @@ function FooterLinkList({ items }: { items: readonly { key: string; label: strin
   );
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export const HomeFooter: FC = () => {
   const year = new Date().getFullYear();
-  const marqueeTrack = Array.from({ length: 6 })
-    .flatMap(() => FOOTER_MARQUEE_SERVICES);
+  const marqueeTrack = Array.from({ length: 6 }).flatMap(() => FOOTER_MARQUEE_SERVICES);
+
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  async function onSubscribe(e: FormEvent) {
+    e.preventDefault();
+    setFeedback(null);
+
+    const trimmed = email.trim();
+    if (!isValidEmail(trimmed)) {
+      setFeedback({ kind: 'error', text: 'Введите корректный email.' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const result = await subscribeToNewsletter(trimmed);
+      setFeedback({ kind: 'success', text: result.message });
+      setEmail('');
+    } catch {
+      setFeedback({ kind: 'error', text: 'Не удалось оформить подписку. Попробуйте позже.' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <footer className="relative w-full overflow-hidden bg-[#E29595] text-[#171717]">
@@ -98,12 +129,31 @@ export const HomeFooter: FC = () => {
                 Новые мастера, акции и полезные материалы — иногда, без спама.
               </p>
 
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input className={inputClass} placeholder="Введите email" />
-                <button type="button" className={ctaClass}>
-                  Подписаться
+              <form className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center" onSubmit={onSubscribe} noValidate>
+                <input
+                  className={inputClass}
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  placeholder="Введите email"
+                  value={email}
+                  onChange={(ev) => setEmail(ev.target.value)}
+                  disabled={submitting}
+                  aria-label="Email для подписки на новости"
+                />
+                <button type="submit" className={ctaClass} disabled={submitting}>
+                  {submitting ? 'Отправка…' : 'Подписаться'}
                 </button>
-              </div>
+              </form>
+
+              {feedback ? (
+                <p
+                  className={`mt-2 text-[12px] ${feedback.kind === 'success' ? 'text-[#171717]/80' : 'text-[#7f1d1d]'}`}
+                  role={feedback.kind === 'error' ? 'alert' : 'status'}
+                >
+                  {feedback.text}
+                </p>
+              ) : null}
 
               <p className="mt-2 text-[12px] text-[#171717]/55">
                 Нажимая «Подписаться», вы соглашаетесь с{' '}

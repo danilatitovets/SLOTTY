@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../../config/db.js';
 import { notifyUser } from '../notifications/notifyUser.js';
 import { escapeTelegramHtml } from '../telegram/telegram.service.js';
@@ -15,6 +16,12 @@ type DueAppointmentRow = {
   master_name: string;
   voucher_number: string | null;
 };
+
+type ReminderDeliveryStatus = 'pending' | 'sent' | 'failed';
+
+const MAX_REMINDER_RETRIES = 5;
+const REMINDER_RETRY_COOLDOWN_MINUTES = 10;
+const STALE_PENDING_MINUTES = 15;
 
 /** Окно для cron ~5 мин: не пропустить момент «за 24ч» / «за 1ч». */
 const REMINDER_WINDOWS: Record<
@@ -89,62 +96,167 @@ async function fetchDueAppointments(kind: ReminderKind): Promise<DueAppointmentR
         and a.starts_at > now() + $2::interval
         and not exists (
           select 1 from public.appointment_reminder_deliveries d
-           where d.appointment_id = a.id and d.reminder_kind = $3
+           where d.appointment_id = a.id
+             and d.reminder_kind = $3
+             and d.status = 'sent'
+        )
+        and (
+          not exists (
+            select 1 from public.appointment_reminder_deliveries d2
+             where d2.appointment_id = a.id and d2.reminder_kind = $3
+          )
+          or exists (
+            select 1 from public.appointment_reminder_deliveries d3
+             where d3.appointment_id = a.id
+               and d3.reminder_kind = $3
+               and d3.status = 'failed'
+               and d3.retry_count < $4
+               and d3.failed_at < now() - ($5::int || ' minutes')::interval
+          )
+          or exists (
+            select 1 from public.appointment_reminder_deliveries d4
+             where d4.appointment_id = a.id
+               and d4.reminder_kind = $3
+               and d4.status = 'pending'
+               and d4.created_at < now() - ($6::int || ' minutes')::interval
+          )
         )
       order by a.starts_at asc
       limit 100`,
-    [win.upper, win.lower, kind],
+    [
+      win.upper,
+      win.lower,
+      kind,
+      MAX_REMINDER_RETRIES,
+      REMINDER_RETRY_COOLDOWN_MINUTES,
+      STALE_PENDING_MINUTES,
+    ],
   );
   return r.rows;
+}
+
+async function claimReminderDelivery(
+  client: PoolClient,
+  appointmentId: string,
+  kind: ReminderKind,
+): Promise<boolean> {
+  const stillActive = await client.query(
+    `select 1 from public.appointments
+      where id = $1 and status in ('pending', 'confirmed') and starts_at > now()`,
+    [appointmentId],
+  );
+  if (!stillActive.rowCount) return false;
+
+  const existing = await client.query<{
+    status: ReminderDeliveryStatus;
+    retry_count: number;
+    created_at: Date | string;
+  }>(
+    `select status, retry_count, created_at
+       from public.appointment_reminder_deliveries
+      where appointment_id = $1 and reminder_kind = $2
+      for update`,
+    [appointmentId, kind],
+  );
+
+  const row = existing.rows[0];
+  if (row?.status === 'sent') return false;
+
+  if (row?.status === 'pending') {
+    const created = new Date(row.created_at as Date).getTime();
+    const staleMs = STALE_PENDING_MINUTES * 60 * 1000;
+    if (Date.now() - created < staleMs) return false;
+  }
+
+  if (row?.status === 'failed') {
+    if (row.retry_count >= MAX_REMINDER_RETRIES) return false;
+  }
+
+  if (!row) {
+    await client.query(
+      `insert into public.appointment_reminder_deliveries (
+         appointment_id, reminder_kind, status, created_at
+       ) values ($1, $2, 'pending', now())`,
+      [appointmentId, kind],
+    );
+    return true;
+  }
+
+  await client.query(
+    `update public.appointment_reminder_deliveries
+        set status = 'pending',
+            sent_at = null,
+            failed_at = null,
+            error_message = null,
+            created_at = now()
+      where appointment_id = $1 and reminder_kind = $2`,
+    [appointmentId, kind],
+  );
+  return true;
+}
+
+async function markReminderSent(appointmentId: string, kind: ReminderKind): Promise<void> {
+  await query(
+    `update public.appointment_reminder_deliveries
+        set status = 'sent',
+            sent_at = now(),
+            failed_at = null,
+            error_message = null
+      where appointment_id = $1 and reminder_kind = $2`,
+    [appointmentId, kind],
+  );
+}
+
+async function markReminderFailed(
+  appointmentId: string,
+  kind: ReminderKind,
+  errorMessage: string,
+): Promise<void> {
+  await query(
+    `update public.appointment_reminder_deliveries
+        set status = 'failed',
+            failed_at = now(),
+            error_message = $3,
+            retry_count = retry_count + 1
+      where appointment_id = $1 and reminder_kind = $2`,
+    [appointmentId, kind, errorMessage.slice(0, 2000)],
+  );
 }
 
 async function deliverReminderForRow(row: DueAppointmentRow, kind: ReminderKind): Promise<void> {
   const meta = REMINDER_WINDOWS[kind];
   const { clientText, masterText, clientBody, masterBody } = buildTelegramTexts(row, kind);
 
-  await withTransaction(async (client) => {
-    const lock = await client.query(
-      `select 1 from public.appointment_reminder_deliveries
-        where appointment_id = $1 and reminder_kind = $2`,
-      [row.id, kind],
-    );
-    if (lock.rowCount) return;
-
-    const stillActive = await client.query(
-      `select 1 from public.appointments
-        where id = $1 and status in ('pending', 'confirmed') and starts_at > now()`,
-      [row.id],
-    );
-    if (!stillActive.rowCount) return;
-
-    await client.query(
-      `insert into public.appointment_reminder_deliveries (appointment_id, reminder_kind)
-       values ($1, $2)`,
-      [row.id, kind],
-    );
-
-  });
+  const claimed = await withTransaction(async (client) =>
+    claimReminderDelivery(client, row.id, kind),
+  );
+  if (!claimed) return;
 
   const related = { relatedEntityType: 'appointment' as const, relatedEntityId: row.id };
 
-  await Promise.all([
-    notifyUser({
+  try {
+    await notifyUser({
       userId: row.client_id,
       type: 'appointment_reminder',
       title: meta.clientTitle,
       body: clientBody,
       ...related,
       telegramHtml: clientText,
-    }),
-    notifyUser({
+    });
+    await notifyUser({
       userId: row.master_id,
       type: 'appointment_reminder',
       title: meta.masterTitle,
       body: masterBody,
       ...related,
       telegramHtml: masterText,
-    }),
-  ]);
+    });
+    await markReminderSent(row.id, kind);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await markReminderFailed(row.id, kind, message);
+    throw e;
+  }
 }
 
 async function processReminderKind(kind: ReminderKind): Promise<number> {

@@ -13,6 +13,7 @@ import { PlatformAdminServicesTab } from './tabs/PlatformAdminServicesTab';
 import { PlatformAdminBookingsTab } from './tabs/PlatformAdminBookingsTab';
 import { PlatformAdminAuditTab } from './tabs/PlatformAdminAuditTab';
 import { PlatformAdminBillingHub } from './tabs/PlatformAdminBillingHub';
+import { PlatformAdminNotificationsHub } from './tabs/PlatformAdminNotificationsHub';
 
 export function PlatformAdminPage() {
   const { profile, isLoading, isAuthenticated } = useAuth();
@@ -48,6 +49,7 @@ export function PlatformAdminPage() {
         <Route path="services" element={<PlatformAdminServicesTab />} />
         <Route path="bookings" element={<PlatformAdminBookingsTab />} />
         <Route path="billing" element={<PlatformAdminBillingHub />} />
+        <Route path="notifications" element={<PlatformAdminNotificationsHub />} />
         <Route path="audit" element={<PlatformAdminAuditTab />} />
         <Route path="*" element={<Navigate to={PLATFORM_ADMIN_PATH} replace />} />
       </Route>

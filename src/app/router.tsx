@@ -33,6 +33,7 @@ import { PersonalDataConsentLegacyRedirect, PersonalDataConsentPage } from '../p
 import { CrossBorderConsentPage } from '../pages/legal/CrossBorderConsentPage';
 import { MasterTermsPage } from '../pages/legal/MasterTermsPage';
 import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
+import { UnsubscribeNewsletterPage } from '../pages/UnsubscribeNewsletterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
@@ -53,6 +54,7 @@ import {
   MASTER_REGISTER_PATH,
   MASTER_START_PATH,
   RESET_PASSWORD_PATH,
+  UNSUBSCRIBE_NEWSLETTER_PATH,
   VERIFY_EMAIL_PATH,
 } from './paths';
 
@@ -116,6 +118,7 @@ export function AppRoutes() {
         <Route path={LEGAL_CROSS_BORDER_PATH} element={<CrossBorderConsentPage />} />
         <Route path={LEGAL_MASTER_TERMS_PATH} element={<MasterTermsPage />} />
         <Route path={LEGAL_TERMS_PATH} element={<UserAgreementPage />} />
+        <Route path={UNSUBSCRIBE_NEWSLETTER_PATH} element={<UnsubscribeNewsletterPage />} />
         <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

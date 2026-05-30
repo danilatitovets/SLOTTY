@@ -10,6 +10,10 @@ function notificationTypeLabel(type: string): string {
   switch (type) {
     case 'appointment_new':
       return 'Новая запись';
+    case 'appointment_pending':
+      return 'Заявка на запись';
+    case 'appointment_confirmed':
+      return 'Подтверждение записи';
     case 'appointment_cancelled':
       return 'Отмена записи';
     case 'appointment_reminder':

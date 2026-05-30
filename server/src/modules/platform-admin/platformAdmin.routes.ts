@@ -64,6 +64,25 @@ import {
   rejectProManualPaymentRequest,
   type ProManualPaymentStatus,
 } from '../billing/proManualPayment.service.js';
+import {
+  countEmailCampaignAudience,
+  createEmailCampaignDraft,
+  getEmailCampaign,
+  getEmailSendingStatus,
+  listEmailCampaignRecipients,
+  listEmailCampaigns,
+  listNewsletterSubscribers,
+  previewEmailCampaign,
+  retryFailedCampaignRecipient,
+  sendEmailCampaign,
+  sendTestEmailCampaign,
+  updateEmailCampaignDraft,
+  type EmailCampaignAudience,
+} from './platformAdmin.emailCampaigns.service.js';
+import {
+  listAppointmentReminderFailures,
+  listNotificationDeliveries,
+} from './platformAdmin.notifications.service.js';
 
 export const platformAdminRouter = Router();
 
@@ -510,5 +529,160 @@ platformAdminRouter.get(
     const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
     const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
     res.json(await listPlatformAuditLogs({ limit, offset }));
+  }),
+);
+
+const emailCampaignAudienceSchema = z.enum([
+  'newsletter_subscribers',
+  'masters',
+  'clients',
+  'all_profiles',
+  'test_only',
+]);
+
+const emailCampaignBody = z.object({
+  title: z.string().min(1).max(200),
+  subject: z.string().min(1).max(200),
+  previewText: z.string().max(300).optional().nullable(),
+  bodyText: z.string().min(1).max(20000),
+  ctaText: z.string().max(100).optional().nullable(),
+  ctaUrl: z.string().max(500).optional().nullable(),
+  audience: emailCampaignAudienceSchema,
+});
+
+platformAdminRouter.get(
+  '/email/status',
+  asyncHandler(async (_req, res) => {
+    res.json(getEmailSendingStatus());
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/campaigns',
+  asyncHandler(async (req, res) => {
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listEmailCampaigns({ limit, offset }));
+  }),
+);
+
+platformAdminRouter.post(
+  '/email/campaigns',
+  asyncHandler(async (req, res) => {
+    const body = emailCampaignBody.parse(req.body);
+    res.status(201).json(await createEmailCampaignDraft(req.user!.id, body));
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/campaigns/:id',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    res.json(await getEmailCampaign(id));
+  }),
+);
+
+platformAdminRouter.patch(
+  '/email/campaigns/:id',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = emailCampaignBody.partial().parse(req.body);
+    res.json(await updateEmailCampaignDraft(id, body));
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/campaigns/:id/preview',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    res.json(await previewEmailCampaign(id));
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/campaigns/:id/audience-count',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const campaign = await getEmailCampaign(id);
+    const testEmail = z.string().email().optional().parse(req.query.testEmail);
+    const count = await countEmailCampaignAudience(campaign.audience as EmailCampaignAudience, testEmail);
+    res.json({ count, audience: campaign.audience });
+  }),
+);
+
+platformAdminRouter.post(
+  '/email/campaigns/:id/test',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = z.object({ testEmail: z.string().email() }).parse(req.body);
+    res.json(await sendTestEmailCampaign(id, body.testEmail));
+  }),
+);
+
+platformAdminRouter.post(
+  '/email/campaigns/:id/send',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = z
+      .object({
+        confirmed: z.literal(true),
+        testEmail: z.string().email().optional().nullable(),
+      })
+      .parse(req.body);
+    res.json(await sendEmailCampaign(id, body));
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/campaigns/:id/recipients',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const status = z.string().optional().parse(req.query.status);
+    const search = z.string().optional().parse(req.query.search);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listEmailCampaignRecipients(id, { status, search, limit, offset }));
+  }),
+);
+
+platformAdminRouter.post(
+  '/email/campaigns/:id/recipients/:recipientId/retry',
+  asyncHandler(async (req, res) => {
+    const campaignId = z.string().uuid().parse(req.params.id);
+    const recipientId = z.string().uuid().parse(req.params.recipientId);
+    res.json(await retryFailedCampaignRecipient(campaignId, recipientId));
+  }),
+);
+
+platformAdminRouter.get(
+  '/email/newsletter-subscribers',
+  asyncHandler(async (req, res) => {
+    const status = z.string().optional().parse(req.query.status);
+    const search = z.string().optional().parse(req.query.search);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listNewsletterSubscribers({ status, search, limit, offset }));
+  }),
+);
+
+platformAdminRouter.get(
+  '/notifications/deliveries',
+  asyncHandler(async (req, res) => {
+    const channel = z.string().optional().parse(req.query.channel);
+    const status = z.string().optional().parse(req.query.status);
+    const search = z.string().optional().parse(req.query.search);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listNotificationDeliveries({ channel, status, search, limit, offset }));
+  }),
+);
+
+platformAdminRouter.get(
+  '/notifications/reminder-failures',
+  asyncHandler(async (req, res) => {
+    const search = z.string().optional().parse(req.query.search);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(await listAppointmentReminderFailures({ search, limit, offset }));
   }),
 );

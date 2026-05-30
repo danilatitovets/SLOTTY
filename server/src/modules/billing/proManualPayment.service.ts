@@ -14,6 +14,11 @@ import {
 } from './manualPaymentConfig.js';
 import { writeAdminAuditLog } from '../platform-admin/auditLog.service.js';
 import { buildMasterPublicProfileUrl } from '../masters/categoryChangePolicy.service.js';
+import {
+  notifyProPaymentApproved,
+  notifyProPaymentRejected,
+  notifyProPaymentSubmitted,
+} from './proManualPaymentNotifications.js';
 
 export type ProManualPaymentStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -331,6 +336,8 @@ export async function createProManualPaymentRequest(
   const receiptUrl = body.receiptUrl?.trim() || null;
   const receiptFilePath = body.receiptFilePath?.trim() || null;
 
+  const meta = await getMasterPaymentMeta(masterId);
+
   const ins = await query<RequestRow>(
     `insert into public.pro_manual_payment_requests (
        master_id, profile_id, plan_code, payer_full_name, tariff_amount, declared_paid_amount, currency,
@@ -349,7 +356,15 @@ export async function createProManualPaymentRequest(
       receiptFilePath,
     ],
   );
-  return mapRow(ins.rows[0]!);
+  const created = mapRow(ins.rows[0]!);
+
+  void notifyProPaymentSubmitted({
+    masterId,
+    masterName: meta.displayName,
+    requestId: created.id,
+  });
+
+  return created;
 }
 
 export type ProManualPaymentAdminRow = ProManualPaymentRequestDto & {
@@ -491,6 +506,19 @@ export async function approveProManualPaymentRequest(
     },
   });
 
+  const expiresRow = await query<{ pro_expires_at: Date | string | null }>(
+    `select pro_expires_at from public.master_profiles where master_id = $1`,
+    [row.master_id],
+  );
+  const proExpiresAt = expiresRow.rows[0]?.pro_expires_at;
+  if (proExpiresAt) {
+    void notifyProPaymentApproved({
+      masterId: row.master_id,
+      requestId,
+      proExpiresAt,
+    });
+  }
+
   await writeAdminAuditLog({
     adminUserId,
     action: 'pro_manual_payment_approved',
@@ -549,6 +577,12 @@ export async function rejectProManualPaymentRequest(
       where id = $1`,
     [requestId, reason, adminNote, adminUserId],
   );
+
+  void notifyProPaymentRejected({
+    masterId: row.master_id,
+    requestId,
+    rejectionReason: reason,
+  });
 
   await writeAdminAuditLog({
     adminUserId,

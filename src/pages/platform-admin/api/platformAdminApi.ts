@@ -19,6 +19,12 @@ import type {
   PlatformPurchasesSummary,
   ProManualPaymentRequestAdmin,
   ProfileReportAdmin,
+  EmailCampaignAdmin,
+  EmailCampaignAudience,
+  EmailCampaignRecipientAdmin,
+  NewsletterSubscriberAdmin,
+  NotificationDeliveryAdmin,
+  AppointmentReminderFailureAdmin,
 } from './platformAdmin.types';
 
 async function readErr(res: Response): Promise<string> {
@@ -485,4 +491,177 @@ export async function getAuditLogs(params?: {
   };
   const items = data.items ?? data.logs;
   return { logs: items, items, total: data.total, limit: data.limit, offset: data.offset };
+}
+
+export async function getEmailSendingStatus(): Promise<{ configured: boolean; from: string | null }> {
+  const res = await apiFetch('/api/platform-admin/email/status');
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { configured: boolean; from: string | null };
+}
+
+export async function getEmailCampaigns(params?: {
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformPagedResult<EmailCampaignAdmin>> {
+  const q = new URLSearchParams();
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/email/campaigns?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPagedResult<EmailCampaignAdmin>;
+}
+
+export async function createEmailCampaign(body: {
+  title: string;
+  subject: string;
+  previewText?: string | null;
+  bodyText: string;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  audience: EmailCampaignAudience;
+}): Promise<EmailCampaignAdmin> {
+  const res = await apiFetch('/api/platform-admin/email/campaigns', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as EmailCampaignAdmin;
+}
+
+export async function updateEmailCampaign(
+  id: string,
+  body: Partial<{
+    title: string;
+    subject: string;
+    previewText: string | null;
+    bodyText: string;
+    ctaText: string | null;
+    ctaUrl: string | null;
+    audience: EmailCampaignAudience;
+  }>,
+): Promise<EmailCampaignAdmin> {
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as EmailCampaignAdmin;
+}
+
+export async function previewEmailCampaign(id: string): Promise<{
+  campaign: EmailCampaignAdmin;
+  recipientCount: number;
+  previewHtml: string;
+}> {
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}/preview`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as {
+    campaign: EmailCampaignAdmin;
+    recipientCount: number;
+    previewHtml: string;
+  };
+}
+
+export async function getEmailCampaignAudienceCount(
+  id: string,
+  testEmail?: string,
+): Promise<{ count: number; audience: EmailCampaignAudience }> {
+  const q = testEmail ? `?testEmail=${encodeURIComponent(testEmail)}` : '';
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}/audience-count${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { count: number; audience: EmailCampaignAudience };
+}
+
+export async function sendTestEmailCampaign(
+  id: string,
+  testEmail: string,
+): Promise<{ ok: true; devLogged: boolean; messageId: string | null }> {
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}/test`, {
+    method: 'POST',
+    body: JSON.stringify({ testEmail }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { ok: true; devLogged: boolean; messageId: string | null };
+}
+
+export async function sendEmailCampaign(
+  id: string,
+  body: { confirmed: true; testEmail?: string | null },
+): Promise<{ ok: true; status: string; sent: number; failed: number; skipped: number }> {
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { ok: true; status: string; sent: number; failed: number; skipped: number };
+}
+
+export async function getEmailCampaignRecipients(
+  id: string,
+  params?: { status?: string; search?: string; limit?: number; offset?: number },
+): Promise<PlatformPagedResult<EmailCampaignRecipientAdmin>> {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.search) q.set('search', params.search);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/email/campaigns/${id}/recipients?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPagedResult<EmailCampaignRecipientAdmin>;
+}
+
+export async function retryEmailCampaignRecipient(campaignId: string, recipientId: string): Promise<void> {
+  const res = await apiFetch(
+    `/api/platform-admin/email/campaigns/${campaignId}/recipients/${recipientId}/retry`,
+    { method: 'POST', body: JSON.stringify({}) },
+  );
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function getNewsletterSubscribers(params?: {
+  status?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformPagedResult<NewsletterSubscriberAdmin>> {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.search) q.set('search', params.search);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/email/newsletter-subscribers?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPagedResult<NewsletterSubscriberAdmin>;
+}
+
+export async function getNotificationDeliveries(params?: {
+  channel?: string;
+  status?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformPagedResult<NotificationDeliveryAdmin>> {
+  const q = new URLSearchParams();
+  if (params?.channel) q.set('channel', params.channel);
+  if (params?.status) q.set('status', params.status);
+  if (params?.search) q.set('search', params.search);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/notifications/deliveries?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPagedResult<NotificationDeliveryAdmin>;
+}
+
+export async function getAppointmentReminderFailures(params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformPagedResult<AppointmentReminderFailureAdmin>> {
+  const q = new URLSearchParams();
+  if (params?.search) q.set('search', params.search);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/notifications/reminder-failures?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as PlatformPagedResult<AppointmentReminderFailureAdmin>;
 }

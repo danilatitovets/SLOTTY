@@ -1,16 +1,25 @@
 import { Resend } from 'resend';
+import { resolveResendFrom } from '../../email/emailConfig.js';
 import { env } from '../../../config/env.js';
-
-const DEFAULT_FROM = 'SLOTTY <onboarding@resend.dev>';
 
 export type SendMailParams = {
   to: string;
   subject: string;
   html: string;
+  text?: string;
 };
 
-export async function sendSlottyEmail(params: SendMailParams): Promise<void> {
-  const from = env.RESEND_FROM?.trim() || DEFAULT_FROM;
+export type SendMailResult = {
+  messageId: string | null;
+  devLogged: boolean;
+};
+
+export async function sendSlottyEmail(params: SendMailParams): Promise<SendMailResult> {
+  return sendSlottyEmailDetailed(params);
+}
+
+export async function sendSlottyEmailDetailed(params: SendMailParams): Promise<SendMailResult> {
+  const from = resolveResendFrom();
   const apiKey = env.RESEND_API_KEY?.trim();
 
   if (!apiKey) {
@@ -20,21 +29,24 @@ export async function sendSlottyEmail(params: SendMailParams): Promise<void> {
       preview: params.html.replace(/\s+/g, ' ').slice(0, 120) + '…',
       links: extractLinks(params.html),
     });
-    return;
+    return { messageId: null, devLogged: true };
   }
 
   const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from,
     to: params.to,
     subject: params.subject,
     html: params.html,
+    text: params.text,
   });
 
   if (error) {
     console.error('[SLOTTY email] Resend error:', error);
     throw new Error(error.message || 'Failed to send email');
   }
+
+  return { messageId: data?.id ?? null, devLogged: false };
 }
 
 function extractLinks(html: string): string[] {

@@ -7,12 +7,14 @@ import {
   HiUsers,
   HiCalendarDays,
   HiBanknotes,
+  HiEnvelope,
 } from 'react-icons/hi2';
 import {
   PLATFORM_ADMIN_AUDIT_PATH,
   PLATFORM_ADMIN_BILLING_PATH,
   PLATFORM_ADMIN_BOOKINGS_PATH,
   PLATFORM_ADMIN_MASTERS_PATH,
+  PLATFORM_ADMIN_NOTIFICATIONS_PATH,
   PLATFORM_ADMIN_PATH,
   PLATFORM_ADMIN_REQUESTS_PATH,
   PLATFORM_ADMIN_SERVICES_PATH,
@@ -84,6 +86,14 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     title: 'Биллинг',
     description:
       'Покупки тарифа Pro, сводка по выручке и промокоды со скидкой при оформлении подписки.',
+  },
+  {
+    to: PLATFORM_ADMIN_NOTIFICATIONS_PATH,
+    label: 'Рассылки',
+    icon: HiEnvelope,
+    title: 'Email-рассылки и доставка',
+    description:
+      'Маркетинговые кампании для подписчиков, тестовые письма, логи Telegram и ошибки напоминаний о записях.',
   },
   {
     to: PLATFORM_ADMIN_AUDIT_PATH,

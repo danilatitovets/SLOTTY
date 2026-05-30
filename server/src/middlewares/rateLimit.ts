@@ -139,6 +139,14 @@ export const masterProPaymentRequestLimiter = createLimiter({
   label: '1 ч',
 });
 
+/** POST /api/newsletter/subscribe */
+export const newsletterSubscribeLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxProd: 10,
+  label: '1 ч',
+  keyGenerator: catalogIpKey,
+});
+
 /** GET /api/geo/search, /api/geo/reverse */
 export const geoRateLimit = createLimiter({
   windowMs: 60 * 1000,

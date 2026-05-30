@@ -1,6 +1,5 @@
 import { notifyUser } from '../notifications/notifyUser.js';
-import { escapeTelegramHtml } from '../telegram/telegram.service.js';
-import { formatAppointmentDateTime } from '../telegram/formatAppointmentDateTime.js';
+import { masterClientCancelledBooking } from '../notifications/templates/appointmentNotificationTemplates.js';
 import { notifyClientBookingCreated } from './appointments.clientNotifications.js';
 import { notifyMasterBookingCreated } from './appointments.masterNotifications.js';
 import { fetchAppointmentNotifyContext } from './appointmentNotifyContext.js';
@@ -53,21 +52,12 @@ export async function notifyMasterClientCancelledBooking(
     const ctx = await fetchAppointmentNotifyContext(appointmentId);
     if (!ctx) return;
 
-    const w = formatAppointmentDateTime(ctx.startsAt);
-    const plain = `${w.date}, ${w.time}`;
-
+    const payload = masterClientCancelledBooking(ctx);
     await notifyUser({
       userId: masterId,
-      type: 'appointment_cancelled',
-      title: 'Клиент отменил запись',
-      body: `${ctx.clientName} отменил запись: ${ctx.serviceTitle} (${plain}).`,
+      ...payload,
       relatedEntityType: 'appointment',
       relatedEntityId: appointmentId,
-      telegramHtml:
-        `<b>Клиент отменил запись</b>\n` +
-        `Клиент: ${escapeTelegramHtml(ctx.clientName)}\n` +
-        `Услуга: ${escapeTelegramHtml(ctx.serviceTitle)}\n` +
-        `Было: ${escapeTelegramHtml(plain)}`,
     });
   } catch (e) {
     logNotifyError('notifyMasterClientCancelledBooking', e);

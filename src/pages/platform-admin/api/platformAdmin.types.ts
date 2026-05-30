@@ -306,3 +306,80 @@ export type PlatformAuditLogItem = {
   metadata: Record<string, unknown> | null;
   createdAt: string;
 };
+
+export type EmailCampaignAudience =
+  | 'newsletter_subscribers'
+  | 'masters'
+  | 'clients'
+  | 'all_profiles'
+  | 'test_only';
+
+export type EmailCampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled' | 'failed';
+
+export type EmailCampaignAdmin = {
+  id: string;
+  title: string;
+  subject: string;
+  previewText: string | null;
+  bodyHtml: string;
+  bodyText: string | null;
+  ctaText: string | null;
+  ctaUrl: string | null;
+  audience: EmailCampaignAudience;
+  status: EmailCampaignStatus;
+  createdByProfileId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  scheduledAt: string | null;
+  sentAt: string | null;
+  cancelledAt: string | null;
+};
+
+export type EmailCampaignRecipientAdmin = {
+  id: string;
+  campaignId: string;
+  email: string;
+  profileId: string | null;
+  subscriberId: string | null;
+  status: string;
+  sentAt: string | null;
+  failedAt: string | null;
+  errorMessage: string | null;
+  resendMessageId: string | null;
+  createdAt: string;
+};
+
+export type NewsletterSubscriberAdmin = {
+  id: string;
+  email: string;
+  status: string;
+  source: string;
+  subscribedAt: string;
+  unsubscribedAt: string | null;
+};
+
+export type NotificationDeliveryAdmin = {
+  id: string;
+  notificationId: string | null;
+  profileId: string;
+  channel: string;
+  status: string;
+  dedupeKey: string | null;
+  errorMessage: string | null;
+  sentAt: string | null;
+  failedAt: string | null;
+  createdAt: string;
+  fullName: string;
+  email: string | null;
+};
+
+export type AppointmentReminderFailureAdmin = {
+  appointmentId: string;
+  reminderKind: string;
+  status: string;
+  failedAt: string | null;
+  errorMessage: string | null;
+  retryCount: number;
+  fullName: string;
+  email: string | null;
+};
