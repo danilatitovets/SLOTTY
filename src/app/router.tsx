@@ -33,6 +33,7 @@ import { PersonalDataConsentLegacyRedirect, PersonalDataConsentPage } from '../p
 import { CrossBorderConsentPage } from '../pages/legal/CrossBorderConsentPage';
 import { MasterTermsPage } from '../pages/legal/MasterTermsPage';
 import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
+import { NotFoundPage } from '../pages/NotFoundPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { LoginPage } from '../pages/auth/LoginPage';
@@ -115,7 +116,7 @@ export function AppRoutes() {
         <Route path={LEGAL_CROSS_BORDER_PATH} element={<CrossBorderConsentPage />} />
         <Route path={LEGAL_MASTER_TERMS_PATH} element={<MasterTermsPage />} />
         <Route path={LEGAL_TERMS_PATH} element={<UserAgreementPage />} />
-        <Route path="*" element={<Navigate to={HUB_PATH} replace />} />
+        <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

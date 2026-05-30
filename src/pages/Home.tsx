@@ -13,6 +13,7 @@ import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { useTelegram } from '../shared/hooks/useTelegram';
 import { readTelegramWebAppStartParam } from '../shared/lib/telegramWebApp';
+import { HomeStructuredData } from '../shared/seo/HomeStructuredData';
 import { HomeForMasters } from './home/HomeForMasters';
 import { HomeHeroStack } from './home/HomeHeroStack';
 import { homeShell } from './home/homeLayout';
@@ -70,6 +71,7 @@ export function Home() {
 
   return (
     <div className="min-h-dvh bg-[#E29595] text-neutral-900">
+      <HomeStructuredData />
       <div className="overflow-x-visible rounded-b-[2.5rem] bg-white sm:rounded-b-[3rem]">
         <HomeHeader isDemoMaster={isMasterUser} onProfileTab={onProfileTab} />
 

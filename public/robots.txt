@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Allow: /book
+Allow: /services
+Allow: /masters
+Allow: /services/category/
+Allow: /legal/
+
+Disallow: /login
+Disallow: /master/login
+Disallow: /master/register
+Disallow: /master/start
+Disallow: /auth/
+Disallow: /profile
+Disallow: /admin
+Disallow: /platform-admin
+Disallow: /become-master
+Disallow: /zapis
+Disallow: /settings
+
+Sitemap: https://slotty.of.by/sitemap.xml

@@ -191,6 +191,7 @@ export function MastersCatalogPage() {
 
   return (
     <>
+      <h1 className="sr-only">Мастера</h1>
       <MastersCatalogDesktop
         search={search}
         onSearchChange={setSearch}

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
-import { LOGIN_PATH, MASTERS_PATH, getBookingPath } from '../../../app/paths';
+import { LOGIN_PATH, MASTERS_PATH, getBookingPath, getMasterPath } from '../../../app/paths';
+import { SeoHead } from '../../../shared/seo/SeoHead';
+import { truncateMetaDescription } from '../../../shared/seo/seoConfig';
+import { SEO_DEFAULT_OG_IMAGE, SEO_DEFAULT_ROBOTS } from '../../../shared/seo/seoSite';
 import type { ClientOutletContext } from '../clientOutletContext';
 import { useFavoriteMaster } from '../../../features/profile/hooks/useFavoriteMaster';
 import { useClientErrorModal } from '../ClientErrorModalContext';
@@ -57,6 +60,20 @@ export function MasterPublicPage() {
     () => (master?.portfolio ?? []).map((p) => p.imageUrl).filter((u): u is string => Boolean(u?.trim())),
     [master?.portfolio],
   );
+
+  const masterSeoMeta = useMemo(() => {
+    if (!master) return null;
+    const bio = master.bio?.trim();
+    return {
+      title: `${master.masterName} — онлайн-запись | SLOTTY`,
+      description: bio
+        ? truncateMetaDescription(bio)
+        : 'Профиль мастера в SLOTTY: услуги, цены, отзывы и онлайн-запись в Минске.',
+      robots: SEO_DEFAULT_ROBOTS,
+      canonicalPath: getMasterPath(masterId),
+      ogImage: SEO_DEFAULT_OG_IMAGE,
+    };
+  }, [master, masterId]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -125,6 +142,7 @@ export function MasterPublicPage() {
 
   return (
     <>
+      {masterSeoMeta ? <SeoHead meta={masterSeoMeta} /> : null}
       <MasterProfileDesktop
         master={master}
         userLat={userLat}

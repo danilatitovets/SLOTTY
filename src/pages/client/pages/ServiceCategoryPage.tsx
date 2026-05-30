@@ -203,6 +203,7 @@ export function ServiceCategoryPage() {
 
       <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
         <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
+          <h1 className="sr-only lg:hidden">{categoryName}</h1>
           <CatalogMobilePageToolbar title={categoryName} backTo={SERVICES_PATH} backLabel="К услугам" />
           <CatalogStickyToolbar
             compact

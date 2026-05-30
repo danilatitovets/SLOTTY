@@ -102,6 +102,7 @@ export function ServicesCatalogPage() {
 
   return (
     <>
+      <h1 className="sr-only">Услуги мастеров</h1>
       <ServicesCatalogDesktop
         search={search}
         onSearchChange={setSearch}

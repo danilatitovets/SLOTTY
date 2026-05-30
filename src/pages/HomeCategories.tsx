@@ -48,7 +48,7 @@ export const HomeCategories: FC<HomeCategoriesProps> = ({ onCategory }) => {
                 <div className="overflow-hidden rounded-[22px] bg-[#F2F2F2] p-3 sm:rounded-[26px] sm:p-4">
                   <ImageReveal
                     src={categoryImageSrc(category)}
-                    alt=""
+                    alt={category.label}
                     loading={index < 2 ? 'eager' : 'lazy'}
                     fetchPriority={index < 2 ? 'high' : 'low'}
                     draggable={false}
