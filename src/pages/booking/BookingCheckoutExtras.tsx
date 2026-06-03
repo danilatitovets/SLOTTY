@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { HiCheck, HiCreditCard } from 'react-icons/hi2';
-import { LEGAL_PAYMENT_PATH, LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
-import { PaymentLogos } from '../../shared/ui/PaymentLogos';
+import { HiCheck } from 'react-icons/hi2';
+import { LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
 import { legalReturnState } from '../legal/useLegalPageBack';
 import { categorySupportsReferencePhoto } from '../../features/booking/lib/referencePhotoCategories';
 import {
@@ -9,7 +8,6 @@ import {
   catalogPrimaryBtn,
 } from '../client/servicesCatalog/servicesCatalogTheme';
 import { bookingDesktopSectionTitle } from './bookingDesktopTheme';
-import { bookingMutedPanel } from './bookingUi';
 import { BookingReferencePhotoField } from './BookingReferencePhotoField';
 
 const TRUST_ITEMS = [
@@ -54,27 +52,6 @@ export function BookingCheckoutExtras({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <div className={`${bookingMutedPanel} p-4`}>
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-white text-[#6B7280]">
-            <HiCreditCard className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className={bookingDesktopSectionTitle}>Оплата</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-[#6B7280]">
-              Оплата услуги — у мастера на месте. SLOTTY не списывает деньги с карты при записи. Онлайн-оплата на
-              сайте появится после подключения платёжного провайдера —{' '}
-              <Link to={LEGAL_PAYMENT_PATH} className="font-semibold text-[#F47C8C] hover:underline">
-                подробнее
-              </Link>
-              .
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <PaymentLogos variant="compact" showDisclaimer className="!rounded-[14px]" />
-
       <ul className="space-y-2.5">
         {TRUST_ITEMS.map((label) => (
           <li key={label} className="flex items-center gap-2.5 text-[13px] font-medium text-[#374151]">
