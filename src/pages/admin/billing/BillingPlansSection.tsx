@@ -9,10 +9,13 @@ import {
   landingPlanCtaClass,
   landingProCtaClass,
 } from '../../../features/billing/ui/landingTariffCards';
-import { PaymentLogos } from '../../../shared/ui/PaymentLogos';
+import { PaymentLogoImage } from '../../../shared/ui/PaymentLogos/PaymentLogoImage';
+import { PAYMENT_METHODS, type PaymentMethodId } from '../../../shared/ui/PaymentLogos/paymentLogosConfig';
 import { BillingPeriodSwitch } from './BillingPeriodSwitch';
 import { BillingUsagePanel } from './BillingUsagePanel';
 import { billingDesktopCard, billingSoftNote } from './adminBillingTheme';
+
+const BILLING_PAYMENT_METHODS: PaymentMethodId[] = ['bepaid', 'visa', 'mastercard', 'belkart'];
 
 export type BillingPlansSectionProps = {
   plan: PlanId;
@@ -142,14 +145,21 @@ export function BillingPlansSection({
           />
 
           {showPaymentLogos && useLiveBilling && !proActive ? (
-            <div className={`${billingSoftNote} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
-              <p className="text-[13px] leading-relaxed">Оплата картой на защищённой странице bePaid.</p>
-              <PaymentLogos
-                variant="compact"
-                showDisclaimer={false}
-                methods={['bepaid', 'visa', 'mastercard', 'belkart']}
-                className="shrink-0"
-              />
+            <div className={`${billingSoftNote} text-center`}>
+              <p className="text-[13px] font-medium leading-snug text-[#6B7280]">
+                Оплата картой · защищённая страница bePaid
+              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
+                {PAYMENT_METHODS.filter((m) => BILLING_PAYMENT_METHODS.includes(m.id)).map((method) => (
+                  <div
+                    key={method.id}
+                    className="flex h-10 min-w-[4.75rem] items-center justify-center rounded-xl bg-white px-3 ring-1 ring-inset ring-[#E8EAED]"
+                    title={method.caption}
+                  >
+                    <PaymentLogoImage method={method} logoHeightClass="h-6 w-auto max-w-[5.25rem]" />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>
