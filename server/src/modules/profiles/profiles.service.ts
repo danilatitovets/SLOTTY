@@ -116,11 +116,11 @@ export async function resolveHeaderAvatarUrl(
   avatarUrl: string | null,
   hasMasterProfile: boolean,
 ): Promise<string | null> {
-  const accountAvatar = sanitizePortraitDisplayUrl(avatarUrl);
-  if (accountAvatar) return accountAvatar;
-  if (!hasMasterProfile) return null;
-  const masterPhoto = await fetchMasterCabinetPhotoUrl(profileId);
-  return sanitizePortraitDisplayUrl(masterPhoto);
+  if (hasMasterProfile) {
+    const masterPhoto = sanitizePortraitDisplayUrl(await fetchMasterCabinetPhotoUrl(profileId));
+    if (masterPhoto) return masterPhoto;
+  }
+  return sanitizePortraitDisplayUrl(avatarUrl);
 }
 
 function toTelegramUserIdNumber(raw: string | null): number | null {
@@ -167,14 +167,14 @@ function mergeMasterCabinetPersonalFields(
   row: { role: string; full_name: string; phone: string | null; address: string | null },
   master: MasterCabinetPersonalFields | null,
 ): { full_name: string; phone: string | null; address: string | null } {
-  if (!master || (row.role !== 'master' && row.role !== 'platform_admin')) {
+  if (!master) {
     return { full_name: row.full_name, phone: row.phone, address: row.address };
   }
 
   return {
-    full_name: row.full_name?.trim() ? row.full_name : master.fullName ?? row.full_name,
-    phone: row.phone?.trim() ? row.phone : master.phone,
-    address: row.address?.trim() ? row.address : master.address,
+    full_name: master.fullName?.trim() || row.full_name?.trim() || row.full_name,
+    phone: master.phone?.trim() || row.phone,
+    address: master.address?.trim() || row.address,
   };
 }
 

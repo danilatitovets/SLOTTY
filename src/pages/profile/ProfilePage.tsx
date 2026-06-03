@@ -585,7 +585,10 @@ export function ProfilePage() {
   const { displayName, roleSubtitle, profileInitials } = useMemo(() => {
     if (profile) {
       const name = profile.full_name;
-      const sub = profile.role === 'master' ? 'Мастер\u00a0SLOTTY' : 'Клиент\u00a0SLOTTY';
+      const sub =
+        profile.role === 'master' || profile.hasMasterProfile
+          ? 'Мастер\u00a0SLOTTY'
+          : 'Клиент\u00a0SLOTTY';
       return { displayName: name, roleSubtitle: sub, profileInitials: profileDisplayInitials(name) };
     }
     if (telegramUserPreview) {

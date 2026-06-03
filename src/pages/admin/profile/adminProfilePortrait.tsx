@@ -14,14 +14,19 @@ export function resolveMasterCabinetPortraitUrl(photoUrl?: string | null): strin
   return url || null;
 }
 
-/** GET /api/me → header_avatar_url; иначе фото кабинета мастера. */
+/** GET /api/me → header_avatar_url; при кабинете мастера — сначала photo кабинета. */
 export function resolveAccountOrCabinetPortraitUrl(
   profile: BackendProfile | null | undefined,
   masterPhotoUrl?: string | null,
 ): string | null {
+  const hasMasterCabinet = profile?.hasMasterProfile === true;
+  if (hasMasterCabinet) {
+    const fromCabinet = resolveMasterCabinetPortraitUrl(masterPhotoUrl);
+    if (fromCabinet) return fromCabinet;
+  }
   const account = accountAvatarUrl(profile);
   if (account) return account;
-  return resolveMasterCabinetPortraitUrl(masterPhotoUrl);
+  return null;
 }
 
 type AvatarProps = {
