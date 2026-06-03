@@ -753,6 +753,35 @@ export function ProfilePage() {
     void loadClientAppointments();
   }, [loadClientAppointments, searchParams]);
 
+  const focusAppointmentId = searchParams.get('focus');
+
+  useEffect(() => {
+    if (!focusAppointmentId) return;
+    if (mainTab !== 'appointments') {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', 'appointments');
+          return next;
+        },
+        { replace: true },
+      );
+      return;
+    }
+    if (apptListLoading) return;
+    const row = [...apptState.upcoming, ...apptState.past].find((r) => r.id === focusAppointmentId);
+    if (!row) return;
+    setSelectedAppointmentId(focusAppointmentId);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('focus');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [focusAppointmentId, mainTab, apptListLoading, apptState, setSearchParams]);
+
   useEffect(() => {
     if (mainTab === 'favorites') {
       void loadFavorites();

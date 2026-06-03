@@ -10,7 +10,7 @@ import {
 } from '../shared/adminCatalogSheetTheme';
 import { notifIconFallback } from './adminNotificationsTheme';
 import { resolveMasterNotificationAction } from './notificationAction';
-import { parseNotificationSummary } from './parseNotificationSummary';
+import { parseNotificationSummary } from '../../../features/notifications/parseNotificationSummary';
 
 function notificationTypeLabel(type: string): string {
   switch (type) {

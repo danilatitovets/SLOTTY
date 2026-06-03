@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiArrowLeft } from 'react-icons/hi2';
 import { PROFILE_PATH } from '../../../app/paths';
@@ -7,6 +8,7 @@ import { NothingFoundCard } from '../../../shared/ui/NothingFoundCard';
 import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../../client/clientNavConstants';
 import { catalogCanvasClass, catalogDesktopPanel, catalogPrimaryBtn } from '../clientProfile/clientProfileTheme';
 import { ClientNotificationCard } from './ClientNotificationCard';
+import { ClientNotificationDetailSheet } from './ClientNotificationDetailSheet';
 import {
   notificationsBackLinkClass,
   notificationsCanvasClass,
@@ -33,11 +35,15 @@ function NotificationsListBody({
   error,
   notifications,
   onReload,
+  onOpenItem,
+  onMarkRead,
 }: {
   loading: boolean;
   error: string | null;
   notifications: ReturnType<typeof useMyNotifications>['notifications'];
   onReload: (opts?: { quiet?: boolean }) => void;
+  onOpenItem: (item: ReturnType<typeof useMyNotifications>['notifications'][number]) => void;
+  onMarkRead: (id: string) => void;
 }) {
   if (error) {
     return (
@@ -82,7 +88,8 @@ function NotificationsListBody({
         <ClientNotificationCard
           key={item.id}
           item={item}
-          onAfterRead={() => void onReload({ quiet: true })}
+          onOpen={onOpenItem}
+          onMarkRead={onMarkRead}
         />
       ))}
     </div>
@@ -92,7 +99,15 @@ function NotificationsListBody({
 export function ClientNotificationsPage() {
   const { isAuthenticated, backendConfigured } = useAuth();
   const enabled = isAuthenticated && backendConfigured;
-  const { notifications, loading, error, reload } = useMyNotifications(enabled);
+  const { notifications, loading, error, reload, markAsRead } = useMyNotifications(enabled);
+  const [selected, setSelected] = useState<ReturnType<typeof useMyNotifications>['notifications'][number] | null>(
+    null,
+  );
+
+  const selectedItem = useMemo(() => {
+    if (!selected) return null;
+    return notifications.find((n) => n.id === selected.id) ?? selected;
+  }, [notifications, selected]);
 
   const list = (
     <NotificationsListBody
@@ -100,6 +115,8 @@ export function ClientNotificationsPage() {
       error={error}
       notifications={notifications}
       onReload={() => void reload()}
+      onOpenItem={setSelected}
+      onMarkRead={(id) => void markAsRead(id)}
     />
   );
 
@@ -120,6 +137,12 @@ export function ClientNotificationsPage() {
           <div className="mt-6">{list}</div>
         </div>
       </div>
+
+      <ClientNotificationDetailSheet
+        item={selectedItem}
+        onClose={() => setSelected(null)}
+        onMarkRead={(id) => void markAsRead(id)}
+      />
     </>
   );
 }
