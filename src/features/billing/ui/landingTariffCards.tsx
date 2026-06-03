@@ -105,7 +105,7 @@ export function LandingPricingCard({
         ))}
       </ul>
 
-      <div className="mt-8">{footer}</div>
+      <div className="mt-auto w-full pt-6">{footer}</div>
     </article>
   );
 }

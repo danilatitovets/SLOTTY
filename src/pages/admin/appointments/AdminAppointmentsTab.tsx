@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { HiInbox } from 'react-icons/hi2';
 import { ADMIN_BILLING_PATH, ADMIN_SCHEDULE_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
 import { planBadgeLabel } from '../../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../../features/billing/useMasterPlanEntitlements';
@@ -14,7 +13,6 @@ import { useAdminToast } from '../shared/useAdminToast';
 import {
   APPOINTMENTS_PAGE_BG,
   apptBillingBanner,
-  apptEmptyIcon,
   apptGroupLabel,
   apptListGap,
   apptHistoryDesktopPanel,
@@ -439,11 +437,6 @@ export function AdminAppointmentsTab({
           title="Новых заявок пока нет"
           text="Когда клиент отправит заявку на запись, она появится здесь"
           hint="Чтобы клиенты могли записаться, проверьте услуги и откройте окна в расписании"
-          icon={
-            <span className={apptEmptyIcon}>
-              <HiInbox className="h-8 w-8" aria-hidden />
-            </span>
-          }
           action={
             <div className="flex w-full flex-col gap-2">
               <AdminCabinetCrossLink to={ADMIN_SCHEDULE_PATH}>Открыть расписание</AdminCabinetCrossLink>
@@ -495,7 +488,6 @@ export function AdminAppointmentsTab({
     if (!upcomingFiltered.length) {
       return (
         <AppointmentsEmptyState
-          picture="appointmentsEmpty"
           title="Предстоящих записей нет"
           text="Подтверждённые записи появятся здесь после того, как вы примете заявку"
           action={
@@ -536,7 +528,6 @@ export function AdminAppointmentsTab({
     if (!historyRows.length) {
       return (
         <AppointmentsEmptyState
-          picture="clientsEmpty"
           title="Истории записей пока нет"
           text="Завершённые и отменённые записи появятся здесь"
         />
@@ -545,7 +536,6 @@ export function AdminAppointmentsTab({
     if (!historyFiltered.length) {
       return (
         <AppointmentsEmptyState
-          picture="searchEmpty"
           title="Ничего не найдено"
           text="Попробуйте изменить фильтры статуса или периода"
         />

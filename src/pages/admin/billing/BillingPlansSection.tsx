@@ -99,15 +99,7 @@ export function BillingPlansSection({
           badge={freeActive ? 'Активен' : undefined}
           highlighted={freeActive}
           footer={
-            <div className="flex flex-col gap-5">
-              <button
-                type="button"
-                disabled={freeActive}
-                onClick={onSelectFree}
-                className={landingPlanCtaClass(freeActive, freeActive)}
-              >
-                {freeActive ? 'Текущий тариф' : 'Перейти на Free'}
-              </button>
+            <div className="flex w-full flex-col">
               {isFree && !proActive ? (
                 <div className="border-t border-[#F3F4F6] pt-5">
                   <BillingUsagePanel
@@ -121,6 +113,14 @@ export function BillingPlansSection({
                   />
                 </div>
               ) : null}
+              <button
+                type="button"
+                disabled={freeActive}
+                onClick={onSelectFree}
+                className={`${landingPlanCtaClass(freeActive, freeActive)} ${isFree && !proActive ? 'mt-5' : ''}`}
+              >
+                {freeActive ? 'Текущий тариф' : 'Перейти на Free'}
+              </button>
             </div>
           }
         />
