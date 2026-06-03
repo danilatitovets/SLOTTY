@@ -27,6 +27,9 @@ export const appointmentsDesktopTabsSticky = profileDesktopTabsSticky;
 export const APPOINTMENTS_GRADIENT =
   'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
 
+/** Фон шапки вкладки «Заявки» (`public/photos/fon.png`). */
+export const APPOINTMENTS_REQUESTS_HERO_BG = '/photos/fon.png';
+
 export const APPOINTMENTS_TAB_BAR_HEIGHT = '5.75rem';
 
 export const APPOINTMENTS_TAB_BAR_SCROLL_PAD = `calc(${APPOINTMENTS_TAB_BAR_HEIGHT} + 1.25rem + env(safe-area-inset-bottom, 0px))`;

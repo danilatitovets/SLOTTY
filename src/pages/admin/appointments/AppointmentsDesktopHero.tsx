@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react';
 import { HiArchiveBox, HiCalendarDays, HiInbox } from 'react-icons/hi2';
 import { OverviewKpiCarousel } from '../overview/OverviewKpiBlocks';
-import { appointmentsDesktopCard, APPOINTMENTS_GRADIENT } from './adminAppointmentsTheme';
+import {
+  appointmentsDesktopCard,
+  APPOINTMENTS_GRADIENT,
+  APPOINTMENTS_REQUESTS_HERO_BG,
+} from './adminAppointmentsTheme';
 import { AppointmentsKpiStatCard } from './AppointmentsKpiStatCard';
 import type { AppointmentsTabId } from './appointmentsTypes';
 
@@ -31,17 +35,36 @@ function HeroBlock({
   value,
   subtitle,
   description,
+  backgroundImage,
 }: {
   badgeIcon: ReactNode;
   badge: string;
   value: string;
   subtitle: string;
   description: string;
+  backgroundImage?: string;
 }) {
   return (
-    <section className={`relative overflow-hidden ${APPOINTMENTS_GRADIENT} p-6 text-white lg:p-8`}>
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
+    <section className="relative overflow-hidden p-6 text-white lg:p-8">
+      {backgroundImage ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#111827]/75 via-[#2b2430]/55 to-[#ff5f7a]/45"
+            aria-hidden
+          />
+        </>
+      ) : (
+        <>
+          <div className={`pointer-events-none absolute inset-0 ${APPOINTMENTS_GRADIENT}`} aria-hidden />
+          <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
+        </>
+      )}
       <div className="relative min-w-0">
         <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-[14px] font-black text-white">
           {badgeIcon}
@@ -100,6 +123,7 @@ export function AppointmentsDesktopHero({ tab, stats }: Props) {
             value={String(s.requests)}
             subtitle={s.requests === 1 ? '1 новая заявка' : `${s.requests} новых заявок`}
             description="Подтвердите или отклоните — клиент сразу увидит статус записи."
+            backgroundImage={APPOINTMENTS_REQUESTS_HERO_BG}
           />
         }
       >
