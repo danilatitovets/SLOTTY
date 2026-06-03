@@ -14,6 +14,12 @@ dist-ssr
 .env
 dbpass.txt
 
+# Playwright / e2e artifacts
+test-results/
+
+# Local payment brand kit (production assets in public/images/payment/)
+public/photos/pay/
+
 # Supabase CLI cache
 supabase/.temp/
 
