@@ -1,9 +1,13 @@
+import { APPOINTMENTS_HERO_BG } from '../appointments/adminAppointmentsTheme';
 import {
   profileDashboardCard,
   profileDashboardCardPad,
   profileDesktopTabsSticky,
   PROFILE_DESKTOP_PAGE_BG,
 } from '../profile/adminProfileDashboardTheme';
+
+/** Фон hero расписания (`public/photos/fon.webp`), как в записях. */
+export const SCHEDULE_HERO_BG = APPOINTMENTS_HERO_BG;
 
 /** Высота нижней панели раздела «Расписание». */
 export const SCHEDULE_TAB_BAR_HEIGHT = '5.75rem';

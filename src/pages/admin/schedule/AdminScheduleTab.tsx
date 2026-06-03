@@ -102,6 +102,10 @@ export function AdminScheduleTab({ draft }: Props) {
 
   const [pageTab, setPageTab] = useAdminSectionTab('tab', 'create', SCHEDULE_TABS);
 
+  useEffect(() => {
+    preloadTabIntroImages(SCHEDULE_TAB_INTRO_IMAGES);
+  }, []);
+
   const { toast, showToast, showErrorToast, clearToast } = useAdminToast();
   const [createError, setCreateError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

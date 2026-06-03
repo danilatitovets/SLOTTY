@@ -9,15 +9,9 @@ import {
 } from 'react-icons/hi2';
 import { OverviewKpiCarousel, OverviewKpiStatCard } from '../overview/OverviewKpiBlocks';
 import { useTabIntroImage } from '../useTabIntroImage';
-import { scheduleDesktopCard, scheduleTabHeroBg } from './adminScheduleTheme';
+import { scheduleDesktopCard, SCHEDULE_HERO_BG } from './adminScheduleTheme';
 import type { ScheduleTabMetrics } from './scheduleTabMetrics';
 import type { SchedulePageTab } from './scheduleTypes';
-
-const SCHEDULE_TAB_HERO_BG: Record<SchedulePageTab, string> = {
-  create: scheduleTabHeroBg('111.webp'),
-  calendar: scheduleTabHeroBg('222.webp'),
-  list: scheduleTabHeroBg('333.webp'),
-};
 
 type Props = {
   tab: SchedulePageTab;
@@ -40,21 +34,19 @@ function HeroShell({
 }
 
 function HeroBlock({
-  tab,
   badgeIcon,
   badge,
   value,
   subtitle,
   description,
 }: {
-  tab: SchedulePageTab;
   badgeIcon: ReactNode;
   badge: string;
   value: string;
   subtitle: string;
   description: string;
 }) {
-  const backgroundSrc = useTabIntroImage(SCHEDULE_TAB_HERO_BG[tab]);
+  const backgroundSrc = useTabIntroImage(SCHEDULE_HERO_BG);
 
   return (
     <section className="relative overflow-hidden p-5 text-white lg:p-8">
@@ -92,7 +84,6 @@ function CreateHero({ metrics }: { metrics: ScheduleTabMetrics['create'] }) {
     <HeroShell
       hero={
         <HeroBlock
-          tab="create"
           badgeIcon={<HiPlusCircle className="h-4 w-4" aria-hidden />}
           badge="Создать окна"
           value={String(m.templates)}
@@ -142,7 +133,6 @@ function CalendarHero({ metrics }: { metrics: ScheduleTabMetrics['calendar'] }) 
     <HeroShell
       hero={
         <HeroBlock
-          tab="calendar"
           badgeIcon={<HiCalendarDays className="h-4 w-4" aria-hidden />}
           badge="Календарь"
           value={String(m.free)}
@@ -192,7 +182,6 @@ function ListHero({ metrics }: { metrics: ScheduleTabMetrics['list'] }) {
     <HeroShell
       hero={
         <HeroBlock
-          tab="list"
           badgeIcon={<HiRectangleStack className="h-4 w-4" aria-hidden />}
           badge="Все окна"
           value={String(m.total)}
