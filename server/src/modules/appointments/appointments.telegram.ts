@@ -1,8 +1,9 @@
 import { notifyUser } from '../notifications/notifyUser.js';
 import { masterClientCancelledBooking } from '../notifications/templates/appointmentNotificationTemplates.js';
+import { masterNewBookingTelegramKeyboard } from '../notifications/telegramAppointmentKeyboard.js';
 import { notifyClientBookingCreated } from './appointments.clientNotifications.js';
 import { notifyMasterBookingCreated } from './appointments.masterNotifications.js';
-import { sendAppointmentCreatedEmails } from './appointmentNotifyEmail.js';
+import { masterClientCancelledEmail } from './appointmentNotifyEmail.js';
 import { fetchAppointmentNotifyContext } from './appointmentNotifyContext.js';
 import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 
@@ -40,11 +41,7 @@ function toContext(payload: AppointmentCreatedPayload): AppointmentNotifyContext
 export async function notifyAppointmentCreated(payload: AppointmentCreatedPayload): Promise<void> {
   try {
     const ctx = toContext(payload);
-    await Promise.all([
-      notifyClientBookingCreated(ctx),
-      notifyMasterBookingCreated(ctx),
-      sendAppointmentCreatedEmails(ctx),
-    ]);
+    await Promise.all([notifyClientBookingCreated(ctx), notifyMasterBookingCreated(ctx)]);
   } catch (e) {
     logNotifyError('notifyAppointmentCreated', e);
   }
@@ -65,6 +62,8 @@ export async function notifyMasterClientCancelledBooking(
       ...payload,
       relatedEntityType: 'appointment',
       relatedEntityId: appointmentId,
+      telegramReplyMarkup: masterNewBookingTelegramKeyboard() as unknown as Record<string, unknown>,
+      email: masterClientCancelledEmail(ctx),
     });
   } catch (e) {
     logNotifyError('notifyMasterClientCancelledBooking', e);

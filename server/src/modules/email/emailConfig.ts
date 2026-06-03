@@ -19,3 +19,16 @@ export function assertResendConfiguredForCampaign(): void {
 export function resolveResendFrom(): string {
   return env.RESEND_FROM?.trim() || 'SLOTTY <onboarding@resend.dev>';
 }
+
+/** Предупреждение при старте API в production без Resend. */
+export function logResendConfigStatus(): void {
+  if (isResendConfigured()) {
+    console.info('[SLOTTY] Resend: включён, from=', resolveResendFrom());
+    return;
+  }
+  if (env.NODE_ENV === 'production') {
+    console.warn(
+      '[SLOTTY] Resend: RESEND_API_KEY не задан — письма о записях не уйдут на email (только in-app / Telegram)',
+    );
+  }
+}

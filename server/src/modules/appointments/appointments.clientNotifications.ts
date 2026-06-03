@@ -7,6 +7,13 @@ import {
   clientBookingConfirmed,
   clientBookingRequestCreated,
 } from '../notifications/templates/appointmentNotificationTemplates.js';
+import {
+  clientBookingCancelledByMasterEmail,
+  clientBookingCancelledBySelfEmail,
+  clientBookingCompletedEmail,
+  clientBookingConfirmedEmail,
+  clientBookingCreatedEmail,
+} from './appointmentNotifyEmail.js';
 import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 import { fetchAppointmentNotifyContext } from './appointmentNotifyContext.js';
 
@@ -15,6 +22,8 @@ const related = (ctx: AppointmentNotifyContext) => ({
   relatedEntityId: ctx.appointmentId,
 });
 
+const clientTelegramMarkup = clientBookingTelegramKeyboard() as unknown as Record<string, unknown>;
+
 /** Клиент отправил заявку на запись (pending). */
 export async function notifyClientBookingCreated(ctx: AppointmentNotifyContext): Promise<void> {
   const payload = clientBookingRequestCreated(ctx);
@@ -22,7 +31,8 @@ export async function notifyClientBookingCreated(ctx: AppointmentNotifyContext):
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientBookingTelegramKeyboard() as unknown as Record<string, unknown>,
+    telegramReplyMarkup: clientTelegramMarkup,
+    email: clientBookingCreatedEmail(ctx),
   });
 }
 
@@ -33,6 +43,8 @@ export async function notifyClientBookingConfirmed(ctx: AppointmentNotifyContext
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: clientTelegramMarkup,
+    email: clientBookingConfirmedEmail(ctx),
   });
 }
 
@@ -43,6 +55,8 @@ export async function notifyClientBookingCancelledByMaster(ctx: AppointmentNotif
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: clientTelegramMarkup,
+    email: clientBookingCancelledByMasterEmail(ctx),
   });
 }
 
@@ -53,6 +67,8 @@ export async function notifyClientBookingCompleted(ctx: AppointmentNotifyContext
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: clientTelegramMarkup,
+    email: clientBookingCompletedEmail(ctx),
   });
 }
 
@@ -63,6 +79,8 @@ export async function notifyClientBookingCancelledBySelf(ctx: AppointmentNotifyC
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: clientTelegramMarkup,
+    email: clientBookingCancelledBySelfEmail(ctx),
   });
 }
 

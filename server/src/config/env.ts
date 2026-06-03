@@ -154,9 +154,13 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).optional(),
   ),
-  /** Отправитель, например `SLOTTY <noreply@slotty.of.by>`. */
+  /** Отправитель Resend; допускается alias EMAIL_FROM в Railway. */
   RESEND_FROM: z.preprocess(
-    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    (v) => {
+      const raw = v ?? envFirst('RESEND_FROM', 'EMAIL_FROM');
+      if (raw === '' || raw === undefined || raw === null) return undefined;
+      return String(raw).trim();
+    },
     z.string().min(3).optional(),
   ),
   /** Sentry DSN (backend). Без DSN — только warning при старте. */

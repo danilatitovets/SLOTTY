@@ -1,3 +1,5 @@
+import { useMemo, type MouseEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HiBellAlert } from 'react-icons/hi2';
 import type { MeNotificationRow } from '../../../features/profile/api/clientNotifications';
 import { formatNotificationListTime } from '../../../features/notifications/formatNotificationTime';
@@ -12,6 +14,7 @@ import {
   notifIconStripUnread,
   notifMetaAccent,
 } from './adminNotificationsTheme';
+import { resolveMasterNotificationAction } from './notificationAction';
 
 function notificationIconClass(type: string): string {
   switch (type) {
@@ -33,14 +36,24 @@ type Props = {
   item: MeNotificationRow;
   index?: number;
   onOpen: (item: MeNotificationRow) => void;
+  onMarkRead?: (id: string) => void;
 };
 
-export function AdminNotificationCard({ item, index = 0, onOpen }: Props) {
+export function AdminNotificationCard({ item, index = 0, onOpen, onMarkRead }: Props) {
+  const navigate = useNavigate();
+  const action = useMemo(() => resolveMasterNotificationAction(item), [item]);
   const isNew = !item.read_at;
   const typeIconClass = notificationIconClass(item.type);
   const iconWrap = typeIconClass
     ? `${notifIconFallback} h-10 w-10 ${typeIconClass}`
     : `${notifIconFallback} h-10 w-10`;
+
+  const openAction = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!action) return;
+    if (!item.read_at) onMarkRead?.(item.id);
+    navigate(action.to);
+  };
 
   return (
     <article
@@ -78,7 +91,17 @@ export function AdminNotificationCard({ item, index = 0, onOpen }: Props) {
             </div>
           </div>
           <p className="mt-1.5 line-clamp-2 text-[14px] leading-snug text-[#6B7280]">{item.body}</p>
-          <p className="mt-2 text-[12px] font-semibold text-[#9CA3AF]">Подробнее</p>
+          {action ? (
+            <button
+              type="button"
+              onClick={openAction}
+              className="mt-2.5 inline-flex text-[13px] font-bold text-[#F47C8C] transition hover:text-[#e86b7c]"
+            >
+              {action.label} →
+            </button>
+          ) : (
+            <p className="mt-2 text-[12px] font-semibold text-[#9CA3AF]">Подробнее</p>
+          )}
         </div>
       </div>
     </article>

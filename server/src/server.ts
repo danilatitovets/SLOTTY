@@ -4,6 +4,7 @@ import { initSentry } from './lib/sentry.js';
 import { getGoogleOAuthDiagnostics } from './modules/auth/googleOAuth.service.js';
 import { startAppointmentRemindersScheduler } from './modules/appointments/appointmentReminders.scheduler.js';
 import { initTelegramBotTransport } from './modules/telegram/telegram.service.js';
+import { logResendConfigStatus } from './modules/email/emailConfig.js';
 
 initSentry();
 const app = createApp();
@@ -28,6 +29,7 @@ app.listen(env.PORT, () => {
   } else if (googleOAuth.configured && googleOAuth.redirectUri) {
     console.log(`[auth] Google OAuth redirect → ${googleOAuth.redirectUri}`);
   }
+  logResendConfigStatus();
   void initTelegramBotTransport();
   startAppointmentRemindersScheduler();
   void import('./modules/auth/googleLoginPending.store.js').then(({ warnIfPendingStoreNotShared }) => {

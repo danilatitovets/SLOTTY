@@ -70,7 +70,12 @@ export function AdminNotificationsPage() {
     <ul className="flex flex-col gap-2.5 lg:gap-3">
       {filtered.map((item, index) => (
         <li key={item.id}>
-          <AdminNotificationCard item={item} index={index} onOpen={setSelected} />
+          <AdminNotificationCard
+            item={item}
+            index={index}
+            onOpen={setSelected}
+            onMarkRead={(id) => void markAsRead(id)}
+          />
         </li>
       ))}
     </ul>

@@ -30,7 +30,7 @@ export function clientBookingRequestCreated(ctx: AppointmentNotifyContext): Appo
   return {
     type: 'appointment_pending',
     title: 'Заявка отправлена',
-    body: 'Заявка на запись отправлена мастеру. Мы сообщим, когда мастер подтвердит время.',
+    body: 'Заявка на запись отправлена мастеру. Мы сообщим на email и в Telegram, когда мастер подтвердит время.',
     telegramHtml:
       `<b>Заявка на запись отправлена</b>\n` +
       `Услуга: ${escapeTelegramHtml(svc)}\n` +
@@ -75,7 +75,7 @@ export function clientBookingConfirmed(ctx: AppointmentNotifyContext): Appointme
   return {
     type: 'appointment_confirmed',
     title: 'Запись подтверждена',
-    body: `Запись подтверждена: ${plain}. Ждём вас!`,
+    body: `Запись подтверждена: ${plain}. Детали также отправлены на ваш email. Ждём вас!`,
     telegramHtml:
       `<b>Запись подтверждена</b>\n` +
       `Мастер ${escapeTelegramHtml(ctx.masterName)} подтвердил вашу запись.\n` +

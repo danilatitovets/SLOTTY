@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { HiInbox } from 'react-icons/hi2';
 import { ADMIN_BILLING_PATH, ADMIN_SCHEDULE_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
 import { planBadgeLabel } from '../../../features/billing/model/masterPlans';
@@ -69,8 +69,21 @@ import { AppointmentsLoadMore } from './AppointmentsLoadMore';
 import { useMasterAppointmentsPage } from './useMasterAppointmentsPage';
 import { useAdminSectionTab } from '../useAdminSectionTab';
 import { AdminCabinetCrossLink } from '../shared/AdminCabinetCrossLink';
+import {
+  fetchMasterAppointments,
+  type MasterAppointmentsTab,
+} from '../../../features/admin/api/masterCabinetApi';
+import { mapMasterAppointmentRowToDemo } from '../../../features/admin/lib/masterCabinetMapper';
 
 const APPOINTMENTS_TABS = ['requests', 'upcoming', 'history'] as const satisfies readonly AppointmentsTabId[];
+
+const APPOINTMENT_FOCUS_PARAM = 'focus';
+
+function appointmentsTabForStatus(status: string): AppointmentsTabId {
+  if (status === 'pending') return 'requests';
+  if (status === 'confirmed') return 'upcoming';
+  return 'history';
+}
 
 type Props = {
   appointments: DemoMasterAppointment[];
@@ -103,8 +116,74 @@ export function AdminAppointmentsTab({
   onChangeAppointments,
   onOpenDetail,
 }: Props) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusId = searchParams.get(APPOINTMENT_FOCUS_PARAM);
+  const focusHandledRef = useRef<string | null>(null);
   const [tab, setTab] = useAdminSectionTab('tab', 'requests', APPOINTMENTS_TABS);
   const remote = useMasterAppointmentsPage({ enabled: useRemoteList, tab });
+
+  const clearAppointmentFocus = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(APPOINTMENT_FOCUS_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    if (!focusId || focusHandledRef.current === focusId) return;
+
+    const openLocal = (row: DemoMasterAppointment) => {
+      focusHandledRef.current = focusId;
+      setTab(appointmentsTabForStatus(row.status));
+      onOpenDetail(row);
+      clearAppointmentFocus();
+    };
+
+    if (!useRemoteList) {
+      const local = appointments.find((a) => a.id === focusId);
+      if (local) openLocal(local);
+      else clearAppointmentFocus();
+      return;
+    }
+
+    let cancelled = false;
+    const apiTabs: MasterAppointmentsTab[] = ['pending', 'upcoming', 'history', 'all'];
+
+    void (async () => {
+      for (const apiTab of apiTabs) {
+        try {
+          const out = await fetchMasterAppointments({ tab: apiTab, limit: 100, offset: 0 });
+          const row = out.appointments.find((a) => a.id === focusId);
+          if (row && !cancelled) {
+            const mapped = mapMasterAppointmentRowToDemo(row);
+            focusHandledRef.current = focusId;
+            setTab(appointmentsTabForStatus(mapped.status));
+            onOpenDetail(mapped);
+            clearAppointmentFocus();
+            return;
+          }
+        } catch {
+          /* пробуем следующую вкладку */
+        }
+      }
+      if (!cancelled) clearAppointmentFocus();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    appointments,
+    clearAppointmentFocus,
+    focusId,
+    onOpenDetail,
+    setTab,
+    useRemoteList,
+  ]);
   const listAppointments = useRemoteList ? remote.items : appointments;
   const [actionConfig, setActionConfig] = useState<AppointmentActionConfig | null>(null);
   const [actionApiError, setActionApiError] = useState<string | null>(null);

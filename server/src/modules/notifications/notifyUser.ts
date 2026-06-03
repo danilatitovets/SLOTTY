@@ -1,7 +1,16 @@
+import { sendSlottyEmail } from '../auth/email/resendMail.js';
+import { isResendConfigured } from '../email/emailConfig.js';
+import { resolveAccountEmail } from '../profiles/profiles.service.js';
 import { insertUserNotification, type NotificationType } from './notificationsInsert.js';
 import { logNotificationDelivery } from './notificationDeliveriesInsert.js';
 import { sendNotificationToProfile } from '../telegram/telegramProfileNotifications.js';
 import type { SendTelegramMessageResult } from '../telegram/telegram.service.js';
+
+export type NotifyUserEmail = {
+  subject: string;
+  html: string;
+  text?: string;
+};
 
 export type NotifyUserParams = {
   userId: string;
@@ -13,6 +22,8 @@ export type NotifyUserParams = {
   /** HTML для Telegram; если не задан — Telegram не отправляется. */
   telegramHtml?: string;
   telegramReplyMarkup?: Record<string, unknown>;
+  /** Письмо через Resend (Google / email-вход). */
+  email?: NotifyUserEmail;
 };
 
 function buildTelegramDedupeKey(params: NotifyUserParams): string {
@@ -26,25 +37,52 @@ function logTelegramIssue(context: string, res: SendTelegramMessageResult): void
   }
 }
 
-/** In-app уведомление + опционально сообщение в Telegram. */
-export async function notifyUser(params: NotifyUserParams): Promise<void> {
-  const notificationId = await insertUserNotification({
-    userId: params.userId,
-    type: params.type,
-    title: params.title,
-    body: params.body,
-    relatedEntityType: params.relatedEntityType,
-    relatedEntityId: params.relatedEntityId,
-  });
+async function deliverEmail(params: NotifyUserParams): Promise<void> {
+  const mail = params.email;
+  if (!mail) return;
 
-  if (!params.telegramHtml?.trim()) return;
+  const to = await resolveAccountEmail(params.userId);
+  if (!to) {
+    console.warn(
+      `[notify] ${params.type} email skipped user=${params.userId}: нет email (войдите через Google или email)`,
+    );
+    return;
+  }
+
+  if (!isResendConfigured()) {
+    console.warn(`[notify] ${params.type} email skipped: RESEND_API_KEY не задан на сервере`);
+    return;
+  }
+
+  try {
+    await sendSlottyEmail({
+      to,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+    });
+    console.info(`[notify] ${params.type} email sent user=${params.userId}`);
+  } catch (e) {
+    console.warn(
+      `[notify] ${params.type} email failed user=${params.userId}:`,
+      e instanceof Error ? e.message : e,
+    );
+  }
+}
+
+async function deliverTelegram(
+  params: NotifyUserParams,
+  notificationId: string,
+): Promise<void> {
+  const html = params.telegramHtml?.trim();
+  if (!html) return;
 
   const dedupeKey = buildTelegramDedupeKey(params);
 
   try {
     const res = await sendNotificationToProfile(
       params.userId,
-      params.telegramHtml,
+      html,
       params.telegramReplyMarkup,
     );
     logTelegramIssue(`${params.type} user=${params.userId}`, res);
@@ -93,4 +131,18 @@ export async function notifyUser(params: NotifyUserParams): Promise<void> {
       console.warn('[notify] failed to log telegram delivery:', logErr);
     });
   }
+}
+
+/** In-app уведомление + опционально Telegram и email (Resend). */
+export async function notifyUser(params: NotifyUserParams): Promise<void> {
+  const notificationId = await insertUserNotification({
+    userId: params.userId,
+    type: params.type,
+    title: params.title,
+    body: params.body,
+    relatedEntityType: params.relatedEntityType,
+    relatedEntityId: params.relatedEntityId,
+  });
+
+  await Promise.all([deliverTelegram(params, notificationId), deliverEmail(params)]);
 }
