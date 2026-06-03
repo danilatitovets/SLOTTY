@@ -13,6 +13,7 @@ import {
 } from './appointments.storage.js';
 import { categorySupportsReferencePhoto } from './referencePhotoCategories.js';
 import { sanitizeMasterLocationForViewer } from '../../lib/sanitizeMasterLocation.js';
+import { resolveClientNotifyLabel } from './clientNotifyLabel.js';
 
 type SlotRow = {
   id: string;
@@ -191,15 +192,24 @@ export async function createAppointmentTx(input: {
       voucherNumber,
     ]);
 
-    const clientNameRes = await client.query<{ n: string }>(
-      `select coalesce(nullif(trim(full_name), ''), 'Клиент') as n from public.profiles where id = $1`,
+    const clientProfileRes = await client.query<{
+      full_name: string;
+      phone: string | null;
+      telegram_username: string | null;
+    }>(
+      `select coalesce(full_name, '') as full_name, phone, telegram_username
+         from public.profiles where id = $1`,
       [input.clientId],
     );
     const masterNameRes = await client.query<{ n: string }>(
       `select coalesce(nullif(trim(display_name), ''), 'Мастер') as n from public.master_profiles where master_id = $1`,
       [slot.master_id],
     );
-    const clientDisplayName = clientNameRes.rows[0]?.n ?? 'Клиент';
+    const clientRow = clientProfileRes.rows[0];
+    const clientDisplayName = resolveClientNotifyLabel(
+      clientRow ?? { full_name: '', phone: null, telegram_username: null },
+    );
+    const clientPhone = clientRow?.phone?.trim() || null;
     const masterDisplayName = masterNameRes.rows[0]?.n ?? 'Мастер';
 
     return {
@@ -212,6 +222,7 @@ export async function createAppointmentTx(input: {
       price: Number(service.price_amount),
       voucherNumber,
       clientDisplayName,
+      clientPhone,
       masterDisplayName,
     };
   });

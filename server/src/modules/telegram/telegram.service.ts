@@ -22,6 +22,7 @@ export function escapeTelegramHtml(text: string): string {
 export async function sendTelegramMessage(params: {
   telegramUserId: number | string;
   text: string;
+  replyMarkup?: Record<string, unknown>;
 }): Promise<SendTelegramMessageResult> {
   const token = getBotToken();
   if (!token) {
@@ -38,6 +39,7 @@ export async function sendTelegramMessage(params: {
         chat_id: chatId,
         text: params.text,
         parse_mode: 'HTML',
+        ...(params.replyMarkup ? { reply_markup: params.replyMarkup } : {}),
       }),
     });
 

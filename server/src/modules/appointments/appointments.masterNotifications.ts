@@ -1,5 +1,6 @@
 import { notifyUser } from '../notifications/notifyUser.js';
 import { masterBookingRequestCreated } from '../notifications/templates/appointmentNotificationTemplates.js';
+import { masterNewBookingTelegramKeyboard } from '../notifications/telegramAppointmentKeyboard.js';
 import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 
 const related = (ctx: AppointmentNotifyContext) => ({
@@ -14,5 +15,6 @@ export async function notifyMasterBookingCreated(ctx: AppointmentNotifyContext):
     userId: ctx.masterId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: masterNewBookingTelegramKeyboard() as unknown as Record<string, unknown>,
   });
 }

@@ -37,8 +37,16 @@ export function clientBookingRequestCreated(ctx: AppointmentNotifyContext): Appo
       `Дата: ${escapeTelegramHtml(date)}\n` +
       `Время: ${escapeTelegramHtml(time)}\n` +
       `Мастер: ${escapeTelegramHtml(master)}` +
-      voucherLine(ctx, true),
+      voucherLine(ctx, true) +
+      `\n\nМы напомним в Telegram, когда мастер подтвердит запись.`,
   };
+}
+
+function clientContactTelegramLine(ctx: AppointmentNotifyContext): string {
+  if (ctx.clientPhone) {
+    return `\nТелефон: ${escapeTelegramHtml(ctx.clientPhone)}`;
+  }
+  return '';
 }
 
 /** Мастеру: новая заявка. */
@@ -48,14 +56,16 @@ export function masterBookingRequestCreated(ctx: AppointmentNotifyContext): Appo
   return {
     type: 'appointment_new',
     title: 'Новая заявка на запись',
-    body: `Новая заявка на запись: ${ctx.serviceTitle}, ${plain}. Проверьте заявку в кабинете.`,
+    body: `Новая заявка: ${ctx.clientName}, ${ctx.serviceTitle}, ${plain}. Откройте раздел «Записи».`,
     telegramHtml:
       `<b>Новая заявка на запись</b>\n` +
-      `Клиент: ${escapeTelegramHtml(ctx.clientName)}\n` +
-      `Услуга: ${escapeTelegramHtml(ctx.serviceTitle)}\n` +
+      `Клиент: ${escapeTelegramHtml(ctx.clientName)}` +
+      clientContactTelegramLine(ctx) +
+      `\nУслуга: ${escapeTelegramHtml(ctx.serviceTitle)}\n` +
       `Дата: ${escapeTelegramHtml(date)}\n` +
       `Время: ${escapeTelegramHtml(time)}` +
-      voucherLine(ctx, true),
+      voucherLine(ctx, true) +
+      `\n\nОткройте кабинет и подтвердите время.`,
   };
 }
 

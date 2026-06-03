@@ -2,6 +2,7 @@ import { notifyUser } from '../notifications/notifyUser.js';
 import { masterClientCancelledBooking } from '../notifications/templates/appointmentNotificationTemplates.js';
 import { notifyClientBookingCreated } from './appointments.clientNotifications.js';
 import { notifyMasterBookingCreated } from './appointments.masterNotifications.js';
+import { sendAppointmentCreatedEmails } from './appointmentNotifyEmail.js';
 import { fetchAppointmentNotifyContext } from './appointmentNotifyContext.js';
 import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 
@@ -13,6 +14,7 @@ export type AppointmentCreatedPayload = {
   startsAt: string;
   voucherNumber: string;
   clientDisplayName: string;
+  clientPhone?: string | null;
   masterDisplayName: string;
 };
 
@@ -29,6 +31,7 @@ function toContext(payload: AppointmentCreatedPayload): AppointmentNotifyContext
     startsAt: payload.startsAt,
     voucherNumber: payload.voucherNumber,
     clientName: payload.clientDisplayName,
+    clientPhone: payload.clientPhone?.trim() || null,
     masterName: payload.masterDisplayName,
   };
 }
@@ -37,7 +40,11 @@ function toContext(payload: AppointmentCreatedPayload): AppointmentNotifyContext
 export async function notifyAppointmentCreated(payload: AppointmentCreatedPayload): Promise<void> {
   try {
     const ctx = toContext(payload);
-    await Promise.all([notifyClientBookingCreated(ctx), notifyMasterBookingCreated(ctx)]);
+    await Promise.all([
+      notifyClientBookingCreated(ctx),
+      notifyMasterBookingCreated(ctx),
+      sendAppointmentCreatedEmails(ctx),
+    ]);
   } catch (e) {
     logNotifyError('notifyAppointmentCreated', e);
   }

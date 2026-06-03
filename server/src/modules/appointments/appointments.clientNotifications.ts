@@ -1,4 +1,5 @@
 import { notifyUser } from '../notifications/notifyUser.js';
+import { clientBookingTelegramKeyboard } from '../notifications/telegramAppointmentKeyboard.js';
 import {
   clientBookingCancelledByMaster,
   clientBookingCancelledBySelf,
@@ -21,6 +22,7 @@ export async function notifyClientBookingCreated(ctx: AppointmentNotifyContext):
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
+    telegramReplyMarkup: clientBookingTelegramKeyboard() as unknown as Record<string, unknown>,
   });
 }
 

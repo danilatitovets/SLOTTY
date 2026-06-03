@@ -48,6 +48,7 @@ appointmentCreateRouter.post('/', bookingCreateLimiter, requireClientBookingCrea
       startsAt: out.startsAt,
       voucherNumber: out.voucherNumber,
       clientDisplayName: out.clientDisplayName,
+      clientPhone: out.clientPhone,
       masterDisplayName: out.masterDisplayName,
     });
     res.status(201).json(out);

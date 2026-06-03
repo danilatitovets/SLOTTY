@@ -12,6 +12,7 @@ export type NotifyUserParams = {
   relatedEntityId?: string | null;
   /** HTML для Telegram; если не задан — Telegram не отправляется. */
   telegramHtml?: string;
+  telegramReplyMarkup?: Record<string, unknown>;
 };
 
 function buildTelegramDedupeKey(params: NotifyUserParams): string {
@@ -41,7 +42,11 @@ export async function notifyUser(params: NotifyUserParams): Promise<void> {
   const dedupeKey = buildTelegramDedupeKey(params);
 
   try {
-    const res = await sendNotificationToProfile(params.userId, params.telegramHtml);
+    const res = await sendNotificationToProfile(
+      params.userId,
+      params.telegramHtml,
+      params.telegramReplyMarkup,
+    );
     logTelegramIssue(`${params.type} user=${params.userId}`, res);
 
     if (res.status === 'ok') {
