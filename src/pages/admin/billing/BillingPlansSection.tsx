@@ -9,10 +9,13 @@ import {
   landingPlanCtaClass,
   landingProCtaClass,
 } from '../../../features/billing/ui/landingTariffCards';
-import { PaymentPartnersStrip } from '../../../shared/ui/PaymentLogos';
+import { PaymentLogoImage } from '../../../shared/ui/PaymentLogos/PaymentLogoImage';
+import { PAYMENT_METHODS } from '../../../shared/ui/PaymentLogos/paymentLogosConfig';
 import { BillingPeriodSwitch } from './BillingPeriodSwitch';
 import { BillingUsagePanel } from './BillingUsagePanel';
 import { billingDesktopCard } from './adminBillingTheme';
+
+const BEPAID_METHOD = PAYMENT_METHODS.find((m) => m.id === 'bepaid')!;
 
 export type BillingPlansSectionProps = {
   plan: PlanId;
@@ -62,6 +65,7 @@ export function BillingPlansSection({
   onSelectPro,
 }: BillingPlansSectionProps) {
   const isFree = plan === 'free';
+  const showBePaidOnCta = showPaymentLogos && useLiveBilling && !proActive;
 
   return (
     <section className={`${billingDesktopCard} w-full min-w-0 p-4 sm:p-5 lg:p-6`}>
@@ -71,16 +75,23 @@ export function BillingPlansSection({
             Выберите тариф
           </h2>
           <p className="mt-1 max-w-xl text-[14px] font-medium leading-snug text-[#6B7280]">
-            Сначала выберите период и тариф Pro, затем сравните с Free.
+            Сравните Free и Pro — период оплаты в карточке Pro, использование — в Free.
           </p>
         </div>
       </div>
 
       {liveBillingNote ? <div className="mt-4">{liveBillingNote}</div> : null}
 
-      <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 lg:items-start">
+      {proPaymentPendingBanner || demoNote ? (
+        <div className="mt-4 space-y-3">
+          {proPaymentPendingBanner}
+          {demoNote}
+        </div>
+      ) : null}
+
+      <div className="mt-5 grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch lg:gap-5">
         <LandingPricingCard
-          className="order-2 lg:order-1"
+          className="order-2 h-full lg:order-1"
           name="Free"
           priceValue={freePriceValue}
           priceUnit={freePriceUnit}
@@ -88,67 +99,74 @@ export function BillingPlansSection({
           badge={freeActive ? 'Активен' : undefined}
           highlighted={freeActive}
           footer={
-            <button
-              type="button"
-              disabled={freeActive}
-              onClick={onSelectFree}
-              className={landingPlanCtaClass(freeActive, freeActive)}
-            >
-              {freeActive ? 'Текущий тариф' : 'Перейти на Free'}
-            </button>
+            <div className="flex flex-col gap-5">
+              <button
+                type="button"
+                disabled={freeActive}
+                onClick={onSelectFree}
+                className={landingPlanCtaClass(freeActive, freeActive)}
+              >
+                {freeActive ? 'Текущий тариф' : 'Перейти на Free'}
+              </button>
+              {isFree && !proActive ? (
+                <div className="border-t border-[#F3F4F6] pt-5">
+                  <BillingUsagePanel
+                    plan="free"
+                    servicesLen={servicesLen}
+                    maxSvc={maxSvc}
+                    monthlyCount={monthlyCount}
+                    maxAppt={maxAppt}
+                    scheduleHorizonDays={scheduleHorizonDays}
+                    variant="compact"
+                  />
+                </div>
+              ) : null}
+            </div>
           }
         />
 
-        <div className="order-1 flex min-w-0 flex-col gap-3 lg:order-2">
-          {proPaymentPendingBanner || demoNote ? (
-            <div className="space-y-3">
-              {proPaymentPendingBanner}
-              {demoNote}
-            </div>
-          ) : null}
-
-          {!proActive ? (
-            <div className="w-full min-w-0 rounded-[20px] bg-white p-4 ring-1 ring-[#EEEEEE] sm:p-5">
-              <BillingPeriodSwitch period={billingPeriod} onPeriod={onPeriodChange} />
-            </div>
-          ) : null}
-
+        <div className="order-1 flex h-full min-w-0 flex-col lg:order-2">
           <LandingProTariffCard
+            className="h-full"
             priceValue={proPriceValue}
             priceUnit={proPriceUnit}
             features={LANDING_MASTER_PRO_FEATURES}
             description={LANDING_PRO_DESCRIPTION}
             topBadge={proActive ? 'Активен' : 'Популярный'}
             denseCta
+            slotAfterTitle={
+              !proActive ? (
+                <BillingPeriodSwitch
+                  period={billingPeriod}
+                  onPeriod={onPeriodChange}
+                  variant="proCard"
+                />
+              ) : undefined
+            }
             footer={
               <button
                 type="button"
                 disabled={proActive}
                 onClick={onSelectPro}
-                className={landingProCtaClass(proActive)}
+                className={`${landingProCtaClass(proActive)} gap-2.5`}
               >
-                {proActive ? 'Текущий тариф' : 'Оплатить картой'}
+                {proActive ? (
+                  'Текущий тариф'
+                ) : (
+                  <>
+                    <span>Оплатить картой</span>
+                    {showBePaidOnCta ? (
+                      <PaymentLogoImage
+                        method={BEPAID_METHOD}
+                        logoHeightClass="h-5 w-auto max-w-[5.5rem] object-contain sm:h-6 sm:max-w-[6rem]"
+                        className="shrink-0"
+                      />
+                    ) : null}
+                  </>
+                )}
               </button>
             }
           />
-
-          {showPaymentLogos && useLiveBilling && !proActive ? (
-            <PaymentPartnersStrip />
-          ) : null}
-
-          {isFree && !proActive ? (
-            <div className="w-full min-w-0 rounded-[20px] bg-white p-4 ring-1 ring-[#EEEEEE] sm:p-5">
-              <BillingUsagePanel
-                plan="free"
-                servicesLen={servicesLen}
-                maxSvc={maxSvc}
-                monthlyCount={monthlyCount}
-                maxAppt={maxAppt}
-                scheduleHorizonDays={scheduleHorizonDays}
-                variant="compact"
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     </section>

@@ -142,6 +142,9 @@ export type MasterProRotatingCardProps = {
   ctaLabel?: string;
   /** Кнопка сразу под списком, без растягивания (кабинет «Тарифы»). */
   denseCta?: boolean;
+  /** Слот под заголовком (период оплаты в кабинете). */
+  slotAfterTitle?: ReactNode;
+  className?: string;
 };
 
 export function MasterProRotatingCard({
@@ -154,6 +157,8 @@ export function MasterProRotatingCard({
   ctaHref,
   ctaLabel,
   denseCta = false,
+  slotAfterTitle,
+  className = '',
 }: MasterProRotatingCardProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [motionOk, setMotionOk] = useState(true);
@@ -191,15 +196,15 @@ export function MasterProRotatingCard({
 
   return (
     <div
-      className="rounded-[22px] p-[2px] transition-[background-color,box-shadow] duration-700 ease-in-out sm:rounded-[22px]"
+      className={`rounded-[22px] p-[2px] transition-[background-color,box-shadow] duration-700 ease-in-out sm:rounded-[22px] ${className}`}
       style={{
         backgroundColor: theme.accent,
         boxShadow: `0 0 32px ${accentGlow(theme.accent, 0.55)}, ${cardShadow}`,
       }}
     >
       <article
-        className={`relative flex flex-col overflow-hidden rounded-[20px] px-5 pb-6 pt-5 sm:rounded-[20px] sm:p-7 ${
-          denseCta ? 'min-h-0' : 'min-h-[20rem]'
+        className={`relative flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] px-5 pb-6 pt-5 sm:rounded-[20px] sm:p-7 ${
+          denseCta ? 'min-h-[28rem] lg:min-h-0' : 'min-h-[20rem]'
         }`}
       >
       {MASTER_PRO_CATEGORY_THEMES.map((item, index) => (
@@ -224,7 +229,7 @@ export function MasterProRotatingCard({
         </span>
       ) : null}
 
-      <div className={`relative z-10 flex flex-col ${denseCta ? '' : 'flex-1'}`}>
+      <div className={`relative z-10 flex flex-col ${denseCta ? 'flex-1' : 'flex-1'}`}>
         <p
           className="text-[18px] font-semibold tracking-tight transition-colors duration-700"
           style={{ color: colors.primary }}
@@ -238,6 +243,8 @@ export function MasterProRotatingCard({
             {theme.label}
           </span>
         </p>
+
+        {slotAfterTitle ? <div className="mt-4">{slotAfterTitle}</div> : null}
 
         <div className="mt-4 flex items-baseline gap-1">
           <span

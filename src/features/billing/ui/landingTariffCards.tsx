@@ -118,6 +118,8 @@ export type LandingProTariffCardProps = {
   topBadge?: string;
   footer: ReactNode;
   denseCta?: boolean;
+  slotAfterTitle?: ReactNode;
+  className?: string;
 };
 
 /** Pro — тот же `MasterProRotatingCard`, что на лендинге. */
@@ -129,6 +131,8 @@ export function LandingProTariffCard({
   topBadge = 'Популярный',
   footer,
   denseCta = false,
+  slotAfterTitle,
+  className = '',
 }: LandingProTariffCardProps) {
   return (
     <MasterProRotatingCard
@@ -139,6 +143,8 @@ export function LandingProTariffCard({
       topBadge={topBadge}
       cta={footer}
       denseCta={denseCta}
+      slotAfterTitle={slotAfterTitle}
+      className={className}
     />
   );
 }
