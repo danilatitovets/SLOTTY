@@ -23,6 +23,7 @@ import {
   adminDesktopNavItemClass,
   adminSidebarFooterCard,
   adminSidebarFooterCardAccent,
+  ADMIN_SIDEBAR_TARIFF_BG,
 } from './adminCabinetLayout';
 
 function SidebarUnreadBadge({ count }: { count: number }) {
@@ -160,14 +161,20 @@ export function AdminDesktopSidebar() {
 
       <div className="space-y-2 border-t border-[#EEEEEE] p-3">
         <Link to={ADMIN_BILLING_NAV.to} className={`${adminSidebarFooterCardAccent} mb-0`}>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white text-[#ff5f7a]">
+          <div
+            className="pointer-events-none absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${ADMIN_SIDEBAR_TARIFF_BG})` }}
+            aria-hidden
+          />
+          <div className="pointer-events-none absolute inset-0 bg-black/45" aria-hidden />
+          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/95 text-[#ff5f7a] shadow-sm">
             <HiSparkles className="h-5 w-5" aria-hidden />
           </span>
-          <div className="min-w-0 flex-1 text-left">
-            <p className="text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
+          <div className="relative z-10 min-w-0 flex-1 text-left">
+            <p className="text-[14px] font-semibold tracking-[-0.02em] text-white">
               Тариф {planBadgeLabel(planId)}
             </p>
-            <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">
+            <p className="mt-0.5 text-[12px] leading-snug text-white/80">
               Управление подпиской и лимитами
             </p>
           </div>

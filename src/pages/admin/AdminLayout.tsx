@@ -49,7 +49,6 @@ import { isPlatformAdmin } from '../../features/auth/lib/isPlatformAdmin';
 import { AdminContentLoadingOverlay } from './shared/AdminContentLoadingOverlay';
 import { LOADING_VIDEO_SRC } from '../../shared/ui/loadingVideoSrc';
 import { AdminCabinetStatusBanner } from './AdminCabinetStatusBanner';
-import { AdminCabinetSectionIntro } from './shared/AdminCabinetSectionIntro';
 
 function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean }) {
   const label = count > 9 ? '9+' : String(count);
@@ -282,12 +281,6 @@ function AdminLayoutInner() {
           <AdminDesktopTopBar />
 
           {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
-
-          {!isProfileHome && !isProfileCompletion ? (
-            <div className="px-4 pt-3 lg:hidden">
-              <AdminCabinetSectionIntro pathname={pathname} variant="mobile" />
-            </div>
-          ) : null}
 
           {accountAccess.showBlockedScreen || accountAccess.showDeletedScreen ? (
             <div className={`mx-auto w-full min-w-0 flex-1 ${ADMIN_CABINET_SHELL_MAX} px-4 py-6`}>

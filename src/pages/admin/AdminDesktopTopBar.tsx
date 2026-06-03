@@ -5,8 +5,6 @@ import { useAdminNotifications } from './notifications/AdminNotificationsContext
 import { NotificationBellBadge, notificationBellLinkClass } from './notifications/notificationBellUi';
 import { ADMIN_PAGE_TITLES, IconNavNotifications, resolveAdminSectionMeta } from './adminCabinetNav';
 import { ProfileCompletionHeaderCard } from './profile/ProfileCompletionHeaderCard';
-import { AdminCabinetSectionIntro } from './shared/AdminCabinetSectionIntro';
-
 export function AdminDesktopTopBar() {
   const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -41,7 +39,6 @@ export function AdminDesktopTopBar() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-[22px] font-bold tracking-[-0.04em] text-[#111827]">{title}</h1>
-          <AdminCabinetSectionIntro pathname={pathname} variant="desktop" />
         </div>
 
         <div className="flex shrink-0 items-center gap-4">

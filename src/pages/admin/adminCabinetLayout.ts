@@ -33,7 +33,10 @@ export const adminSidebarFooterCard =
   'flex w-full items-center gap-3 rounded-[14px] bg-[#F6F7FB] p-3.5 no-underline transition hover:bg-[#F1EFEF] active:scale-[0.99]';
 
 export const adminSidebarFooterCardAccent =
-  'flex w-full items-center gap-3 rounded-[14px] bg-[#FFF1F4] p-3.5 no-underline transition hover:bg-[#FFE8ED] active:scale-[0.99]';
+  'relative flex w-full items-center gap-3 overflow-hidden rounded-[14px] p-3.5 no-underline transition active:scale-[0.99] hover:opacity-95';
+
+/** Фон карточки тарифа в сайдбаре (`public/photos/fon.png`). */
+export const ADMIN_SIDEBAR_TARIFF_BG = '/photos/fon.png';
 
 /** Десктоп: сегменты в сером треке (как фильтры в расписании). */
 export const ADMIN_SEGMENT_NAV_DESKTOP =
