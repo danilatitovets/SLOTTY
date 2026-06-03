@@ -1,11 +1,11 @@
 # Payment brand assets
 
-| File | Status | Source / note |
-|------|--------|----------------|
-| `visa.svg` | Asset | Visa wordmark geometry, official blue `#1434CB` |
-| `mastercard.svg` | Asset | Mastercard circles mark, official palette |
-| `bepaid.svg` | **TODO** | Replace with official file from [bepaid.by](https://bepaid.by) brand kit |
-| `erip.svg` | **TODO** | Replace with official ЕРИП / «Расчёт» logo from НКФО or provider |
-| `belkart.svg` | **TODO** | Replace with official БЕЛКАРТ logo from БПК or bank materials |
+| File | Status | Source |
+|------|--------|--------|
+| `bepaid.png` | Official | `public/photos/pay/BePaid_idGp8jSDbK_0.png` |
+| `visa.png` | Official | `public/photos/pay/Visa-Logo-PNG-Pic.png` |
+| `mastercard.svg` | Official | `public/photos/pay/ma_symbol.svg` (Mastercard brand center) |
+| `belkart.png` | Official | `public/photos/pay/belcart.png` |
+| `erip.svg` | Placeholder | Replace with official ЕРИП logo when available |
 
 Do not recolor or stretch logos in UI — use `object-contain` only.

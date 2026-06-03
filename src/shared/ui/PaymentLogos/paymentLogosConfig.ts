@@ -15,8 +15,7 @@ export const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: 'bepaid',
     label: 'bePaid',
     caption: 'Платёжный провайдер',
-    src: '/images/payment/bepaid.svg',
-    isPlaceholderAsset: true,
+    src: '/images/payment/bepaid.png',
   },
   {
     id: 'erip',
@@ -29,7 +28,7 @@ export const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: 'visa',
     label: 'Visa',
     caption: 'Банковские карты',
-    src: '/images/payment/visa.svg',
+    src: '/images/payment/visa.png',
   },
   {
     id: 'mastercard',
@@ -41,8 +40,7 @@ export const PAYMENT_METHODS: PaymentMethodConfig[] = [
     id: 'belkart',
     label: 'Белкарт',
     caption: 'Карты Беларуси',
-    src: '/images/payment/belkart.svg',
-    isPlaceholderAsset: true,
+    src: '/images/payment/belkart.png',
   },
 ];
 
