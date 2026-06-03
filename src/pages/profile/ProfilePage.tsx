@@ -492,6 +492,7 @@ export function ProfilePage() {
 
   const { hasUnread: hasNewNotifications } = useMyNotifications(isAuthenticated && backendConfigured, {
     pollIntervalMs: 60_000,
+    audience: 'client',
   });
 
   const sheetBlocksScroll = editProfileOpen;

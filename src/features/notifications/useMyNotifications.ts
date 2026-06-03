@@ -3,15 +3,19 @@ import {
   fetchMyNotifications,
   markNotificationReadApi,
   type MeNotificationRow,
+  type NotificationAudience,
 } from '../profile/api/clientNotifications';
 
 type Options = {
   /** Периодическое обновление списка (бейдж в шапке кабинета). */
   pollIntervalMs?: number;
+  /** Лента мастера или клиента (один аккаунт может быть и тем и другим). */
+  audience?: NotificationAudience;
 };
 
 export function useMyNotifications(enabled = true, options?: Options) {
   const pollIntervalMs = options?.pollIntervalMs ?? 0;
+  const audience = options?.audience;
   const [notifications, setNotifications] = useState<MeNotificationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +24,7 @@ export function useMyNotifications(enabled = true, options?: Options) {
     if (!opts?.quiet) setLoading(true);
     setError(null);
     try {
-      setNotifications(await fetchMyNotifications());
+      setNotifications(await fetchMyNotifications(audience));
     } catch (e) {
       if (!opts?.quiet) {
         setNotifications([]);
@@ -29,7 +33,7 @@ export function useMyNotifications(enabled = true, options?: Options) {
     } finally {
       if (!opts?.quiet) setLoading(false);
     }
-  }, []);
+  }, [audience]);
 
   useEffect(() => {
     if (!enabled) return;

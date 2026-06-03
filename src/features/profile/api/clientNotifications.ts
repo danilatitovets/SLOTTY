@@ -12,8 +12,13 @@ export type MeNotificationRow = {
   created_at: string;
 };
 
-export async function fetchMyNotifications(): Promise<MeNotificationRow[]> {
-  const res = await apiFetch('/api/me/notifications');
+export type NotificationAudience = 'master' | 'client';
+
+export async function fetchMyNotifications(
+  audience?: NotificationAudience,
+): Promise<MeNotificationRow[]> {
+  const qs = audience ? `?audience=${encodeURIComponent(audience)}` : '';
+  const res = await apiFetch(`/api/me/notifications${qs}`);
   if (!res.ok) {
     throw new Error(await readSlottyApiErrorMessage(res));
   }

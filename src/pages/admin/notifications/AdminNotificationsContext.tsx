@@ -8,7 +8,7 @@ const AdminNotificationsContext = createContext<NotificationsState | null>(null)
 
 export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
   const { useCabinetApi } = useAdminMasterCabinet();
-  const state = useMyNotifications(useCabinetApi, { pollIntervalMs: 45_000 });
+  const state = useMyNotifications(useCabinetApi, { pollIntervalMs: 45_000, audience: 'master' });
   return (
     <AdminNotificationsContext.Provider value={state}>{children}</AdminNotificationsContext.Provider>
   );

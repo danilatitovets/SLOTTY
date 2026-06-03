@@ -99,7 +99,9 @@ function NotificationsListBody({
 export function ClientNotificationsPage() {
   const { isAuthenticated, backendConfigured } = useAuth();
   const enabled = isAuthenticated && backendConfigured;
-  const { notifications, loading, error, reload, markAsRead } = useMyNotifications(enabled);
+  const { notifications, loading, error, reload, markAsRead } = useMyNotifications(enabled, {
+    audience: 'client',
+  });
   const [selected, setSelected] = useState<ReturnType<typeof useMyNotifications>['notifications'][number] | null>(
     null,
   );

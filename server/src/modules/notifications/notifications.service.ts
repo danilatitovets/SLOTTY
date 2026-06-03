@@ -1,5 +1,9 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
+import {
+  filterNotificationsForAudience,
+  type NotificationAudience,
+} from './notificationAudience.js';
 
 function toIso(v: Date | string | null | undefined): string | null {
   if (v == null) return null;
@@ -18,7 +22,10 @@ export type NotificationRow = {
   created_at: string;
 };
 
-export async function listNotifications(userId: string): Promise<NotificationRow[]> {
+export async function listNotifications(
+  userId: string,
+  audience?: NotificationAudience,
+): Promise<NotificationRow[]> {
   const r = await query<{
     id: string;
     type: string;
@@ -36,7 +43,7 @@ export async function listNotifications(userId: string): Promise<NotificationRow
       limit 200`,
     [userId],
   );
-  return r.rows.map((row) => ({
+  const mapped = r.rows.map((row) => ({
     id: row.id,
     type: row.type,
     title: row.title,
@@ -46,6 +53,9 @@ export async function listNotifications(userId: string): Promise<NotificationRow
     read_at: toIso(row.read_at),
     created_at: toIso(row.created_at) ?? new Date().toISOString(),
   }));
+
+  if (!audience) return mapped;
+  return filterNotificationsForAudience(mapped, audience);
 }
 
 export async function markNotificationRead(userId: string, notificationId: string) {

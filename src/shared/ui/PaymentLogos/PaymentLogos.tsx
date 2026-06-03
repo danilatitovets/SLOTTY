@@ -26,6 +26,14 @@ function resolveMethods(ids?: PaymentMethodId[]) {
   return PAYMENT_METHODS.filter((m) => set.has(m.id));
 }
 
+function footerLogoHeightClass(id: PaymentMethodId): string {
+  if (id === 'visa') return 'h-9 w-auto max-w-[6.25rem] sm:h-11 sm:max-w-[7.5rem]';
+  if (id === 'bepaid') return 'h-7 w-auto max-w-[5.75rem] sm:h-8 sm:max-w-[6.5rem]';
+  if (id === 'mastercard') return 'h-8 w-auto max-w-[3.25rem] sm:h-9';
+  if (id === 'belkart') return 'h-8 w-auto max-w-[7rem] sm:h-9 sm:max-w-[8rem]';
+  return 'h-7 w-auto max-w-[5rem] sm:h-8';
+}
+
 export const PaymentLogos: FC<Props> = ({
   variant = 'cards',
   showDisclaimer = true,
@@ -45,18 +53,14 @@ export const PaymentLogos: FC<Props> = ({
         {title ? (
           <p className="mb-2 text-[12px] font-semibold tracking-[0.06em] text-[#171717]/55">{title}</p>
         ) : null}
-        <div className="-mx-1 flex gap-2.5 overflow-x-auto pb-1 scrollbar-thin sm:gap-3">
+        <div className="-mx-1 flex flex-wrap items-center gap-4 overflow-x-auto pb-1 scrollbar-thin sm:gap-5">
           {methods.map((method) => (
-            <div
+            <PaymentLogoImage
               key={method.id}
-              className="flex h-12 min-w-[5.75rem] shrink-0 items-center justify-center rounded-xl bg-white/20 px-3 ring-1 ring-inset ring-black/8 transition hover:bg-white/28 sm:h-[3.25rem] sm:min-w-[6.25rem] sm:px-3.5"
-              title={method.caption}
-            >
-              <PaymentLogoImage
-                method={method}
-                logoHeightClass="h-7 w-auto max-w-[5.75rem] sm:h-8 sm:max-w-[6.5rem]"
-              />
-            </div>
+              method={method}
+              logoHeightClass={footerLogoHeightClass(method.id)}
+              className="shrink-0"
+            />
           ))}
         </div>
         {showDisclaimer ? (

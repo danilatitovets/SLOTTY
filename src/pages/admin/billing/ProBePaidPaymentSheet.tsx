@@ -10,13 +10,9 @@ import {
 import { createBePaidPayment } from '../../../features/payments/api/bepaidApi';
 import { LEGAL_PAYMENT_PATH, LEGAL_REFUND_PATH, PAYMENT_SUCCESS_PATH } from '../../../app/paths';
 import { readPublicAppOrigin } from '../../../shared/lib/masterBookingLink';
-import { PaymentLogos } from '../../../shared/ui/PaymentLogos';
-import { PaymentLogoImage } from '../../../shared/ui/PaymentLogos/PaymentLogoImage';
-import { PAYMENT_METHODS } from '../../../shared/ui/PaymentLogos/paymentLogosConfig';
+import { PaymentPartnersStrip } from '../../../shared/ui/PaymentLogos';
 import { billingPinkBtn } from './adminBillingTheme';
 import { catalogSheetSecondaryBtn } from '../shared/adminCatalogSheetTheme';
-
-const BEPAID_METHOD = PAYMENT_METHODS.find((m) => m.id === 'bepaid')!;
 
 type Props = {
   billingPeriod: BillingPeriod;
@@ -145,20 +141,7 @@ export function ProBePaidPaymentSheet({
       </div>
 
       <section className="overflow-hidden rounded-[22px] bg-gradient-to-b from-[#FFF8F9] to-white p-5 ring-1 ring-[#FDE8ED]">
-        <div className="flex flex-col items-center">
-          <div className="flex h-14 items-center justify-center rounded-[16px] bg-white px-5 shadow-[0_8px_24px_rgba(244,124,140,0.12)] ring-1 ring-[#FDE8ED]">
-            <PaymentLogoImage method={BEPAID_METHOD} logoHeightClass="h-8 w-auto max-w-[7rem]" />
-          </div>
-          <p className="mt-3 text-[12px] font-medium text-[#6B7280]">Платёжный провайдер · BYN · 3-D Secure</p>
-        </div>
-
-        <PaymentLogos
-          variant="compact"
-          showDisclaimer={false}
-          title="Принимаем"
-          methods={['visa', 'mastercard', 'belkart']}
-          className="mt-5"
-        />
+        <PaymentPartnersStrip className="py-1" />
 
         <ul className="mt-5 space-y-2.5 text-left text-[14px] leading-snug text-[#374151]">
           <li className="flex gap-2.5">

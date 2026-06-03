@@ -7,10 +7,15 @@ import { listNotifications, markNotificationRead } from './notifications.service
 export const notificationsRouter = Router();
 notificationsRouter.use(authMiddleware);
 
+const listQuery = z.object({
+  audience: z.enum(['master', 'client']).optional(),
+});
+
 notificationsRouter.get(
   '/',
   asyncHandler(async (req, res) => {
-    const rows = await listNotifications(req.user!.id);
+    const { audience } = listQuery.parse(req.query);
+    const rows = await listNotifications(req.user!.id, audience);
     res.json({ notifications: rows });
   }),
 );
