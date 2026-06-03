@@ -11,6 +11,7 @@ import {
   type ProManualPaymentRequestDto,
 } from '../../../features/billing/api/proPaymentRequestApi';
 import { billingSoftNote } from './adminBillingTheme';
+import { ProBePaidPaymentBlock } from './ProBePaidPaymentBlock';
 import {
   catalogSheetField,
   catalogSheetGhostBtn,
@@ -342,7 +343,7 @@ export function ProManualPaymentSheet({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-[18px] font-bold text-[#111827]">Оплата Pro по реквизитам</h3>
+      <h3 className="text-[18px] font-bold text-[#111827]">Оплата Pro</h3>
 
       {loading ? <p className="text-[14px] text-[#6B7280]">Загрузка…</p> : null}
       {loadError ? (
@@ -381,10 +382,19 @@ export function ProManualPaymentSheet({
                 </p>
               </div>
 
+              <ProBePaidPaymentBlock
+                billingPeriod={billingPeriod}
+                disabled={Boolean(pending) || submitting}
+              />
+
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                или по реквизитам
+              </p>
+
               <RequisitesBlock config={config} />
 
               <p className={billingSoftNote}>
-                После оплаты отправьте заявку. Мы проверим поступление и активируем Pro вручную.
+                После оплаты по реквизитам отправьте заявку. Мы проверим поступление и активируем Pro вручную.
               </p>
             </>
           ) : null}

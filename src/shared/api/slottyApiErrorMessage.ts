@@ -75,6 +75,12 @@ const PRO_MESSAGES: Record<string, string> = {
     'Срок Pro истёк. Продлите тариф в разделе «Тарифы», чтобы снова пользоваться Pro-функциями.',
 };
 
+const PAYMENT_MESSAGES: Record<string, string> = {
+  BEPAID_DISABLED: 'Онлайн-оплата временно недоступна',
+  BEPAID_CHECKOUT_FAILED: 'Не удалось открыть страницу оплаты. Попробуйте позже.',
+  PRO_ALREADY_ACTIVE: 'Тариф Pro уже активен',
+};
+
 const LIMIT_MESSAGES: Record<string, string> = {
   LIMIT_SERVICES_REACHED:
     'Достигнут лимит услуг по тарифу. Оформите Pro или деактивируйте лишние услуги.',
@@ -117,6 +123,7 @@ export async function readSlottyApiErrorMessage(res: Response): Promise<string> 
   if (code && CATEGORY_CHANGE_MESSAGES[code]) return CATEGORY_CHANGE_MESSAGES[code];
   if (code && SPONSOR_MESSAGES[code]) return SPONSOR_MESSAGES[code];
   if (code && PROMO_MESSAGES[code]) return PROMO_MESSAGES[code];
+  if (code && PAYMENT_MESSAGES[code]) return PAYMENT_MESSAGES[code];
   const msg = j?.error?.message;
   if (msg) return msg;
   return `Ошибка ${res.status}`;

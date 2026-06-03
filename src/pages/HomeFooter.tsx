@@ -6,11 +6,15 @@ import {
   HUB_PATH,
   LEGAL_CONSENT_PATH,
   LEGAL_CROSS_BORDER_PATH,
+  LEGAL_PAYMENT_PATH,
   LEGAL_PRIVACY_PATH,
+  LEGAL_PUBLIC_OFFER_PATH,
+  LEGAL_REFUND_PATH,
   LEGAL_TERMS_PATH,
   SERVICES_PATH,
 } from '../app/paths';
 import { subscribeToNewsletter } from '../features/newsletter/api/newsletterApi';
+import { PaymentLogos } from '../shared/ui/PaymentLogos';
 import { homeShell } from './home/homeLayout';
 import { TIVONIX_SITE_URL } from './legal/legalSiteInfo';
 
@@ -40,6 +44,9 @@ const FOOTER_COL_B = [
   { key: 'consent', label: 'Согласие на обработку', to: LEGAL_CONSENT_PATH },
   { key: 'cross', label: 'Трансграничная передача', to: LEGAL_CROSS_BORDER_PATH },
   { key: 'terms', label: 'Пользовательское соглашение', to: LEGAL_TERMS_PATH },
+  { key: 'offer', label: 'Публичная оферта', to: LEGAL_PUBLIC_OFFER_PATH },
+  { key: 'payment', label: 'Оплата', to: LEGAL_PAYMENT_PATH },
+  { key: 'refund', label: 'Возвраты', to: LEGAL_REFUND_PATH },
 ] as const;
 
 const navLinkClass =
@@ -189,6 +196,14 @@ export const HomeFooter: FC = () => {
                 </ul>
               </nav>
             </div>
+          </div>
+
+          <div className="mt-10 max-w-xl">
+            <PaymentLogos
+              variant="footer"
+              title="Планируемые способы оплаты"
+              showDisclaimer
+            />
           </div>
 
           <div className="relative mt-12 border-t border-black/10 pt-6 sm:mt-14 sm:pt-8">

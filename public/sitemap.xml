@@ -42,4 +42,19 @@
   <url>
     <loc>https://slotty.of.by/legal/master-terms</loc>
   </url>
+  <url>
+    <loc>https://slotty.of.by/legal/payment</loc>
+  </url>
+  <url>
+    <loc>https://slotty.of.by/legal/refund</loc>
+  </url>
+  <url>
+    <loc>https://slotty.of.by/legal/public-offer</loc>
+  </url>
+  <url>
+    <loc>https://slotty.of.by/payment/success</loc>
+  </url>
+  <url>
+    <loc>https://slotty.of.by/payment/fail</loc>
+  </url>
 </urlset>

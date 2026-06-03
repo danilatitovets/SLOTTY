@@ -466,6 +466,8 @@ export async function activateMasterProFromManualPayment(
     [plan.id, billingPeriod, durationDays, masterId],
   );
 
+  const eventSource =
+    typeof options.metadata?.source === 'string' ? options.metadata.source : 'manual_payment';
   await recordBillingEvent({
     masterId,
     eventType: 'subscription_purchased',
@@ -473,7 +475,7 @@ export async function activateMasterProFromManualPayment(
     billingPeriod,
     amount: options.amount,
     status: 'succeeded',
-    source: 'manual_payment',
+    source: eventSource,
     metadata: { ...options.metadata, durationDays },
   });
 

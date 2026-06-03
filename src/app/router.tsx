@@ -7,9 +7,14 @@ import {
   LEGAL_CONSENT_PATH,
   LEGAL_CROSS_BORDER_PATH,
   LEGAL_MASTER_TERMS_PATH,
+  LEGAL_PAYMENT_PATH,
   LEGAL_PD_CONSENT_PATH,
   LEGAL_PRIVACY_PATH,
+  LEGAL_PUBLIC_OFFER_PATH,
+  LEGAL_REFUND_PATH,
   LEGAL_TERMS_PATH,
+  PAYMENT_SUCCESS_PATH,
+  PAYMENT_FAIL_PATH,
   MASTERS_PATH,
   PROFILE_PATH,
   PROFILE_NOTIFICATIONS_PATH,
@@ -36,6 +41,11 @@ import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
 import { UnsubscribeNewsletterPage } from '../pages/UnsubscribeNewsletterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
+import { PaymentInfoPage } from '../pages/legal/PaymentInfoPage';
+import { RefundPolicyPage } from '../pages/legal/RefundPolicyPage';
+import { PublicOfferPage } from '../pages/legal/PublicOfferPage';
+import { PaymentSuccessPage } from '../pages/payment/PaymentSuccessPage';
+import { PaymentFailPage } from '../pages/payment/PaymentFailPage';
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { MasterLoginPage } from '../pages/auth/MasterLoginPage';
@@ -118,6 +128,11 @@ export function AppRoutes() {
         <Route path={LEGAL_CROSS_BORDER_PATH} element={<CrossBorderConsentPage />} />
         <Route path={LEGAL_MASTER_TERMS_PATH} element={<MasterTermsPage />} />
         <Route path={LEGAL_TERMS_PATH} element={<UserAgreementPage />} />
+        <Route path={LEGAL_PAYMENT_PATH} element={<PaymentInfoPage />} />
+        <Route path={LEGAL_REFUND_PATH} element={<RefundPolicyPage />} />
+        <Route path={LEGAL_PUBLIC_OFFER_PATH} element={<PublicOfferPage />} />
+        <Route path={PAYMENT_SUCCESS_PATH} element={<PaymentSuccessPage />} />
+        <Route path={PAYMENT_FAIL_PATH} element={<PaymentFailPage />} />
         <Route path={UNSUBSCRIBE_NEWSLETTER_PATH} element={<UnsubscribeNewsletterPage />} />
         <Route path="*" element={<NotFoundPage />} />
     </Routes>

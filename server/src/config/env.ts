@@ -206,6 +206,47 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).optional(),
   ),
+  BEPAID_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true'),
+  BEPAID_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  BEPAID_SHOP_ID: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  BEPAID_CURRENCY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().length(3).optional(),
+  ),
+  BEPAID_CHECKOUT_API_URL: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().url().optional(),
+  ),
+  BEPAID_PUBLIC_KEY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  BEPAID_SECRET_KEY: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  BEPAID_WEBHOOK_SECRET: z.preprocess(
+    (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
+    z.string().min(1).optional(),
+  ),
+  BEPAID_SUCCESS_URL: z.preprocess(
+    (v) => normalizeEnvUrl(v, 'BEPAID_SUCCESS_URL', true),
+    z.string().url().optional(),
+  ),
+  BEPAID_FAIL_URL: z.preprocess(
+    (v) => normalizeEnvUrl(v, 'BEPAID_FAIL_URL', true),
+    z.string().url().optional(),
+  ),
+  BEPAID_NOTIFICATION_URL: z.preprocess(
+    (v) => normalizeEnvUrl(v, 'BEPAID_NOTIFICATION_URL', true),
+    z.string().url().optional(),
+  ),
 });
 
 const parsed = envSchema.safeParse(process.env);

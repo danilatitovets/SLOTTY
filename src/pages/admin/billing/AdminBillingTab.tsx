@@ -384,7 +384,7 @@ export function AdminBillingTab() {
 
   const liveBillingNote = useLiveBilling && !isPro && !proPaymentPending ? (
     <p className={billingSoftNote}>
-      После оплаты отправьте заявку. Мы проверим поступление и активируем Pro.
+      Pro можно оплатить картой через bePaid или по реквизитам с заявкой на проверку.
     </p>
   ) : null;
 
@@ -432,7 +432,7 @@ export function AdminBillingTab() {
       <AdminBottomSheet
         open={mockProOpen}
         onClose={() => setMockProOpen(false)}
-        title={useLiveBilling ? 'Оплата Pro по реквизитам' : 'Подключить Pro'}
+        title={useLiveBilling ? 'Оплата Pro' : 'Подключить Pro'}
         variant="catalog"
       >
         {useLiveBilling ? (

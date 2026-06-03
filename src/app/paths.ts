@@ -138,6 +138,11 @@ export const PLATFORM_ADMIN_SERVICES_PATH = '/platform-admin/services';
 export const PLATFORM_ADMIN_BOOKINGS_PATH = '/platform-admin/bookings';
 export const PLATFORM_ADMIN_AUDIT_PATH = '/platform-admin/audit';
 export const PLATFORM_ADMIN_BILLING_PATH = '/platform-admin/billing';
+export const PLATFORM_ADMIN_PAYMENTS_PATH = '/platform-admin/payments';
+
+/** Страницы возврата с bePaid (UX; статус — только webhook). */
+export const PAYMENT_SUCCESS_PATH = '/payment/success';
+export const PAYMENT_FAIL_PATH = '/payment/fail';
 export const PLATFORM_ADMIN_NOTIFICATIONS_PATH = '/platform-admin/notifications';
 
 /** Отписка от newsletter по токену из письма. */
@@ -180,6 +185,15 @@ export const LEGAL_TERMS_PATH = '/legal/terms';
 
 /** Условия для мастеров. */
 export const LEGAL_MASTER_TERMS_PATH = '/legal/master-terms';
+
+/** Оплата и безопасность платежей. */
+export const LEGAL_PAYMENT_PATH = '/legal/payment';
+
+/** Возвраты и отмена оплаты. */
+export const LEGAL_REFUND_PATH = '/legal/refund';
+
+/** Публичная оферта. */
+export const LEGAL_PUBLIC_OFFER_PATH = '/legal/public-offer';
 
 /** Шаблон маршрута профиля мастера (для документации / Route). */
 export const MASTER_PATH = '/master/:id';

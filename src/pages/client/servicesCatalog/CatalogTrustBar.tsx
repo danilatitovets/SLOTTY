@@ -10,7 +10,7 @@ const ITEMS = [
   { icon: HiShieldCheck, label: 'Проверенные мастера' },
   { icon: HiBolt, label: 'Быстрая запись' },
   { icon: HiXCircle, label: 'Бесплатная отмена' },
-  { icon: HiCreditCard, label: 'Безопасная оплата' },
+  { icon: HiCreditCard, label: 'Оплата у мастера · онлайн позже' },
 ] as const;
 
 export function CatalogTrustBar() {

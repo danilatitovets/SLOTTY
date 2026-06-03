@@ -12,6 +12,7 @@ import {
 import {
   PLATFORM_ADMIN_AUDIT_PATH,
   PLATFORM_ADMIN_BILLING_PATH,
+  PLATFORM_ADMIN_PAYMENTS_PATH,
   PLATFORM_ADMIN_BOOKINGS_PATH,
   PLATFORM_ADMIN_MASTERS_PATH,
   PLATFORM_ADMIN_NOTIFICATIONS_PATH,
@@ -86,6 +87,14 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     title: 'Биллинг',
     description:
       'Покупки тарифа Pro, сводка по выручке и промокоды со скидкой при оформлении подписки.',
+  },
+  {
+    to: PLATFORM_ADMIN_PAYMENTS_PATH,
+    label: 'Платежи',
+    icon: HiBanknotes,
+    title: 'Платежи bePaid',
+    description:
+      'Онлайн-платежи через bePaid: статусы из webhook, суммы, типы (Pro / запись), детали транзакции.',
   },
   {
     to: PLATFORM_ADMIN_NOTIFICATIONS_PATH,

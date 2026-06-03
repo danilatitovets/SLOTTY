@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { HiCheck, HiCreditCard } from 'react-icons/hi2';
-import { LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
+import { LEGAL_PAYMENT_PATH, LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
+import { PaymentLogos } from '../../shared/ui/PaymentLogos';
 import { legalReturnState } from '../legal/useLegalPageBack';
 import { categorySupportsReferencePhoto } from '../../features/booking/lib/referencePhotoCategories';
 import {
@@ -61,11 +62,18 @@ export function BookingCheckoutExtras({
           <div className="min-w-0">
             <p className={bookingDesktopSectionTitle}>Оплата</p>
             <p className="mt-1 text-[13px] leading-relaxed text-[#6B7280]">
-              Оплата на месте после визита. SLOTTY не списывает деньги с карты при записи.
+              Оплата услуги — у мастера на месте. SLOTTY не списывает деньги с карты при записи. Онлайн-оплата на
+              сайте появится после подключения платёжного провайдера —{' '}
+              <Link to={LEGAL_PAYMENT_PATH} className="font-semibold text-[#F47C8C] hover:underline">
+                подробнее
+              </Link>
+              .
             </p>
           </div>
         </div>
       </div>
+
+      <PaymentLogos variant="compact" showDisclaimer className="!rounded-[14px]" />
 
       <ul className="space-y-2.5">
         {TRUST_ITEMS.map((label) => (
