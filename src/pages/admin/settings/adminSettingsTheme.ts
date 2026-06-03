@@ -31,3 +31,9 @@ export const settingsBackBtn =
   'inline-flex min-h-10 items-center gap-2 rounded-full px-1 text-[14px] font-semibold text-[#6B7280] transition hover:text-[#ff5f7a] active:scale-[0.98]';
 
 export const settingsLegalArticle = 'min-w-0 space-y-4 pt-2';
+
+/** Фон шапки вкладки «Справка» (`public/photos/hero.webp`, poster главной). */
+export const SETTINGS_HELP_HERO_BG = '/photos/hero.webp';
+
+/** Вытягивание hero на края белой карточки настроек (см. `settingsShellCard` padding). */
+export const settingsHelpHeroBleed = '-mx-4 sm:-mx-5 lg:-mx-6';

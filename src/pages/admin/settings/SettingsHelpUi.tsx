@@ -3,10 +3,39 @@ import { HiArrowLeft, HiArrowRight, HiOutlineDocumentText, HiOutlineEnvelope, Hi
 import type { LegalDocId } from '../../../constants/legalDocuments';
 import {
   settingsBackBtn,
+  settingsHelpHeroBleed,
+  SETTINGS_HELP_HERO_BG,
   settingsLegalArticle,
   settingsRow,
   settingsRowIcon,
 } from './adminSettingsTheme';
+
+export function SettingsHelpHero() {
+  return (
+    <section
+      className={`relative overflow-hidden ${settingsHelpHeroBleed}`}
+      aria-labelledby="settings-help-hero-heading"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${SETTINGS_HELP_HERO_BG})` }}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/42" aria-hidden />
+      <div className="relative px-4 py-7 sm:px-5 sm:py-8 lg:px-6 lg:py-9">
+        <h2
+          id="settings-help-hero-heading"
+          className="text-[22px] font-black tracking-[-0.04em] text-white lg:text-[26px]"
+        >
+          Справка
+        </h2>
+        <p className="mt-2 max-w-md text-[14px] font-semibold leading-snug text-white/88 sm:text-[15px]">
+          Telegram, почта и юридические документы SLOTTY
+        </p>
+      </div>
+    </section>
+  );
+}
 
 export function SettingsBackButton({ onClick, label = 'Назад' }: { onClick: () => void; label?: string }) {
   return (
@@ -104,8 +133,8 @@ export function SettingsDocCard({
         <Icon className="h-5 w-5" aria-hidden />
       </SettingsIconWrap>
       <div className="min-w-0 flex-1 text-left">
-        <p className="text-[15px] font-bold leading-snug text-[#111827]">{title}</p>
-        <p className="mt-0.5 text-[12px] font-medium text-[#9CA3AF]">{updatedLabel}</p>
+        <p className="text-[15px] font-bold text-[#111827]">{title}</p>
+        <p className="mt-0.5 truncate text-[14px] font-medium text-[#6B7280]">{updatedLabel}</p>
       </div>
       <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#9CA3AF]">
         <HiArrowRight className="h-4 w-4" aria-hidden />
