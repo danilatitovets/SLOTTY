@@ -41,6 +41,7 @@ export function mapNotificationJobTypeToPreferenceEvent(
       return 'new_booking';
     case 'booking_reminder_1h':
     case 'booking_reminder_24h':
+    case 'booking_visit_start':
       return 'reminder_1h';
     case 'booking_master_client_cancelled':
       return 'cancel';

@@ -1,5 +1,4 @@
 import { query } from '../../config/db.js';
-// query used for no_show_at
 import { ApiError } from '../../utils/ApiError.js';
 import { logNotification } from '../notifications/notificationLog.js';
 import { insertBookingEvent } from './bookingEvents.service.js';
@@ -8,6 +7,14 @@ import { scheduleJobsAfterBookingCancelled, scheduleJobsAfterBookingConfirmed } 
 import { notifyClientByAppointmentId } from './appointments.clientNotifications.js';
 import type { DbAppointmentStatus } from '../../lib/appointmentStatus.js';
 import { normalizeDbStatus } from '../../lib/appointmentStatus.js';
+import {
+  assertCanCancelBeforeEnd,
+  assertCanCloseOverdueRecord,
+  assertCanStartVisit,
+  assertLegacyClientArrivedForbidden,
+  assertLegacyInstantNoShowForbidden,
+  isVisitGuardError,
+} from '../../lib/masterAppointmentLifecycle.js';
 
 type TransitionRow = {
   id: string;
@@ -15,11 +22,20 @@ type TransitionRow = {
   client_id: string;
   master_id: string;
   slot_id: string;
+  starts_at: Date | string;
+  ends_at: Date | string;
 };
+
+function guardApiError(err: unknown): never {
+  if (isVisitGuardError(err)) {
+    throw ApiError.conflict(err.message, err.code);
+  }
+  throw err;
+}
 
 async function loadForMaster(masterId: string, appointmentId: string): Promise<TransitionRow> {
   const r = await query<TransitionRow>(
-    `select id, status::text, client_id, master_id, slot_id
+    `select id, status::text, client_id, master_id, slot_id, starts_at, ends_at
        from public.appointments where id = $1 and master_id = $2`,
     [appointmentId, masterId],
   );
@@ -163,12 +179,14 @@ export async function masterClientArrivedLifecycle(
   masterId: string,
   appointmentId: string,
 ): Promise<{ clientId: string }> {
-  const row = await loadForMaster(masterId, appointmentId);
-  const s = normalizeDbStatus(row.status);
-  if (s !== 'confirmed') {
-    throw ApiError.conflict('Only confirmed appointments allow client arrived', 'BAD_STATUS');
+  void masterId;
+  void appointmentId;
+  try {
+    assertLegacyClientArrivedForbidden();
+  } catch (e) {
+    guardApiError(e);
   }
-  return transition(masterId, appointmentId, 'client_arrived', { eventType: 'booking.client_arrived' });
+  throw ApiError.conflict('Unreachable', 'DEPRECATED_CLIENT_ARRIVED');
 }
 
 export async function masterStartVisitLifecycle(
@@ -177,8 +195,14 @@ export async function masterStartVisitLifecycle(
 ): Promise<{ clientId: string }> {
   const row = await loadForMaster(masterId, appointmentId);
   const s = normalizeDbStatus(row.status);
-  if (s !== 'client_arrived' && s !== 'confirmed') {
-    throw ApiError.conflict('Start visit from confirmed or client arrived only', 'BAD_STATUS');
+  try {
+    assertCanStartVisit({
+      status: s,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+    });
+  } catch (e) {
+    guardApiError(e);
   }
   return transition(masterId, appointmentId, 'in_progress', { eventType: 'booking.started' });
 }
@@ -195,23 +219,17 @@ export async function masterCompleteAppointmentLifecycle(
 export async function masterNoShowLifecycle(
   masterId: string,
   appointmentId: string,
-  comment?: string | null,
+  _comment?: string | null,
 ): Promise<{ clientId: string }> {
-  const row = await loadForMaster(masterId, appointmentId);
-  if (normalizeDbStatus(row.status) !== 'confirmed') {
-    throw ApiError.conflict('No-show only for confirmed upcoming visits', 'BAD_STATUS');
+  void masterId;
+  void appointmentId;
+  void _comment;
+  try {
+    assertLegacyInstantNoShowForbidden();
+  } catch (e) {
+    guardApiError(e);
   }
-  await query(
-    `update public.appointments set no_show_at = coalesce(no_show_at, now()) where id = $1`,
-    [appointmentId],
-  );
-  return transition(masterId, appointmentId, 'no_show', {
-    eventType: 'booking.no_show',
-    reason: comment,
-    notify: 'no_show',
-    releaseSlot: true,
-    cancelReminders: true,
-  });
+  throw ApiError.conflict('Unreachable', 'USE_SUPPORT_NO_SHOW');
 }
 
 export async function masterCancelAppointmentLifecycle(
@@ -222,6 +240,11 @@ export async function masterCancelAppointmentLifecycle(
 ): Promise<{ clientId: string }> {
   const row = await loadForMaster(masterId, appointmentId);
   const s = normalizeDbStatus(row.status);
+  try {
+    assertCanCancelBeforeEnd({ status: s, endsAt: row.ends_at });
+  } catch (e) {
+    guardApiError(e);
+  }
   if (!['pending', 'confirmed', 'client_arrived', 'in_progress'].includes(s)) {
     throw ApiError.conflict('Appointment cannot be cancelled', 'BAD_STATUS');
   }
@@ -233,4 +256,69 @@ export async function masterCancelAppointmentLifecycle(
     releaseSlot: true,
     cancelReminders: true,
   });
+}
+
+export async function masterCloseOverdueAppointmentLifecycle(
+  masterId: string,
+  appointmentId: string,
+  reason?: string | null,
+): Promise<{ clientId: string }> {
+  const row = await loadForMaster(masterId, appointmentId);
+  const s = normalizeDbStatus(row.status);
+  try {
+    assertCanCloseOverdueRecord({ status: s, endsAt: row.ends_at });
+  } catch (e) {
+    guardApiError(e);
+  }
+
+  const { finalizeAppointmentCompleted } = await import('./appointments.completion.service.js');
+
+  const overdueMeta = {
+    overdueClose: true,
+    ...(reason?.trim() ? { closeReason: reason.trim() } : {}),
+  };
+
+  if (s === 'master_marked_completed' || s === 'client_confirmed_completed') {
+    await finalizeAppointmentCompleted({
+      appointmentId,
+      actorUserId: masterId,
+      actorRole: 'master',
+      eventType: 'booking.completed_by_master',
+      metadata: overdueMeta,
+    });
+    return { clientId: row.client_id };
+  }
+
+  if (s === 'in_progress') {
+    await finalizeAppointmentCompleted({
+      appointmentId,
+      actorUserId: masterId,
+      actorRole: 'master',
+      eventType: 'booking.completed_by_master',
+      metadata: overdueMeta,
+    });
+    return { clientId: row.client_id };
+  }
+
+  if (s === 'client_arrived') {
+    await setStatus(appointmentId, 'in_progress');
+    await insertBookingEvent({
+      appointmentId,
+      eventType: 'booking.started',
+      oldStatus: s,
+      newStatus: 'in_progress',
+      actorUserId: masterId,
+      actorRole: 'master',
+      metadata: { autoStartedOnClose: true },
+    });
+  }
+
+  await finalizeAppointmentCompleted({
+    appointmentId,
+    actorUserId: masterId,
+    actorRole: 'master',
+    eventType: 'booking.completed_by_master',
+    metadata: overdueMeta,
+  });
+  return { clientId: row.client_id };
 }

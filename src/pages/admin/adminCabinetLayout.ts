@@ -11,7 +11,7 @@ export const ADMIN_SIDEBAR_OVERLAY_INSET = 'lg:left-[260px]';
 export const ADMIN_DESKTOP_DRAWER_PANEL =
   'lg:w-[min(720px,52vw)] lg:min-w-[520px] lg:max-w-[720px]';
 
-export const ADMIN_CABINET_SHELL_MAX = 'w-full max-w-[460px] lg:max-w-none';
+export const ADMIN_CABINET_SHELL_MAX = 'w-full lg:max-w-none';
 
 export const ADMIN_CABINET_MAIN =
   'mx-auto w-full min-w-0 flex-1 lg:mx-0 lg:flex lg:flex-col lg:px-8 lg:py-6';

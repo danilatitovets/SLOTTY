@@ -221,6 +221,17 @@ export type PlatformMasterDetail = PlatformMasterListItem & {
     usage: { activeServices: number; monthlyAppointments: number };
   } | null;
   billingEvents: PlatformMasterBillingEvent[];
+  bookingRules: {
+    clientPreview: string[];
+    minBookingNoticeMinutes: number;
+    freeCancelBeforeMinutes: number;
+    allowedLatenessMinutes: number;
+    noShowAfterMinutes: number;
+    rescheduleEnabled: boolean;
+    paymentMethods: string[];
+    visitPreparationText: string | null;
+    updatedAt: string | null;
+  } | null;
 };
 
 export type PlatformServiceListItem = {

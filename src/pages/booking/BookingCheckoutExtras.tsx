@@ -10,11 +10,7 @@ import {
 import { bookingDesktopSectionTitle } from './bookingDesktopTheme';
 import { BookingReferencePhotoField } from './BookingReferencePhotoField';
 
-const TRUST_ITEMS = [
-  'Бесплатная отмена за 24 часа',
-  'Напоминание в Telegram',
-  'Оплата на месте у мастера',
-] as const;
+const DEFAULT_TRUST_ITEMS = ['Напоминание в Telegram'] as const;
 
 type Props = {
   bookError: string | null;
@@ -29,6 +25,8 @@ type Props = {
   onReferencePhotoUrlChange: (url: string | null) => void;
   onConfirm: () => void;
   className?: string;
+  /** Краткие правила мастера (отмена, опоздание, оплата). */
+  ruleLines?: string[];
 };
 
 export function BookingCheckoutExtras({
@@ -44,24 +42,31 @@ export function BookingCheckoutExtras({
   onReferencePhotoUrlChange,
   onConfirm,
   className = '',
+  ruleLines,
 }: Props) {
   const { pathname, search } = useLocation();
   const legalReturn = legalReturnState(`${pathname}${search}`);
   const canSubmit = canConfirm && acceptedTerms && !submitting;
   const showReferencePhoto = categorySupportsReferencePhoto(categoryCode);
+  const trustItems = ruleLines?.length
+    ? ruleLines.slice(0, 4)
+    : ['Бесплатная отмена за 24 часа', ...DEFAULT_TRUST_ITEMS, 'Оплата на месте у мастера'];
 
   return (
     <div className={`space-y-4 ${className}`}>
-      <ul className="space-y-2.5">
-        {TRUST_ITEMS.map((label) => (
-          <li key={label} className="flex items-center gap-2.5 text-[13px] font-medium text-[#374151]">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ECFDF5] text-[#15803D]">
-              <HiCheck className="h-4 w-4" aria-hidden />
-            </span>
-            {label}
-          </li>
-        ))}
-      </ul>
+      <div>
+        <p className="text-[13px] font-semibold text-[#111827]">Правила записи</p>
+        <ul className="mt-2 space-y-2.5">
+          {trustItems.map((label) => (
+            <li key={label} className="flex items-center gap-2.5 text-[13px] font-medium text-[#374151]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ECFDF5] text-[#15803D]">
+                <HiCheck className="h-4 w-4" aria-hidden />
+              </span>
+              {label}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {showReferencePhoto ? (
         <BookingReferencePhotoField

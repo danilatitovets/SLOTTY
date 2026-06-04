@@ -127,8 +127,8 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
       {
         id: 'billing',
         to: MASTER_SETTINGS_BILLING_PATH,
-        label: 'Биллинг и тариф',
-        keywords: ['тариф', 'pro', 'оплата', 'подписка'],
+        label: 'Тариф и оплата',
+        keywords: ['тариф', 'pro', 'оплата', 'подписка', 'биллинг', 'платежи', 'карта'],
         icon: IconCard,
       },
       {
@@ -199,9 +199,9 @@ export const SETTINGS_PAGE_META: Record<
     breadcrumb: 'Уведомления',
   },
   billing: {
-    title: 'Биллинг и тариф',
-    description: 'Подписка, способ оплаты и последние платежи. Тарифы и лимиты — в кабинете мастера.',
-    breadcrumb: 'Биллинг и тариф',
+    title: 'Тариф и оплата',
+    description: '',
+    breadcrumb: 'Тариф и оплата',
   },
   team: {
     title: 'Команда и доступ',
@@ -210,17 +210,17 @@ export const SETTINGS_PAGE_META: Record<
   },
   integrations: {
     title: 'Интеграции',
-    description: 'Подключайте сервисы, которые помогают принимать записи и отправлять уведомления.',
+    description: '',
     breadcrumb: 'Интеграции',
   },
   privacy: {
     title: 'Данные и приватность',
-    description: 'Экспорт данных, видимость профиля и управление согласиями.',
+    description: '',
     breadcrumb: 'Данные и приватность',
   },
   support: {
     title: 'Поддержка',
-    description: 'Найдите ответ, проверьте статус системы или отправьте обращение в поддержку SLOTTY.',
+    description: '',
     breadcrumb: 'Поддержка',
   },
   'system-status': {

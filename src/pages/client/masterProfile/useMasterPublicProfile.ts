@@ -59,6 +59,9 @@ export function useMasterPublicProfile(masterId: string) {
           paymentMethods: detail.bookingRules?.paymentMethods?.length
             ? detail.bookingRules.paymentMethods
             : undefined,
+          clientPreview: detail.bookingRules?.clientPreview?.length
+            ? detail.bookingRules.clientPreview
+            : undefined,
         });
       } catch {
         if (!cancelled) setApiProfile(null);

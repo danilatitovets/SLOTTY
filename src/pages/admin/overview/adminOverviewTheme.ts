@@ -16,7 +16,7 @@ export const overviewDesktopCanvas = PROFILE_DESKTOP_PAGE_BG;
 
 export const OVERVIEW_TAB_BAR_HEIGHT = '5.75rem';
 
-export const ADMIN_CABINET_SHELL_MAX = 'w-full max-w-[460px] lg:max-w-none';
+export const ADMIN_CABINET_SHELL_MAX = 'w-full lg:max-w-none';
 
 /** Desktop: контент на сером полотне, без обёртки-белой «коробки». */
 export const overviewShellCard = 'hidden w-full min-w-0 lg:block';
@@ -93,7 +93,8 @@ export function overviewSvodkaPhotoSrc(fileName: string): string {
   return overviewSvodkaDir + encodeURIComponent(fileName);
 }
 
-export const OVERVIEW_WELCOME_IMAGE_SRC = overviewSvodkaPhotoSrc('обзор.webp');
+/** Тот же фон, что у hero «Расписание → Окна» (`public/photos/fon.webp`). */
+export const OVERVIEW_WELCOME_IMAGE_SRC = '/photos/fon.webp';
 
 /** @deprecated use MINI_PICTURE.clientsEmpty */
 export const OVERVIEW_CLIENTS_FOOTER_SRC = MINI_PICTURE.clientsEmpty;

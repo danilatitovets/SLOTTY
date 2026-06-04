@@ -235,7 +235,7 @@ export function SettingsNotificationsPage() {
           <section>
             <SettingsCabinetSectionTitle
               title="События"
-              description="Выберите каналы для каждого типа. «Новая запись» и «Биллинг» всегда включены."
+              description="Выберите каналы для каждого типа. «Новая запись» и «Оплата и подписка» всегда включены."
             />
             <NotificationEventsCabinetList
               prefs={prefs.events}

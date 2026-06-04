@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
+import type { MasterAppointmentsTab } from '../../../features/appointments/masterAppointmentLifecycle';
 import { LoadingScreen } from '../../../shared/ui/LoadingVideo';
 import { AdminAppointmentDetailSheet } from '../shared/AdminAppointmentDetailSheet';
 import { afterBookingMutation } from '../../../features/appointments/bookingDataSync';
@@ -10,6 +11,7 @@ export function AdminAppointmentsSection() {
   const { appointments, persistAppointments } = useAdminAppointments();
   const { useCabinetApi, cabinetLoading, cabinetError, reloadCabinet } = useAdminMasterCabinet();
   const [detailAppt, setDetailAppt] = useState<DemoMasterAppointment | null>(null);
+  const [detailTab, setDetailTab] = useState<MasterAppointmentsTab>('upcoming');
 
   const handleAfterBookingAction = useCallback(async () => {
     afterBookingMutation();
@@ -31,11 +33,15 @@ export function AdminAppointmentsSection() {
         appointments={appointments}
         useRemoteList={useCabinetApi}
         onChangeAppointments={persistAppointments}
-        onOpenDetail={setDetailAppt}
+        onOpenDetail={(a, tab) => {
+          setDetailAppt(a);
+          setDetailTab(tab);
+        }}
       />
 
       <AdminAppointmentDetailSheet
         appointment={detailAppt}
+        tab={detailTab}
         onClose={() => setDetailAppt(null)}
         useLiveApi={useCabinetApi}
         onAfterAction={handleAfterBookingAction}

@@ -68,6 +68,7 @@ export type MasterPublicDetailDto = {
     cancellationPolicy: string | null;
     paymentNote: string | null;
     paymentMethods?: string[];
+    clientPreview?: string[];
   } | null;
   certificates: {
     id: string;

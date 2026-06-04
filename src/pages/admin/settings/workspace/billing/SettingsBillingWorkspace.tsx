@@ -64,7 +64,7 @@ function subscriptionStatusLabel(uiState: string, isPro: boolean): string {
     case 'expired':
       return 'Pro истёк';
     default:
-      return isPro ? 'Активен' : 'Free';
+      return isPro ? 'Активен' : 'Бесплатный';
   }
 }
 
@@ -113,7 +113,7 @@ export function SettingsBillingWorkspace() {
     return <SettingsErrorState message={b.loadError} onRetry={b.reload} />;
   }
 
-  const planName = b.isProEntitled ? 'Master Pro' : 'Free';
+  const planName = b.isProEntitled ? 'Master Pro' : 'Бесплатный тариф';
   const statusTone = subscriptionStatusTone(b.uiState);
   const statusLabel = subscriptionStatusLabel(b.uiState, b.isProEntitled);
   const canUpdateCard = detail?.availableActions.includes('update_payment_method') ?? false;
@@ -198,12 +198,6 @@ export function SettingsBillingWorkspace() {
           title="Способ оплаты"
           description="Карта для автоматического продления Master Pro"
         />
-        {detail && !detail.autoRenewLegalAllowed ? (
-          <p className="mb-3 rounded-[12px] bg-[#FFFBEB] px-4 py-3 text-[13px] leading-relaxed text-[#92400E]">
-            Автоматическое ежемесячное списание на этой среде может быть недоступно. Продление подписки выполняется
-            только после подтверждения платёжного провайдера на staging/production.
-          </p>
-        ) : null}
         <div className="overflow-hidden rounded-[16px] bg-white p-4 sm:p-5">
           {hasCard && detail ? (
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -17,7 +17,6 @@ import {
   getCategoryWorkPhotoUrl,
   resolveCategoryWorkCode,
 } from '../../../features/catalog/categoryWorkPhotos';
-import { resolveServiceListingCoverUrl } from '../../../features/catalog/catalogServicePhotos';
 import { EMPTY_DISTANCE, EMPTY_METRIC } from '../../../shared/lib/emptyDisplayText';
 import {
   estimatedBookingsCount,
@@ -200,14 +199,6 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
 
   const priceLabel = listing.priceFrom > 0 ? formatPriceFrom(listing.priceFrom) : null;
 
-  const serviceCoverSrc =
-    listing.serviceCoverUrl ??
-    resolveServiceListingCoverUrl({
-      category: listing.category,
-      categoryCode: listing.categoryCode,
-      serviceName: listing.serviceName,
-    });
-
   const { previewPhotos, extraWorks } = useMemo(() => {
     const urls = uniquePortfolioUrls(listing.portfolioPreview);
     if (urls.length >= 4) {
@@ -277,18 +268,20 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
         </button>
 
         <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#EBEBEB] lg:h-auto lg:w-[168px] lg:min-h-[148px]">
-          <ImageReveal
-            src={serviceCoverSrc}
-            alt=""
-            className="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
-            loading="lazy"
+          <MasterCardPortrait
+            masterName={listing.masterName}
+            photoUrl={listing.photoUrl}
+            className="relative h-full w-full min-h-[176px] lg:min-h-[148px]"
+            imageClassName="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
+            badge={
+              hasSlot ? (
+                <span className={`absolute left-3 top-3 ${AVAILABILITY_BADGE}`}>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
+                  Свободна
+                </span>
+              ) : null
+            }
           />
-          {hasSlot ? (
-            <span className={`absolute left-3 top-3 ${AVAILABILITY_BADGE}`}>
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#22C55E]" aria-hidden />
-              Свободна
-            </span>
-          ) : null}
         </div>
 
         <div className="relative flex min-w-0 flex-1 flex-col p-5 lg:min-h-[148px] lg:p-4 lg:pr-[184px]">

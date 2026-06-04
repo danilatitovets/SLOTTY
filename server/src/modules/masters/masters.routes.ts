@@ -30,6 +30,11 @@ import {
   updateMyPortfolioItem,
 } from './masterTrustProfile.service.js';
 import {
+  getMasterBookingRulesStructured,
+  putMasterBookingRulesStructured,
+  type PutMasterBookingRulesBody,
+} from './masterBookingRulesStructured.service.js';
+import {
   insertCertificates,
   replaceScheduleRules,
   upsertPrimaryLocation,
@@ -319,6 +324,31 @@ const bookingRulesPatchBody = z.object({
   cancellationPolicy: z.string().max(20000).nullable().optional(),
   paymentNote: z.string().max(20000).nullable().optional(),
   paymentMethods: z.array(z.string().max(80)).max(30).optional(),
+});
+
+const lateCancelPolicyEnum = z.enum(['mark_late', 'require_agreement', 'warning_only']);
+const lateArrivalPolicyEnum = z.enum(['master_can_cancel', 'shorten_visit', 'reschedule_by_agreement']);
+const noShowPolicyEnum = z.enum(['mark_no_show', 'client_can_dispute']);
+
+const bookingRulesPutBody = z.object({
+  minBookingNoticeMinutes: z.number().int().min(0).optional(),
+  requiresMasterConfirmation: z.boolean().optional(),
+  freeCancelBeforeMinutes: z.number().int().min(0).optional(),
+  lateCancelPolicy: lateCancelPolicyEnum.optional(),
+  allowedLatenessMinutes: z.number().int().min(0).optional(),
+  lateArrivalPolicy: lateArrivalPolicyEnum.optional(),
+  noShowAfterMinutes: z.number().int().min(0).optional(),
+  noShowPolicy: noShowPolicyEnum.optional(),
+  rescheduleEnabled: z.boolean().optional(),
+  rescheduleBeforeMinutes: z.number().int().min(0).optional(),
+  rescheduleLimit: z.number().int().min(0).nullable().optional(),
+  paymentMethods: z.array(z.string().max(80)).max(30).optional(),
+  paymentComment: z.string().max(2000).nullable().optional(),
+  prepaymentRequired: z.boolean().optional(),
+  refundPolicyEnabled: z.boolean().optional(),
+  refundPolicyText: z.string().max(2000).nullable().optional(),
+  visitPreparationText: z.string().max(2000).nullable().optional(),
+  contraindicationsText: z.string().max(2000).nullable().optional(),
 });
 
 const careerTypeEnum = z.enum(['education', 'course', 'practice', 'work']);
@@ -749,13 +779,20 @@ mastersRouter.get(
   requireMasterDbAccess,
   requireMasterPlatformWrite,
   asyncHandler(async (req, res) => {
-    const row = await getMyBookingRulesDecoded(req.user!.id);
-    res.json({
-      bookingRules: row.bookingRules,
-      cancellationPolicy: row.cancellationPolicy,
-      paymentNote: row.paymentNote,
-      paymentMethods: row.paymentMethods,
-    });
+    const structured = await getMasterBookingRulesStructured(req.user!.id);
+    res.json(structured);
+  }),
+);
+
+mastersRouter.put(
+  '/me/booking-rules',
+  authMiddleware,
+  requireMasterDbAccess,
+  requireMasterPlatformWrite,
+  asyncHandler(async (req, res) => {
+    const body = bookingRulesPutBody.parse(req.body) as PutMasterBookingRulesBody;
+    const structured = await putMasterBookingRulesStructured(req.user!.id, body);
+    res.json(structured);
   }),
 );
 

@@ -118,11 +118,11 @@ export function statusHint(status: string): string {
     case 'pending':
       return 'Подтвердите или отклоните заявку';
     case 'confirmed':
-      return 'Отметьте приход клиента или неявку';
+      return 'Клиент записан на выбранное время. Начните визит, когда наступит время записи.';
     case 'client_arrived':
-      return 'Начните визит, когда будете готовы';
+      return 'Клиент сообщил, что на месте. Начните визит, когда будете готовы.';
     case 'in_progress':
-      return 'Отметьте выполнение услуги после визита';
+      return 'После оказания услуги завершите визит.';
     case 'master_marked_completed':
       return 'Ожидаем подтверждение клиента';
     case 'client_confirmed_completed':

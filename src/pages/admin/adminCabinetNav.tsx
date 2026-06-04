@@ -158,7 +158,7 @@ export const ADMIN_SECTION_META: Record<string, AdminSectionMeta> = {
   },
   [MASTER_SETTINGS_PATH]: {
     title: 'Настройки',
-    description: 'Безопасность, уведомления, биллинг, интеграции и поддержка.',
+    description: 'Безопасность, уведомления, тариф и оплата, интеграции и поддержка.',
   },
 };
 

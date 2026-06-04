@@ -61,7 +61,7 @@ export const SUPPORT_CATEGORY_OPTIONS = [
   { value: 'schedule', label: 'Расписание' },
   { value: 'appointments', label: 'Записи' },
   { value: 'notifications', label: 'Уведомления' },
-  { value: 'billing_plan', label: 'Биллинг и тариф' },
+  { value: 'billing_plan', label: 'Тариф и оплата' },
   { value: 'payment_bepaid', label: 'Оплата BePaid' },
   { value: 'integrations', label: 'Интеграции' },
   { value: 'map_address', label: 'Карта / адрес' },

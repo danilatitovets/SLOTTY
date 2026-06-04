@@ -48,6 +48,11 @@ function formatWhen(iso: string): string {
   });
 }
 
+function supportCategoryLabel(category: string): string {
+  if (category === 'booking_no_show') return 'Клиент не пришёл';
+  return category;
+}
+
 export function PlatformAdminSupportTab() {
   const { profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -228,6 +233,11 @@ export function PlatformAdminSupportTab() {
                 >
                   <p className="font-mono text-[12px] font-bold text-[#ff5f7a]">{t.ticketCode}</p>
                   <p className="mt-1 text-[14px] font-semibold text-[#111827]">{t.subject}</p>
+                  {t.category === 'booking_no_show' ? (
+                    <span className="mt-1 inline-flex rounded-full bg-[#FEF2F2] px-2 py-0.5 text-[11px] font-bold text-[#B91C1C]">
+                      Клиент не пришёл
+                    </span>
+                  ) : null}
                   <p className="mt-1 text-[12px] text-[#6B7280]">
                     {t.masterName ?? '—'} · {t.severity} · {t.status}
                   </p>
@@ -248,7 +258,7 @@ export function PlatformAdminSupportTab() {
                   <div>
                     <h2 className="text-[18px] font-bold text-[#111827]">{detail.subject}</h2>
                     <p className="mt-1 text-[13px] text-[#6B7280]">
-                      {detail.userEmail ?? '—'} · {detail.plan ?? '—'} · {detail.category} · {detail.severity}
+                      {detail.userEmail ?? '—'} · {detail.plan ?? '—'} · {supportCategoryLabel(detail.category)} · {detail.severity}
                     </p>
                     <p className="mt-1 font-mono text-[12px] text-[#ff5f7a]">{detail.ticketCode}</p>
                     {detail.assignedTo ? (

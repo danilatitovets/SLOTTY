@@ -91,10 +91,14 @@ export function eventLabel(eventType: string, role: 'client' | 'master' | 'admin
       return master ? 'Клиент подтвердил выполнение' : 'Вы подтвердили выполнение';
     case 'booking.completed':
       return 'Визит завершён';
+    case 'booking.completed_by_master':
+      return master ? 'Вы завершили визит' : 'Визит завершён';
     case 'booking.completed_auto_confirmed':
       return role === 'admin' ? 'Завершено автоматически (24 ч)' : 'Визит завершён';
     case 'booking.no_show':
       return 'Неявка';
+    case 'booking.no_show_reported':
+      return master ? 'Отправлено в поддержку: неявка' : 'Мастер сообщил о неявке';
     case 'booking.client_on_the_way':
       return master ? 'Клиент в пути' : 'Вы сообщили, что в пути';
     case 'booking.client_running_late':

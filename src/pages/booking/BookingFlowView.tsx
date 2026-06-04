@@ -58,6 +58,7 @@ type Props = {
   onCommentChange: (value: string) => void;
   referencePhotoUrl: string | null;
   onReferencePhotoUrlChange: (url: string | null) => void;
+  ruleLines?: string[];
 };
 
 function ReviewStars({ rating }: { rating: number }) {
@@ -98,6 +99,7 @@ export function BookingFlowView({
   onCommentChange,
   referencePhotoUrl,
   onReferencePhotoUrlChange,
+  ruleLines,
 }: Props) {
   const showVerified = masterShowsVerifiedBadge(master);
   const slotPromo = selectedSlot?.promotion;
@@ -131,6 +133,7 @@ export function BookingFlowView({
         onPickSlot={onPickSlot}
         onOpenCalendar={onOpenCalendar}
         onConfirm={onConfirm}
+        ruleLines={ruleLines}
       />
 
       <div className="w-full min-w-0 lg:hidden">
@@ -349,6 +352,7 @@ export function BookingFlowView({
           referencePhotoUrl={referencePhotoUrl}
           onReferencePhotoUrlChange={onReferencePhotoUrlChange}
           onConfirm={onConfirm}
+          ruleLines={ruleLines}
         />
       </section>
       </div>

@@ -89,6 +89,29 @@ function logBookingCreated(parties: AppointmentParties): void {
   });
 }
 
+async function scheduleVisitStartJob(parties: AppointmentParties): Promise<void> {
+  const now = Date.now();
+  const scheduledAt = parties.startsAt;
+  if (scheduledAt.getTime() <= now) {
+    logNotificationWarn('notification.enqueue.skipped', {
+      bookingId: parties.appointmentId,
+      type: 'booking_visit_start',
+      reason: 'PAST_SCHEDULE',
+      scheduledAt: scheduledAt.toISOString(),
+      startAt: parties.startsAt.toISOString(),
+    });
+    return;
+  }
+
+  await enqueueForUsers(
+    parties,
+    'booking_visit_start',
+    scheduledAt,
+    [parties.masterId],
+    ['email', 'telegram', 'in_app'],
+  );
+}
+
 async function scheduleReminderJobs(parties: AppointmentParties): Promise<void> {
   const now = Date.now();
   const specs: Array<{ kind: '1h' | '24h'; ms: number; jobType: NotificationJobType }> = [
@@ -133,7 +156,7 @@ export async function cancelPendingReminderJobs(appointmentId: string): Promise<
     `update public.notification_jobs
         set status = 'cancelled', updated_at = now()
       where appointment_id = $1
-        and job_type in ('booking_reminder_1h', 'booking_reminder_24h')
+        and job_type in ('booking_reminder_1h', 'booking_reminder_24h', 'booking_visit_start')
         and status = 'pending'`,
     [appointmentId],
   );
@@ -144,6 +167,7 @@ export async function scheduleJobsAfterBookingConfirmed(appointmentId: string): 
   const parties = await loadAppointmentParties(appointmentId);
   if (!parties) return;
   await scheduleReminderJobs(parties);
+  await scheduleVisitStartJob(parties);
 }
 
 export async function scheduleJobsAfterBookingCancelled(appointmentId: string): Promise<void> {

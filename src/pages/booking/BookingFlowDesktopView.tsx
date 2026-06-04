@@ -53,6 +53,7 @@ type Props = {
   onPickSlot: (slotId: string) => void;
   onOpenCalendar: () => void;
   onConfirm: () => void;
+  ruleLines?: string[];
 };
 
 function ReviewStars({ rating }: { rating: number }) {
@@ -90,6 +91,7 @@ export function BookingFlowDesktopView({
   onPickSlot,
   onOpenCalendar,
   onConfirm,
+  ruleLines,
 }: Props) {
   const showVerified = masterShowsVerifiedBadge(master);
   const slotPromo = selectedSlot?.promotion;
@@ -259,6 +261,7 @@ export function BookingFlowDesktopView({
             onReferencePhotoUrlChange={onReferencePhotoUrlChange}
             categoryCode={master.categoryCode}
             onConfirm={onConfirm}
+            ruleLines={ruleLines}
           />
         </aside>
       </div>

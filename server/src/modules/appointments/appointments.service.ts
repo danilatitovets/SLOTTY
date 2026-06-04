@@ -26,6 +26,7 @@ import {
   masterCancelAppointmentLifecycle,
   masterClientArrivedLifecycle,
   masterConfirmAppointmentLifecycle,
+  masterCloseOverdueAppointmentLifecycle,
   masterNoShowLifecycle,
   masterStartVisitLifecycle,
 } from './appointments.lifecycle.js';
@@ -38,6 +39,7 @@ import {
   statusHint,
   UPCOMING_TAB_SQL,
 } from '../../lib/appointmentStatus.js';
+import { buildMasterAppointmentActions } from '../../lib/masterAppointmentLifecycle.js';
 
 type SlotRow = {
   id: string;
@@ -80,6 +82,9 @@ export async function createAppointmentTx(input: {
     if (slotStart <= now) {
       throw ApiError.conflict('Slot already started', 'SLOT_IN_PAST');
     }
+
+    const { assertBookingNoticeAllowed } = await import('../masters/masterBookingRulesStructured.service.js');
+    await assertBookingNoticeAllowed(slot.master_id, slotStart);
 
     const svcRes = await client.query<{
       id: string;
@@ -603,8 +608,8 @@ export async function cancelClientAppointment(
   reason?: string | null,
   reasonCategory?: string | null,
 ): Promise<{ masterId: string }> {
-  const r = await query<{ status: string; master_id: string }>(
-    `select status::text, master_id from public.appointments where id = $1 and client_id = $2`,
+  const r = await query<{ status: string; master_id: string; starts_at: Date | string }>(
+    `select status::text, master_id, starts_at from public.appointments where id = $1 and client_id = $2`,
     [appointmentId, clientId],
   );
   const row = r.rows[0];
@@ -616,7 +621,12 @@ export async function cancelClientAppointment(
   }
   const oldStatus = row.status;
   const cancelReason = normalizeCancelReason(reason);
-  const category = reasonCategory?.trim().slice(0, 64) || null;
+  const { isLateCancellation } = await import('../masters/masterBookingRulesStructured.service.js');
+  const late = await isLateCancellation(row.master_id, new Date(row.starts_at));
+  const category =
+    late && !reasonCategory?.trim()
+      ? 'late_cancellation'
+      : reasonCategory?.trim().slice(0, 64) || null;
   await query(
     `update public.appointments
         set status = 'cancelled_by_client',
@@ -690,6 +700,23 @@ export async function clientConfirmCompletedAppointment(
 export { createClientBookingDispute, createMasterBookingDispute } from './bookingDisputes.service.js';
 export { clientBookingSignal } from './appointments.clientSignals.js';
 export { addClientBookingComment } from './appointments.clientComment.js';
+
+export async function masterCloseOverdueAppointment(
+  masterId: string,
+  appointmentId: string,
+  reason?: string | null,
+): Promise<{ clientId: string }> {
+  return masterCloseOverdueAppointmentLifecycle(masterId, appointmentId, reason);
+}
+
+export async function masterReportNoShowAppointment(
+  masterId: string,
+  appointmentId: string,
+  input: import('./appointments.noShowReport.service.js').MasterReportNoShowInput,
+): Promise<{ ticketCode: string }> {
+  const { masterReportNoShowToSupport } = await import('./appointments.noShowReport.service.js');
+  return masterReportNoShowToSupport(masterId, appointmentId, input);
+}
 
 export async function masterNoShowAppointment(
   masterId: string,
@@ -970,6 +997,29 @@ export async function getMasterAppointmentByVoucher(masterId: string, voucherRaw
   const { deriveClientSignalSummary } = await import('../../lib/bookingClientDetail.js');
   const clientSignal = deriveClientSignalSummary(events);
 
+  const lifecycleUpcoming = buildMasterAppointmentActions(
+    {
+      status: row.status,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      hasClientOnSiteSignal: clientSignal?.kind === 'reported_arrived' || row.status === 'client_arrived',
+    },
+    new Date(),
+    undefined,
+    'upcoming',
+  );
+  const lifecycleHistory = buildMasterAppointmentActions(
+    {
+      status: row.status,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      hasClientOnSiteSignal: clientSignal?.kind === 'reported_arrived' || row.status === 'client_arrived',
+    },
+    new Date(),
+    undefined,
+    'history',
+  );
+
   return {
     id: row.id,
     client_id: row.client_id,
@@ -1011,5 +1061,7 @@ export async function getMasterAppointmentByVoucher(masterId: string, voucherRaw
           ? (ev.metadata as { lateMinutes?: number }).lateMinutes ?? null
           : null,
     })),
+    lifecycle: lifecycleUpcoming,
+    lifecycle_history: lifecycleHistory,
   };
 }

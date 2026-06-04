@@ -17,6 +17,7 @@ import {
 } from './telegramAppointmentKeyboard.js';
 import { escapeTelegramHtml } from '../telegram/telegram.service.js';
 import { formatAppointmentDateTime } from '../telegram/formatAppointmentDateTime.js';
+import { masterBookingDeepLink } from './appointmentNotifyLinks.js';
 import { deliverEmailNotification } from './notifyUser.js';
 import { insertUserNotification } from './notificationsInsert.js';
 import { sendNotificationToProfile } from '../telegram/telegramProfileNotifications.js';
@@ -47,6 +48,20 @@ async function appointmentStillActive(appointmentId: string): Promise<boolean> {
 
 function isReminderJob(jobType: string): boolean {
   return jobType === 'booking_reminder_1h' || jobType === 'booking_reminder_24h';
+}
+
+function isVisitStartJob(jobType: string): boolean {
+  return jobType === 'booking_visit_start';
+}
+
+async function appointmentAwaitingMasterAtStart(appointmentId: string): Promise<boolean> {
+  const r = await query<{ status: string }>(
+    `select status::text from public.appointments where id = $1`,
+    [appointmentId],
+  );
+  const row = r.rows[0];
+  if (!row) return false;
+  return ['confirmed', 'client_arrived'].includes(row.status);
 }
 
 function buildReminderTelegramHtml(
@@ -89,6 +104,13 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
     }
   }
 
+  if (isVisitStartJob(job.job_type)) {
+    const awaiting = await appointmentAwaitingMasterAtStart(job.appointment_id);
+    if (!awaiting) {
+      return { status: 'skipped', reason: 'VISIT_ALREADY_STARTED_OR_CLOSED' };
+    }
+  }
+
   const ctx = await fetchAppointmentNotifyContext(job.appointment_id);
   if (!ctx) {
     return { status: 'skipped', reason: 'APPOINTMENT_NOT_FOUND' };
@@ -121,6 +143,8 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
 
   const notifyType: NotificationType = isReminderJob(job.job_type)
     ? 'appointment_reminder'
+    : isVisitStartJob(job.job_type)
+      ? 'appointment_reminder'
     : job.job_type === 'booking_client_confirmed'
       ? 'appointment_confirmed'
       : job.job_type === 'booking_master_new'
@@ -132,6 +156,17 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
     if (isReminderJob(job.job_type)) {
       const kind = job.job_type as 'booking_reminder_1h' | 'booking_reminder_24h';
       mail = forMaster ? masterBookingReminderEmail(ctx, kind) : clientBookingReminderEmail(ctx, kind);
+    } else if (isVisitStartJob(job.job_type) && forMaster) {
+      const { date, time } = formatAppointmentDateTime(ctx.startsAt);
+      const link = ctx.voucherNumber ? masterBookingDeepLink(ctx.voucherNumber, 'email') : null;
+      mail = {
+        subject: 'Запись началась',
+        text: `Клиент должен быть у вас: ${ctx.serviceTitle}, ${date} ${time}.${link ? `\n\nОткрыть запись: ${link}` : ''}`,
+        html:
+          `<p><strong>Запись началась</strong></p>` +
+          `<p>Клиент должен быть у вас: <b>${ctx.serviceTitle}</b>, ${date} ${time}.</p>` +
+          (link ? `<p><a href="${link}">Открыть запись</a></p>` : ''),
+      };
     } else if (job.job_type === 'booking_client_confirmed') {
       mail = clientBookingConfirmedEmail(ctx);
     } else if (job.job_type === 'booking_master_new') {
@@ -154,7 +189,11 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
   if (job.channel === 'in_app') {
     let title: string;
     let body: string;
-    if (isReminderJob(job.job_type)) {
+    if (isVisitStartJob(job.job_type) && forMaster) {
+      const { date, time } = formatAppointmentDateTime(ctx.startsAt);
+      title = 'Запись началась';
+      body = `Клиент должен быть у вас: ${ctx.serviceTitle}, ${date} ${time}.`;
+    } else if (isReminderJob(job.job_type)) {
       title =
         job.job_type === 'booking_reminder_24h'
           ? forMaster
@@ -190,7 +229,25 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
 
   if (job.channel === 'telegram') {
     let payload;
-    if (isReminderJob(job.job_type)) {
+    if (isVisitStartJob(job.job_type) && forMaster) {
+      const { date, time } = formatAppointmentDateTime(ctx.startsAt);
+      const title = 'Запись началась';
+      const body = `Клиент должен быть у вас: ${ctx.serviceTitle}, ${date} ${time}.`;
+      payload = {
+        type: notifyType,
+        title,
+        body,
+        telegramHtml:
+          `<b>${escapeTelegramHtml(title)}</b>\n\n` +
+          `Клиент: <b>${escapeTelegramHtml(ctx.clientName)}</b>\n` +
+          `Услуга: ${escapeTelegramHtml(ctx.serviceTitle)}\n` +
+          `Дата: ${escapeTelegramHtml(date)}\n` +
+          `Время: ${escapeTelegramHtml(time)}`,
+        telegramReplyMarkup: masterBookingTelegramKeyboard(ctx),
+        relatedEntityType: 'appointment' as const,
+        relatedEntityId: job.appointment_id,
+      };
+    } else if (isReminderJob(job.job_type)) {
       const title =
         job.job_type === 'booking_reminder_24h'
           ? forMaster

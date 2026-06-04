@@ -17,6 +17,8 @@ import {
   masterCancelAppointment,
   masterClientArrivedAppointment,
   masterConfirmAppointment,
+  masterCloseOverdueAppointment,
+  masterReportNoShowAppointment,
   masterNoShowAppointment,
   masterStartAppointment,
   masterMarkCompletedAppointment,
@@ -285,6 +287,16 @@ const masterCommentBody = z.object({
   comment: z.string().max(2000).optional(),
 });
 
+const masterReportNoShowBody = z.object({
+  waitedMinutes: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(20)]),
+  hadClientContact: z.boolean(),
+  comment: z.string().max(2000).optional(),
+});
+
+const masterCloseBody = z.object({
+  reason: z.string().max(2000).optional(),
+});
+
 masterAppointmentsRouter.get(
   '/stats',
   asyncHandler(async (req, res) => {
@@ -376,6 +388,26 @@ masterAppointmentsRouter.patch(
     const appointmentId = z.string().uuid().parse(req.params.appointmentId);
     const body = masterCommentBody.parse(req.body ?? {});
     await masterNoShowAppointment(req.user!.id, appointmentId, body.comment);
+    res.status(204).send();
+  }),
+);
+
+masterAppointmentsRouter.post(
+  '/:appointmentId/report-no-show',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const body = masterReportNoShowBody.parse(req.body ?? {});
+    const out = await masterReportNoShowAppointment(req.user!.id, appointmentId, body);
+    res.status(201).json(out);
+  }),
+);
+
+masterAppointmentsRouter.patch(
+  '/:appointmentId/close',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const body = masterCloseBody.parse(req.body ?? {});
+    await masterCloseOverdueAppointment(req.user!.id, appointmentId, body.reason);
     res.status(204).send();
   }),
 );

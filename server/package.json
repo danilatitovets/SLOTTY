@@ -25,6 +25,7 @@
     "test:booking-notifications": "tsx --test src/lib/bookingNotifications.unit.test.ts",
     "test:notification-jobs": "tsx --test src/lib/notificationJobs.unit.test.ts",
     "test:appointment-status": "tsx --test src/lib/appointmentStatus.unit.test.ts",
+    "test:master-appointment-lifecycle": "tsx --test src/lib/masterAppointmentLifecycle.unit.test.ts",
     "test:booking-client-detail": "tsx src/lib/bookingClientDetail.unit.test.ts",
     "test:booking-completion": "tsx --test src/lib/appointments.completion.unit.test.ts",
     "test:booking-lifecycle": "tsx src/lib/bookingLifecycleSmoke.unit.test.ts",

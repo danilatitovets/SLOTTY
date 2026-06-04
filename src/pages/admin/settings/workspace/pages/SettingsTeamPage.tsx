@@ -33,7 +33,7 @@ const TEAM_ROLES = [
     id: 'owner',
     icon: <HiShieldCheck className="h-5 w-5" aria-hidden />,
     title: 'Владелец',
-    subtitle: 'Полный доступ к кабинету, биллингу и настройкам',
+    subtitle: 'Полный доступ к кабинету, оплате и настройкам',
   },
   {
     id: 'admin',

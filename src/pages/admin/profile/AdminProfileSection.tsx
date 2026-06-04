@@ -35,9 +35,10 @@ import {
   SheetPortfolio,
   SheetSchedule,
 } from './AdminProfileEditSheets';
-import { RulesSection, SheetRules } from './AdminProfileRulesUi';
+import { SheetRules } from './AdminProfileRulesUi';
+import { AdminProfileBookingRulesPage } from './bookingRules/AdminProfileBookingRulesPage';
 import { useSingleFlight } from '../shared/useSingleFlight';
-import { AddressSection } from './AdminProfileAddressUi';
+import { AdminProfileAddressPage } from './address/AdminProfileAddressPage';
 import { MasterBookingLinkCard } from './MasterBookingLinkCard';
 import { MasterCategorySection } from './MasterCategorySection';
 import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
@@ -350,8 +351,10 @@ function AdminProfileReadView({
   draft,
   onEditMain,
   onEditSchedule,
-  onEditAddress,
+  onGoToAddress,
   onEditRules,
+  onSaveLocation,
+  locationSaving,
   onAddCareer,
   onEditCareer,
   onDeleteCareer,
@@ -375,7 +378,9 @@ function AdminProfileReadView({
   onGoServices: () => void;
   cabinetLoading?: boolean;
   useCabinetApi?: boolean;
-  onEditAddress: () => void;
+  onGoToAddress: () => void;
+  onSaveLocation: (location: MasterDraft['location']) => Promise<void>;
+  locationSaving?: boolean;
   onEditRules: () => void;
   onAddCareer: () => void;
   onEditCareer: (id: string) => void;
@@ -401,7 +406,14 @@ function AdminProfileReadView({
 
   const section = useMemo(() => {
     if (activeSection === 'address') {
-      return <AddressSection draft={draft} onEditAddress={onEditAddress} />;
+      return (
+        <AdminProfileAddressPage
+          draft={draft}
+          cabinetLoading={cabinetLoading}
+          saving={locationSaving}
+          onSave={onSaveLocation}
+        />
+      );
     }
     if (activeSection === 'portfolio') {
       return (
@@ -422,7 +434,7 @@ function AdminProfileReadView({
       );
     }
     if (activeSection === 'rules') {
-      return <RulesSection draft={draft} onEditRules={onEditRules} />;
+      return <AdminProfileBookingRulesPage useCabinetApi={useCabinetApi} />;
     }
     return (
       <MainSection
@@ -445,7 +457,9 @@ function AdminProfileReadView({
     onDeleteCareer,
     onDeleteCert,
     onDeletePortfolio,
-    onEditAddress,
+    onGoToAddress,
+    onSaveLocation,
+    locationSaving,
     onEditCareer,
     onEditCert,
     onEditMain,
@@ -476,7 +490,7 @@ function AdminProfileReadView({
           onEditMain,
           onGoServices,
           onGoSchedule: () => navigate(ADMIN_SCHEDULE_PATH),
-          onGoAddress: () => setActiveSection('address'),
+          onGoAddress: onGoToAddress,
           onGoPortfolio: () => setActiveSection('portfolio'),
           onGoRules: () => setActiveSection('rules'),
         }}
@@ -562,10 +576,10 @@ export function AdminProfileSection() {
     if (cabinetLoading || sheetPersisting) return;
     const sheetParam = searchParams.get('sheet');
     if (sheetParam === 'main') openSheet('main');
-    else if (sheetParam === 'address') openSheet('address');
-    else if (sheetParam === 'rules') openSheet('rules');
+    else if (sheetParam === 'address') setActiveSection('address');
+    else if (sheetParam === 'rules') setActiveSection('rules');
     else if (sheetParam === 'schedule') openSheet('schedule');
-  }, [cabinetLoading, openSheet, searchParams, sheetPersisting]);
+  }, [cabinetLoading, openSheet, searchParams, setActiveSection, sheetPersisting]);
 
   const saveMain = useCallback(
     async (patch: Partial<MasterDraft>) => {
@@ -625,25 +639,38 @@ export function AdminProfileSection() {
   );
 
   const saveLocation = useCallback(
-    async (location: MasterDraft['location']) => {
+    async (location: MasterDraft['location'], opts?: { inline?: boolean }) => {
       await runSheetPersist(async () => {
         setSheetApiError(null);
         if (!useCabinetApi) {
           persistDraft({ ...draft, location });
-          closeSheet();
-          showSaved();
+          if (!opts?.inline) {
+            closeSheet();
+            showSaved();
+          }
           return;
         }
         try {
           await flushLocationToBackend({ ...draft, location });
-          closeSheet();
-          showSaved();
+          if (!opts?.inline) {
+            closeSheet();
+            showSaved();
+          }
         } catch (e) {
-          setSheetApiError(e instanceof Error ? e.message : 'Ошибка сохранения');
+          const msg = e instanceof Error ? e.message : 'Ошибка сохранения';
+          if (opts?.inline) {
+            throw e;
+          }
+          setSheetApiError(msg);
         }
       });
     },
     [closeSheet, draft, flushLocationToBackend, persistDraft, runSheetPersist, showSaved, useCabinetApi],
+  );
+
+  const saveLocationInline = useCallback(
+    (location: MasterDraft['location']) => saveLocation(location, { inline: true }),
+    [saveLocation],
   );
 
   const saveSchedule = useCallback(
@@ -1021,8 +1048,10 @@ export function AdminProfileSection() {
           onGoServices={() => navigate(ADMIN_SERVICES_PATH)}
           onEditMain={() => openSheet('main')}
           onEditSchedule={() => openSheet('schedule')}
-          onEditAddress={() => openSheet('address')}
-          onEditRules={() => openSheet('rules')}
+          onGoToAddress={() => setActiveSection('address')}
+          onSaveLocation={saveLocationInline}
+          locationSaving={sheetPersisting}
+          onEditRules={() => setActiveSection('rules')}
           onAddCareer={() => openSheet({ k: 'career' }, 'add')}
           onEditCareer={(id) => openSheet({ k: 'career', id })}
           onDeleteCareer={(id) => openSheet({ k: 'del-career', id })}

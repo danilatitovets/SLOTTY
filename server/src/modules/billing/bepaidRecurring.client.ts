@@ -1,6 +1,6 @@
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
-import { assertBePaidReady, isBePaidTestMode } from '../payments/bepaid.config.js';
+import { assertBePaidReady, isBePaidConfigured, isBePaidEnabled, isBePaidTestMode } from '../payments/bepaid.config.js';
 
 export type BePaidTokenChargeParams = {
   trackingId: string;
@@ -35,9 +35,9 @@ export async function chargeBePaidWithCardToken(
   params: BePaidTokenChargeParams,
 ): Promise<BePaidTokenChargeResult> {
   assertBePaidReady();
-  if (!env.BEPAID_RECURRING_ENABLED) {
+  if (!isBePaidRecurringConfigured()) {
     throw ApiError.serviceUnavailable(
-      'Автосписание отключено (BEPAID_RECURRING_ENABLED=false)',
+      'Автосписание отключено (bePaid не настроен или BEPAID_RECURRING_ENABLED=false)',
       'BEPAID_RECURRING_DISABLED',
     );
   }
@@ -119,5 +119,8 @@ export async function chargeBePaidWithCardToken(
 }
 
 export function isBePaidRecurringConfigured(): boolean {
-  return env.BEPAID_RECURRING_ENABLED === true && Boolean(env.BEPAID_SHOP_ID?.trim() && env.BEPAID_SECRET_KEY?.trim());
+  if (!isBePaidEnabled() || !isBePaidConfigured()) return false;
+  const raw = process.env.BEPAID_RECURRING_ENABLED;
+  if (raw === 'false' || raw === '0') return false;
+  return true;
 }

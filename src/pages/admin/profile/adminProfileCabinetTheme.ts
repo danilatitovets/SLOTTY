@@ -16,6 +16,15 @@ export const cabinetMutedBtn =
 /** Серые плитки внутри панелей (как поля каталога). */
 export const cabinetInsetTile = 'rounded-[10px] bg-[#F5F5F5]';
 
+/** Внутренняя панель «блок в блоке» — как карточки записей и пустые состояния. */
+export const cabinetInsetShell =
+  'overflow-hidden rounded-[16px] bg-white ring-1 ring-[#EEEEEE] lg:rounded-[18px] lg:ring-[#EAECEF]';
+
+/** Outline-кнопка кабинета (как ссылки из пустых состояний). */
+export const cabinetOutlineBtn =
+  'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#F47C8C]/30 bg-white px-4 text-[14px] font-semibold text-[#F47C8C] no-underline transition hover:bg-[#FFF1F4] active:scale-[0.99] disabled:opacity-50';
+
+
 /** Поля в модалках профиля — как в каталоге (#EBEBEB, без бордеров). */
 export const sheetFieldClass =
   'mt-1.5 w-full rounded-[10px] border-0 bg-[#EBEBEB] px-4 py-3 text-[15px] font-medium text-[#111827] outline-none transition placeholder:text-[#8E8E93] focus:bg-[#E4E4E4]';

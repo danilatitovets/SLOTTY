@@ -1,6 +1,7 @@
 import { apiFetch } from '../../../shared/api/backendClient';
 import { readSlottyApiErrorMessage } from '../../../shared/api/slottyApiErrorMessage';
 import type { ClientBookingDetail } from '../clientBooking/clientBookingDetailTypes';
+import type { MasterAppointmentLifecycleResult } from '../masterAppointmentLifecycle';
 
 export type MasterBookingByVoucher = {
   id: string;
@@ -32,6 +33,8 @@ export type MasterBookingByVoucher = {
     comment?: string | null;
     lateMinutes?: number | null;
   }>;
+  lifecycle?: MasterAppointmentLifecycleResult;
+  lifecycle_history?: MasterAppointmentLifecycleResult;
 };
 
 export async function fetchClientAppointmentByVoucher(

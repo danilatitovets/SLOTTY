@@ -11,8 +11,14 @@ export function formatAppointmentPrice(value: number): string {
   return formatBynRu(value);
 }
 
-export function clientInitials(name: string): string {
-  return profileDisplayInitials(name);
+export function clientInitials(name: string, phone?: string | null): string {
+  const trimmed = name.trim();
+  if (trimmed && !/^\+?\d[\d\s()-]{5,}$/.test(trimmed)) {
+    return profileDisplayInitials(trimmed);
+  }
+  const digits = (phone ?? trimmed).replace(/\D/g, '');
+  if (digits.length >= 2) return digits.slice(-2);
+  return profileDisplayInitials(trimmed || 'Клиент');
 }
 
 /** «На дому» / «В студии» из короткого адреса. */

@@ -89,7 +89,7 @@ const NOTIFICATION_EVENTS = [
   { id: 'client_comment', label: 'Комментарий клиента' },
   { id: 'reviews', label: 'Отзывы' },
   { id: 'disputes', label: 'Жалобы и споры' },
-  { id: 'billing', label: 'Биллинг', alwaysOn: true },
+  { id: 'billing', label: 'Оплата и подписка', alwaysOn: true },
   { id: 'news', label: 'Новости SLOTTY' },
 ] as const;
 

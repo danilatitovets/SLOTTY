@@ -339,6 +339,29 @@ export async function patchMasterAppointmentNoShow(
   if (!res.ok) throw new Error(await readApiError(res));
 }
 
+export async function patchMasterAppointmentClose(
+  appointmentId: string,
+  reason?: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/close`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+}
+
+export async function postMasterReportNoShow(
+  appointmentId: string,
+  body: { waitedMinutes: number; hadClientContact: boolean; comment?: string },
+): Promise<{ ticketCode: string }> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/report-no-show`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+  return (await res.json()) as { ticketCode: string };
+}
+
 export type MasterServiceCreatedDto = {
   id: string;
   title: string;

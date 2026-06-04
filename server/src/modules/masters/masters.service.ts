@@ -5,6 +5,7 @@ import { listMyServices } from '../services/services.service.js';
 import { listMyScheduleRules } from './masterOnboarding.service.js';
 import { contactsToLegacyContactLine, type MasterContactPayload } from './masterContactsCodec.js';
 import { decodePaymentNote, listMasterPaymentMethodNames } from './masterTrustProfile.service.js';
+import { getPublicMasterBookingRulesSummary } from './masterBookingRulesStructured.service.js';
 import { sanitizeMasterLocationForViewer } from '../../lib/sanitizeMasterLocation.js';
 
 const MASTER_PROFILE_COVER_TITLE = 'Обложка профиля';
@@ -409,6 +410,8 @@ export async function getMasterDetail(masterId: string) {
     ? paymentMethodsPublic
     : paymentDecodedPublic.paymentMethods;
 
+  const rulesSummary = await getPublicMasterBookingRulesSummary(masterId);
+
   const locRows = locations.rows as PublicMasterLocationRow[];
   const coverUrl = await resolveMasterPublicCoverUrl(master.master_id, master.portfolio_cover_item_id);
   const coverId = master.portfolio_cover_item_id?.trim() || null;
@@ -431,12 +434,13 @@ export async function getMasterDetail(masterId: string) {
     },
     services: (services.rows as ServiceRow[]).map(mapService),
     locations: locRows.map((row) => mapPublicMasterLocation(row)),
-    bookingRules: br
+    bookingRules: br || rulesSummary.clientPreview.length
       ? {
-          bookingRules: br.booking_rules,
-          cancellationPolicy: br.cancellation_policy,
+          bookingRules: br?.booking_rules ?? null,
+          cancellationPolicy: br?.cancellation_policy ?? null,
           paymentNote: paymentNotePublic,
           paymentMethods: paymentMethodsResolved,
+          clientPreview: rulesSummary.clientPreview,
         }
       : null,
     certificates: (certificates.rows as CertificateRow[]).map((row) => ({

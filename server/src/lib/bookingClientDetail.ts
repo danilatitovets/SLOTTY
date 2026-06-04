@@ -328,6 +328,7 @@ export function formatBookingTimelineEventForClient(ev: BookingEventRow): string
       return 'Вы подтвердили выполнение';
     case 'booking.completed':
     case 'booking.completed_auto_confirmed':
+    case 'booking.completed_by_master':
       return 'Визит завершён';
     case 'booking.no_show':
       return 'Отмечена неявка';

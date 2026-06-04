@@ -4,6 +4,7 @@ export const SUPPORT_CATEGORIES = [
   'services',
   'schedule',
   'appointments',
+  'booking_no_show',
   'notifications',
   'billing_plan',
   'payment_bepaid',

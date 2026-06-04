@@ -43,23 +43,23 @@ export function BillingSubscriptionStatusPanel({
 
   const { uiState } = billing;
 
-  if (uiState === 'free' || uiState === 'expired') {
+  if (uiState === 'free') {
+    return null;
+  }
+
+  if (uiState === 'expired') {
     return (
       <section className={`${billingPanel} space-y-3`}>
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9CA3AF]">Ваш тариф</p>
-          <h3 className="mt-1 text-[20px] font-bold tracking-[-0.03em] text-[#111827]">Free</h3>
+          <h3 className="mt-1 text-[20px] font-bold tracking-[-0.03em] text-[#111827]">Pro не активен</h3>
           <p className="mt-1 text-[14px] text-[#6B7280]">
-            {uiState === 'expired'
-              ? 'Подписка Pro закончилась. Подключите Pro, чтобы снова пользоваться расширенными возможностями.'
-              : 'Бесплатный старт — перейдите на Pro, когда понадобятся расширенные возможности.'}
+            Подписка Pro закончилась. Подключите Pro, чтобы снова пользоваться расширенными возможностями.
           </p>
         </div>
-        {uiState === 'expired' ? (
-          <button type="button" disabled={busy} onClick={onConnectPro} className={billingPinkBtn}>
-            Подключить Pro
-          </button>
-        ) : null}
+        <button type="button" disabled={busy} onClick={onConnectPro} className={billingPinkBtn}>
+          Подключить Pro
+        </button>
       </section>
     );
   }

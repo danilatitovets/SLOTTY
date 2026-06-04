@@ -4,11 +4,12 @@ import { logNotification } from '../notifications/notificationLog.js';
 import { normalizeDbStatus, type DbAppointmentStatus } from '../../lib/appointmentStatus.js';
 import { insertBookingEvent } from './bookingEvents.service.js';
 import type { BookingActorRole } from './bookingEvents.service.js';
-import { cancelBookingAutoCompleteJob, scheduleBookingAutoCompleteJob } from './bookingCompletionJobs.service.js';
+import { cancelBookingAutoCompleteJob } from './bookingCompletionJobs.service.js';
 import { scheduleJobsAfterBookingCancelled } from '../notifications/notificationJobs.schedule.js';
 import { notifyClientByAppointmentId } from './appointments.clientNotifications.js';
 import { notifyMasterByAppointmentId } from './appointments.masterNotifications.js';
 import { loadAppointmentById } from './appointments.access.js';
+import { assertCanCompleteVisit, isVisitGuardError } from '../../lib/masterAppointmentLifecycle.js';
 
 async function setAppointmentStatus(
   appointmentId: string,
@@ -61,8 +62,9 @@ export async function finalizeAppointmentCompleted(params: {
   appointmentId: string;
   actorUserId: string;
   actorRole: BookingActorRole;
-  eventType: 'booking.completed' | 'booking.completed_auto_confirmed';
+  eventType: 'booking.completed' | 'booking.completed_auto_confirmed' | 'booking.completed_by_master';
   auto?: boolean;
+  metadata?: Record<string, unknown> | null;
 }): Promise<void> {
   const row = await loadAppointmentById(params.appointmentId);
   if (!row) throw ApiError.notFound('Запись не найдена', 'BOOKING_NOT_FOUND');
@@ -84,7 +86,9 @@ export async function finalizeAppointmentCompleted(params: {
     newStatus: 'completed',
     actorUserId: params.actorUserId,
     actorRole: params.actorRole,
-    metadata: params.auto ? { auto: true } : null,
+    metadata: params.auto
+      ? { auto: true, ...(params.metadata ?? {}) }
+      : params.metadata ?? null,
   });
 
   await cancelBookingAutoCompleteJob(params.appointmentId);
@@ -114,9 +118,6 @@ export async function masterMarkServiceCompleted(
   }
 
   const s = normalizeDbStatus(access.status);
-  if (!['client_arrived', 'in_progress', 'client_confirmed_completed'].includes(s)) {
-    throw ApiError.conflict('Нельзя отметить выполнение из этого статуса', 'BAD_STATUS');
-  }
 
   if (s === 'client_confirmed_completed' || access.client_confirmed_completed_at) {
     await finalizeAppointmentCompleted({
@@ -128,33 +129,31 @@ export async function masterMarkServiceCompleted(
     return { clientId: access.client_id };
   }
 
-  if (s === 'client_arrived') {
-    await setAppointmentStatus(appointmentId, 'in_progress');
-    await insertBookingEvent({
+  if (s === 'master_marked_completed') {
+    await finalizeAppointmentCompleted({
       appointmentId,
-      eventType: 'booking.started',
-      oldStatus: s,
-      newStatus: 'in_progress',
       actorUserId: masterId,
       actorRole: 'master',
+      eventType: 'booking.completed',
     });
+    return { clientId: access.client_id };
   }
 
-  const oldForEvent = s === 'client_arrived' ? 'in_progress' : s;
-  await setAppointmentStatus(appointmentId, 'master_marked_completed', {
-    master_marked_completed_at: true,
-  });
-  await insertBookingEvent({
+  try {
+    assertCanCompleteVisit(s);
+  } catch (e) {
+    if (isVisitGuardError(e)) {
+      throw ApiError.conflict(e.message, e.code);
+    }
+    throw e;
+  }
+
+  await finalizeAppointmentCompleted({
     appointmentId,
-    eventType: 'booking.master_marked_completed',
-    oldStatus: oldForEvent,
-    newStatus: 'master_marked_completed',
     actorUserId: masterId,
     actorRole: 'master',
+    eventType: 'booking.completed_by_master',
   });
-
-  await scheduleBookingAutoCompleteJob(appointmentId);
-  void notifyClientByAppointmentId(appointmentId, 'master_marked_completed');
 
   return { clientId: access.client_id };
 }

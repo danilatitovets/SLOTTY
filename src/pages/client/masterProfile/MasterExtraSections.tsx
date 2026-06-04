@@ -53,7 +53,8 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
   const paymentMethods = master.paymentMethods ?? [];
   const isDesktop = layout === 'desktop';
   const hasRulesContent = Boolean(
-    master.bookingRules?.trim() ||
+    master.clientPreview?.length ||
+      master.bookingRules?.trim() ||
       master.cancellationPolicy?.trim() ||
       master.paymentNote?.trim() ||
       paymentMethods.length > 0,
@@ -100,28 +101,40 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
       </Accordion>
 
       {hasRulesContent ? (
-        <Accordion title="Правила записи" desktop={isDesktop}>
+        <Accordion title="Правила мастера" desktop={isDesktop}>
           <div className="space-y-3">
-            {master.bookingRules?.trim() ? (
-              <div>
-                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                  Запись
-                </p>
-                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
-                  {master.bookingRules.trim()}
-                </p>
-              </div>
-            ) : null}
-            {master.cancellationPolicy?.trim() ? (
-              <div>
-                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                  Отмена и перенос
-                </p>
-                <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
-                  {master.cancellationPolicy.trim()}
-                </p>
-              </div>
-            ) : null}
+            {master.clientPreview?.length ? (
+              <ul className="space-y-2">
+                {master.clientPreview.map((line) => (
+                  <li key={line} className="text-[14px] leading-relaxed text-[#4B5563]">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <>
+                {master.bookingRules?.trim() ? (
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                      Запись
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
+                      {master.bookingRules.trim()}
+                    </p>
+                  </div>
+                ) : null}
+                {master.cancellationPolicy?.trim() ? (
+                  <div>
+                    <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                      Отмена и перенос
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
+                      {master.cancellationPolicy.trim()}
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            )}
             {paymentMethods.length > 0 || master.paymentNote?.trim() ? (
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">

@@ -1,9 +1,9 @@
 import { AdminTabIntroBanner } from '../AdminTabIntroBanner';
 import type { OverviewAnalyticsTab } from './overviewAnalytics';
-import { MINI_PICTURE, overviewSvodkaPhotoSrc } from './adminOverviewTheme';
+import { MINI_PICTURE, OVERVIEW_WELCOME_IMAGE_SRC, overviewSvodkaPhotoSrc } from './adminOverviewTheme';
 
 export const OVERVIEW_TAB_INTRO_IMAGES = [
-  overviewSvodkaPhotoSrc('обзор.webp'),
+  OVERVIEW_WELCOME_IMAGE_SRC,
   overviewSvodkaPhotoSrc('доход.webp'),
   overviewSvodkaPhotoSrc('клиенты.webp'),
   overviewSvodkaPhotoSrc('репутация.webp'),
@@ -11,7 +11,7 @@ export const OVERVIEW_TAB_INTRO_IMAGES = [
 ] as const;
 
 const OVERVIEW_TAB_INTRO: Record<OverviewAnalyticsTab, { title: string; imageSrc: string }> = {
-  summary: { title: 'Сводка', imageSrc: overviewSvodkaPhotoSrc('обзор.webp') },
+  summary: { title: 'Сводка', imageSrc: OVERVIEW_WELCOME_IMAGE_SRC },
   revenue: { title: 'Доход', imageSrc: overviewSvodkaPhotoSrc('доход.webp') },
   clients: { title: 'Клиенты', imageSrc: overviewSvodkaPhotoSrc('клиенты.webp') },
   reputation: { title: 'Репутация', imageSrc: overviewSvodkaPhotoSrc('репутация.webp') },

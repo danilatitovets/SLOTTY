@@ -17,10 +17,9 @@ import {
   fetchMasterAppointments,
   fetchMasterCabinet,
   patchMasterAppointmentCancel,
-  patchMasterAppointmentClientArrived,
+  patchMasterAppointmentClose,
   patchMasterAppointmentComplete,
   patchMasterAppointmentConfirm,
-  patchMasterAppointmentNoShow,
   patchMasterAppointmentStart,
   patchMasterMe,
   patchMasterService,
@@ -768,19 +767,25 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         if (!before || before.status === row.status) continue;
         if (before.status === 'pending' && row.status === 'confirmed') {
           calls.push(patchMasterAppointmentConfirm(row.id));
-        } else if (before.status === 'confirmed' && row.status === 'client_arrived') {
-          calls.push(patchMasterAppointmentClientArrived(row.id));
-        } else if (before.status === 'client_arrived' && row.status === 'in_progress') {
+        } else if (
+          (before.status === 'confirmed' || before.status === 'client_arrived') &&
+          row.status === 'in_progress'
+        ) {
           calls.push(patchMasterAppointmentStart(row.id));
         } else if (
-          (before.status === 'confirmed' ||
-            before.status === 'client_arrived' ||
-            before.status === 'in_progress') &&
+          before.status === 'in_progress' &&
           row.status === 'completed'
         ) {
           calls.push(patchMasterAppointmentComplete(row.id));
-        } else if (before.status === 'confirmed' && row.status === 'no_show') {
-          calls.push(patchMasterAppointmentNoShow(row.id));
+        } else if (
+          (before.status === 'confirmed' ||
+            before.status === 'client_arrived' ||
+            before.status === 'in_progress' ||
+            before.status === 'master_marked_completed') &&
+          row.status === 'completed' &&
+          before.status !== 'in_progress'
+        ) {
+          calls.push(patchMasterAppointmentClose(row.id));
         } else if (
           (before.status === 'pending' ||
             before.status === 'confirmed' ||

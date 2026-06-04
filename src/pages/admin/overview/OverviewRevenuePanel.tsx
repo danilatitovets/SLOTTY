@@ -21,8 +21,7 @@ import { OverviewLineChart } from './OverviewLineChart';
 import { OverviewRevenuePeriodMenu } from './OverviewRevenuePeriodMenu';
 import { OverviewRevenueSourcesMenu } from './OverviewRevenueSourcesMenu';
 
-const SLOTTY_GRADIENT =
-  'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
+import { OverviewSummaryHeroBackground } from './OverviewSummaryHeroBackground';
 
 function formatTrendPercent(value: number | null): string | null {
   if (value === null) return null;
@@ -45,22 +44,20 @@ function RevenueHeroSection({
     <section
       className={
         embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
+          ? 'relative overflow-hidden p-6 text-white lg:p-8'
+          : 'relative overflow-hidden rounded-[32px] p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8'
       }
     >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-1/3 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
+      <OverviewSummaryHeroBackground />
 
-      <div className="relative min-w-0">
+      <div className="relative z-10 min-w-0">
         <OverviewRevenuePeriodMenu value={periodPreset} onChange={onPeriodChange} />
 
-        <p className="mt-8 text-[52px] font-black leading-none tabular-nums tracking-[-0.08em] text-white lg:text-[72px]">
+        <p className="mt-8 text-[52px] font-black leading-none tabular-nums tracking-[-0.08em] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)] lg:text-[72px]">
           {formatBynRu(data.totalRevenue)}
         </p>
 
-        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
+        <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/90 drop-shadow-[0_1px_10px_rgba(0,0,0,0.4)]">
           Общая сумма дохода по активным и завершённым записям за выбранный период.
         </p>
       </div>

@@ -24,7 +24,7 @@ export function BillingDesktopHero({
   const periodLabel = period === 'year' ? 'Годовая оплата' : 'Ежемесячная оплата';
   const description = isPro
     ? 'Полный доступ к кабинету: безлимит услуг и записей, расширенная сводка.'
-    : 'Бесплатный старт — перейдите на Pro, когда понадобится больше возможностей.';
+    : null;
 
   return (
     <section className={`${billingDesktopCard} p-4 sm:p-5 lg:p-6`}>
@@ -37,7 +37,9 @@ export function BillingDesktopHero({
             {planBadgeLabel(plan)}
             <span className="font-medium text-[#6B7280]"> · {periodLabel}</span>
           </p>
-          <p className="mt-1.5 text-[14px] font-medium leading-snug text-[#6B7280]">{description}</p>
+          {description ? (
+            <p className="mt-1.5 text-[14px] font-medium leading-snug text-[#6B7280]">{description}</p>
+          ) : null}
         </div>
         <span className="shrink-0 rounded-full bg-[#FFF1F4] px-3 py-1.5 text-[13px] font-semibold text-[#F47C8C] ring-1 ring-[#FDE8ED]">
           {planBadgeLabel(plan)}

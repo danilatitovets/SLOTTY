@@ -69,7 +69,7 @@ export function BookingPage() {
   type ApiBookingBundle =
     | { status: 'idle' }
     | { status: 'loading' }
-    | { status: 'ok'; profile: ReturnType<typeof mapMasterDetailToDemoProfile>; slots: PublicSlotDto[] }
+    | { status: 'ok'; profile: ReturnType<typeof mapMasterDetailToDemoProfile>; slots: PublicSlotDto[]; ruleLines: string[] }
     | { status: 'error' };
 
   const [apiBundle, setApiBundle] = useState<ApiBookingBundle>({ status: 'idle' });
@@ -94,7 +94,8 @@ export function BookingPage() {
         if (cancelled) return;
         const activeOnly = { ...detail, services: detail.services.filter((s) => s.isActive) };
         const profile = mapMasterDetailToDemoProfile(activeOnly);
-        setApiBundle({ status: 'ok', profile, slots });
+        const ruleLines = detail.bookingRules?.clientPreview?.slice(0, 4) ?? [];
+        setApiBundle({ status: 'ok', profile, slots, ruleLines });
       } catch {
         if (cancelled) return;
         setApiBundle({ status: 'error' });
@@ -449,6 +450,8 @@ export function BookingPage() {
     );
   }
 
+  const bookingRuleLines = apiBundle.status === 'ok' ? apiBundle.ruleLines : undefined;
+
   return (
     <BookingPageShell backTo={backTo}>
       <BookingFlowView
@@ -474,6 +477,7 @@ export function BookingPage() {
         onCommentChange={setClientComment}
         referencePhotoUrl={referencePhotoUrl}
         onReferencePhotoUrlChange={setReferencePhotoUrl}
+        ruleLines={bookingRuleLines}
       />
     </BookingPageShell>
   );

@@ -318,7 +318,7 @@ function buildNotificationsSection(
     arrived: 'Клиент на месте',
     reviews: 'Отзывы',
     disputes: 'Споры',
-    billing: 'Биллинг',
+    billing: 'Тариф и оплата',
     news: 'Новости SLOTTY',
   };
   for (const [key, label] of Object.entries(eventLabels)) {

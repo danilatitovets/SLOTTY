@@ -157,7 +157,7 @@ export function AdminProfileHero({
   const displayName = draft.name.trim() || 'Мастер';
 
   return (
-    <section className={`${cabinetCard} relative z-0 rounded-t-none`}>
+    <section className={`${cabinetCard} relative z-0 max-lg:-mx-4 max-lg:rounded-none lg:rounded-t-none`}>
       <input
         ref={coverInputRef}
         type="file"

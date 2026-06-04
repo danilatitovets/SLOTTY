@@ -30,6 +30,7 @@ export type ExtendedMasterProfile = DemoMasterProfile & {
   cancellationPolicy?: string;
   paymentMethods?: string[];
   paymentNote?: string;
+  clientPreview?: string[];
 };
 
 export type NearestSlotInfo = {

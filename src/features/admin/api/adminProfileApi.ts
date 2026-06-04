@@ -14,6 +14,50 @@ export type BookingRulesDto = {
   paymentMethods: string[];
 };
 
+export type StructuredBookingRulesDto = {
+  minBookingNoticeMinutes: number;
+  requiresMasterConfirmation: boolean;
+  freeCancelBeforeMinutes: number;
+  lateCancelPolicy: 'mark_late' | 'require_agreement' | 'warning_only';
+  allowedLatenessMinutes: number;
+  lateArrivalPolicy: 'master_can_cancel' | 'shorten_visit' | 'reschedule_by_agreement';
+  noShowAfterMinutes: number;
+  noShowPolicy: 'mark_no_show' | 'client_can_dispute';
+  rescheduleEnabled: boolean;
+  rescheduleBeforeMinutes: number;
+  rescheduleLimit: number | null;
+  paymentMethods: string[];
+  paymentComment: string | null;
+  prepaymentRequired: boolean;
+  refundPolicyEnabled: boolean;
+  refundPolicyText: string | null;
+  visitPreparationText: string | null;
+  contraindicationsText: string | null;
+  completionScore: number;
+  updatedAt: string | null;
+  bookingRules: string | null;
+  cancellationPolicy: string | null;
+  paymentNote: string | null;
+  clientPreview: string[];
+};
+
+export async function fetchMyBookingRulesStructured(): Promise<StructuredBookingRulesDto> {
+  const res = await apiFetch('/api/masters/me/booking-rules');
+  if (!res.ok) throw new Error(await readApiError(res));
+  return (await res.json()) as StructuredBookingRulesDto;
+}
+
+export async function putMyBookingRulesStructured(
+  payload: Partial<Omit<StructuredBookingRulesDto, 'clientPreview' | 'updatedAt' | 'completionScore'>>,
+): Promise<StructuredBookingRulesDto> {
+  const res = await apiFetch('/api/masters/me/booking-rules', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+  return (await res.json()) as StructuredBookingRulesDto;
+}
+
 export async function updateMyMasterProfile(payload: {
   displayName?: string;
   bio?: string;

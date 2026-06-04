@@ -55,7 +55,7 @@ export const PaymentInfoPage: FC = () => {
           <li>
             <strong>Подписка Pro и платные функции мастера</strong> — оплата в кабинете в разделе{' '}
             <a className={legalDocLinkClass} href={MASTER_SETTINGS_BILLING_PATH}>
-              «Биллинг и тариф»
+              «Тариф и оплата»
             </a>
             . После выбора тарифа вы переходите на страницу bePaid, вводите данные карты и возвращаетесь в SLOTTY с
             результатом операции.

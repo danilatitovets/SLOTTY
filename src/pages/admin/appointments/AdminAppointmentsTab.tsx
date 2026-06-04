@@ -56,6 +56,7 @@ import {
   pickNearestUpcoming,
   uniqueServiceTitles,
 } from './appointmentsFormat';
+import { isRequiresAttentionAppointment } from '../../../features/appointments/masterAppointmentLifecycle';
 import type {
   AppointmentsTabId,
   HistoryPeriodFilter,
@@ -94,7 +95,7 @@ type Props = {
     rows: DemoMasterAppointment[],
     options?: { cancelReason?: string },
   ) => void | Promise<void>;
-  onOpenDetail: (appointment: DemoMasterAppointment) => void;
+  onOpenDetail: (appointment: DemoMasterAppointment, tab: AppointmentsTabId) => void;
 };
 
 function updateStatus(
@@ -139,8 +140,9 @@ export function AdminAppointmentsTab({
 
     const openLocal = (row: DemoMasterAppointment) => {
       focusHandledRef.current = focusId;
-      setTab(appointmentsTabForStatus(row.status));
-      onOpenDetail(row);
+      const t = appointmentsTabForStatus(row.status);
+      setTab(t);
+      onOpenDetail(row, t);
       clearAppointmentFocus();
     };
 
@@ -162,8 +164,9 @@ export function AdminAppointmentsTab({
           if (row && !cancelled) {
             const mapped = mapMasterAppointmentRowToDemo(row);
             focusHandledRef.current = focusId;
-            setTab(appointmentsTabForStatus(mapped.status));
-            onOpenDetail(mapped);
+            const t = appointmentsTabForStatus(mapped.status);
+            setTab(t);
+            onOpenDetail(mapped, t);
             clearAppointmentFocus();
             return;
           }
@@ -260,9 +263,24 @@ export function AdminAppointmentsTab({
     return upcomingFiltered.filter((a) => a.id !== nearest.id);
   }, [upcomingFiltered, nearest]);
 
-  const upcomingGroups = useMemo(
-    () => groupAppointmentsByDay(upcomingRest),
+  const attentionRows = useMemo(
+    () => upcomingFiltered.filter((a) => isRequiresAttentionAppointment(a)),
+    [upcomingFiltered],
+  );
+
+  const upcomingActiveRows = useMemo(
+    () => upcomingRest.filter((a) => !isRequiresAttentionAppointment(a)),
     [upcomingRest],
+  );
+
+  const upcomingGroups = useMemo(
+    () => groupAppointmentsByDay(upcomingActiveRows),
+    [upcomingActiveRows],
+  );
+
+  const historyAttentionRows = useMemo(
+    () => historyRows.filter((a) => isRequiresAttentionAppointment(a)),
+    [historyRows],
   );
 
   const historySortFn = useMemo(() => {
@@ -517,14 +535,28 @@ export function AdminAppointmentsTab({
     }
     return (
       <div className="space-y-4">
-        {nearest ? <AppointmentsNearestCard appointment={nearest} onOpen={() => onOpenDetail(nearest)} /> : null}
+        {nearest && !isRequiresAttentionAppointment(nearest) ? (
+          <AppointmentsNearestCard appointment={nearest} onOpen={() => onOpenDetail(nearest, 'upcoming')} />
+        ) : null}
+        {attentionRows.length ? (
+          <section>
+            <h3 className={`mb-2 px-0.5 ${apptGroupLabel}`}>Требуют внимания</h3>
+            <ul className={apptListGap}>
+              {attentionRows.map((a) => (
+                <li key={a.id}>
+                  <AppointmentsUpcomingRow appointment={a} onOpen={() => onOpenDetail(a, 'upcoming')} overdue />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {upcomingGroups.map((group) => (
           <section key={group.dayIso}>
             <h3 className={`mb-2 px-0.5 ${apptGroupLabel}`}>{group.label}</h3>
             <ul className={apptListGap}>
               {group.items.map((a) => (
                 <li key={a.id}>
-                  <AppointmentsUpcomingRow appointment={a} onOpen={() => onOpenDetail(a)} />
+                  <AppointmentsUpcomingRow appointment={a} onOpen={() => onOpenDetail(a, 'upcoming')} />
                 </li>
               ))}
             </ul>
@@ -584,6 +616,18 @@ export function AdminAppointmentsTab({
         </div>
 
         <div className={apptHistoryDesktopPanel}>
+          {historyAttentionRows.length ? (
+            <section className="border-b border-[#FEE2E2] bg-[#FFF5F5] px-4 py-3">
+              <h3 className={`mb-2 ${apptGroupLabel} !text-[#B91C1C]`}>Требуют внимания</h3>
+              <ul className={apptListGap}>
+                {historyAttentionRows.map((a) => (
+                  <li key={a.id}>
+                    <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a, 'history')} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           <div className={apptHistoryTableHead} role="row">
             <span className={apptHistoryTableHeadCell}>Клиент</span>
             <span className={apptHistoryTableHeadCell}>Услуга</span>
@@ -597,7 +641,7 @@ export function AdminAppointmentsTab({
               <ul className="flex flex-col" role="list">
                 {group.items.map((a, rowIndex) => (
                   <li key={a.id} className={rowIndex === group.items.length - 1 ? 'last:[&_button]:border-b-0' : undefined}>
-                    <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a)} />
+                    <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a, 'history')} />
                   </li>
                 ))}
               </ul>
@@ -611,7 +655,7 @@ export function AdminAppointmentsTab({
             <ul className={apptListGap}>
               {group.items.map((a) => (
                 <li key={a.id}>
-                  <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a)} />
+                  <AppointmentsHistoryRow appointment={a} onOpen={() => onOpenDetail(a, 'history')} />
                 </li>
               ))}
             </ul>

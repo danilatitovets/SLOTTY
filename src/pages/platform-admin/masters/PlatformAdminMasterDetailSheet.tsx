@@ -285,6 +285,26 @@ export function PlatformAdminMasterDetailSheet({ masterId, listPreview, onClose 
                 </div>
               </section>
 
+              {detail.bookingRules ? (
+                <section>
+                  <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-[#9CA3AF]">
+                    Правила мастера
+                  </h3>
+                  <ul className="space-y-2 rounded-2xl bg-[#f6f7fb] px-4 py-3">
+                    {detail.bookingRules.clientPreview.map((line) => (
+                      <li key={line} className="text-[13px] leading-relaxed text-[#374151]">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                  {detail.bookingRules.updatedAt ? (
+                    <p className="mt-2 text-[12px] text-[#9CA3AF]">
+                      Обновлено: {formatDate(detail.bookingRules.updatedAt)}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
               <section>
                 <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-[#9CA3AF]">
                   История биллинга

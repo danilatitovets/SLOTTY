@@ -8,6 +8,7 @@ import {
 } from '../billing/billing.service.js';
 import { listBillingEventsForMaster, recordBillingEvent } from '../billing/billingEvents.service.js';
 import { writeAdminAuditLog } from './auditLog.service.js';
+import { getPublicMasterBookingRulesSummary } from '../masters/masterBookingRulesStructured.service.js';
 
 export type PlatformMasterListItem = {
   masterId: string;
@@ -73,6 +74,17 @@ export type PlatformMasterDetail = PlatformMasterListItem & {
     usage: { activeServices: number; monthlyAppointments: number };
   } | null;
   billingEvents: PlatformMasterBillingEvent[];
+  bookingRules: {
+    clientPreview: string[];
+    minBookingNoticeMinutes: number;
+    freeCancelBeforeMinutes: number;
+    allowedLatenessMinutes: number;
+    noShowAfterMinutes: number;
+    rescheduleEnabled: boolean;
+    paymentMethods: string[];
+    visitPreparationText: string | null;
+    updatedAt: string | null;
+  } | null;
 };
 
 export async function listPlatformMasters(params: {
@@ -302,6 +314,8 @@ export async function getPlatformMaster(masterId: string): Promise<PlatformMaste
     billingEvents = [];
   }
 
+  const bookingRulesSummary = await getPublicMasterBookingRulesSummary(masterId);
+
   return {
     masterId: row.master_id,
     displayName: row.display_name,
@@ -332,6 +346,19 @@ export async function getPlatformMaster(masterId: string): Promise<PlatformMaste
     publishedAt: row.published_at ? new Date(row.published_at).toISOString() : null,
     subscription,
     billingEvents,
+    bookingRules: bookingRulesSummary.structured
+      ? {
+          clientPreview: bookingRulesSummary.clientPreview,
+          minBookingNoticeMinutes: bookingRulesSummary.structured.minBookingNoticeMinutes,
+          freeCancelBeforeMinutes: bookingRulesSummary.structured.freeCancelBeforeMinutes,
+          allowedLatenessMinutes: bookingRulesSummary.structured.allowedLatenessMinutes,
+          noShowAfterMinutes: bookingRulesSummary.structured.noShowAfterMinutes,
+          rescheduleEnabled: bookingRulesSummary.structured.rescheduleEnabled,
+          paymentMethods: bookingRulesSummary.structured.paymentMethods,
+          visitPreparationText: bookingRulesSummary.structured.visitPreparationText,
+          updatedAt: bookingRulesSummary.structured.updatedAt,
+        }
+      : null,
   };
 }
 

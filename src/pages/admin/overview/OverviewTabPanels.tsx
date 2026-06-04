@@ -109,11 +109,11 @@ function SummaryMobileHeroCard({
       <OverviewSummaryHeroBackground />
 
       <div className="relative z-10 min-w-0">
-        <h1 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-white">
+        <h1 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
           Привет, {firstName}. Сегодня всё под контролем.
         </h1>
 
-        <p className="mt-3 text-[14px] font-semibold leading-relaxed text-white/82">
+        <p className="mt-3 text-[14px] font-semibold leading-relaxed text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]">
           Быстрая сводка по записям, доходу, ближайшему клиенту и расписанию.
         </p>
 
@@ -321,11 +321,11 @@ function DesktopHeroCard({
         <div>
 
 
-          <h1 className="mt-8 max-w-[760px] text-[52px] font-black leading-[0.95] tracking-[-0.08em] text-white">
+          <h1 className="mt-8 max-w-[760px] text-[52px] font-black leading-[0.95] tracking-[-0.08em] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)]">
             Привет, {firstName}. Сегодня всё под контролем.
           </h1>
 
-          <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/82">
+          <p className="mt-6 max-w-[660px] text-[17px] font-semibold leading-8 text-white/90 drop-shadow-[0_1px_10px_rgba(0,0,0,0.4)]">
             Быстрая сводка по записям, доходу, ближайшему клиенту и расписанию.
             Всё главное видно сразу, без лишних действий.
           </p>

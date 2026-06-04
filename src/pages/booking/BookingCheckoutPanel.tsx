@@ -27,6 +27,7 @@ type Props = {
   onReferencePhotoUrlChange: (url: string | null) => void;
   categoryCode?: string | null;
   onConfirm: () => void;
+  ruleLines?: string[];
 };
 
 export function BookingCheckoutPanel({
@@ -49,6 +50,7 @@ export function BookingCheckoutPanel({
   onReferencePhotoUrlChange,
   categoryCode,
   onConfirm,
+  ruleLines,
 }: Props) {
   return (
     <div className={`${bookingDesktopPanel} space-y-5`}>
@@ -122,6 +124,7 @@ export function BookingCheckoutPanel({
         referencePhotoUrl={referencePhotoUrl}
         onReferencePhotoUrlChange={onReferencePhotoUrlChange}
         onConfirm={onConfirm}
+        ruleLines={ruleLines}
       />
     </div>
   );
