@@ -1,51 +1,61 @@
 import type { FC } from 'react';
-import { SITE_SUPPORT_EMAIL } from './legalSiteInfo';
+import { SITE_SUPPORT_EMAIL, TERMS_LEGAL_HERO_BG } from './legalSiteInfo';
 import { LegalPageShell } from './LegalPageShell';
+import { LegalDocSection, legalDocLinkClass, type LegalTocItem } from './legalDocumentUi';
 
-/** Краткое пользовательское соглашение; при необходимости замените на полноценную оферту с юристом. */
+const TOC: LegalTocItem[] = [
+  { id: 'service', label: '1. Сервис' },
+  { id: 'account', label: '2. Аккаунт и данные' },
+  { id: 'liability', label: '3. Ограничение ответственности' },
+  { id: 'contact', label: '4. Связь' },
+];
+
 export const UserAgreementPage: FC = () => {
   return (
-    <LegalPageShell title="Пользовательское соглашение">
-      <p className="text-[13px] font-medium text-neutral-500">
-        Регулирует использование сервиса <strong className="text-neutral-800">SLOTTY</strong>. Дополните разделами про оплату, ответственность и споры под вашу модель.
-      </p>
-
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">1. Сервис</h2>
+    <LegalPageShell
+      title="Пользовательское соглашение"
+      titleHighlight="соглашение"
+      heroBg={TERMS_LEGAL_HERO_BG}
+      heroBgFit="cover"
+      toc={TOC}
+      heroLead={
+        <>
+          Регулирует использование сервиса <strong className="text-[#111827]">SLOTTY</strong>. Дополните разделами
+          про оплату, ответственность и споры под вашу модель.
+        </>
+      }
+    >
+      <LegalDocSection id="service" title="1. Сервис">
         <p>
           SLOTTY предоставляет технические средства для поиска мастеров, просмотра услуг и онлайн-записи. Договор на
-          оказание услуги (маникюр, стрижка и т.д.) заключается между клиентом и мастером / салоном; SLOTTY выступает как
-          посредническая платформа, если иное прямо не указано в интерфейсе или отдельном договоре.
+          оказание услуги заключается между клиентом и мастером; SLOTTY выступает как посредническая платформа, если
+          иное прямо не указано.
         </p>
-      </section>
+      </LegalDocSection>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">2. Аккаунт и данные</h2>
+      <LegalDocSection id="account" title="2. Аккаунт и данные">
         <p>
           Вы обязуетесь предоставлять достоверные данные в разумном объёме. Обработка персональных данных регулируется
-          Политикой конфиденциальности и Согласием на обработку ПД. Подписка на email-новости в футере — добровольная и
-          не требуется для записи к мастерам.
+          Политикой конфиденциальности и Согласием на обработку ПД.
         </p>
-      </section>
+      </LegalDocSection>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">3. Ограничение ответственности</h2>
+      <LegalDocSection id="liability" title="3. Ограничение ответственности">
         <p>
           Сервис предоставляется «как есть». Оператор не отвечает за качество услуг мастера, расписание третьих лиц и
           сбои связи, не зависящие от Оператора, в пределах, допускаемых применимым правом.
         </p>
-      </section>
+      </LegalDocSection>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">4. Связь</h2>
+      <LegalDocSection id="contact" title="4. Связь">
         <p>
           Вопросы по соглашению:{' '}
-          <a className="font-semibold text-[#E29595] underline underline-offset-2" href={`mailto:${SITE_SUPPORT_EMAIL}`}>
+          <a className={legalDocLinkClass} href={`mailto:${SITE_SUPPORT_EMAIL}`}>
             {SITE_SUPPORT_EMAIL}
           </a>
           .
         </p>
-      </section>
+      </LegalDocSection>
     </LegalPageShell>
   );
 };

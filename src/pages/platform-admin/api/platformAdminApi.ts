@@ -19,6 +19,8 @@ import type {
   PlatformPurchasesSummary,
   ProManualPaymentRequestAdmin,
   ProfileReportAdmin,
+  SupportTicketAdmin,
+  SupportTicketAdminDetail,
   EmailCampaignAdmin,
   EmailCampaignAudience,
   EmailCampaignRecipientAdmin,
@@ -1001,4 +1003,73 @@ export async function postPlatformSubscriptionRetry(
   });
   if (!res.ok) throw new Error(await readErr(res));
   return (await res.json()) as { paymentUrl: string; paymentId: string };
+}
+
+export async function getPlatformSupportTickets(params?: {
+  status?: string;
+  severity?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<PlatformPagedResult<SupportTicketAdmin> & { tickets: SupportTicketAdmin[] }> {
+  const q = new URLSearchParams();
+  if (params?.status) q.set('status', params.status);
+  if (params?.severity) q.set('severity', params.severity);
+  if (params?.category) q.set('category', params.category);
+  q.set('limit', String(params?.limit ?? PAGE_SIZE));
+  q.set('offset', String(params?.offset ?? 0));
+  const res = await apiFetch(`/api/platform-admin/support/tickets?${q}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    tickets: SupportTicketAdmin[];
+    total: number;
+    limit: number;
+    offset: number;
+  };
+  return { tickets: data.tickets, items: data.tickets, total: data.total, limit: data.limit, offset: data.offset };
+}
+
+export async function getPlatformSupportTicket(ticketCode: string): Promise<SupportTicketAdminDetail> {
+  const res = await apiFetch(`/api/platform-admin/support/tickets/${encodeURIComponent(ticketCode)}`);
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as { ticket: SupportTicketAdminDetail };
+  return data.ticket;
+}
+
+export async function replyPlatformSupportTicket(ticketCode: string, message: string): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/support/tickets/${encodeURIComponent(ticketCode)}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function updatePlatformSupportTicketStatus(
+  ticketCode: string,
+  status: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/support/tickets/${encodeURIComponent(ticketCode)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function assignPlatformSupportTicket(
+  ticketCode: string,
+  assignedTo: string | null,
+): Promise<void> {
+  const res = await apiFetch(`/api/platform-admin/support/tickets/${encodeURIComponent(ticketCode)}/assign`, {
+    method: 'PATCH',
+    body: JSON.stringify({ assignedTo }),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export async function fetchPlatformSystemStatus(): Promise<
+  import('../../../features/systemStatus/systemStatusApi').PublicStatusPage
+> {
+  const res = await apiFetch('/api/platform-admin/system-status');
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as import('../../../features/systemStatus/systemStatusApi').PublicStatusPage;
 }

@@ -27,6 +27,7 @@ import { GoogleSignInButton } from './GoogleSignInButton';
 import { useTelegram } from '../../../shared/hooks/useTelegram';
 import { openTelegramOrBrowserUrl } from '../../../shared/lib/telegramWebApp';
 import { GoogleIcon } from '../../../shared/ui/GoogleIcon';
+import { integrationBrandIcon } from '../../../pages/admin/settings/workspace/integrationBrandIcons';
 import { isConsentRequiredError } from '../../legal/consentBlock.types';
 import {
   SignupConsentFields,
@@ -35,6 +36,15 @@ import {
 } from '../../legal/components/SignupConsentFields';
 import { useAuth } from '../AuthProvider';
 import { ActiveSessionsSection } from './ActiveSessionsSection';
+import {
+  SettingsCabinetHero,
+  SettingsCabinetList,
+  SettingsCabinetRingBadge,
+  SettingsCabinetSectionTitle,
+  SettingsCabinetSurface,
+  settingsCabinetActionBtn,
+  settingsCabinetStack,
+} from '../../../pages/admin/settings/workspace/settingsCabinetUi';
 import {
   sheetFieldClass,
   sheetHintClass,
@@ -74,15 +84,11 @@ const settingsOutlineBtn =
   'flex min-h-12 w-full items-center justify-center rounded-[16px] border border-[#FDE8ED] bg-white px-4 text-[14px] font-semibold text-[#ff5f7a] transition hover:bg-[#FFF9FB] active:scale-[0.98] disabled:opacity-50';
 
 function TelegramMark() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="12" r="12" fill="#2AABEE" />
-      <path
-        fill="#fff"
-        d="M5.43 11.47c3.66-1.6 6.1-2.65 7.32-3.15 3.48-1.45 4.2-1.7 4.67-1.7.1 0 .33.02.48.12.12.1.16.24.14.34-.02.1-.16.48-.32.94-.46 1.5-1.98 5.92-2.75 7.86-.34.74-.99 1.1-1.52 1.12-.52.02-1.35-.3-2.01-.55-.9-.33-1.62-.5-1.55-.95.03-.2.38-.4 1.05-.72Z"
-      />
-    </svg>
-  );
+  return integrationBrandIcon('telegram', 20);
+}
+
+function GoogleMark() {
+  return integrationBrandIcon('google', 20);
 }
 
 function hasProvider(identities: AuthIdentityDto[], provider: AuthProvider): boolean {
@@ -638,24 +644,27 @@ export function LoginMethodsPanel({
   /* ——— Способы входа: OKX-стиль (клиентские настройки) ——— */
   if (isSettings && okxStyle) {
     const connectedCount = countAccountVerifications(identities);
-    const okxBtn =
-      'shrink-0 rounded-[10px] bg-[#F5F5F5] px-4 py-2 text-[14px] font-semibold text-[#111827] transition hover:bg-[#EBEBEB] disabled:opacity-50';
+    const okxBtn = settingsCabinetActionBtn;
 
     return (
-      <div className="space-y-5">
-        <div className="flex items-start gap-4">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] text-[15px] font-bold text-[#F47C8C]">
-            {loading ? '…' : `${connectedCount}/3`}
-          </span>
-          <div>
-            <h2 className="text-[18px] font-bold text-[#111827]">Защита аккаунта</h2>
-            <p className="mt-1 text-[14px] text-[#6B7280]">
-              {connectedCount >= 3
-                ? 'Все способы входа подключены'
-                : 'Подключите ещё способы — так не потеряете доступ'}
-            </p>
-          </div>
-        </div>
+      <div className={settingsCabinetStack}>
+        <SettingsCabinetHero
+          badge={
+            <SettingsCabinetRingBadge
+              current={connectedCount}
+              total={3}
+              label="способов"
+              loading={loading}
+            />
+          }
+          title="Защита аккаунта"
+          description={
+            connectedCount >= 3
+              ? 'Все способы входа подключены'
+              : 'Подключите ещё способы — так не потеряете доступ'
+          }
+          loading={loading}
+        />
 
         {error ? <ErrorBanner message={error} pageStyle={false} /> : null}
         {emailNotice ? (
@@ -663,15 +672,16 @@ export function LoginMethodsPanel({
         ) : null}
 
         <section>
-          <h3 className="mb-3 text-[16px] font-bold text-[#111827]">Способы аутентификации</h3>
-          <div className="overflow-hidden rounded-[16px] bg-white divide-y divide-[#EBEBEB]">
+          <SettingsCabinetSectionTitle title="Способы аутентификации" />
+          <SettingsCabinetList>
             <OkxAuthRow
-              icon={<TelegramMark />}
+              icon={TelegramMark()}
+              iconTone="brand"
               title="Telegram"
               subtitle={linked.telegram ? 'Подключён — вход через Mini App' : 'Откройте SLOTTY в Telegram'}
               action={
                 linked.telegram ? (
-                  <span className="text-[13px] font-semibold text-[#16A34A]">✓</span>
+                  <LoginMethodConnectedMark />
                 ) : inTelegramApp ? (
                   <button type="button" disabled={busy} onClick={() => void handleLinkTelegram()} className={okxBtn}>
                     Настроить
@@ -685,12 +695,13 @@ export function LoginMethodsPanel({
             />
 
             <OkxAuthRow
-              icon={<GoogleIcon size={20} />}
+              icon={GoogleMark()}
+              iconTone="brand"
               title="Google"
               subtitle={linked.google ? 'Почта Google подключена' : 'Вход с телефона и компьютера'}
               action={
                 linked.google ? (
-                  <span className="text-[13px] font-semibold text-[#16A34A]">✓</span>
+                  <LoginMethodConnectedMark />
                 ) : googleClientId ? (
                   <GoogleLoginPill
                     busy={busy}
@@ -721,7 +732,7 @@ export function LoginMethodsPanel({
               }
               action={
                 linked.email && linked.emailVerified ? (
-                  <span className="text-[13px] font-semibold text-[#16A34A]">✓</span>
+                  <LoginMethodConnectedMark />
                 ) : linked.email && !linked.emailVerified ? (
                   <button type="button" disabled={busy} onClick={() => void handleResendVerification()} className={okxBtn}>
                     Подтвердить
@@ -741,11 +752,11 @@ export function LoginMethodsPanel({
                 ) : null
               }
             />
-          </div>
+          </SettingsCabinetList>
         </section>
 
         {!linked.email && showEmailForm ? (
-          <div className="space-y-3 rounded-[16px] bg-white p-5">
+          <SettingsCabinetSurface className="space-y-3">
             <input
               type="email"
               autoComplete="email"
@@ -766,7 +777,7 @@ export function LoginMethodsPanel({
               type="button"
               disabled={busy || !email.trim() || password.length < 8}
               onClick={() => void handleEmailSubmit()}
-              className="w-full rounded-[10px] bg-[#111827] py-3 text-[14px] font-semibold text-white disabled:opacity-50"
+              className={`w-full ${settingsPrimaryBtn}`}
             >
               Сохранить
             </button>
@@ -782,7 +793,7 @@ export function LoginMethodsPanel({
             >
               Отмена
             </button>
-          </div>
+          </SettingsCabinetSurface>
         ) : null}
 
         <ActiveSessionsSection />
@@ -1305,20 +1316,37 @@ function MethodStatusBadge({
   );
 }
 
+function LoginMethodConnectedMark() {
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6f88] to-[#ff5f7a] text-white"
+      aria-label="Подключено"
+    >
+      <HiCheck className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+    </span>
+  );
+}
+
 function OkxAuthRow({
   icon,
   title,
   subtitle,
   action,
+  iconTone = 'default',
 }: {
   icon: ReactNode;
   title: string;
   subtitle: string;
   action?: ReactNode;
+  iconTone?: 'default' | 'brand';
 }) {
   return (
     <div className="flex items-center gap-4 px-5 py-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#F5F5F5]">
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${
+          iconTone === 'brand' ? 'bg-white ring-1 ring-[#EBEBEB]' : 'bg-[#F5F5F5]'
+        }`}
+      >
         {icon}
       </span>
       <div className="min-w-0 flex-1">

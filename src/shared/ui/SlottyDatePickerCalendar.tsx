@@ -6,6 +6,7 @@ const TONE_ACCENT: Record<SlottySelectTone, string> = {
   neutral: '#E29595',
   admin: '#F47C8C',
   catalog: '#F47C8C',
+  cabinet: '#ff5f7a',
 };
 
 function pad2(n: number): string {

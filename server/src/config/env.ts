@@ -76,6 +76,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  /** Размер пула pg (Supabase session pooler обычно ≤15). */
+  PG_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   TELEGRAM_BOT_TOKEN: z.preprocess(
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
@@ -284,6 +286,22 @@ const envSchema = z.object({
     .transform((v) => v !== 'false' && v !== '0'),
   BILLING_WORKER_INTERVAL_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
   BILLING_RENEWAL_REMINDER_DAYS: z.coerce.number().int().min(1).max(14).default(3),
+  SYSTEM_STATUS_CHECKS_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== 'false' && v !== '0'),
+  SYSTEM_STATUS_CHECK_INTERVAL_MS: z.coerce.number().int().min(15_000).max(3_600_000).default(60_000),
+  /** Экспорт данных кабинета мастера (ZIP). По умолчанию выключен. */
+  DATA_EXPORT_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+  DATA_EXPORT_WORKER_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== 'false' && v !== '0'),
+  DATA_EXPORT_WORKER_INTERVAL_MS: z.coerce.number().int().min(15_000).max(3_600_000).default(30_000),
+  DATA_EXPORT_EXPIRY_DAYS: z.coerce.number().int().min(1).max(30).default(7),
 });
 
 const parsed = envSchema.safeParse(process.env);

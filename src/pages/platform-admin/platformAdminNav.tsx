@@ -8,6 +8,7 @@ import {
   HiCalendarDays,
   HiBanknotes,
   HiEnvelope,
+  HiLifebuoy,
 } from 'react-icons/hi2';
 import {
   PLATFORM_ADMIN_AUDIT_PATH,
@@ -18,6 +19,8 @@ import {
   PLATFORM_ADMIN_NOTIFICATIONS_PATH,
   PLATFORM_ADMIN_PATH,
   PLATFORM_ADMIN_REQUESTS_PATH,
+  PLATFORM_ADMIN_SUPPORT_PATH,
+  PLATFORM_ADMIN_SYSTEM_STATUS_PATH,
   PLATFORM_ADMIN_SERVICES_PATH,
   PLATFORM_ADMIN_USERS_PATH,
 } from '../../app/paths';
@@ -47,6 +50,20 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     title: 'Заявки',
     description:
       'Смена категории мастера и заявки «Стать спонсором SLOTTY». Обработайте запрос и оставьте комментарий при отклонении.',
+  },
+  {
+    to: PLATFORM_ADMIN_SUPPORT_PATH,
+    label: 'Поддержка',
+    icon: HiLifebuoy,
+    title: 'Поддержка SLOTTY',
+    description: 'Обращения мастеров: тикеты, статусы, ответы и эскалация.',
+  },
+  {
+    to: PLATFORM_ADMIN_SYSTEM_STATUS_PATH,
+    label: 'Статус',
+    icon: HiCog6Tooth,
+    title: 'Статус системы',
+    description: 'Компоненты платформы, инциденты, плановые работы и health checks.',
   },
   {
     to: PLATFORM_ADMIN_USERS_PATH,

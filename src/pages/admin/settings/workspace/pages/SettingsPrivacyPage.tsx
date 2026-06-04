@@ -1,85 +1,151 @@
 import {
+  HiClipboardDocumentList,
+  HiDocumentText,
+  HiMegaphone,
+  HiShieldCheck,
+  HiUserCircle,
+} from 'react-icons/hi2';
+import { Link } from 'react-router-dom';
+import {
   LEGAL_CONSENT_PATH,
   LEGAL_PRIVACY_PATH,
   LEGAL_TERMS_PATH,
+  MASTER_SETTINGS_PRIVACY_PATH,
+  MASTER_SETTINGS_SUPPORT_CONTACT_PATH,
 } from '../../../../../app/paths';
-import { Link } from 'react-router-dom';
 import { SUPPORT_EMAIL } from '../../../../../constants/support';
-import { SettingsDangerZone } from '../settingsCards';
+import { legalReturnState } from '../../../../legal/useLegalPageBack';
+import { SettingsDangerZone, SettingsCabinetToggleRow } from '../settingsCards';
 import { SettingsHeader } from '../SettingsHeader';
 import { SETTINGS_PAGE_META } from '../settingsNav';
-import { SettingsComingSoonBanner, SettingsFormRow, SettingsSectionCard } from '../settingsUi';
-import { settingsOutlineBtn } from '../settingsWorkspaceTheme';
+import {
+  SettingsCabinetHero,
+  SettingsCabinetRingBadge,
+  SettingsCabinetList,
+  SettingsCabinetListRow,
+  SettingsCabinetSectionTitle,
+  SettingsCabinetSurface,
+  settingsCabinetStack,
+} from '../settingsCabinetUi';
+import { DataExportSection } from '../privacy/DataExportSection';
 
 const meta = SETTINGS_PAGE_META.privacy;
+
+const PRIVACY_READY = 2;
+const PRIVACY_TOTAL = 3;
+
+const LEGAL_LINKS = [
+  {
+    to: LEGAL_PRIVACY_PATH,
+    title: 'Политика конфиденциальности',
+    subtitle: 'Как SLOTTY обрабатывает и защищает персональные данные',
+    icon: <HiShieldCheck className="h-5 w-5" aria-hidden />,
+  },
+  {
+    to: LEGAL_TERMS_PATH,
+    title: 'Пользовательское соглашение',
+    subtitle: 'Общие правила использования сервиса',
+    icon: <HiDocumentText className="h-5 w-5" aria-hidden />,
+  },
+  {
+    to: LEGAL_CONSENT_PATH,
+    title: 'Согласие на обработку данных',
+    subtitle: 'Текст согласия при регистрации и в кабинете',
+    icon: <HiClipboardDocumentList className="h-5 w-5" aria-hidden />,
+  },
+] as const;
 
 export function SettingsPrivacyPage() {
   return (
     <>
       <SettingsHeader title={meta.title} description={meta.description} breadcrumb={meta.breadcrumb} />
 
-      <SettingsComingSoonBanner
-        title="Часть настроек приватности в разработке"
-        description="Экспорт данных, видимость профиля и маркетинговые рассылки появятся после подключения API. Сейчас доступны только юридические документы и обращение в поддержку."
-      />
-
-      <div className="mt-5 space-y-5">
-        <SettingsSectionCard title="Экспорт данных">
-          <p className="text-[14px] text-[#6B7280]">
-            Запросите архив профиля, записей и настроек в формате JSON. Функция появится в следующем релизе.
-          </p>
-          <button type="button" disabled className={`mt-4 min-h-[40px] ${settingsOutlineBtn} cursor-not-allowed opacity-50`}>
-            Запросить экспорт — скоро
-          </button>
-        </SettingsSectionCard>
-
-        <SettingsSectionCard title="Видимость и маркетинг">
-          <SettingsFormRow
-            title="Публичный профиль"
-            description="Показывать карточку в каталоге SLOTTY"
-            control={
-              <label className="inline-flex cursor-not-allowed items-center gap-2 opacity-50">
-                <input type="checkbox" checked disabled className="h-4 w-4 rounded" aria-disabled />
-                <span className="text-[13px] text-[#6B7280]">Скоро</span>
-              </label>
-            }
-          />
-          <SettingsFormRow
-            title="Маркетинговые уведомления"
-            description="Новости и акции SLOTTY"
-            control={
-              <label className="inline-flex cursor-not-allowed items-center gap-2 opacity-50">
-                <input type="checkbox" checked disabled className="h-4 w-4 rounded" aria-disabled />
-                <span className="text-[13px] text-[#6B7280]">Скоро</span>
-              </label>
-            }
-          />
-        </SettingsSectionCard>
-
-        <SettingsSectionCard title="Согласия">
-          <ul className="space-y-2 text-[14px]">
-            <li>
-              <Link to={LEGAL_PRIVACY_PATH} className="font-semibold text-[#ff5f7a] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5f7a]/30">
-                Политика конфиденциальности
-              </Link>
-            </li>
-            <li>
-              <Link to={LEGAL_TERMS_PATH} className="font-semibold text-[#ff5f7a] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5f7a]/30">
-                Пользовательское соглашение
-              </Link>
-            </li>
-            <li>
-              <Link to={LEGAL_CONSENT_PATH} className="font-semibold text-[#ff5f7a] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5f7a]/30">
-                Согласие на обработку данных
-              </Link>
-            </li>
-          </ul>
-        </SettingsSectionCard>
-
-        <SettingsDangerZone
-          disabled
-          hint={`Для удаления аккаунта напишите на ${SUPPORT_EMAIL} — мы обработаем запрос вручную.`}
+      <div className={`${settingsCabinetStack} pb-8`}>
+        <SettingsCabinetHero
+          badge={
+            <SettingsCabinetRingBadge
+              current={PRIVACY_READY}
+              total={PRIVACY_TOTAL}
+              label="готово"
+            />
+          }
+          title="Ваши данные под контролем"
+          description="Скачайте отчёт в Word с данными кабинета или ознакомьтесь с юридическими документами."
         />
+
+        <DataExportSection />
+
+        <section>
+          <SettingsCabinetSectionTitle
+            title="Видимость и маркетинг"
+            description="Кто видит ваш профиль и какие рассылки вы получаете"
+          />
+          <SettingsCabinetSurface className="divide-y divide-[#F3F4F6] !p-0">
+            <div className="flex items-center gap-4 px-4 py-4 sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
+                <HiUserCircle className="h-5 w-5" aria-hidden />
+              </span>
+              <SettingsCabinetToggleRow
+                title="Публичный профиль"
+                description="Показывать карточку в каталоге SLOTTY"
+                checked
+                disabled
+                className="flex-1 !px-0 !py-0"
+              />
+            </div>
+            <div className="flex items-center gap-4 px-4 py-4 sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
+                <HiMegaphone className="h-5 w-5" aria-hidden />
+              </span>
+              <SettingsCabinetToggleRow
+                title="Маркетинговые уведомления"
+                description="Новости и акции SLOTTY"
+                checked={false}
+                disabled
+                className="flex-1 !px-0 !py-0"
+              />
+            </div>
+          </SettingsCabinetSurface>
+        </section>
+
+        <section>
+          <SettingsCabinetSectionTitle
+            title="Согласия и документы"
+            description="Актуальные версии правил и политик"
+          />
+          <SettingsCabinetList>
+            {LEGAL_LINKS.map((item) => (
+              <SettingsCabinetListRow
+                key={item.to}
+                icon={item.icon}
+                title={item.title}
+                subtitle={item.subtitle}
+                to={item.to}
+                linkState={legalReturnState(MASTER_SETTINGS_PRIVACY_PATH)}
+                actionLabel="Читать"
+              />
+            ))}
+          </SettingsCabinetList>
+        </section>
+
+        <section>
+          <SettingsDangerZone
+            disabled
+            hint={
+              <>
+                Для удаления аккаунта напишите на{' '}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold">
+                  {SUPPORT_EMAIL}
+                </a>{' '}
+                или{' '}
+                <Link to={MASTER_SETTINGS_SUPPORT_CONTACT_PATH} className="font-semibold">
+                  создайте обращение в поддержку
+                </Link>
+                .
+              </>
+            }
+          />
+        </section>
       </div>
     </>
   );

@@ -147,6 +147,10 @@ type Variant = 'landing' | 'bar';
 
 export type SlottyHeaderProps = {
   variant?: Variant;
+  /** Тёмный bar-хедер (страница политики конфиденциальности). */
+  barTone?: 'light' | 'dark';
+  /** На mobile при `variant="bar"` — pill-хедер с бургер-меню как на главной. */
+  barMobileMenu?: boolean;
 };
 
 function useSyncHeaderHeight(headerRef: RefObject<HTMLElement | null>) {
@@ -172,21 +176,22 @@ function useSyncHeaderHeight(headerRef: RefObject<HTMLElement | null>) {
   }, [headerRef]);
 }
 
-function BurgerIcon({ open }: { open: boolean }) {
+function BurgerIcon({ open, tone = 'light' }: { open: boolean; tone?: 'light' | 'dark' }) {
+  const barColor = tone === 'dark' ? 'bg-white' : 'bg-black';
   return (
     <div className="relative h-5 w-5" aria-hidden>
       <span
-        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full bg-black transition-all duration-300 ${
+        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full transition-all duration-300 ${barColor} ${
           open ? 'translate-y-0 rotate-45' : '-translate-y-[6px]'
         }`}
       />
       <span
-        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full bg-black transition-all duration-300 ${
+        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full transition-all duration-300 ${barColor} ${
           open ? 'opacity-0' : 'opacity-100'
         }`}
       />
       <span
-        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full bg-black transition-all duration-300 ${
+        className={`absolute left-0 top-1/2 h-[2px] w-5 rounded-full transition-all duration-300 ${barColor} ${
           open ? 'translate-y-0 -rotate-45' : 'translate-y-[6px]'
         }`}
       />
@@ -196,11 +201,15 @@ function BurgerIcon({ open }: { open: boolean }) {
 
 function HeaderShell({
   variant,
+  barTone = 'light',
+  landingTone = 'light',
   children,
   innerClassName = '',
   shellRef,
 }: {
   variant: Variant;
+  barTone?: 'light' | 'dark';
+  landingTone?: 'light' | 'dark';
   children: ReactNode;
   innerClassName?: string;
   shellRef?: RefObject<HTMLElement | null>;
@@ -208,11 +217,18 @@ function HeaderShell({
   const headerElementRef = shellRef as LegacyRef<HTMLElement> | undefined;
 
   if (variant === 'bar') {
+    const isDark = barTone === 'dark';
     return (
       <header
         ref={headerElementRef}
-        className={`sticky top-0 z-50 hidden overflow-visible bg-[#FFFCFC]/95 backdrop-blur-md lg:block ${
-          innerClassName.includes('mega-open') ? 'border-b border-transparent' : 'border-b border-[#F3F4F6]'
+        className={`sticky top-0 z-50 hidden overflow-visible backdrop-blur-md lg:block ${
+          isDark ? 'bg-[#0a0a0a]/95' : 'bg-[#FFFCFC]/95'
+        } ${
+          innerClassName.includes('mega-open')
+            ? 'border-b border-transparent'
+            : isDark
+              ? 'border-b border-white/10'
+              : 'border-b border-[#F3F4F6]'
         }`}
       >
         <div className={`${CLIENT_DESKTOP_SHELL_CLASS} ${innerClassName}`}>{children}</div>
@@ -220,27 +236,51 @@ function HeaderShell({
     );
   }
 
+  const landingIsDark = landingTone === 'dark';
+  const landingPanelClass = landingIsDark
+    ? `overflow-visible rounded-[30px] border border-white/12 bg-[#121212]/98 shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all duration-300 ${
+        innerClassName.includes('mega-open')
+          ? 'rounded-b-none !border-white/10 !bg-[#141414] shadow-[0_20px_56px_rgba(0,0,0,0.65)]'
+          : ''
+      }`
+    : `overflow-visible rounded-[30px] border border-[#D5D3D3]/80 bg-[#E4E2E2]/96 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 ${
+        innerClassName.includes('mega-open')
+          ? '!bg-[#E8E6E6] shadow-[0_24px_70px_rgba(244,124,140,0.14),0_12px_40px_rgba(17,24,39,0.08)]'
+          : ''
+      }`;
+
   return (
     <header
       ref={headerElementRef}
       className="fixed inset-x-0 top-0 z-50 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]"
     >
       <div className={`${CLIENT_DESKTOP_SHELL_CLASS} max-lg:px-4`}>
-        <div
-          className={`overflow-visible rounded-[30px] border border-[#D5D3D3]/80 bg-[#E4E2E2]/96 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-md transition-all duration-300 ${
-            innerClassName.includes('mega-open')
-              ? '!bg-[#E8E6E6] shadow-[0_24px_70px_rgba(244,124,140,0.14),0_12px_40px_rgba(17,24,39,0.08)]'
-              : ''
-          } ${innerClassName}`}
-        >
-          {children}
-        </div>
+        <div className={`${landingPanelClass} ${innerClassName}`}>{children}</div>
       </div>
     </header>
   );
 }
 
-export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
+export function SlottyHeader({
+  variant = 'landing',
+  barTone = 'light',
+  barMobileMenu = false,
+}: SlottyHeaderProps) {
+  const isDarkBar = variant === 'bar' && barTone === 'dark';
+  const barMobileLandingMenu = variant === 'bar' && barMobileMenu;
+  const barMobileMenuDark = barMobileLandingMenu && isDarkBar;
+  const mobileNavLinkClass = barMobileMenuDark
+    ? 'block py-3.5 text-[18px] font-medium text-white/90 transition hover:text-white'
+    : 'block py-3.5 text-[18px] font-medium text-neutral-900';
+  const mobileNavBtnClass = barMobileMenuDark
+    ? 'block w-full py-3.5 text-left text-[18px] font-medium text-white/90 transition hover:text-white'
+    : 'block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900';
+  const mobileBurgerBtnClass = barMobileMenuDark
+    ? 'relative z-50 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/10 active:scale-95'
+    : 'relative z-50 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-black/5 active:scale-95';
+  const headerIconBtn = isDarkBar
+    ? 'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/15 hover:text-[#ff8fa3] active:scale-[0.97]'
+    : iconBtn;
   const navigate = useNavigate();
   const location = useLocation();
   const { isTelegramWebApp } = useTelegram();
@@ -268,7 +308,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
   const showDesktopChrome = !isTelegramWebApp && variant === 'bar';
   const showLandingDesktop = !isTelegramWebApp && variant === 'landing';
-  const compactMobile = isTelegramWebApp || variant === 'bar';
+  const compactMobile = isTelegramWebApp || (variant === 'bar' && !barMobileMenu);
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
@@ -489,12 +529,20 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
   }
 
   const desktopCenterNav = (
-    <DesktopMegaNav
-      openKey={megaOpenKey}
-      onOpen={openMegaMenu}
-      onForceClose={closeHeaderPanels}
-      onAnchorClick={scrollToLandingAnchor}
-    />
+    <div
+      className={
+        isDarkBar
+          ? '[&_a]:text-white/70 [&_a:hover]:text-[#ff8fa3] [&_button]:text-white/70 [&_button:hover]:text-[#ff8fa3]'
+          : undefined
+      }
+    >
+      <DesktopMegaNav
+        openKey={megaOpenKey}
+        onOpen={openMegaMenu}
+        onForceClose={closeHeaderPanels}
+        onAnchorClick={scrollToLandingAnchor}
+      />
+    </div>
   );
 
   const goCatalog = useCallback(() => {
@@ -524,7 +572,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       <button
         type="button"
         onClick={() => void goCatalog()}
-        className={iconBtn}
+        className={headerIconBtn}
         aria-label="Каталог"
         title="Каталог услуг"
       >
@@ -534,7 +582,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       {isAuthenticated && isMasterUser ? (
         <Link
           to={ADMIN_NOTIFICATIONS_PATH}
-          className={iconBtn}
+          className={headerIconBtn}
           aria-label="Уведомления"
           title="Уведомления"
         >
@@ -546,7 +594,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
         <button
           type="button"
           onClick={toggleProfilePanel}
-          className={`${iconBtn} overflow-hidden p-0 ${profilePanelOpen ? 'ring-2 ring-[#F47C8C]/35' : ''}`}
+          className={`${headerIconBtn} overflow-hidden p-0 ${profilePanelOpen ? 'ring-2 ring-[#F47C8C]/35' : ''}`}
           aria-expanded={profilePanelOpen}
           aria-controls="slotty-account-panel"
           aria-label="Аккаунт"
@@ -556,9 +604,13 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       ) : (
         <Link
           to={loginHref}
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EFEF] px-3.5 text-[14px] font-semibold text-[#111827] transition hover:bg-[#E9E6E6]"
+          className={
+            isDarkBar
+              ? 'inline-flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3.5 text-[14px] font-semibold text-white/85 transition hover:bg-white/15'
+              : 'inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EFEF] px-3.5 text-[14px] font-semibold text-[#111827] transition hover:bg-[#E9E6E6]'
+          }
         >
-          <HiUser className="h-5 w-5 text-[#6B7280]" aria-hidden />
+          <HiUser className={`h-5 w-5 ${isDarkBar ? 'text-white/55' : 'text-[#6B7280]'}`} aria-hidden />
           Войти
         </Link>
       )}
@@ -566,7 +618,11 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
       {showPlatformAdmin ? (
         <Link
           to={PLATFORM_ADMIN_PATH}
-          className="inline-flex h-10 shrink-0 items-center rounded-full border border-[#e5e7eb] bg-white px-4 text-[14px] font-semibold text-[#374151] transition hover:border-[#ff5f7a]/40 hover:text-[#ff5f7a]"
+          className={
+            isDarkBar
+              ? 'inline-flex h-10 shrink-0 items-center rounded-full border border-white/15 bg-transparent px-4 text-[14px] font-semibold text-white/75 transition hover:border-[#ff5f7a]/40 hover:text-[#ff8fa3]'
+              : 'inline-flex h-10 shrink-0 items-center rounded-full border border-[#e5e7eb] bg-white px-4 text-[14px] font-semibold text-[#374151] transition hover:border-[#ff5f7a]/40 hover:text-[#ff5f7a]'
+          }
         >
           Админ
         </Link>
@@ -626,9 +682,9 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             aria-controls="slotty-mobile-menu"
             aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
             onClick={() => setMobileMenuOpen((o) => !o)}
-            className="relative z-50 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-black/5 active:scale-95"
+            className={`${mobileBurgerBtnClass} lg:hidden`}
           >
-            <BurgerIcon open={mobileMenuOpen} />
+            <BurgerIcon open={mobileMenuOpen} tone={barMobileMenuDark ? 'dark' : 'light'} />
           </button>
         </div>
       ) : (
@@ -638,9 +694,9 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
           aria-controls="slotty-mobile-menu"
           aria-label={mobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
           onClick={() => setMobileMenuOpen((o) => !o)}
-          className="relative z-50 flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-black/5 active:scale-95 lg:hidden"
+          className={`${mobileBurgerBtnClass} lg:hidden`}
         >
-          <BurgerIcon open={mobileMenuOpen} />
+          <BurgerIcon open={mobileMenuOpen} tone={barMobileMenuDark ? 'dark' : 'light'} />
         </button>
       )}
     </div>
@@ -653,13 +709,17 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
         mobileMenuOpen ? 'max-h-[900px] opacity-100' : 'max-h-0 opacity-0'
       }`}
     >
-      <div className="pb-5 pl-7 pr-4 pt-1 sm:pl-9 sm:pr-5">
+      <div
+        className={`pb-5 pl-7 pr-4 pt-1 sm:pl-9 sm:pr-5 ${
+          barMobileMenuDark ? 'border-t border-white/10' : ''
+        }`}
+      >
         <nav aria-label="Меню">
           <ul className="flex flex-col">
             <li>
               <Link
                 to={SERVICES_PATH}
-                className="block py-3.5 text-[18px] font-medium text-neutral-900"
+                className={mobileNavLinkClass}
                 onClick={() => {
                   closeMobileMenu();
                   void setProfileRole('client');
@@ -672,7 +732,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <Link
                 to={MASTERS_PATH}
-                className="block py-3.5 text-[18px] font-medium text-neutral-900"
+                className={mobileNavLinkClass}
                 onClick={() => {
                   closeMobileMenu();
                   void setProfileRole('client');
@@ -685,7 +745,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <button
                 type="button"
-                className="block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900"
+                className={mobileNavBtnClass}
                 onClick={() => {
                   closeMobileMenu();
                   void goAppointments();
@@ -698,7 +758,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <button
                 type="button"
-                className="block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900"
+                className={mobileNavBtnClass}
                 onClick={() => scrollToLandingAnchor(LANDING_ANCHOR_HOW)}
               >
                 Как это работает
@@ -708,7 +768,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <button
                 type="button"
-                className="block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900"
+                className={mobileNavBtnClass}
                 onClick={() => scrollToLandingAnchor(LANDING_ANCHOR_FOR_MASTERS)}
               >
                 Для мастеров
@@ -718,7 +778,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <button
                 type="button"
-                className="block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900"
+                className={mobileNavBtnClass}
                 onClick={() => scrollToLandingAnchor(LANDING_ANCHOR_TARIFFS)}
               >
                 Тарифы
@@ -728,7 +788,7 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <li>
               <button
                 type="button"
-                className="block w-full py-3.5 text-left text-[18px] font-medium text-neutral-900"
+                className={mobileNavBtnClass}
                 onClick={() => scrollToLandingAnchor(LANDING_ANCHOR_FAQ)}
               >
                 FAQ
@@ -737,19 +797,11 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
             <li>
               {isAuthenticated ? (
-                <Link
-                  to={PROFILE_PATH}
-                  className="block py-3.5 text-[18px] font-medium text-neutral-900"
-                  onClick={closeMobileMenu}
-                >
+                <Link to={PROFILE_PATH} className={mobileNavLinkClass} onClick={closeMobileMenu}>
                   Профиль
                 </Link>
               ) : (
-                <Link
-                  to={loginHref}
-                  className="block py-3.5 text-[18px] font-medium text-neutral-900"
-                  onClick={closeMobileMenu}
-                >
+                <Link to={loginHref} className={mobileNavLinkClass} onClick={closeMobileMenu}>
                   Войти
                 </Link>
               )}
@@ -762,7 +814,11 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
             <Link
               to={PLATFORM_ADMIN_PATH}
               onClick={closeMobileMenu}
-              className="block w-full rounded-2xl border border-[#e5e7eb] py-3 text-center text-[15px] font-semibold text-[#374151]"
+              className={
+                barMobileMenuDark
+                  ? 'block w-full rounded-2xl border border-white/15 py-3 text-center text-[15px] font-semibold text-white/80'
+                  : 'block w-full rounded-2xl border border-[#e5e7eb] py-3 text-center text-[15px] font-semibold text-[#374151]'
+              }
             >
               Админ
             </Link>
@@ -781,32 +837,66 @@ export function SlottyHeader({ variant = 'landing' }: SlottyHeaderProps) {
 
   if (variant === 'bar') {
     return (
-      <HeaderShell variant="bar" shellRef={headerRef} innerClassName={headerPanelOpen ? 'mega-open' : ''}>
-        <div ref={megaHostRef} className="relative" {...megaHostProps}>
-          <div className={`${HEADER_BAR_ROW_CLASS} lg:px-0`}>
-            <div className="flex min-w-0 items-center gap-5 xl:gap-8">
-              <HeaderLogoLink onClick={closeHeaderPanels} size="compact" />
+      <>
+        {barMobileLandingMenu ? (
+          <>
+            <button
+              type="button"
+              className={`fixed inset-0 z-40 cursor-default transition-opacity duration-300 lg:hidden ${
+                barMobileMenuDark ? 'bg-black/55' : 'bg-transparent'
+              } ${
+                mobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+              aria-label="Закрыть меню"
+              tabIndex={-1}
+              onClick={closeMobileMenu}
+            />
+            <HeaderShell
+              variant="landing"
+              landingTone={barMobileMenuDark ? 'dark' : 'light'}
+              shellRef={headerRef}
+              innerClassName={mobileMenuOpen ? 'mega-open' : ''}
+            >
+              <div className="relative lg:hidden">
+                {topBar}
+                {mobileMenu}
+              </div>
+            </HeaderShell>
+          </>
+        ) : null}
 
-              {desktopCenterNav}
+        <HeaderShell
+          variant="bar"
+          barTone={barTone}
+          shellRef={headerRef}
+          innerClassName={headerPanelOpen ? 'mega-open' : ''}
+        >
+          <div ref={megaHostRef} className="relative" {...megaHostProps}>
+            <div className={`${HEADER_BAR_ROW_CLASS} lg:px-0`}>
+              <div className="flex min-w-0 items-center gap-5 xl:gap-8">
+                <HeaderLogoLink onClick={closeHeaderPanels} size="compact" />
+
+                {desktopCenterNav}
+              </div>
+
+              {desktopActions}
             </div>
 
-            {desktopActions}
+            <HeaderMegaDropdown
+              variant="bar"
+              isOpen={headerPanelOpen}
+              panelKey={megaPanelKey}
+              panelRef={megaPanelRef}
+              isMasterUser={isMasterUser}
+              accountItems={profilePanelOpen ? accountMegaItems : null}
+              onAnchorClick={scrollToLandingAnchor}
+              onForceClose={closeHeaderPanels}
+              onScheduleClose={scheduleHeaderPanelClose}
+              onCancelClose={cancelMegaClose}
+            />
           </div>
-
-          <HeaderMegaDropdown
-            variant="bar"
-            isOpen={headerPanelOpen}
-            panelKey={megaPanelKey}
-            panelRef={megaPanelRef}
-            isMasterUser={isMasterUser}
-            accountItems={profilePanelOpen ? accountMegaItems : null}
-            onAnchorClick={scrollToLandingAnchor}
-            onForceClose={closeHeaderPanels}
-            onScheduleClose={scheduleHeaderPanelClose}
-            onCancelClose={cancelMegaClose}
-          />
-        </div>
-      </HeaderShell>
+        </HeaderShell>
+      </>
     );
   }
 

@@ -49,8 +49,11 @@ const FOOTER_COL_B = [
   { key: 'refund', label: 'Возвраты', to: LEGAL_REFUND_PATH },
 ] as const;
 
-const navLinkClass =
+const navLinkBrandClass =
   'text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80';
+
+const navLinkDarkClass =
+  'text-[15px] font-medium text-white/75 transition hover:text-white active:opacity-80';
 
 const inputClass =
   'h-10 w-full rounded-full bg-white/12 px-4 text-[13px] text-white placeholder:text-white/55 outline-none ring-1 ring-inset ring-white/12 transition focus:ring-white/30 disabled:opacity-60';
@@ -58,12 +61,18 @@ const inputClass =
 const ctaClass =
   'inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-white px-4 text-[13px] font-semibold text-[#171717] transition hover:bg-white/90 active:opacity-80 disabled:cursor-not-allowed disabled:opacity-60';
 
-function FooterLinkList({ items }: { items: readonly { key: string; label: string; to: string }[] }) {
+function FooterLinkList({
+  items,
+  linkClass,
+}: {
+  items: readonly { key: string; label: string; to: string }[];
+  linkClass: string;
+}) {
   return (
     <ul className="flex flex-col gap-2.5">
       {items.map((item) => (
         <li key={item.key}>
-          <Link to={item.to} className={navLinkClass}>
+          <Link to={item.to} className={linkClass}>
             {item.label}
           </Link>
         </li>
@@ -76,7 +85,13 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-export const HomeFooter: FC = () => {
+type HomeFooterProps = {
+  tone?: 'brand' | 'dark';
+};
+
+export const HomeFooter: FC<HomeFooterProps> = ({ tone = 'brand' }) => {
+  const isDark = tone === 'dark';
+  const navLinkClass = isDark ? navLinkDarkClass : navLinkBrandClass;
   const year = new Date().getFullYear();
   const marqueeTrack = Array.from({ length: 6 }).flatMap(() => FOOTER_MARQUEE_SERVICES);
 
@@ -107,13 +122,25 @@ export const HomeFooter: FC = () => {
   }
 
   return (
-    <footer className="relative w-full overflow-hidden bg-[#E29595] text-[#171717]">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background:radial-gradient(800px_circle_at_20%_10%,rgba(255,255,255,0.95),transparent_55%),radial-gradient(900px_circle_at_80%_40%,rgba(255,255,255,0.65),transparent_55%)]" />
+    <footer
+      className={`relative w-full overflow-hidden ${isDark ? 'bg-[#0a0a0a] text-white' : 'bg-[#E29595] text-[#171717]'}`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isDark
+            ? 'opacity-100 [background:radial-gradient(900px_circle_at_15%_0%,rgba(255,95,122,0.12),transparent_55%),radial-gradient(700px_circle_at_85%_30%,rgba(255,255,255,0.04),transparent_50%)]'
+            : 'opacity-[0.16] [background:radial-gradient(800px_circle_at_20%_10%,rgba(255,255,255,0.95),transparent_55%),radial-gradient(900px_circle_at_80%_40%,rgba(255,255,255,0.65),transparent_55%)]'
+        }`}
+      />
 
       <div className="relative">
-        <div className="border-b border-black/10 py-5 sm:py-6">
+        <div className={`border-b py-5 sm:py-6 ${isDark ? 'border-white/10' : 'border-black/10'}`}>
           <div className="relative left-1/2 w-[100vw] max-w-[100vw] -translate-x-1/2 overflow-hidden">
-            <div className="flex w-max items-center gap-8 px-6 text-[30px] font-bold tracking-[-0.04em] text-white sm:text-[40px] motion-reduce:animate-none animate-services-marquee-left">
+            <div
+              className={`flex w-max items-center gap-8 px-6 text-[30px] font-bold tracking-[-0.04em] sm:text-[40px] motion-reduce:animate-none animate-services-marquee-left ${
+                isDark ? 'text-white/15' : 'text-white'
+              }`}
+            >
               {[...marqueeTrack, ...marqueeTrack].map((text, index) => (
                 <span key={`${text}-${index}`} className="inline-flex items-center gap-5">
                   <span>{text}</span>
@@ -129,10 +156,18 @@ export const HomeFooter: FC = () => {
         <div className={`${homeShell} px-5 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-10 sm:px-6 sm:pt-12 lg:pt-14`}>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-16">
             <div>
-              <h3 className="text-pretty text-[18px] font-semibold tracking-[-0.02em] text-[#171717] sm:text-[19px]">
+              <h3
+                className={`text-pretty text-[18px] font-semibold tracking-[-0.02em] sm:text-[19px] ${
+                  isDark ? 'text-white' : 'text-[#171717]'
+                }`}
+              >
                 Подпишись на новости и обновления
               </h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-[#171717]/70 sm:text-[14px]">
+              <p
+                className={`mt-2 text-[13px] leading-relaxed sm:text-[14px] ${
+                  isDark ? 'text-white/55' : 'text-[#171717]/70'
+                }`}
+              >
                 Новые мастера, акции и полезные материалы — иногда, без спама.
               </p>
 
@@ -155,16 +190,31 @@ export const HomeFooter: FC = () => {
 
               {feedback ? (
                 <p
-                  className={`mt-2 text-[12px] ${feedback.kind === 'success' ? 'text-[#171717]/80' : 'text-[#7f1d1d]'}`}
+                  className={`mt-2 text-[12px] ${
+                    feedback.kind === 'success'
+                      ? isDark
+                        ? 'text-white/65'
+                        : 'text-[#171717]/80'
+                      : isDark
+                        ? 'text-[#fca5a5]'
+                        : 'text-[#7f1d1d]'
+                  }`}
                   role={feedback.kind === 'error' ? 'alert' : 'status'}
                 >
                   {feedback.text}
                 </p>
               ) : null}
 
-              <p className="mt-2 text-[12px] text-[#171717]/55">
+              <p className={`mt-2 text-[12px] ${isDark ? 'text-white/40' : 'text-[#171717]/55'}`}>
                 Нажимая «Подписаться», вы соглашаетесь с{' '}
-                <Link to={LEGAL_PRIVACY_PATH} className="font-medium underline decoration-black/20 underline-offset-2 hover:decoration-black/40">
+                <Link
+                  to={LEGAL_PRIVACY_PATH}
+                  className={`font-medium underline underline-offset-2 ${
+                    isDark
+                      ? 'decoration-white/25 hover:decoration-[#ff8fa3] text-white/70'
+                      : 'decoration-black/20 hover:decoration-black/40'
+                  }`}
+                >
                   политикой конфиденциальности
                 </Link>
                 .
@@ -173,23 +223,46 @@ export const HomeFooter: FC = () => {
 
             <div className="grid grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-3 sm:gap-x-14 md:gap-x-20">
               <nav aria-label="Разделы сайта">
-                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">РАЗДЕЛЫ</p>
-                <FooterLinkList items={FOOTER_COL_A} />
+                <p
+                  className={`mb-3 text-[12px] font-semibold tracking-[0.08em] ${
+                    isDark ? 'text-white/35' : 'text-[#171717]/55'
+                  }`}
+                >
+                  РАЗДЕЛЫ
+                </p>
+                <FooterLinkList items={FOOTER_COL_A} linkClass={navLinkClass} />
               </nav>
               <nav aria-label="Мастерам и документы">
-                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">ДОКУМЕНТЫ</p>
-                <FooterLinkList items={FOOTER_COL_B} />
+                <p
+                  className={`mb-3 text-[12px] font-semibold tracking-[0.08em] ${
+                    isDark ? 'text-white/35' : 'text-[#171717]/55'
+                  }`}
+                >
+                  ДОКУМЕНТЫ
+                </p>
+                <FooterLinkList items={FOOTER_COL_B} linkClass={navLinkClass} />
               </nav>
               <nav aria-label="Контакты">
-                <p className="mb-3 text-[12px] font-semibold tracking-[0.08em] text-[#171717]/55">КОНТАКТ</p>
+                <p
+                  className={`mb-3 text-[12px] font-semibold tracking-[0.08em] ${
+                    isDark ? 'text-white/35' : 'text-[#171717]/55'
+                  }`}
+                >
+                  КОНТАКТ
+                </p>
                 <ul className="flex flex-col gap-2.5">
                   <li>
-                    <a href={TIVONIX_SITE_URL} target="_blank" rel="noopener noreferrer" className="text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80">
+                    <a
+                      href={TIVONIX_SITE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={navLinkClass}
+                    >
                       tivonix.tech
                     </a>
                   </li>
                   <li>
-                    <Link to={BECOME_MASTER_PATH} className="text-[15px] font-medium text-[#171717]/85 transition hover:text-[#171717] active:opacity-80">
+                    <Link to={BECOME_MASTER_PATH} className={navLinkClass}>
                       Стать мастером
                     </Link>
                   </li>
@@ -198,7 +271,7 @@ export const HomeFooter: FC = () => {
             </div>
           </div>
 
-          <div className="mt-10 max-w-2xl">
+          <div className={`mt-10 max-w-2xl ${isDark ? '[&_p]:text-white/45 [&_p]:font-semibold' : ''}`}>
             <PaymentLogos
               variant="footer"
               title="Планируемые способы оплаты"
@@ -206,19 +279,33 @@ export const HomeFooter: FC = () => {
             />
           </div>
 
-          <div className="relative mt-12 border-t border-black/10 pt-6 sm:mt-14 sm:pt-8">
+          <div
+            className={`relative mt-12 border-t pt-6 sm:mt-14 sm:pt-8 ${
+              isDark ? 'border-white/10' : 'border-black/10'
+            }`}
+          >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <p className="text-[13px] text-[#171717]/60">
+                <p className={`text-[13px] ${isDark ? 'text-white/40' : 'text-[#171717]/60'}`}>
                   © SLOTTY 2024 – {year}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <Link to={LEGAL_PRIVACY_PATH} className="text-[13px] font-medium text-[#171717]/60 transition hover:text-[#171717]/80">
+                <Link
+                  to={LEGAL_PRIVACY_PATH}
+                  className={`text-[13px] font-medium transition ${
+                    isDark ? 'text-white/45 hover:text-white/80' : 'text-[#171717]/60 hover:text-[#171717]/80'
+                  }`}
+                >
                   Политика конфиденциальности
                 </Link>
-                <Link to={LEGAL_TERMS_PATH} className="text-[13px] font-medium text-[#171717]/60 transition hover:text-[#171717]/80">
+                <Link
+                  to={LEGAL_TERMS_PATH}
+                  className={`text-[13px] font-medium transition ${
+                    isDark ? 'text-white/45 hover:text-white/80' : 'text-[#171717]/60 hover:text-[#171717]/80'
+                  }`}
+                >
                   Условия использования
                 </Link>
               </div>
@@ -228,7 +315,9 @@ export const HomeFooter: FC = () => {
           <div className="mt-6 pb-2 sm:mt-8 sm:pb-3">
             <div
               aria-hidden
-              className="pointer-events-none relative left-1/2 w-[1200px] max-w-[120vw] -translate-x-1/2 -translate-y-[3%] select-none text-center text-[140px] font-black leading-none tracking-[-0.06em] text-white/60 sm:-translate-y-[4%] sm:text-[220px] md:text-[260px] lg:text-[320px]"
+              className={`pointer-events-none relative left-1/2 w-[1200px] max-w-[120vw] -translate-x-1/2 -translate-y-[3%] select-none text-center text-[140px] font-black leading-none tracking-[-0.06em] sm:-translate-y-[4%] sm:text-[220px] md:text-[260px] lg:text-[320px] ${
+                isDark ? 'text-white/[0.07]' : 'text-white/60'
+              }`}
             >
               SLOTTY
             </div>

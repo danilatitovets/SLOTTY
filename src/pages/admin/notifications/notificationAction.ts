@@ -1,4 +1,9 @@
-import { ADMIN_APPOINTMENTS_PATH, ADMIN_BILLING_PATH, getMasterAppointmentPath } from '../../../app/paths';
+import {
+  ADMIN_APPOINTMENTS_PATH,
+  ADMIN_BILLING_PATH,
+  MASTER_SETTINGS_SUPPORT_TICKETS_PATH,
+  getMasterAppointmentPath,
+} from '../../../app/paths';
 import type { MeNotificationRow } from '../../../features/profile/api/clientNotifications';
 import type { AppointmentsTabId } from '../appointments/appointmentsTypes';
 
@@ -83,6 +88,23 @@ export function resolveMasterNotificationAction(
       pathname: ADMIN_BILLING_PATH,
       to: ADMIN_BILLING_PATH,
     };
+  }
+
+  if (item.related_entity_type === 'support_ticket' && item.related_entity_id) {
+    const ticketPath = `${MASTER_SETTINGS_SUPPORT_TICKETS_PATH}/${item.related_entity_id}`;
+    return {
+      label: 'Открыть обращение',
+      pathname: MASTER_SETTINGS_SUPPORT_TICKETS_PATH,
+      to: ticketPath,
+    };
+  }
+
+  if (item.type === 'system' && item.title.includes('SUP-')) {
+    const match = item.title.match(/SUP-[A-Z0-9-]+/i);
+    if (match) {
+      const to = `${MASTER_SETTINGS_SUPPORT_TICKETS_PATH}/${match[0]}`;
+      return { label: 'Открыть обращение', pathname: MASTER_SETTINGS_SUPPORT_TICKETS_PATH, to };
+    }
   }
 
   return null;

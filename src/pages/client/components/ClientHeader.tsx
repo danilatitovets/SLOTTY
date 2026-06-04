@@ -8,6 +8,7 @@ type Props = {
   onCityClick?: () => void;
   /** Профиль: логотип слева, без кнопки города (как в bar-хедере). */
   logoLeading?: boolean;
+  tone?: 'light' | 'dark';
 };
 
 const CLIENT_HEADER_LOGO_CLASS = 'block h-[72px] w-auto object-contain object-center';
@@ -24,14 +25,18 @@ function HeaderLogo() {
   );
 }
 
-export function ClientHeader({ cityLabel, onCityClick, logoLeading = false }: Props) {
+export function ClientHeader({ cityLabel, onCityClick, logoLeading = false, tone = 'light' }: Props) {
+  const isDark = tone === 'dark';
+
   return (
     <header className="fixed inset-x-0 top-0 z-40 pt-[calc(0.5rem+env(safe-area-inset-top,0px))]">
       <div className="mx-auto max-w-lg px-4">
         <div
-          className={`flex min-h-[5rem] items-center gap-2 rounded-[28px] bg-[#F1EFEF] px-3 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:px-4 ${
-            logoLeading ? 'justify-between' : 'grid grid-cols-[1fr_auto_1fr]'
-          }`}
+          className={`flex min-h-[5rem] items-center gap-2 rounded-[28px] px-3 py-2 sm:px-4 ${
+            isDark
+              ? 'border border-white/10 bg-[#141414] shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
+              : 'bg-[#F1EFEF] shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
+          } ${logoLeading ? 'justify-between' : 'grid grid-cols-[1fr_auto_1fr]'}`}
         >
           {logoLeading ? (
             <HeaderLogo />
@@ -57,9 +62,11 @@ export function ClientHeader({ cityLabel, onCityClick, logoLeading = false }: Pr
           <Link
             to={getProfilePath('favorites')}
             aria-label="Избранное"
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-[#9CA3AF] shadow-sm transition hover:text-[#F47C8C] active:scale-95 ${
-              logoLeading ? '' : 'justify-self-end'
-            }`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm transition active:scale-95 ${
+              isDark
+                ? 'bg-white/10 text-white/55 hover:text-[#ff8fa3]'
+                : 'bg-white/90 text-[#9CA3AF] hover:text-[#F47C8C]'
+            } ${logoLeading ? '' : 'justify-self-end'}`}
           >
             <HiHeart className="h-5 w-5" aria-hidden />
           </Link>

@@ -16,7 +16,6 @@ function IconMenu({ className }: { className?: string }) {
 export function SettingsLayout() {
   const [search, setSearch] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   useEffect(() => {
     if (!sidebarOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -28,11 +27,8 @@ export function SettingsLayout() {
 
   return (
     <div className={`flex min-h-dvh ${SETTINGS_WORKSPACE_BG} text-[#111827]`}>
-      <div className="sticky top-0 hidden h-dvh shrink-0 lg:block">
+      <div className="sticky top-0 hidden h-dvh max-w-full shrink-0 overflow-x-hidden lg:flex">
         <SettingsIconRail />
-      </div>
-
-      <div className="sticky top-0 hidden h-dvh shrink-0 lg:block">
         <SettingsSidebar search={search} onSearchChange={setSearch} />
       </div>
 
@@ -51,7 +47,7 @@ export function SettingsLayout() {
         </header>
 
         <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
-          <div className="mx-auto w-full max-w-3xl min-w-0 pb-8">
+          <div className="mx-auto w-full max-w-5xl min-w-0 pb-8">
             <Outlet />
           </div>
         </main>

@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 import { notifyUser } from '../notifications/notifyUser.js';
 import { writeAdminAuditLog } from './auditLog.service.js';
 import { assertAdminCanModifyUser } from './platformAdminGuards.service.js';
+import { listProfileSecurityEventsForUser } from './platformAdmin.audit.service.js';
 
 export type PlatformUserListItem = {
   id: string;
@@ -31,6 +32,13 @@ export type PlatformUserEmailConflict = {
   role: string;
 };
 
+export type PlatformUserSecurityEvent = {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata: Record<string, unknown> | null;
+};
+
 export type PlatformUserDetail = PlatformUserListItem & {
   blockedAt: string | null;
   blockedReason: string | null;
@@ -38,6 +46,7 @@ export type PlatformUserDetail = PlatformUserListItem & {
   accessRestrictionReason: string | null;
   identities: PlatformUserAuthIdentity[];
   emailConflicts: PlatformUserEmailConflict[];
+  securityEvents: PlatformUserSecurityEvent[];
 };
 
 function mapListRow(row: {
@@ -231,6 +240,7 @@ export async function getPlatformUser(userId: string): Promise<PlatformUserDetai
   } catch {
     emailConflicts = [];
   }
+  const securityEvents = await listProfileSecurityEventsForUser(userId, 8);
   return {
     ...base,
     blockedAt: row.blocked_at ? new Date(row.blocked_at).toISOString() : null,
@@ -241,6 +251,7 @@ export async function getPlatformUser(userId: string): Promise<PlatformUserDetai
     accessRestrictionReason: row.access_restriction_reason,
     identities,
     emailConflicts,
+    securityEvents,
   };
 }
 

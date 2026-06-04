@@ -1,10 +1,13 @@
 import type { FC } from 'react';
 import { PaymentDisclaimer } from './PaymentDisclaimer';
 import { PaymentLogoImage } from './PaymentLogoImage';
+import { PaymentLogosMarquee } from './PaymentLogosMarquee';
 import {
   PAYMENT_DISCLAIMER_DEFAULT,
   PAYMENT_DISCLAIMER_SHORT,
   PAYMENT_METHODS,
+  paymentLogoCompactHeightClass,
+  paymentLogoHeightClass,
   type PaymentMethodId,
 } from './paymentLogosConfig';
 
@@ -27,11 +30,7 @@ function resolveMethods(ids?: PaymentMethodId[]) {
 }
 
 function footerLogoHeightClass(id: PaymentMethodId): string {
-  if (id === 'visa') return 'h-9 w-auto max-w-[6.25rem] sm:h-11 sm:max-w-[7.5rem]';
-  if (id === 'bepaid') return 'h-7 w-auto max-w-[5.75rem] sm:h-8 sm:max-w-[6.5rem]';
-  if (id === 'mastercard') return 'h-8 w-auto max-w-[3.25rem] sm:h-9';
-  if (id === 'belkart') return 'h-8 w-auto max-w-[7rem] sm:h-9 sm:max-w-[8rem]';
-  return 'h-7 w-auto max-w-[5rem] sm:h-8';
+  return paymentLogoCompactHeightClass(id);
 }
 
 export const PaymentLogos: FC<Props> = ({
@@ -53,7 +52,7 @@ export const PaymentLogos: FC<Props> = ({
         {title ? (
           <p className="mb-2 text-[12px] font-semibold tracking-[0.06em] text-[#171717]/55">{title}</p>
         ) : null}
-        <div className="-mx-1 flex flex-wrap items-center gap-4 overflow-x-auto pb-1 scrollbar-thin sm:gap-5">
+        <div className="-mx-1 flex flex-wrap items-end gap-4 sm:gap-5">
           {methods.map((method) => (
             <PaymentLogoImage
               key={method.id}
@@ -80,14 +79,17 @@ export const PaymentLogos: FC<Props> = ({
         {title ? (
           <p className="mb-2 text-[13px] font-semibold text-neutral-800">{title}</p>
         ) : null}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           {methods.map((method) => (
             <div
               key={method.id}
-              className="flex h-10 items-center justify-center rounded-xl bg-[#FAFAFA] px-3 ring-1 ring-inset ring-black/[0.05]"
+              className="flex items-end justify-center rounded-xl bg-[#FAFAFA] px-3 py-2 ring-1 ring-inset ring-black/[0.05]"
               title={method.caption}
             >
-              <PaymentLogoImage method={method} logoHeightClass="h-6 w-auto max-w-[5.5rem]" />
+              <PaymentLogoImage
+                method={method}
+                logoHeightClass={paymentLogoCompactHeightClass(method.id)}
+              />
             </div>
           ))}
         </div>
@@ -100,21 +102,37 @@ export const PaymentLogos: FC<Props> = ({
     );
   }
 
-  const isLegal = variant === 'legal';
+  if (variant === 'legal') {
+    return (
+      <section className={className} aria-labelledby={title ? 'payment-logos-title' : undefined}>
+        {title ? (
+          <h2
+            id="payment-logos-title"
+            className="text-[17px] font-semibold tracking-[-0.02em] text-[#111827]"
+          >
+            {title}
+          </h2>
+        ) : null}
+        {showDisclaimer ? (
+          <PaymentDisclaimer tone="legal" className={title ? 'mt-2' : ''}>
+            {disclaimer}
+          </PaymentDisclaimer>
+        ) : null}
+
+        <PaymentLogosMarquee methods={methods} className={title || showDisclaimer ? 'mt-5' : ''} />
+      </section>
+    );
+  }
+
   const gridClass =
-    isLegal || variant === 'cards'
-      ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5'
-      : 'grid grid-cols-2 gap-3';
+    variant === 'cards' ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5' : 'grid grid-cols-2 gap-3';
 
   return (
-    <section
-      className={`rounded-[24px] border border-black/[0.06] bg-[#FFFBFB] px-4 py-5 sm:px-6 sm:py-6 ${className}`}
-      aria-labelledby={title ? 'payment-logos-title' : undefined}
-    >
+    <section className={className} aria-labelledby={title ? 'payment-logos-title' : undefined}>
       {title ? (
         <h2
           id="payment-logos-title"
-          className="text-[17px] font-semibold tracking-[-0.02em] text-neutral-950"
+          className="text-[17px] font-semibold tracking-[-0.02em] text-[#111827]"
         >
           {title}
         </h2>
@@ -128,19 +146,16 @@ export const PaymentLogos: FC<Props> = ({
       <ul className={`${title || showDisclaimer ? 'mt-5' : ''} ${gridClass}`}>
         {methods.map((method) => (
           <li key={method.id}>
-            <div className="group flex h-full flex-col rounded-[18px] border border-black/[0.06] bg-white px-3 py-3.5 transition hover:border-[#E29595]/35 hover:bg-[#FFF8F8] sm:px-4 sm:py-4">
-              <div className="flex min-h-[2.75rem] items-center justify-center sm:min-h-[3rem]">
+            <div className="flex h-full flex-col rounded-[16px] bg-[#F5F5F5] px-3 py-3.5 sm:px-4 sm:py-4">
+              <div className="flex min-h-[4.5rem] items-end justify-center pb-0.5 sm:min-h-[5rem]">
                 <PaymentLogoImage
                   method={method}
-                  logoHeightClass="h-7 w-auto max-w-[6.5rem] sm:h-8"
+                  logoHeightClass={paymentLogoHeightClass(method.id)}
                 />
               </div>
-              <p className="mt-3 text-center text-[12px] font-medium leading-snug text-neutral-600">
+              <p className="mt-3 text-center text-[12px] font-medium leading-snug text-[#6B7280]">
                 {method.caption}
               </p>
-              {method.isPlaceholderAsset ? (
-                <p className="mt-1 text-center text-[10px] text-neutral-400">логотип — уточняется</p>
-              ) : null}
             </div>
           </li>
         ))}

@@ -65,6 +65,10 @@ export default {
           '0%': { transform: 'translateX(-50%)' },
           '100%': { transform: 'translateX(0)' },
         },
+        'payment-marquee': {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
       },
       animation: {
         'fade-enter': 'fade-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both',
@@ -76,6 +80,7 @@ export default {
         'notif-sheet': 'notif-sheet 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
         'services-marquee-left': 'services-marquee-left 55s linear infinite',
         'services-marquee-right': 'services-marquee-right 60s linear infinite',
+        'payment-marquee': 'payment-marquee 36s linear infinite',
       },
       borderRadius: {
         card: '1.5rem',

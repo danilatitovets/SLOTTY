@@ -25,7 +25,7 @@ export function PlatformAdminDeliveriesTab() {
   const [reminderFailures, setReminderFailures] = useState<AppointmentReminderFailureAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'failed' | 'skipped'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'failed' | 'skipped' | 'preference'>('all');
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
@@ -35,8 +35,16 @@ export function PlatformAdminDeliveriesTab() {
       const [d, r] = await Promise.all([
         getNotificationDeliveries({
           channel: 'telegram',
-          status: statusFilter === 'all' ? undefined : statusFilter,
-          search: search.trim() || undefined,
+          status:
+            statusFilter === 'all' || statusFilter === 'preference'
+              ? statusFilter === 'preference'
+                ? 'skipped'
+                : undefined
+              : statusFilter,
+          search:
+            statusFilter === 'preference'
+              ? 'preference_disabled'
+              : search.trim() || undefined,
           limit: 50,
         }),
         getAppointmentReminderFailures({ search: search.trim() || undefined, limit: 30 }),
@@ -67,14 +75,18 @@ export function PlatformAdminDeliveriesTab() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          {(['all', 'sent', 'failed', 'skipped'] as const).map((s) => (
+          {(['all', 'sent', 'failed', 'skipped', 'preference'] as const).map((s) => (
             <button
               key={s}
               type="button"
               className={paFilterChip(statusFilter === s)}
               onClick={() => setStatusFilter(s)}
             >
-              {s === 'all' ? 'Все' : s}
+              {s === 'all'
+                ? 'Все'
+                : s === 'preference'
+                  ? 'preference_disabled'
+                  : s}
             </button>
           ))}
         </div>

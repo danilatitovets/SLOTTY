@@ -42,6 +42,8 @@ const TONE_TRIGGER: Record<SlottySelectTone, string> = {
     'flex w-full min-h-[3rem] items-center justify-between rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition focus:border-[#F9A8B4] focus:ring-2 focus:ring-[#FFF1F4] disabled:cursor-not-allowed disabled:opacity-50',
   catalog:
     'inline-flex h-10 min-w-[200px] shrink-0 items-center rounded-[10px] border-0 bg-[#F5F5F5] px-3.5 text-left text-[13px] font-semibold text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] disabled:cursor-not-allowed disabled:opacity-50',
+  cabinet:
+    'flex w-full min-h-12 items-center justify-between rounded-[10px] border-0 bg-[#F5F5F5] px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] focus:ring-2 focus:ring-[#ff5f7a]/15 disabled:cursor-not-allowed disabled:opacity-50',
 };
 
 type ClampBounds = { left: number; top: number; right: number; bottom: number };

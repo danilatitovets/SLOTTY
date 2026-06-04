@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
-import { settingsOutlineBtn, settingsPinkBtn } from './settingsWorkspaceTheme';
+import { MASTER_SETTINGS_SECURITY_PATH } from '../../../../app/paths';
+import {
+  SettingsCabinetList,
+  SettingsCabinetListRow,
+  SettingsCabinetStatusPill,
+  SettingsCabinetSwitch,
+} from './settingsCabinetUi';
+import { settingsPinkBtn } from './settingsWorkspaceTheme';
 import { SettingsStatusBadge } from './settingsUi';
 
 export function AuthMethodCard({
@@ -34,36 +41,37 @@ export function AuthMethodCard({
   );
 }
 
-export function NotificationChannelCard({
-  title,
-  description,
-  connected,
-  onTest,
-  disabled = false,
-}: {
+export type NotificationChannelRow = {
+  id: 'telegram' | 'email' | 'in_app';
+  icon: ReactNode;
   title: string;
-  description: string;
+  subtitle: string;
   connected: boolean;
-  onTest?: () => void;
-  disabled?: boolean;
-}) {
+  iconTone?: 'default' | 'brand';
+};
+
+export function NotificationChannelsCabinetList({ channels }: { channels: NotificationChannelRow[] }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-[#F3F4F6] py-4 last:border-0 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="text-[15px] font-semibold text-[#111827]">{title}</p>
-          <SettingsStatusBadge tone={connected ? 'success' : 'neutral'}>
-            {connected ? 'Подключён' : 'Не настроен'}
-          </SettingsStatusBadge>
-        </div>
-        <p className="mt-0.5 text-[13px] text-[#6B7280]">{description}</p>
-      </div>
-      {onTest ? (
-        <button type="button" onClick={onTest} disabled={!connected || disabled} className={settingsOutlineBtn}>
-          Тест
-        </button>
-      ) : null}
-    </div>
+    <SettingsCabinetList>
+      {channels.map((ch) => (
+        <SettingsCabinetListRow
+          key={ch.id}
+          icon={ch.icon}
+          iconTone={ch.iconTone}
+          title={ch.title}
+          subtitle={ch.subtitle}
+          to={!ch.connected && ch.id !== 'in_app' ? MASTER_SETTINGS_SECURITY_PATH : undefined}
+          actionLabel={!ch.connected && ch.id !== 'in_app' ? 'Настроить' : undefined}
+          trailing={
+            ch.connected ? (
+              <SettingsCabinetStatusPill tone="success">Подключён</SettingsCabinetStatusPill>
+            ) : ch.id === 'in_app' ? (
+              <SettingsCabinetStatusPill tone="pink">Всегда</SettingsCabinetStatusPill>
+            ) : undefined
+          }
+        />
+      ))}
+    </SettingsCabinetList>
   );
 }
 
@@ -82,7 +90,13 @@ const NOTIFICATION_EVENTS = [
   { id: 'news', label: 'Новости SLOTTY' },
 ] as const;
 
-export function NotificationPreferenceMatrix({
+const NOTIFICATION_CHANNEL_LABELS: Record<'telegram' | 'email' | 'inApp', string> = {
+  telegram: 'Telegram',
+  email: 'Email',
+  inApp: 'Кабинет',
+};
+
+export function NotificationEventsCabinetList({
   prefs,
   onChange,
   disabled = false,
@@ -92,51 +106,91 @@ export function NotificationPreferenceMatrix({
   disabled?: boolean;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[520px] text-left text-[13px]">
-        <thead>
-          <tr className="border-b border-[#EAECEF] text-[#9CA3AF]">
-            <th className="pb-3 pr-4 font-semibold">Событие</th>
-            <th className="pb-3 px-2 text-center font-semibold">Telegram</th>
-            <th className="pb-3 px-2 text-center font-semibold">Email</th>
-            <th className="pb-3 pl-2 text-center font-semibold">In-app</th>
-          </tr>
-        </thead>
-        <tbody>
-          {NOTIFICATION_EVENTS.map((ev) => {
-            const row = prefs[ev.id] ?? { telegram: true, email: false, inApp: true };
-            const locked = 'alwaysOn' in ev && ev.alwaysOn;
-            return (
-              <tr key={ev.id} className="border-b border-[#F3F4F6] last:border-0">
-                <td className="py-3 pr-4">
-                  <span className="font-medium text-[#111827]">{ev.label}</span>
-                  {locked ? (
-                    <span className="mt-1 block text-[11px] text-[#9CA3AF]">
-                      Обязательное — нельзя отключить
-                    </span>
-                  ) : null}
-                </td>
-                {(['telegram', 'email', 'inApp'] as const).map((ch) => (
-                  <td key={ch} className="py-3 px-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={row[ch]}
-                      disabled={disabled || locked}
-                      onChange={(e) => onChange(ev.id, ch, e.target.checked)}
-                      className="h-4 w-4 min-h-4 min-w-4 rounded border-[#D1D5DB] text-[#ff5f7a] focus-visible:ring-2 focus-visible:ring-[#ff5f7a]/30 disabled:opacity-40"
-                      aria-label={`${ev.label} — ${ch}`}
-                    />
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      {NOTIFICATION_EVENTS.map((ev) => {
+        const row = prefs[ev.id] ?? { telegram: true, email: false, inApp: true };
+        const locked = 'alwaysOn' in ev && ev.alwaysOn;
+
+        return (
+          <div
+            key={ev.id}
+            className="overflow-hidden rounded-[16px] bg-white px-5 py-4 shadow-[0_1px_0_rgba(17,24,39,0.04)]"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[15px] font-bold text-[#111827]">{ev.label}</p>
+              {locked ? <SettingsCabinetStatusPill tone="neutral">Обязательно</SettingsCabinetStatusPill> : null}
+            </div>
+            {locked ? (
+              <p className="mt-1 text-[12px] leading-snug text-[#9CA3AF]">
+                Всегда доставляется — отключить нельзя
+              </p>
+            ) : null}
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+              {(['telegram', 'email', 'inApp'] as const).map((ch) => (
+                <div
+                  key={ch}
+                  className="flex flex-col items-center gap-2 rounded-[12px] bg-[#F6F7FB] px-2 py-3"
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-[#9CA3AF]">
+                    {NOTIFICATION_CHANNEL_LABELS[ch]}
+                  </span>
+                  <SettingsCabinetSwitch
+                    checked={row[ch]}
+                    disabled={disabled || locked}
+                    onChange={(next) => onChange(ev.id, ch, next)}
+                    aria-label={`${ev.label} — ${NOTIFICATION_CHANNEL_LABELS[ch]}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
+export type IntegrationCabinetRow = {
+  id: string;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  statusText: string;
+  statusTone: 'success' | 'warning' | 'neutral' | 'pink';
+  disabled?: boolean;
+  to?: string;
+  externalHref?: string;
+  actionLabel?: string;
+  iconTone?: 'default' | 'brand';
+};
+
+export function IntegrationsCabinetList({ rows }: { rows: IntegrationCabinetRow[] }) {
+  return (
+    <SettingsCabinetList>
+      {rows.map((row) => {
+        const trailing = (
+          <SettingsCabinetStatusPill tone={row.statusTone}>{row.statusText}</SettingsCabinetStatusPill>
+        );
+
+        return (
+          <SettingsCabinetListRow
+            key={row.id}
+            icon={row.icon}
+            iconTone={row.iconTone}
+            title={row.title}
+            subtitle={row.subtitle}
+            disabled={row.disabled}
+            to={row.to}
+            externalHref={row.externalHref}
+            trailing={trailing}
+          />
+        );
+      })}
+    </SettingsCabinetList>
+  );
+}
+
+/** @deprecated Используйте IntegrationsCabinetList */
 export function IntegrationCard({
   title,
   description,
@@ -204,30 +258,87 @@ export function SettingsPlaceholderPage({
   );
 }
 
+export function SettingsCabinetToggleRow({
+  title,
+  description,
+  checked = false,
+  disabled = true,
+  soonLabel = 'Скоро',
+  className = '',
+}: {
+  title: string;
+  description: string;
+  checked?: boolean;
+  disabled?: boolean;
+  soonLabel?: string;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-4 px-5 py-4 ${className}`.trim()}>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-bold text-[#111827]">{title}</p>
+        <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">{description}</p>
+      </div>
+      <div className="flex shrink-0 flex-col items-center gap-1.5">
+        <SettingsCabinetSwitch
+          checked={checked}
+          disabled={disabled}
+          onChange={() => undefined}
+          aria-label={title}
+        />
+        {disabled && soonLabel ? (
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[#9CA3AF]">{soonLabel}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export const SETTINGS_DANGER_ZONE_BG_SRC = '/photos/УДАЛИТЬ/1.png';
+
 export function SettingsDangerZone({
   onDelete,
   disabled = true,
   hint = 'Удаление через приложение пока недоступно. Напишите в поддержку.',
+  backgroundSrc = SETTINGS_DANGER_ZONE_BG_SRC,
 }: {
   onDelete?: () => void;
   disabled?: boolean;
-  hint?: string;
+  hint?: ReactNode;
+  backgroundSrc?: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-[#FECACA] bg-[#FEF2F2] p-5 sm:p-6">
-      <h3 className="text-[16px] font-bold text-[#991B1B]">Опасная зона</h3>
-      <p className="mt-2 text-[14px] text-[#7F1D1D]">
-        Удаление аккаунта необратимо: профиль мастера, записи и настройки будут недоступны.
-      </p>
-      <p className="mt-2 text-[13px] text-[#7F1D1D]/90">{hint}</p>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={disabled ? undefined : onDelete}
-        className="mt-4 min-h-[40px] rounded-[12px] border border-[#DC2626] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#DC2626] hover:bg-[#FEE2E2] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {disabled ? 'Скоро' : 'Удалить аккаунт'}
-      </button>
+    <div className="relative overflow-hidden rounded-[20px] shadow-[0_8px_32px_rgba(127,29,29,0.18)]">
+      <img
+        src={backgroundSrc}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover object-center"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-[#450a0a]/88 via-[#7f1d1d]/82 to-[#991b1b]/78"
+        aria-hidden
+      />
+      <div className="relative z-10 p-5 sm:p-6">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-white/70">Опасная зона</p>
+        <h3 className="mt-1 text-[18px] font-extrabold tracking-[-0.02em] text-white">
+          Удаление аккаунта
+        </h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-white/90">
+          Удаление аккаунта необратимо: профиль мастера, записи и настройки будут недоступны.
+        </p>
+        <div className="mt-2 text-[13px] leading-relaxed text-white/85 [&_a]:text-white [&_a]:underline [&_a]:underline-offset-2">
+          {hint}
+        </div>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={disabled ? undefined : onDelete}
+          className="mt-4 min-h-[44px] rounded-[14px] border border-white/40 bg-white/95 px-5 py-2.5 text-[14px] font-bold text-[#991B1B] shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {disabled ? 'Скоро' : 'Удалить аккаунт'}
+        </button>
+      </div>
     </div>
   );
 }

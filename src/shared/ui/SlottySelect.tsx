@@ -14,7 +14,7 @@ import { PickerSheet, pickerSheetPrimaryBtn } from './PickerSheet';
 
 export type SlottySelectOption = { value: string; label: string };
 
-export type SlottySelectTone = 'neutral' | 'admin' | 'catalog';
+export type SlottySelectTone = 'neutral' | 'admin' | 'catalog' | 'cabinet';
 
 type Props = {
   value: string;
@@ -45,18 +45,22 @@ const TONE_TRIGGER: Record<SlottySelectTone, string> = {
     'flex w-full min-h-[3rem] items-center rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
   catalog:
     'flex w-full min-h-12 items-center rounded-[10px] border-0 bg-[#EBEBEB] px-4 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#E4E4E4] focus:bg-[#E4E4E4] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
+  cabinet:
+    'flex w-full min-h-12 items-center rounded-[10px] border-0 bg-[#F5F5F5] px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] focus:ring-2 focus:ring-[#ff5f7a]/15 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
 };
 
 const TONE_OPTION_ACTIVE: Record<SlottySelectTone, string> = {
   neutral: 'bg-[#E29595] text-white shadow-[0_6px_18px_rgba(226,149,149,0.35)]',
   admin: 'bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] text-white shadow-[0_8px_20px_rgba(255,95,122,0.28)]',
   catalog: 'bg-[#FFF1F4] text-[#F47C8C] font-semibold ring-1 ring-[#F47C8C]/15',
+  cabinet: 'bg-[#FFF1F4] text-[#ff5f7a] font-semibold',
 };
 
 const TONE_OPTION_IDLE: Record<SlottySelectTone, string> = {
   neutral: 'text-neutral-900 hover:bg-[#F1EFEF]',
   admin: 'text-[#111827] hover:bg-[#FFF1F4]',
   catalog: 'font-medium text-[#374151] hover:bg-[#FAFAFA]',
+  cabinet: 'font-medium text-[#111827] hover:bg-[#FAFAFA]',
 };
 
 const TONE_POPOVER_PANEL: Record<SlottySelectTone, string> = {
@@ -66,12 +70,15 @@ const TONE_POPOVER_PANEL: Record<SlottySelectTone, string> = {
     'overflow-y-auto overscroll-contain rounded-[16px] border border-[#EAECEF] bg-white p-2 shadow-[0_12px_40px_rgba(17,17,17,0.12)]',
   catalog:
     'scrollbar-hidden overflow-y-auto overscroll-contain rounded-[12px] bg-white p-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.08)]',
+  cabinet:
+    'overflow-y-auto overscroll-contain rounded-[16px] bg-white p-1.5 shadow-[0_12px_40px_rgba(17,24,39,0.1)]',
 };
 
 const TONE_POPOVER_OPTION: Record<SlottySelectTone, string> = {
   neutral: 'rounded-[18px] px-3 py-2.5 text-[15px]',
   admin: 'rounded-[12px] px-3 py-2.5 text-[14px]',
   catalog: 'rounded-[8px] px-3 py-2 text-[13px]',
+  cabinet: 'rounded-[10px] px-3 py-2.5 text-[15px]',
 };
 
 function useFixedListboxPosition(
@@ -260,7 +267,10 @@ export function SlottySelect({
         <span className={`min-w-0 flex-1 truncate ${isPlaceholder ? 'text-[#9CA3AF] font-normal' : ''}`}>
           {label}
         </span>
-        <span className={`ml-2 shrink-0 ${tone === 'admin' || tone === 'catalog' ? 'text-[#9CA3AF]' : 'text-neutral-600'}`} aria-hidden>
+        <span
+          className={`ml-2 shrink-0 ${tone === 'admin' || tone === 'catalog' || tone === 'cabinet' ? 'text-[#9CA3AF]' : 'text-neutral-600'}`}
+          aria-hidden
+        >
           <svg
             width="18"
             height="18"

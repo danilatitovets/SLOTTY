@@ -38,12 +38,9 @@ export function SettingsSearchBox({ value, onChange, placeholder = 'Поиск �
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[12px] border border-[#EAECEF] bg-[#FAFAFA] py-2.5 pl-10 pr-16 text-[14px] text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#ff5f7a]/40 focus:bg-white focus:ring-2 focus:ring-[#ff5f7a]/15"
+        className="w-full rounded-[12px] border-0 bg-[#F5F5F5] py-2.5 pl-10 pr-3 text-[14px] text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:bg-[#EBEBEB]"
         aria-label={placeholder}
       />
-      <kbd className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 rounded-md border border-[#EAECEF] bg-white px-1.5 py-0.5 text-[10px] font-medium text-[#9CA3AF] sm:inline">
-        ⌘K
-      </kbd>
     </div>
   );
 }

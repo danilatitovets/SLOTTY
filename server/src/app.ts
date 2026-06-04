@@ -21,9 +21,12 @@ import { publicRouter } from './modules/public/public.routes.js';
 import { geoRouter } from './modules/geo/geo.routes.js';
 import { legalRouter } from './modules/legal/legal.routes.js';
 import { platformAdminRouter } from './modules/platform-admin/platformAdmin.routes.js';
+import { supportRouter } from './modules/support/supportTicket.routes.js';
+import { systemStatusPublicRouter } from './modules/system-status/systemStatus.routes.js';
 import { newsletterRouter } from './modules/newsletter/newsletter.routes.js';
 import { paymentsRouter } from './modules/payments/payments.routes.js';
 import { adminPaymentsRouter } from './modules/payments/adminPayments.routes.js';
+import { dataExportRouter } from './modules/data-export/dataExport.routes.js';
 import { resolveTrustProxySetting } from './lib/clientIp.js';
 
 export function createApp() {
@@ -39,6 +42,7 @@ export function createApp() {
   api.use('/geo', geoRouter);
   api.use('/legal', legalRouter);
   api.use('/public', publicRouter);
+  api.use('/public/status', systemStatusPublicRouter);
   api.use('/auth', authRouter);
   api.use('/me', profilesRouter);
   api.use('/me/appointments', clientAppointmentsRouter);
@@ -52,9 +56,11 @@ export function createApp() {
   api.use('/slots', slotsPublicRouter);
   api.use('/billing', billingRouter);
   api.use('/platform-admin', platformAdminRouter);
+  api.use('/support', supportRouter);
   api.use('/newsletter', newsletterRouter);
   api.use('/payments', paymentsRouter);
   api.use('/admin/payments', adminPaymentsRouter);
+  api.use('/me/data-export', dataExportRouter);
   api.use('/telegram/webhook', telegramWebhookRouter);
 
   app.use('/api', api);

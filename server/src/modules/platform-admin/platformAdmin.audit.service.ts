@@ -71,3 +71,37 @@ export async function listPlatformAuditLogs(params: {
     offset,
   };
 }
+
+export type ProfileSecurityEventItem = {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata: Record<string, unknown> | null;
+};
+
+/** События безопасности профиля (link provider, revoke session). */
+export async function listProfileSecurityEventsForUser(
+  userId: string,
+  limit = 10,
+): Promise<ProfileSecurityEventItem[]> {
+  const r = await query<{
+    id: string;
+    action: string;
+    metadata: Record<string, unknown> | null;
+    created_at: Date | string;
+  }>(
+    `select id, action, metadata, created_at
+       from public.admin_audit_logs
+      where target_user_id = $1
+        and action like 'auth_%'
+      order by created_at desc
+      limit $2`,
+    [userId, limit],
+  );
+  return r.rows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    metadata: row.metadata,
+    createdAt: new Date(row.created_at).toISOString(),
+  }));
+}

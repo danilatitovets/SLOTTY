@@ -14,8 +14,17 @@ import { getProfileById, syncMasterCabinetFromUserProfile, updateProfile } from 
 import { getConsentStatusForProfile } from '../legal/legal.service.js';
 import { uploadProfileAvatar } from './profiles.storage.js';
 import { normalizeBelarusPhone } from './belarusPhone.js';
+import { getPublicStatusPage } from '../system-status/systemStatus.service.js';
 
 export const profilesRouter = Router();
+
+profilesRouter.get(
+  '/system-status',
+  authMiddleware,
+  asyncHandler(async (_req, res) => {
+    res.json(await getPublicStatusPage());
+  }),
+);
 
 profilesRouter.use(authMiddleware, requireProfileMutation);
 

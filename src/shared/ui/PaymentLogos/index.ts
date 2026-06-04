@@ -1,4 +1,5 @@
 export { PaymentLogos, type PaymentLogosVariant } from './PaymentLogos';
+export { PaymentLogosMarquee } from './PaymentLogosMarquee';
 export { PaymentPartnersStrip } from './PaymentPartnersStrip';
 export { PaymentDisclaimer } from './PaymentDisclaimer';
 export { PaymentLegalTrustBlock } from './PaymentLegalTrustBlock';

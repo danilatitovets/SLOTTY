@@ -14,6 +14,36 @@ import {
   type SponsorRequestStatus,
 } from '../sponsors/sponsorRequest.service.js';
 import {
+  assignSupportTicket,
+  getSupportTicketForAdmin,
+  listSupportTicketsForAdmin,
+  replyToSupportTicketAsAdmin,
+  updateSupportTicketStatus,
+} from '../support/supportTicket.service.js';
+import {
+  adminAssignBodySchema,
+  adminStatusBodySchema,
+  replySupportTicketBodySchema,
+} from '../support/supportTicket.validation.js';
+import type { SupportCategory, SupportSeverity, SupportTicketStatus } from '../support/supportTicket.types.js';
+import {
+  addIncidentUpdate,
+  createIncident,
+  createMaintenance,
+  getAdminSystemStatusDashboard,
+  patchComponentStatus,
+  patchIncident,
+  patchMaintenance,
+} from '../system-status/systemStatus.admin.service.js';
+import {
+  createIncidentBodySchema,
+  createMaintenanceBodySchema,
+  incidentUpdateBodySchema,
+  patchComponentBodySchema,
+  patchIncidentBodySchema,
+  patchMaintenanceBodySchema,
+} from '../system-status/systemStatus.validation.js';
+import {
   listMasterProfileReportsForAdmin,
   updateMasterProfileReportStatus,
   type MasterProfileReportStatus,
@@ -201,6 +231,150 @@ platformAdminRouter.patch(
       adminComment: body.adminComment,
     });
     res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.get(
+  '/support/tickets',
+  asyncHandler(async (req, res) => {
+    const status = z
+      .enum(['all', 'unresolved', 'OPEN', 'IN_PROGRESS', 'WAITING_USER', 'RESOLVED', 'CLOSED'])
+      .optional()
+      .parse(req.query.status);
+    const severity = z.enum(['all', 'low', 'medium', 'high', 'critical']).optional().parse(req.query.severity);
+    const category = z
+      .enum([
+        'all',
+        'account_login',
+        'master_profile',
+        'services',
+        'schedule',
+        'appointments',
+        'notifications',
+        'billing_plan',
+        'payment_bepaid',
+        'integrations',
+        'map_address',
+        'ui_bug',
+        'other',
+      ])
+      .optional()
+      .parse(req.query.category);
+    const plan = z.string().optional().parse(req.query.plan);
+    const assignedTo = z.string().optional().parse(req.query.assignedTo);
+    const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
+    const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
+    res.json(
+      await listSupportTicketsForAdmin({
+        status: (status ?? 'unresolved') as SupportTicketStatus | 'all' | 'unresolved',
+        severity: (severity ?? 'all') as SupportSeverity | 'all',
+        category: (category ?? 'all') as SupportCategory | 'all',
+        plan: plan ?? 'all',
+        assignedTo: assignedTo ?? 'all',
+        limit,
+        offset,
+      }),
+    );
+  }),
+);
+
+platformAdminRouter.get(
+  '/support/tickets/:ticketCode',
+  asyncHandler(async (req, res) => {
+    const ticketCode = z.string().min(5).max(32).parse(req.params.ticketCode);
+    res.json({ ticket: await getSupportTicketForAdmin(ticketCode) });
+  }),
+);
+
+platformAdminRouter.post(
+  '/support/tickets/:ticketCode/reply',
+  asyncHandler(async (req, res) => {
+    const ticketCode = z.string().min(5).max(32).parse(req.params.ticketCode);
+    const body = replySupportTicketBodySchema.parse(req.body);
+    const ticket = await replyToSupportTicketAsAdmin(req.user!.id, ticketCode, body.message);
+    res.json({ ticket });
+  }),
+);
+
+platformAdminRouter.patch(
+  '/support/tickets/:ticketCode/status',
+  asyncHandler(async (req, res) => {
+    const ticketCode = z.string().min(5).max(32).parse(req.params.ticketCode);
+    const body = adminStatusBodySchema.parse(req.body);
+    await updateSupportTicketStatus(req.user!.id, ticketCode, body.status);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.patch(
+  '/support/tickets/:ticketCode/assign',
+  asyncHandler(async (req, res) => {
+    const ticketCode = z.string().min(5).max(32).parse(req.params.ticketCode);
+    const body = adminAssignBodySchema.parse(req.body);
+    await assignSupportTicket(req.user!.id, ticketCode, body.assignedTo);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.get(
+  '/system-status',
+  asyncHandler(async (_req, res) => {
+    res.json(await getAdminSystemStatusDashboard());
+  }),
+);
+
+platformAdminRouter.post(
+  '/system-status/incidents',
+  asyncHandler(async (req, res) => {
+    const body = createIncidentBodySchema.parse(req.body);
+    res.status(201).json(await createIncident(req.user!.id, body));
+  }),
+);
+
+platformAdminRouter.patch(
+  '/system-status/incidents/:id',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = patchIncidentBodySchema.parse(req.body);
+    await patchIncident(req.user!.id, id, body);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.post(
+  '/system-status/incidents/:id/updates',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = incidentUpdateBodySchema.parse(req.body);
+    await addIncidentUpdate(req.user!.id, id, body);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.post(
+  '/system-status/maintenance',
+  asyncHandler(async (req, res) => {
+    const body = createMaintenanceBodySchema.parse(req.body);
+    res.status(201).json(await createMaintenance(req.user!.id, body));
+  }),
+);
+
+platformAdminRouter.patch(
+  '/system-status/maintenance/:id',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = patchMaintenanceBodySchema.parse(req.body);
+    await patchMaintenance(req.user!.id, id, body);
+    res.json({ ok: true });
+  }),
+);
+
+platformAdminRouter.patch(
+  '/system-status/components/:id',
+  asyncHandler(async (req, res) => {
+    const id = z.string().uuid().parse(req.params.id);
+    const body = patchComponentBodySchema.parse(req.body);
+    res.json(await patchComponentStatus(req.user!.id, id, body));
   }),
 );
 

@@ -1,8 +1,7 @@
 /** Токены SaaS workspace «Настройки» кабинета мастера. */
 export const SETTINGS_WORKSPACE_BG = 'bg-[#f6f7fb]';
 
-export const SETTINGS_RAIL_WIDTH_EXPANDED = 'w-[72px]';
-export const SETTINGS_RAIL_WIDTH_COLLAPSED = 'w-[72px]';
+export const SETTINGS_RAIL_WIDTH = 'w-[72px]';
 
 export const SETTINGS_SIDEBAR_WIDTH = 'w-[280px]';
 
@@ -10,7 +9,7 @@ export const settingsCardClass =
   'rounded-[20px] border border-[#EAECEF] bg-white shadow-[0_4px_24px_rgba(17,24,39,0.05)]';
 
 export const settingsPinkBtn =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-4 text-[14px] font-semibold text-white shadow-[0_6px_16px_rgba(255,95,122,0.28)] transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-[12px] bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a] px-4 text-[14px] font-semibold text-white transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50';
 
 export const settingsOutlineBtn =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-[12px] border border-[#EAECEF] bg-white px-4 text-[14px] font-semibold text-[#374151] transition hover:bg-[#FAFAFA] active:scale-[0.98] disabled:opacity-50';

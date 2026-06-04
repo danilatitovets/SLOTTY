@@ -68,9 +68,11 @@ async function main() {
   }
 
   const health = await fetch(`${apiBase}/api/health/ready`);
-  const healthJson = health.ok ? await health.json() : null;
+  const healthJson = health.ok
+    ? ((await health.json()) as { status?: string } | null)
+    : null;
   console.log(`\n=== API ${maskUrl(apiBase)} ===`);
-  console.log(`  health/ready: ${health.ok ? healthJson?.status : health.status}`);
+  console.log(`  health/ready: ${health.ok ? (healthJson?.status ?? 'ok') : health.status}`);
 
   const adm = await query<{ id: string }>(
     `select id from public.profiles where role = 'platform_admin'::public.user_role and account_status = 'active' limit 1`,

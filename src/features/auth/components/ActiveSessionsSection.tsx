@@ -6,6 +6,12 @@ import {
   revokeOtherAuthSessions,
 } from '../api/authApi';
 import type { AuthSessionRowDto } from '../types';
+import {
+  SettingsCabinetList,
+  SettingsCabinetSectionTitle,
+  SettingsCabinetStatusPill,
+  settingsCabinetActionBtn,
+} from '../../../pages/admin/settings/workspace/settingsCabinetUi';
 
 function formatSessionWhen(iso: string): string {
   return new Date(iso).toLocaleString('ru-RU', {
@@ -110,20 +116,18 @@ export function ActiveSessionsSection() {
     }
   };
 
-  const okxBtn =
-    'shrink-0 rounded-[10px] bg-[#F5F5F5] px-4 py-2 text-[14px] font-semibold text-[#111827] transition hover:bg-[#EBEBEB] disabled:opacity-50';
+  const okxBtn = settingsCabinetActionBtn;
+  const logoutBtn = `${settingsCabinetActionBtn} text-[#B91C1C] hover:bg-[#FEE2E2]`;
   const hasCurrent = sessions.some((s) => s.isCurrent);
   const hasOthers = sessions.some((s) => !s.isCurrent);
 
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="text-[16px] font-bold text-[#111827]">Активные сеансы</h3>
-          <p className="mt-1 text-[13px] text-[#6B7280]">
-            Устройства, с которых выполнен вход. Завершите лишние, если не узнаёте сеанс.
-          </p>
-        </div>
+        <SettingsCabinetSectionTitle
+          title="Активные сеансы"
+          description="Устройства, с которых выполнен вход. Завершите лишние, если не узнаёте сеанс."
+        />
         {hasOthers && hasCurrent ? (
           <button
             type="button"
@@ -140,7 +144,7 @@ export function ActiveSessionsSection() {
         <p className="mb-3 rounded-[12px] bg-[#FEF2F2] px-4 py-3 text-[13px] text-[#B91C1C]">{error}</p>
       ) : null}
 
-      <div className="overflow-hidden rounded-[16px] bg-white divide-y divide-[#EBEBEB]">
+      <SettingsCabinetList>
         {loading ? (
           <p className="px-5 py-6 text-[14px] text-[#6B7280]">Загрузка сеансов…</p>
         ) : sessions.length === 0 ? (
@@ -154,11 +158,9 @@ export function ActiveSessionsSection() {
                 <SessionDeviceIcon title={row.title} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold text-[#111827]">
+                <p className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-[#111827]">
                   {row.title}
-                  {row.isCurrent ? (
-                    <span className="ml-2 text-[12px] font-semibold text-[#16A34A]">Сейчас</span>
-                  ) : null}
+                  {row.isCurrent ? <SettingsCabinetStatusPill tone="pink">Сейчас</SettingsCabinetStatusPill> : null}
                 </p>
                 <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">{row.subtitle}</p>
                 <p className="mt-1 text-[12px] text-[#9CA3AF]">
@@ -179,7 +181,7 @@ export function ActiveSessionsSection() {
                   type="button"
                   disabled={Boolean(busyId) || revokingOthers}
                   onClick={() => void handleRevoke(row)}
-                  className={`${okxBtn} text-[#B91C1C] hover:bg-[#FEE2E2]`}
+                  className={logoutBtn}
                 >
                   {busyId === row.id ? '…' : 'Выйти'}
                 </button>
@@ -187,7 +189,7 @@ export function ActiveSessionsSection() {
             </div>
           ))
         )}
-      </div>
+      </SettingsCabinetList>
     </section>
   );
 }

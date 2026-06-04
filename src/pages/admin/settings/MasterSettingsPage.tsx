@@ -22,7 +22,7 @@ import { SettingsTeamPage } from './workspace/pages/SettingsTeamPage';
 import { SettingsIntegrationsPage } from './workspace/pages/SettingsIntegrationsPage';
 import { SettingsPrivacyPage } from './workspace/pages/SettingsPrivacyPage';
 import { SettingsSupportPage } from './workspace/pages/SettingsSupportPage';
-import { SettingsAboutPage } from './workspace/pages/SettingsAboutPage';
+import { SupportStatusPage } from './workspace/support/SupportStatusPage';
 
 export function MasterSettingsPage() {
   const { profile, isLoading, isAuthenticated } = useAuth();
@@ -78,8 +78,9 @@ export function MasterSettingsPage() {
               <Route path="team" element={<SettingsTeamPage />} />
               <Route path="integrations" element={<SettingsIntegrationsPage />} />
               <Route path="privacy" element={<SettingsPrivacyPage />} />
-              <Route path="support" element={<SettingsSupportPage />} />
-              <Route path="about" element={<SettingsAboutPage />} />
+              <Route path="support/*" element={<SettingsSupportPage />} />
+              <Route path="system-status" element={<SupportStatusPage />} />
+              <Route path="about" element={<Navigate to="system-status" replace />} />
             </Route>
             <Route path="*" element={<Navigate to={`${MASTER_SETTINGS_PATH}/security`} replace />} />
           </Routes>

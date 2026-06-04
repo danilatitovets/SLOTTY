@@ -3,8 +3,10 @@ import {
   ADMIN_PATH,
   BECOME_MASTER_PATH,
   BOOKING_PATH,
+  HELP_PATH,
   HUB_PATH,
   LEGAL_CONSENT_PATH,
+  MASTER_SETTINGS_SUPPORT_DOCS_PATH,
   LEGAL_CROSS_BORDER_PATH,
   LEGAL_MASTER_TERMS_PATH,
   LEGAL_PAYMENT_PATH,
@@ -43,6 +45,7 @@ import { MasterTermsPage } from '../pages/legal/MasterTermsPage';
 import { PrivacyPolicyPage } from '../pages/legal/PrivacyPolicyPage';
 import { UnsubscribeNewsletterPage } from '../pages/UnsubscribeNewsletterPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { PublicStatusPage } from '../pages/status/PublicStatusPage';
 import { UserAgreementPage } from '../pages/legal/UserAgreementPage';
 import { PaymentInfoPage } from '../pages/legal/PaymentInfoPage';
 import { RefundPolicyPage } from '../pages/legal/RefundPolicyPage';
@@ -128,6 +131,7 @@ export function AppRoutes() {
         <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
         <Route path={BECOME_MASTER_PATH} element={<BecomeMasterPage />} />
         <Route path="/settings" element={<Navigate to={PROFILE_SETTINGS_PATH} replace />} />
+        <Route path={HELP_PATH} element={<Navigate to={MASTER_SETTINGS_SUPPORT_DOCS_PATH} replace />} />
         <Route path={LEGAL_PRIVACY_PATH} element={<PrivacyPolicyPage />} />
         <Route path={LEGAL_CONSENT_PATH} element={<PersonalDataConsentPage />} />
         <Route path={LEGAL_PD_CONSENT_PATH} element={<PersonalDataConsentLegacyRedirect />} />
@@ -140,6 +144,7 @@ export function AppRoutes() {
         <Route path={PAYMENT_SUCCESS_PATH} element={<PaymentSuccessPage />} />
         <Route path={PAYMENT_FAIL_PATH} element={<PaymentFailPage />} />
         <Route path={UNSUBSCRIBE_NEWSLETTER_PATH} element={<UnsubscribeNewsletterPage />} />
+        <Route path="/status" element={<PublicStatusPage />} />
         <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

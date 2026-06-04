@@ -21,8 +21,20 @@ export function mapLegacyAdminSettingsPath(pathname: string): string {
     return MASTER_SETTINGS_SUPPORT_PATH;
   }
 
-  const known = ['security', 'notifications', 'billing', 'team', 'integrations', 'privacy', 'support', 'about'];
   const seg = rest.split('/')[0] ?? '';
+  if (seg === 'about') {
+    return `${MASTER_SETTINGS_PATH}/system-status`;
+  }
+  const known = [
+    'security',
+    'notifications',
+    'billing',
+    'team',
+    'integrations',
+    'privacy',
+    'support',
+    'system-status',
+  ];
   if (known.includes(seg)) {
     return `${MASTER_SETTINGS_PATH}/${rest}`;
   }

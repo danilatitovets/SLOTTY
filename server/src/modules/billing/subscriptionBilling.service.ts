@@ -26,6 +26,7 @@ import {
 import type { PaymentDto } from '../payments/payment.types.js';
 import { createBePaidPayment } from '../payments/payments.service.js';
 import { isBePaidRecurringConfigured } from './bepaidRecurring.client.js';
+import { ensureSubscriptionStatusEnum } from '../../lib/ensureSubscriptionStatusEnum.js';
 
 export type BillingSubscriptionDto = {
   subscription: MasterSubscriptionWithUsageDto;
@@ -134,6 +135,8 @@ function periodDays(billingPeriod: 'month' | 'year'): number {
 }
 
 export async function expireDueSubscriptions(masterId?: string): Promise<void> {
+  await ensureSubscriptionStatusEnum();
+
   const masterFilter = masterId ? 'and ms.master_id = $1' : '';
   const expireParams = masterId ? [masterId] : [];
 
@@ -146,12 +149,12 @@ export async function expireDueSubscriptions(masterId?: string): Promise<void> {
       where sp.id = ms.plan_id
         and sp.code = 'pro'
         and ms.current_period_end < now()
-        and ms.status in (
-          'active'::public.subscription_status,
-          'canceled_at_period_end'::public.subscription_status,
-          'past_due'::public.subscription_status,
-          'payment_failed'::public.subscription_status,
-          'cancelled'::public.subscription_status
+        and ms.status::text in (
+          'active',
+          'canceled_at_period_end',
+          'past_due',
+          'payment_failed',
+          'cancelled'
         )
         ${masterFilter}`,
     expireParams,
@@ -181,7 +184,7 @@ export async function expireDueSubscriptions(masterId?: string): Promise<void> {
       from public.subscription_plans sp
       where sp.id = ms.plan_id
         and sp.code = 'pro'
-        and ms.status = 'expired'::public.subscription_status
+        and ms.status::text = 'expired'
         and ms.current_period_end < now()
         ${downgradeFilter}`,
     downgradeParams,
@@ -450,6 +453,7 @@ export async function cancelSubscriptionAtPeriodEnd(
   masterId: string,
   reason?: string,
 ): Promise<BillingSubscriptionDto> {
+  await ensureSubscriptionStatusEnum();
   const row = await loadSubscriptionRow(masterId);
   if (row.code !== 'pro') {
     throw ApiError.badRequest('Нет активной подписки Pro', 'NO_PRO_SUBSCRIPTION');

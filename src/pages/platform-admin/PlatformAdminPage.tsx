@@ -15,6 +15,8 @@ import { PlatformAdminAuditTab } from './tabs/PlatformAdminAuditTab';
 import { PlatformAdminBillingHub } from './tabs/PlatformAdminBillingHub';
 import { PlatformAdminPaymentsTab } from './tabs/PlatformAdminPaymentsTab';
 import { PlatformAdminNotificationsHub } from './tabs/PlatformAdminNotificationsHub';
+import { PlatformAdminSupportTab } from './tabs/PlatformAdminSupportTab';
+import { PlatformAdminSystemStatusTab } from './tabs/PlatformAdminSystemStatusTab';
 
 export function PlatformAdminPage() {
   const { profile, isLoading, isAuthenticated } = useAuth();
@@ -45,6 +47,8 @@ export function PlatformAdminPage() {
       <Route element={<PlatformAdminLayout />}>
         <Route index element={<PlatformAdminOverviewTab />} />
         <Route path="requests" element={<PlatformAdminRequestsHub />} />
+        <Route path="support" element={<PlatformAdminSupportTab />} />
+        <Route path="system-status" element={<PlatformAdminSystemStatusTab />} />
         <Route path="users" element={<PlatformAdminUsersTab />} />
         <Route path="masters" element={<PlatformAdminMastersTab />} />
         <Route path="services" element={<PlatformAdminServicesTab />} />

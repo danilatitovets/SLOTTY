@@ -45,6 +45,7 @@ import {
   revokeAuthSession,
   revokeOtherAuthSessions,
 } from './authSessions.service.js';
+import { recordProfileSecurityEvent } from './profileSecurityAudit.service.js';
 import { resolveCanonicalProfileId } from './authIdentities.service.js';
 
 export const authRouter = Router();
@@ -218,6 +219,9 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const profileId = await resolveCanonicalProfileId(req.user!.id);
     const out = await revokeOtherAuthSessions(profileId, req.user!.authSessionId);
+    void recordProfileSecurityEvent(profileId, 'auth_sessions_revoked_others', {
+      revokedCount: out.revokedCount,
+    });
     res.json({ ok: true, ...out });
   }),
 );
@@ -229,6 +233,7 @@ authRouter.delete(
     const sessionId = z.string().uuid().parse(req.params.sessionId);
     const profileId = await resolveCanonicalProfileId(req.user!.id);
     const out = await revokeAuthSession(profileId, sessionId, req.user!.authSessionId);
+    void recordProfileSecurityEvent(profileId, 'auth_session_revoked', { sessionId });
     res.json({ ok: true, ...out });
   }),
 );
@@ -239,6 +244,7 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const body = telegramBody.parse(req.body);
     const out = await linkTelegram(body.initDataRaw, req.user!.id);
+    void recordProfileSecurityEvent(req.user!.id, 'auth_telegram_linked');
     res.json(out);
   }),
 );
@@ -274,6 +280,7 @@ authRouter.post(
       throw ApiError.unauthorized('Войдите в аккаунт, чтобы привязать Google', 'AUTH_REQUIRED');
     }
     const out = await linkGoogle(body.idToken, profileId);
+    void recordProfileSecurityEvent(profileId, 'auth_google_linked');
     res.json(out);
   }),
 );
@@ -325,6 +332,7 @@ authRouter.get(
 
       if (state.purpose === 'link') {
         await linkGoogle(idToken, state.profileId!);
+        void recordProfileSecurityEvent(state.profileId!, 'auth_google_linked', { via: 'oauth_callback' });
         res.redirect(
           buildClientOAuthDoneUrl({ purpose: 'link', returnPath: state.returnPath }),
         );
@@ -377,6 +385,7 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const body = emailLinkBody.parse(req.body);
     const out = await linkEmail(body.email, body.password, req.user!.id);
+    void recordProfileSecurityEvent(req.user!.id, 'auth_email_linked');
     res.json(out);
   }),
 );

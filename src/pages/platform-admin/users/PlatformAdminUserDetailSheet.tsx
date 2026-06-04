@@ -207,6 +207,22 @@ export function PlatformAdminUserDetailSheet({
                 )}
               </section>
 
+              {detail.securityEvents && detail.securityEvents.length > 0 ? (
+                <section>
+                  <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-[#9CA3AF]">
+                    Безопасность
+                  </h3>
+                  <ul className="space-y-2">
+                    {detail.securityEvents.map((ev) => (
+                      <li key={ev.id} className="rounded-2xl bg-[#f6f7fb] px-4 py-3 text-[13px]">
+                        <p className="font-semibold text-[#111827]">{ev.action}</p>
+                        <p className="mt-1 text-[12px] text-[#9CA3AF]">{formatDate(ev.createdAt)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               {(detail.blockedReason ||
                 detail.accessRestrictionReason ||
                 detail.blockedAt ||

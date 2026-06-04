@@ -10,6 +10,41 @@ export type PlatformAdminOverview = {
   cancellationsLast7Days: number;
 };
 
+export type SupportTicketAdmin = {
+  id: string;
+  ticketCode: string;
+  userId: string;
+  masterProfileId: string | null;
+  plan: string | null;
+  category: string;
+  severity: string;
+  subject: string;
+  status: string;
+  message: string;
+  contactEmail: string | null;
+  masterName: string | null;
+  userEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo: string | null;
+};
+
+export type SupportTicketAdminDetail = SupportTicketAdmin & {
+  affectedServices: string[];
+  relatedBookingCode: string | null;
+  relatedPaymentId: string | null;
+  preferredContactChannel: string;
+  metadata: Record<string, unknown>;
+  events: Array<{
+    id: string;
+    eventType: string;
+    actorRole: string;
+    message: string | null;
+    createdAt: string;
+  }>;
+  attachments: Array<{ id: string; fileName: string; mimeType: string; sizeBytes: number }>;
+};
+
 export type SponsorRequestAdmin = {
   id: string;
   status: 'pending' | 'in_review' | 'closed' | 'rejected';
@@ -89,6 +124,13 @@ export type PlatformUserEmailConflict = {
   role: string;
 };
 
+export type PlatformUserSecurityEvent = {
+  id: string;
+  action: string;
+  createdAt: string;
+  metadata: Record<string, unknown> | null;
+};
+
 export type PlatformUserDetail = PlatformUserListItem & {
   blockedAt: string | null;
   blockedReason: string | null;
@@ -96,6 +138,7 @@ export type PlatformUserDetail = PlatformUserListItem & {
   accessRestrictionReason: string | null;
   identities: PlatformUserAuthIdentity[];
   emailConflicts: PlatformUserEmailConflict[];
+  securityEvents?: PlatformUserSecurityEvent[];
 };
 
 export type PlatformMasterListItem = {

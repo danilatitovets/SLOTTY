@@ -184,7 +184,28 @@ export const MASTER_SETTINGS_TEAM_PATH = `${MASTER_SETTINGS_PATH}/team`;
 export const MASTER_SETTINGS_INTEGRATIONS_PATH = `${MASTER_SETTINGS_PATH}/integrations`;
 export const MASTER_SETTINGS_PRIVACY_PATH = `${MASTER_SETTINGS_PATH}/privacy`;
 export const MASTER_SETTINGS_SUPPORT_PATH = `${MASTER_SETTINGS_PATH}/support`;
-export const MASTER_SETTINGS_ABOUT_PATH = `${MASTER_SETTINGS_PATH}/about`;
+export const MASTER_SETTINGS_SUPPORT_CONTACT_PATH = `${MASTER_SETTINGS_SUPPORT_PATH}/contact`;
+export const MASTER_SETTINGS_SUPPORT_DOCS_PATH = `${MASTER_SETTINGS_SUPPORT_PATH}/docs`;
+
+export function getMasterSettingsSupportGuidePath(guideId: string): string {
+  return `${MASTER_SETTINGS_SUPPORT_DOCS_PATH}/${encodeURIComponent(guideId)}`;
+}
+export const MASTER_SETTINGS_SUPPORT_TICKETS_PATH = `${MASTER_SETTINGS_SUPPORT_PATH}/tickets`;
+/** @deprecated Используйте MASTER_SETTINGS_SUPPORT_DOCS_PATH */
+export const HELP_PATH = '/help';
+/** Статус системы в сайдбаре настроек мастера. */
+export const MASTER_SETTINGS_SYSTEM_STATUS_PATH = `${MASTER_SETTINGS_PATH}/system-status`;
+/** @deprecated Диагностика объединена со «Статус системы» */
+export const MASTER_SETTINGS_SUPPORT_DIAGNOSTICS_PATH = MASTER_SETTINGS_SYSTEM_STATUS_PATH;
+/** @deprecated Используйте MASTER_SETTINGS_SYSTEM_STATUS_PATH */
+export const MASTER_SETTINGS_SUPPORT_STATUS_PATH = MASTER_SETTINGS_SYSTEM_STATUS_PATH;
+/** @deprecated Бывший «О системе» — редирект на system-status */
+export const MASTER_SETTINGS_ABOUT_PATH = MASTER_SETTINGS_SYSTEM_STATUS_PATH;
+export const PUBLIC_STATUS_PATH = '/status';
+export const PLATFORM_ADMIN_SYSTEM_STATUS_PATH = '/platform-admin/system-status';
+
+/** Inbox обращений в поддержку (platform-admin). */
+export const PLATFORM_ADMIN_SUPPORT_PATH = '/platform-admin/support';
 
 /** @deprecated Используйте MASTER_SETTINGS_*; редиректы сохранены для старых ссылок. */
 export const ADMIN_SETTINGS_PATH = '/admin/settings';

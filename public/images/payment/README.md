@@ -1,11 +1,13 @@
 # Payment brand assets
 
-| File | Status | Source |
-|------|--------|--------|
-| `bepaid.png` | Official | `public/photos/pay/BePaid_idGp8jSDbK_0.png` |
-| `visa.png` | Official | `public/photos/pay/Visa-Logo-PNG-Pic.png` |
-| `mastercard.svg` | Official | `public/photos/pay/ma_symbol.svg` (Mastercard brand center) |
-| `belkart.png` | Official | `public/photos/pay/belcart.png` |
-| `erip.svg` | Placeholder | Replace with official ЕРИП logo when available |
+Production logos live in **`public/photos/pay/`** (see `PAYMENT_PHOTO_ASSETS` in `src/shared/ui/PaymentLogos/paymentLogosConfig.ts`).
+
+| ID | File in `photos/pay/` |
+|----|------------------------|
+| bepaid | `BePaid_idGp8jSDbK_0.webp` |
+| erip | `ерип.svg` |
+| visa | `Visa-Logo-PNG-Pic.webp` |
+| mastercard | `ma_symbol.svg` |
+| belkart | `belcart.webp` |
 
 Do not recolor or stretch logos in UI — use `object-contain` only.

@@ -9,6 +9,7 @@ import {
   settingsRow,
   settingsRowIcon,
 } from './adminSettingsTheme';
+import { TelegramBrandIcon } from './workspace/integrationBrandIcons';
 
 export function SettingsHelpHero({ children }: { children: ReactNode }) {
   return (
@@ -165,15 +166,7 @@ export function SettingsLegalReader({
 }
 
 export function TelegramSupportIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="12" r="12" fill="#2AABEE" />
-      <path
-        fill="#fff"
-        d="M5.43 11.47c3.66-1.6 6.1-2.65 7.32-3.15 3.48-1.45 4.2-1.7 4.67-1.7.1 0 .33.02.48.12.12.1.16.24.14.34-.02.1-.16.48-.32.94-.46 1.5-1.98 5.92-2.75 7.86-.34.74-.99 1.1-1.52 1.12-.52.02-1.35-.3-2.01-.55-.9-.33-1.62-.5-1.55-.95.03-.2.38-.4 1.05-.72Z"
-      />
-    </svg>
-  );
+  return <TelegramBrandIcon size={20} />;
 }
 
 export function EmailSupportIcon() {

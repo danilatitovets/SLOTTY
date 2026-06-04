@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  MASTER_SETTINGS_ABOUT_PATH,
+  MASTER_SETTINGS_SYSTEM_STATUS_PATH,
   MASTER_SETTINGS_BILLING_PATH,
   MASTER_SETTINGS_INTEGRATIONS_PATH,
   MASTER_SETTINGS_NOTIFICATIONS_PATH,
@@ -75,11 +75,11 @@ function IconLock({ className }: { className?: string }) {
   );
 }
 
-function IconLife({ className }: { className?: string }) {
+function IconStatus({ className }: { className?: string }) {
   return (
     <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
       <circle cx="12" cy="12" r="10" />
-      <path d="M12 16v-4M12 8h.01" />
+      <path d="M12 8v4M8 12h8" />
     </svg>
   );
 }
@@ -174,11 +174,11 @@ export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
         icon: IconHelp,
       },
       {
-        id: 'about',
-        to: MASTER_SETTINGS_ABOUT_PATH,
-        label: 'О системе',
-        keywords: ['версия', 'build', 'соглашение'],
-        icon: IconLife,
+        id: 'system-status',
+        to: MASTER_SETTINGS_SYSTEM_STATUS_PATH,
+        label: 'Статус системы',
+        keywords: ['статус', 'инцидент', 'uptime', 'доступность', 'сервисы'],
+        icon: IconStatus,
       },
     ],
   },
@@ -200,7 +200,7 @@ export const SETTINGS_PAGE_META: Record<
   },
   billing: {
     title: 'Биллинг и тариф',
-    description: 'Управляйте подпиской, оплатой и историей платежей.',
+    description: 'Подписка, способ оплаты и последние платежи. Тарифы и лимиты — в кабинете мастера.',
     breadcrumb: 'Биллинг и тариф',
   },
   team: {
@@ -220,13 +220,13 @@ export const SETTINGS_PAGE_META: Record<
   },
   support: {
     title: 'Поддержка',
-    description: 'FAQ, обращения в поддержку и статус сервиса.',
+    description: 'Найдите ответ, проверьте статус системы или отправьте обращение в поддержку SLOTTY.',
     breadcrumb: 'Поддержка',
   },
-  about: {
-    title: 'О системе',
-    description: 'Версия приложения, окружение и юридические документы.',
-    breadcrumb: 'О системе',
+  'system-status': {
+    title: 'Статус системы',
+    description: '',
+    breadcrumb: 'Статус системы',
   },
 };
 

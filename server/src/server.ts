@@ -6,10 +6,12 @@ import { startAppointmentRemindersScheduler } from './modules/appointments/appoi
 import { startNotificationJobsWorker } from './modules/notifications/notificationJobs.worker.js';
 import { startBookingAutoCompleteWorker } from './modules/appointments/bookingAutoComplete.worker.js';
 import { startBillingWorker } from './modules/billing/billingWorker.js';
+import { startSystemStatusWorker } from './modules/system-status/systemStatus.worker.js';
 import { initTelegramBotTransport } from './modules/telegram/telegram.service.js';
 import { logResendConfigStatus } from './modules/email/emailConfig.js';
 import { logBePaidConfigStatus } from './modules/payments/bepaid.config.js';
 import { logAuthSessionsTableStatus } from './modules/auth/authSessions.service.js';
+import { startDataExportWorker } from './modules/data-export/dataExport.worker.js';
 
 initSentry();
 const app = createApp();
@@ -42,6 +44,8 @@ app.listen(env.PORT, () => {
   startBookingAutoCompleteWorker();
   startAppointmentRemindersScheduler();
   startBillingWorker();
+  startSystemStatusWorker();
+  startDataExportWorker();
   void import('./modules/auth/googleLoginPending.store.js').then(({ warnIfPendingStoreNotShared }) => {
     warnIfPendingStoreNotShared();
   });

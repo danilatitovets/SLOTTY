@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { HiBellAlert, HiEnvelope } from 'react-icons/hi2';
+import { Link } from 'react-router-dom';
+import { MASTER_SETTINGS_SECURITY_PATH } from '../../../../../app/paths';
 import { fetchAuthIdentities } from '../../../../../features/auth/api/authApi';
 import type { AuthIdentityDto } from '../../../../../features/auth/types';
 import {
@@ -10,11 +13,27 @@ import {
 import { getApiBaseUrl } from '../../../../../shared/api/backendClient';
 import { AdminToast } from '../../../shared/AdminToast';
 import { useAdminToast } from '../../../shared/useAdminToast';
-import { NotificationChannelCard, NotificationPreferenceMatrix } from '../settingsCards';
+import { integrationBrandIcon } from '../integrationBrandIcons';
+import {
+  NotificationChannelsCabinetList,
+  NotificationEventsCabinetList,
+  type NotificationChannelRow,
+} from '../settingsCards';
 import { SettingsHeader } from '../SettingsHeader';
 import { SETTINGS_PAGE_META } from '../settingsNav';
-import { SettingsComingSoonBanner, SettingsErrorState, SettingsSectionCard, SettingsSkeleton, SettingsStickySaveBar } from '../settingsUi';
-import { settingsOutlineBtn } from '../settingsWorkspaceTheme';
+import {
+  SettingsCabinetHero,
+  SettingsCabinetRingBadge,
+  SettingsCabinetSectionTitle,
+  SettingsCabinetSurface,
+  settingsCabinetStack,
+} from '../settingsCabinetUi';
+import {
+  SettingsComingSoonBanner,
+  SettingsErrorState,
+  SettingsSkeleton,
+  SettingsStickySaveBar,
+} from '../settingsUi';
 
 const meta = SETTINGS_PAGE_META.notifications;
 
@@ -25,6 +44,21 @@ function hasProvider(identities: AuthIdentityDto[], provider: string): boolean {
 function hasVerifiedEmail(identities: AuthIdentityDto[]): boolean {
   const email = identities.find((i) => i.provider === 'email');
   return Boolean(email?.emailVerified);
+}
+
+function NotificationsLoadingSkeleton() {
+  return (
+    <div className={settingsCabinetStack}>
+      <div className="flex items-start gap-4">
+        <div className="h-[72px] w-[72px] shrink-0 animate-pulse rounded-full bg-[#F3F4F6]" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-5 w-48 animate-pulse rounded-lg bg-[#F3F4F6]" />
+          <div className="h-4 w-full max-w-sm animate-pulse rounded-lg bg-[#F3F4F6]" />
+        </div>
+      </div>
+      <SettingsSkeleton rows={4} />
+    </div>
+  );
 }
 
 export function SettingsNotificationsPage() {
@@ -67,6 +101,38 @@ export function SettingsNotificationsPage() {
       email: hasVerifiedEmail(identities),
     }),
     [identities],
+  );
+
+  const connectedChannels = (linked.telegram ? 1 : 0) + (linked.email ? 1 : 0) + 1;
+
+  const channelRows = useMemo<NotificationChannelRow[]>(
+    () => [
+      {
+        id: 'telegram',
+        icon: integrationBrandIcon('telegram'),
+        iconTone: 'brand',
+        title: 'Telegram',
+        subtitle: linked.telegram ? 'Бот и Mini App SLOTTY' : 'Подключите в разделе «Безопасность»',
+        connected: linked.telegram,
+      },
+      {
+        id: 'email',
+        icon: <HiEnvelope className="h-5 w-5" aria-hidden />,
+        title: 'Email',
+        subtitle: linked.email
+          ? 'Письма на подтверждённую почту'
+          : 'Подтвердите email в разделе «Безопасность»',
+        connected: linked.email,
+      },
+      {
+        id: 'in_app',
+        icon: <HiBellAlert className="h-5 w-5" aria-hidden />,
+        title: 'Кабинет',
+        subtitle: 'Колокол и лента в кабинете мастера',
+        connected: true,
+      },
+    ],
+    [linked.email, linked.telegram],
   );
 
   const dirty = prefs != null && JSON.stringify(prefs) !== savedSnapshot;
@@ -123,69 +189,73 @@ export function SettingsNotificationsPage() {
     <>
       <SettingsHeader title={meta.title} description={meta.description} breadcrumb={meta.breadcrumb} />
 
-      {loading ? (
-        <SettingsSectionCard>
-          <SettingsSkeleton rows={5} />
-        </SettingsSectionCard>
-      ) : null}
+      {loading ? <NotificationsLoadingSkeleton /> : null}
 
       {error && !loading ? (
         <SettingsErrorState message={error} onRetry={() => void loadAll()} />
       ) : null}
 
       {prefs && !loading && !error ? (
-        <div className="space-y-5 pb-24">
-          <SettingsSectionCard title="Каналы">
-            <NotificationChannelCard
-              title="Telegram"
-              description="Уведомления в бот и Mini App"
-              connected={linked.telegram}
-              disabled={saving}
-            />
-            <NotificationChannelCard
-              title="Email"
-              description={
-                linked.email
-                  ? 'Письма на подтверждённую почту'
-                  : 'Подтвердите email в разделе «Безопасность»'
-              }
-              connected={linked.email}
-              disabled={saving}
-            />
-            <NotificationChannelCard
-              title="In-app"
-              description="Колокол в кабинете мастера"
-              connected
-              disabled={saving}
-            />
-          </SettingsSectionCard>
-
-          <SettingsSectionCard
-            title="События"
-            description="Выберите каналы для каждого типа события. «Новая запись» и «Биллинг» обязательны и всегда доставляются. Изменения применяются после сохранения."
-          >
-            <div className="-mx-2 overflow-x-auto px-2 sm:mx-0 sm:px-0">
-              <NotificationPreferenceMatrix
-                prefs={prefs.events}
-                onChange={onPrefChange}
-                disabled={saving}
+        <div className={`${settingsCabinetStack} pb-24`}>
+          <SettingsCabinetHero
+            badge={
+              <SettingsCabinetRingBadge
+                current={connectedChannels}
+                total={3}
+                label="каналов"
               />
-            </div>
-          </SettingsSectionCard>
+            }
+            title="Куда приходят уведомления"
+            description={
+              connectedChannels >= 3
+                ? 'Все каналы готовы — настройте события ниже'
+                : 'Подключите Telegram и email в разделе безопасности'
+            }
+          />
 
-          <SettingsSectionCard title="Тест уведомлений">
-            <p className="mb-3 text-[13px] text-[#6B7280]">
-              Тестовые отправки подключаются отдельно. Сейчас проверьте каналы в разделе «Безопасность».
+          {!linked.telegram || !linked.email ? (
+            <p className="rounded-[12px] bg-[#FFF1F4] px-4 py-3 text-[13px] leading-relaxed text-[#374151]">
+              Не все каналы настроены.{' '}
+              <Link
+                to={MASTER_SETTINGS_SECURITY_PATH}
+                className="font-semibold text-[#ff5f7a] underline-offset-2 hover:underline"
+              >
+                Открыть «Безопасность»
+              </Link>
             </p>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={settingsOutlineBtn} disabled>
-                Отправить тест в Telegram
-              </button>
-              <button type="button" className={settingsOutlineBtn} disabled>
-                Отправить тест на email
-              </button>
-            </div>
-          </SettingsSectionCard>
+          ) : null}
+
+          <section>
+            <SettingsCabinetSectionTitle
+              title="Каналы доставки"
+              description="Где SLOTTY может присылать уведомления"
+            />
+            <NotificationChannelsCabinetList channels={channelRows} />
+          </section>
+
+          <section>
+            <SettingsCabinetSectionTitle
+              title="События"
+              description="Выберите каналы для каждого типа. «Новая запись» и «Биллинг» всегда включены."
+            />
+            <NotificationEventsCabinetList
+              prefs={prefs.events}
+              onChange={onPrefChange}
+              disabled={saving}
+            />
+          </section>
+
+          <section>
+            <SettingsCabinetSectionTitle
+              title="Проверка доставки"
+              description="Тестовые письма и push появятся в следующем обновлении"
+            />
+            <SettingsCabinetSurface>
+              <p className="text-[13px] leading-relaxed text-[#6B7280]">
+                Сейчас проверьте подключение Telegram и email в разделе «Безопасность».
+              </p>
+            </SettingsCabinetSurface>
+          </section>
         </div>
       ) : null}
 

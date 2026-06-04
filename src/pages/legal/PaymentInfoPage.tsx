@@ -1,87 +1,102 @@
 import type { FC } from 'react';
-import { LEGAL_REFUND_PATH } from '../../app/paths';
+import { LEGAL_REFUND_PATH, MASTER_SETTINGS_BILLING_PATH } from '../../app/paths';
 import { PaymentLogos } from '../../shared/ui/PaymentLogos';
+import { PAYMENT_DISCLAIMER_LEGAL_PAGE } from '../../shared/ui/PaymentLogos/paymentLogosConfig';
 import { SITE_SUPPORT_EMAIL } from './legalSiteInfo';
 import { LegalPageShell } from './LegalPageShell';
+import {
+  LegalDocIntro,
+  LegalDocSection,
+  legalDocLinkClass,
+  legalDocListClass,
+  type LegalTocItem,
+} from './legalDocumentUi';
+
+const TOC: LegalTocItem[] = [
+  { id: 'methods', label: 'Способы оплаты' },
+  { id: 'current', label: 'Как проходит оплата' },
+  { id: 'security', label: 'Безопасность платежей' },
+  { id: 'refunds', label: 'Возвраты' },
+];
 
 export const PaymentInfoPage: FC = () => {
   return (
-    <LegalPageShell title="Оплата и безопасность платежей">
-      <p className="text-[13px] font-medium text-neutral-500">
-        Сервис <strong className="text-neutral-800">SLOTTY</strong> подключает приём онлайн-платежей в Республике
-        Беларусь через платёжного провайдера <strong className="text-neutral-800">bePaid</strong> (магазин в CRM:
-        домен <strong className="text-neutral-800">slotty.of.by</strong>, ID <strong>35495</strong>, валюта{' '}
-        <strong>BYN</strong>, 3-D Secure). Пока интеграция не включена в production (
-        <code className="text-[12px]">BEPAID_ENABLED=false</code>), оплата на сайте недоступна — только подготовка и
-        тесты.
-      </p>
+    <LegalPageShell
+      title="Оплата и безопасность платежей"
+      titleHighlight="безопасность платежей"
+      toc={TOC}
+    >
+      <LegalDocIntro>
+        Сервис <strong className="text-[#111827]">SLOTTY</strong> принимает онлайн-платежи в Республике Беларусь
+        через платёжного провайдера <strong className="text-[#111827]">bePaid</strong>. Данные карты обрабатываются
+        на стороне провайдера — SLOTTY не хранит полные реквизиты карты.
+      </LegalDocIntro>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">Планируемые способы оплаты</h2>
-        <p className="mt-2 text-[15px] leading-relaxed text-neutral-700">
-          После подключения платёжного провайдера SLOTTY сможет принимать оплату банковскими картами и через доступные
-          платёжные методы (в том числе через инфраструктуру bePaid и ЕРИП — в составе, который будет согласован при
-          подключении).
+      <LegalDocSection id="methods" title="Способы оплаты">
+        <p>
+          Оплата на сайте выполняется через защищённую платёжную страницу bePaid. В зависимости от сценария доступны
+          банковские карты (в том числе Visa, Mastercard, Белкарт) и другие методы, которые поддерживает провайдер в
+          вашем заказе.
         </p>
         <PaymentLogos
           variant="legal"
           className="mt-5"
-          title="Планируемые способы оплаты"
           showDisclaimer
+          disclaimerText={PAYMENT_DISCLAIMER_LEGAL_PAGE}
         />
-      </section>
+      </LegalDocSection>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">Как сейчас проходит оплата</h2>
-        <ul className="list-disc space-y-2 pl-5">
+      <LegalDocSection id="current" title="Как проходит оплата">
+        <ul className={legalDocListClass}>
           <li>
-            <strong>Запись к мастеру</strong> — бесплатна в SLOTTY. Оплата услуги мастера, как правило, производится
-            на месте по правилам мастера (наличные, перевод, карта у мастера и т.д.).
+            <strong>Запись к мастеру</strong> — оформление записи в SLOTTY бесплатно. Оплата услуги мастера, как
+            правило, производится на месте по договорённости с мастером.
           </li>
           <li>
-            <strong>Тариф Pro для мастеров</strong> — до подключения онлайн-эквайринга может оформляться по
-            банковским реквизитам с ручной проверкой оплаты администратором (если эта опция включена в кабинете).
-          </li>
-        </ul>
-      </section>
-
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">Безопасность платежей</h2>
-        <ul className="list-disc space-y-2 pl-5">
-          <li>
-            Оплата будет проходить на защищённой стороне платёжного провайдера (платёжная страница или виджет
-            провайдера).
-          </li>
-          <li>
-            SLOTTY не хранит полные данные банковских карт (номер, CVV/CVC, срок действия) на своих серверах.
-          </li>
-          <li>
-            Доступные способы оплаты будут показаны при оформлении платной услуги на сайте или в кабинете — финальный
-            список зависит от договора с провайдером и банком-эквайером.
-          </li>
-          <li>
-            При ошибке или двойном списании после подключения оплаты обратитесь в поддержку:{' '}
-            <a
-              className="font-semibold text-[#E29595] underline underline-offset-2"
-              href={`mailto:${SITE_SUPPORT_EMAIL}`}
-            >
-              {SITE_SUPPORT_EMAIL}
+            <strong>Подписка Pro и платные функции мастера</strong> — оплата в кабинете в разделе{' '}
+            <a className={legalDocLinkClass} href={MASTER_SETTINGS_BILLING_PATH}>
+              «Биллинг и тариф»
             </a>
-            .
+            . После выбора тарифа вы переходите на страницу bePaid, вводите данные карты и возвращаетесь в SLOTTY с
+            результатом операции.
+          </li>
+          <li>
+            <strong>Результат платежа</strong> — при успешной оплате статус подписки обновляется автоматически. При
+            ошибке или отмене можно повторить оплату или обратиться в поддержку.
           </li>
         </ul>
-      </section>
+      </LegalDocSection>
 
-      <section>
-        <h2 className="text-[17px] font-semibold text-neutral-950">Возвраты</h2>
+      <LegalDocSection id="security" title="Безопасность платежей">
+        <ul className={legalDocListClass}>
+          <li>
+            Платёж обрабатывается на инфраструктуре <strong>bePaid</strong> — сертифицированного платёжного
+            провайдера.
+          </li>
+          <li>SLOTTY не хранит полный номер карты, CVV и срок действия на своих серверах.</li>
+          <li>
+            Соединение с платёжной страницей защищено (HTTPS). Проверяйте адрес страницы оплаты и не передавайте
+            коды из SMS третьим лицам.
+          </li>
+          <li>
+            При ошибке, двойном списании или вопросе по чеку напишите на{' '}
+            <a className={legalDocLinkClass} href={`mailto:${SITE_SUPPORT_EMAIL}`}>
+              {SITE_SUPPORT_EMAIL}
+            </a>{' '}
+            — укажите дату, сумму и email аккаунта.
+          </li>
+        </ul>
+      </LegalDocSection>
+
+      <LegalDocSection id="refunds" title="Возвраты">
         <p>
-          Условия возврата денежных средств при онлайн-оплате описаны на странице{' '}
-          <a className="font-semibold text-[#E29595] underline underline-offset-2" href={LEGAL_REFUND_PATH}>
+          Условия возврата средств за платные функции SLOTTY описаны на странице{' '}
+          <a className={legalDocLinkClass} href={LEGAL_REFUND_PATH}>
             «Возвраты»
           </a>
-          .
+          . Обращения рассматриваются в сроки, указанные в политике возврата.
         </p>
-      </section>
+      </LegalDocSection>
     </LegalPageShell>
   );
 };
