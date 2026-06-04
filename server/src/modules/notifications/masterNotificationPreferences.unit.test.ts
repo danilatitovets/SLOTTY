@@ -8,8 +8,11 @@ import {
 describe('masterNotificationPreferences.state', () => {
   it('defaults include all event keys', () => {
     const d = defaultMasterNotificationPreferences();
+    assert.equal(Object.keys(d.events).length, 12);
     assert.equal(d.events.new_booking.telegram, true);
-    assert.equal(d.events.news.telegram, false);
+    assert.equal(d.events.news.telegram, true);
+    assert.equal(d.events.news.email, true);
+    assert.equal(d.events.client_on_the_way.telegram, true);
     assert.equal(d.channels.in_app, true);
   });
 

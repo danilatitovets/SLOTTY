@@ -4,6 +4,9 @@ export const MASTER_NOTIFICATION_EVENT_KEYS = [
   'reminder_1h',
   'late',
   'arrived',
+  'client_on_the_way',
+  'booking_completed',
+  'client_comment',
   'reviews',
   'disputes',
   'billing',
@@ -46,7 +49,9 @@ export function defaultMasterNotificationPreferences(): MasterNotificationPrefer
     if (key === 'new_booking' || key === 'reviews' || key === 'disputes' || key === 'billing') {
       events[key] = { telegram: true, email: true, inApp: true };
     } else if (key === 'news') {
-      events[key] = { telegram: false, email: true, inApp: true };
+      events[key] = { telegram: true, email: true, inApp: true };
+    } else if (key === 'client_on_the_way' || key === 'booking_completed' || key === 'client_comment') {
+      events[key] = { telegram: true, email: false, inApp: true };
     } else {
       events[key] = defaultEventPrefs();
     }

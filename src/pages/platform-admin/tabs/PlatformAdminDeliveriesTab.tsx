@@ -32,7 +32,7 @@ export function PlatformAdminDeliveriesTab() {
     setLoading(true);
     setError(null);
     try {
-      const [d, r] = await Promise.all([
+      const [deliveriesRes, remindersRes] = await Promise.allSettled([
         getNotificationDeliveries({
           channel: 'telegram',
           status:
@@ -49,8 +49,32 @@ export function PlatformAdminDeliveriesTab() {
         }),
         getAppointmentReminderFailures({ search: search.trim() || undefined, limit: 30 }),
       ]);
-      setDeliveries(d.items);
-      setReminderFailures(r.items);
+
+      if (deliveriesRes.status === 'fulfilled') {
+        setDeliveries(deliveriesRes.value.items);
+      } else {
+        setDeliveries([]);
+      }
+
+      if (remindersRes.status === 'fulfilled') {
+        setReminderFailures(remindersRes.value.items);
+      } else {
+        setReminderFailures([]);
+      }
+
+      const failures = [deliveriesRes, remindersRes].filter((r) => r.status === 'rejected');
+      if (failures.length === 2) {
+        const first = failures[0] as PromiseRejectedResult;
+        throw first.reason;
+      }
+      if (failures.length === 1) {
+        const rejected = failures[0] as PromiseRejectedResult;
+        setError(
+          rejected.reason instanceof Error
+            ? rejected.reason.message
+            : 'Часть данных не загрузилась',
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка загрузки');
     } finally {

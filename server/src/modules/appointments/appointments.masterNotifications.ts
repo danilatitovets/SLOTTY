@@ -61,8 +61,12 @@ export async function notifyMasterByAppointmentId(
   const markup = masterBookingTelegramKeyboard(ctx) as unknown as Record<string, unknown>;
 
   const kindToImmediate: Partial<Record<typeof kind, MasterImmediateNotifyKind>> = {
+    completed: 'booking_completed',
+    client_confirmed_completed: 'booking_completed',
+    client_on_the_way: 'client_on_the_way',
     client_running_late: 'client_running_late',
     client_reported_arrived: 'client_arrived',
+    client_comment: 'client_comment',
     disputed_by_client: 'dispute_created',
   };
   const masterPreferenceEvent: MasterNotificationEventKey | undefined = (() => {

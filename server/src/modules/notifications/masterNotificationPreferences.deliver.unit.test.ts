@@ -18,6 +18,10 @@ describe('masterNotificationPreferences.deliver maps', () => {
 
   it('maps immediate notify kinds', () => {
     assert.equal(mapMasterImmediateNotifyKind('client_running_late'), 'late');
+    assert.equal(mapMasterImmediateNotifyKind('client_on_the_way'), 'client_on_the_way');
+    assert.equal(mapMasterImmediateNotifyKind('booking_completed'), 'booking_completed');
+    assert.equal(mapMasterImmediateNotifyKind('client_comment'), 'client_comment');
+    assert.equal(mapMasterImmediateNotifyKind('slotty_news'), 'news');
     assert.equal(mapMasterImmediateNotifyKind('billing'), 'billing');
   });
 

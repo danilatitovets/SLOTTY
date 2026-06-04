@@ -52,8 +52,11 @@ export function mapNotificationJobTypeToPreferenceEvent(
 export type MasterImmediateNotifyKind =
   | 'booking_created'
   | 'booking_cancelled'
+  | 'client_on_the_way'
   | 'client_running_late'
   | 'client_arrived'
+  | 'booking_completed'
+  | 'client_comment'
   | 'review_received'
   | 'dispute_created'
   | 'billing'
@@ -67,10 +70,16 @@ export function mapMasterImmediateNotifyKind(
       return 'new_booking';
     case 'booking_cancelled':
       return 'cancel';
+    case 'client_on_the_way':
+      return 'client_on_the_way';
     case 'client_running_late':
       return 'late';
     case 'client_arrived':
       return 'arrived';
+    case 'booking_completed':
+      return 'booking_completed';
+    case 'client_comment':
+      return 'client_comment';
     case 'review_received':
       return 'reviews';
     case 'dispute_created':

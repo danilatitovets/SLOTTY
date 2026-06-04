@@ -15,6 +15,10 @@ import {
   resolveResendFrom,
 } from '../email/emailConfig.js';
 import { getSubscriberUnsubscribeTokenByEmail } from '../newsletter/newsletter.service.js';
+import {
+  deliverSlottyNewsToMaster,
+  isMasterProfile,
+} from '../notifications/masterNewsCampaignDeliver.js';
 
 const BATCH_SIZE = 40;
 
@@ -486,6 +490,47 @@ async function sendOneCampaignEmail(
         ctaUrl: campaign.ctaUrl,
         unsubscribeToken: newsletterToken,
       });
+    }
+
+    if (recipient.profileId && (await isMasterProfile(recipient.profileId))) {
+      const outcome = await deliverSlottyNewsToMaster(
+        recipient.profileId,
+        recipient.email,
+        {
+          id: campaign.id,
+          subject: campaign.subject,
+          previewText: campaign.previewText,
+          bodyText: campaign.bodyText,
+          ctaText: campaign.ctaText,
+          ctaUrl: campaign.ctaUrl,
+        },
+        emailContent,
+      );
+      if (outcome === 'sent') {
+        await query(
+          `update public.email_campaign_recipients
+              set status = 'sent', sent_at = now(), error_message = null
+            where id = $1`,
+          [recipientId],
+        );
+        return 'sent';
+      }
+      if (outcome === 'skipped') {
+        await query(
+          `update public.email_campaign_recipients
+              set status = 'skipped', error_message = 'preference_disabled'
+            where id = $1`,
+          [recipientId],
+        );
+        return 'skipped';
+      }
+      await query(
+        `update public.email_campaign_recipients
+            set status = 'failed', failed_at = now(), error_message = 'Send failed'
+          where id = $1`,
+        [recipientId],
+      );
+      return 'failed';
     }
 
     const result = await sendSlottyEmailDetailed({

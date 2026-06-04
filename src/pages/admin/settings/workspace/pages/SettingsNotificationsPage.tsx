@@ -25,7 +25,6 @@ import {
   SettingsCabinetHero,
   SettingsCabinetRingBadge,
   SettingsCabinetSectionTitle,
-  SettingsCabinetSurface,
   settingsCabinetStack,
 } from '../settingsCabinetUi';
 import {
@@ -243,18 +242,6 @@ export function SettingsNotificationsPage() {
               onChange={onPrefChange}
               disabled={saving}
             />
-          </section>
-
-          <section>
-            <SettingsCabinetSectionTitle
-              title="Проверка доставки"
-              description="Тестовые письма и push появятся в следующем обновлении"
-            />
-            <SettingsCabinetSurface>
-              <p className="text-[13px] leading-relaxed text-[#6B7280]">
-                Сейчас проверьте подключение Telegram и email в разделе «Безопасность».
-              </p>
-            </SettingsCabinetSurface>
           </section>
         </div>
       ) : null}

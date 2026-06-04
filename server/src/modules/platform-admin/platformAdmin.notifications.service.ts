@@ -131,7 +131,7 @@ export async function listAppointmentReminderFailures(params?: {
       `select ard.*, p.full_name, ai.email
          from public.appointment_reminder_deliveries ard
          join public.appointments a on a.id = ard.appointment_id
-         join public.profiles p on p.id = a.client_profile_id
+         join public.profiles p on p.id = a.client_id
          left join lateral (
            select email from public.auth_identities
             where profile_id = p.id and email is not null
@@ -146,7 +146,7 @@ export async function listAppointmentReminderFailures(params?: {
       `select count(*)::text as count
          from public.appointment_reminder_deliveries ard
          join public.appointments a on a.id = ard.appointment_id
-         join public.profiles p on p.id = a.client_profile_id
+         join public.profiles p on p.id = a.client_id
          left join lateral (
            select email from public.auth_identities
             where profile_id = p.id and email is not null
