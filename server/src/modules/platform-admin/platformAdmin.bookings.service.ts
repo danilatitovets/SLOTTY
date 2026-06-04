@@ -3,6 +3,7 @@ import { ApiError } from '../../utils/ApiError.js';
 
 export type PlatformBookingListItem = {
   id: string;
+  bookingCode: string | null;
   clientId: string;
   clientName: string;
   clientAccountStatus: string;
@@ -84,6 +85,7 @@ function statusSql(status: string | undefined): string {
 
 type BookingRow = {
   id: string;
+  booking_code: string | null;
   client_id: string;
   client_name: string;
   client_account_status: string;
@@ -103,6 +105,7 @@ type BookingRow = {
 function mapBookingRow(row: BookingRow): PlatformBookingListItem {
   return {
     id: row.id,
+    bookingCode: row.booking_code,
     clientId: row.client_id,
     clientName: row.client_name,
     clientAccountStatus: row.client_account_status,
@@ -122,11 +125,12 @@ function mapBookingRow(row: BookingRow): PlatformBookingListItem {
 }
 
 const BOOKING_SELECT = `
-  select a.id, a.client_id, cp.full_name as client_name, cp.account_status::text as client_account_status,
+  select a.id, bv.voucher_number as booking_code, a.client_id, cp.full_name as client_name, cp.account_status::text as client_account_status,
          a.master_id, mp.display_name as master_name,
          a.service_title_snapshot, a.starts_at, a.ends_at, a.status::text as status,
          a.price_snapshot::text, a.created_at, a.updated_at, a.cancel_reason, a.client_note
     from public.appointments a
+    left join public.booking_vouchers bv on bv.appointment_id = a.id
     join public.profiles cp on cp.id = a.client_id
     join public.master_profiles mp on mp.master_id = a.master_id
 `;

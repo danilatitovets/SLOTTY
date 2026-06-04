@@ -1,6 +1,10 @@
 import type { NotifyUserEmail } from '../notifications/notifyUser.js';
 import { formatAppointmentDateTime } from '../telegram/formatAppointmentDateTime.js';
-import { clientAppointmentsUrl, masterPendingAppointmentsUrl } from '../notifications/appointmentNotifyLinks.js';
+import {
+  buildBookingEmailLink,
+  clientAppointmentsUrl,
+  masterPendingAppointmentsUrl,
+} from '../notifications/appointmentNotifyLinks.js';
 import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 
 function escapeHtml(text: string): string {
@@ -18,6 +22,7 @@ function bookingEmailHtml(params: {
   ctaLabel: string;
   ctaUrl: string;
   footerNote?: string;
+  voucherNumber?: string | null;
 }): string {
   const rowsHtml = params.rows
     .map(
@@ -31,6 +36,10 @@ function bookingEmailHtml(params: {
     params.footerNote ??
     'Оплата услуги — у мастера на месте. SLOTTY не списывает карту при записи.';
 
+  const voucherLine = params.voucherNumber
+    ? `<p style="margin:16px 0 0;font-size:11px;color:#9CA3AF;">№ записи: ${escapeHtml(params.voucherNumber)}</p>`
+    : '';
+
   return (
     `<div style="font-family:Inter,Segoe UI,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;">` +
     `<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#F47C8C;">SLOTTY</p>` +
@@ -38,6 +47,7 @@ function bookingEmailHtml(params: {
     `<p style="margin:0 0 20px;font-size:15px;line-height:1.5;color:#374151;">${escapeHtml(params.intro)}</p>` +
     `<table style="width:100%;border-collapse:collapse;margin:0 0 24px;background:#FAFAFA;border-radius:12px;padding:4px 12px;">${rowsHtml}</table>` +
     `<a href="${escapeHtml(params.ctaUrl)}" style="display:inline-block;background:#F47C8C;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:999px;">${escapeHtml(params.ctaLabel)}</a>` +
+    voucherLine +
     `<p style="margin:24px 0 0;font-size:12px;color:#9CA3AF;line-height:1.5;">${escapeHtml(footer)}</p>` +
     `</div>`
   );
@@ -48,8 +58,24 @@ function whenRows(ctx: AppointmentNotifyContext): { when: string; date: string; 
   return { when: `${date}, ${time}`, date, time };
 }
 
-function voucherRow(ctx: AppointmentNotifyContext): Array<{ label: string; value: string }> {
-  return ctx.voucherNumber ? [{ label: 'Номер записи', value: ctx.voucherNumber }] : [];
+function clientCta(ctx: AppointmentNotifyContext): { label: string; url: string } {
+  if (ctx.voucherNumber) {
+    return {
+      label: 'Открыть запись',
+      url: buildBookingEmailLink('client', ctx.voucherNumber),
+    };
+  }
+  return { label: 'Мои записи', url: clientAppointmentsUrl() };
+}
+
+function masterCta(ctx: AppointmentNotifyContext): { label: string; url: string } {
+  if (ctx.voucherNumber) {
+    return {
+      label: 'Открыть запись',
+      url: buildBookingEmailLink('master', ctx.voucherNumber),
+    };
+  }
+  return { label: 'Открыть заявки', url: masterPendingAppointmentsUrl() };
 }
 
 function plainDetails(ctx: AppointmentNotifyContext, when: string): string {
@@ -58,20 +84,20 @@ function plainDetails(ctx: AppointmentNotifyContext, when: string): string {
     `Услуга: ${ctx.serviceTitle}`,
     `Когда: ${when}`,
   ];
-  if (ctx.voucherNumber) lines.push(`Номер записи: ${ctx.voucherNumber}`);
+  if (ctx.voucherNumber) lines.push(`№ ${ctx.voucherNumber}`);
   return lines.join('\n');
 }
 
 /** Клиент: заявка отправлена. */
 export function clientBookingCreatedEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
+  const cta = clientCta(ctx);
   const rows = [
     { label: 'Мастер', value: ctx.masterName },
     { label: 'Услуга', value: ctx.serviceTitle },
     { label: 'Дата и время', value: when },
-    ...voucherRow(ctx),
   ];
-  const text = `Заявка на запись отправлена.\n${plainDetails(ctx, when)}\n\nМы пришлём подтверждение на email и в Telegram, когда мастер примет заявку.\n${clientAppointmentsUrl()}`;
+  const text = `Заявка на запись отправлена.\n${plainDetails(ctx, when)}\n\n${cta.url}`;
 
   return {
     subject: 'Заявка на запись отправлена — SLOTTY',
@@ -80,8 +106,9 @@ export function clientBookingCreatedEmail(ctx: AppointmentNotifyContext): Notify
       intro:
         'Мастер получил вашу заявку. Когда он подтвердит время, вы получите письмо и уведомление с деталями визита.',
       rows,
-      ctaLabel: 'Мои записи',
-      ctaUrl: clientAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
   };
@@ -90,24 +117,25 @@ export function clientBookingCreatedEmail(ctx: AppointmentNotifyContext): Notify
 /** Клиент: мастер подтвердил запись. */
 export function clientBookingConfirmedEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
+  const cta = clientCta(ctx);
   const rows = [
     { label: 'Мастер', value: ctx.masterName },
     { label: 'Услуга', value: ctx.serviceTitle },
     { label: 'Дата и время', value: when },
-    ...voucherRow(ctx),
   ];
-  const text = `Запись подтверждена.\n${plainDetails(ctx, when)}\n\nЖдём вас в указанное время.\n${clientAppointmentsUrl()}`;
+  const text = `Запись подтверждена.\n${plainDetails(ctx, when)}\n\n${cta.url}`;
 
   return {
-    subject: 'Запись подтверждена — SLOTTY',
+    subject: 'Ваша запись в SLOTTY подтверждена',
     html: bookingEmailHtml({
       title: 'Запись подтверждена',
-      intro: `${ctx.masterName} подтвердил(а) вашу запись. Ниже — детали визита. Сохраните письмо или откройте запись в приложении.`,
+      intro: `${ctx.masterName} подтвердил(а) вашу запись. Ниже — детали визита.`,
       rows,
-      ctaLabel: 'Открыть запись',
-      ctaUrl: clientAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
       footerNote:
-        'Если планы изменились, отмените запись заранее в разделе «Мои записи», чтобы освободить время мастера.',
+        'Если планы изменились, отмените запись заранее в приложении, чтобы освободить время мастера.',
     }),
     text,
   };
@@ -116,20 +144,21 @@ export function clientBookingConfirmedEmail(ctx: AppointmentNotifyContext): Noti
 /** Клиент: мастер отменил. */
 export function clientBookingCancelledByMasterEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
-  const text = `Запись отменена мастером.\n${plainDetails(ctx, when)}\n\nВыберите другое время в SLOTTY.\n${clientAppointmentsUrl()}`;
+  const cta = clientCta(ctx);
+  const text = `Запись отменена мастером.\n${plainDetails(ctx, when)}\n\n${cta.url}`;
 
   return {
     subject: 'Запись отменена мастером — SLOTTY',
     html: bookingEmailHtml({
       title: 'Запись отменена',
-      intro: `${ctx.masterName} отменил(а) запись. Вы можете выбрать другое время у этого мастера или записаться к другому специалисту.`,
+      intro: `${ctx.masterName} отменил(а) запись. Вы можете выбрать другое время.`,
       rows: [
         { label: 'Услуга', value: ctx.serviceTitle },
         { label: 'Было запланировано', value: when },
-        ...voucherRow(ctx),
       ],
-      ctaLabel: 'Найти время',
-      ctaUrl: clientAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
   };
@@ -138,7 +167,8 @@ export function clientBookingCancelledByMasterEmail(ctx: AppointmentNotifyContex
 /** Клиент: сам отменил. */
 export function clientBookingCancelledBySelfEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
-  const text = `Вы отменили запись.\n${plainDetails(ctx, when)}\n${clientAppointmentsUrl()}`;
+  const cta = clientCta(ctx);
+  const text = `Вы отменили запись.\n${plainDetails(ctx, when)}\n${cta.url}`;
 
   return {
     subject: 'Запись отменена — SLOTTY',
@@ -150,8 +180,9 @@ export function clientBookingCancelledBySelfEmail(ctx: AppointmentNotifyContext)
         { label: 'Услуга', value: ctx.serviceTitle },
         { label: 'Было', value: when },
       ],
-      ctaLabel: 'Мои записи',
-      ctaUrl: clientAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
   };
@@ -160,7 +191,8 @@ export function clientBookingCancelledBySelfEmail(ctx: AppointmentNotifyContext)
 /** Клиент: визит завершён. */
 export function clientBookingCompletedEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
-  const text = `Визит завершён.\n${plainDetails(ctx, when)}\n\nСпасибо! Оставьте отзыв в приложении.\n${clientAppointmentsUrl()}`;
+  const cta = clientCta(ctx);
+  const text = `Визит завершён.\n${plainDetails(ctx, when)}\n\n${cta.url}`;
 
   return {
     subject: 'Визит завершён — SLOTTY',
@@ -172,7 +204,8 @@ export function clientBookingCompletedEmail(ctx: AppointmentNotifyContext): Noti
         { label: 'Когда', value: when },
       ],
       ctaLabel: 'Оставить отзыв',
-      ctaUrl: clientAppointmentsUrl(),
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
   };
@@ -181,32 +214,86 @@ export function clientBookingCompletedEmail(ctx: AppointmentNotifyContext): Noti
 /** Мастер: новая заявка. */
 export function masterBookingCreatedEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
+  const cta = masterCta(ctx);
   const rows = [
     { label: 'Клиент', value: ctx.clientName },
     ...(ctx.clientPhone ? [{ label: 'Телефон', value: ctx.clientPhone }] : []),
     { label: 'Услуга', value: ctx.serviceTitle },
     { label: 'Дата и время', value: when },
-    ...voucherRow(ctx),
   ];
-  const text = `Новая заявка на запись.\nКлиент: ${ctx.clientName}\n${plainDetails(ctx, when)}\n${masterPendingAppointmentsUrl()}`;
+  const text = `Новая заявка на запись.\nКлиент: ${ctx.clientName}\n${plainDetails(ctx, when)}\n${cta.url}`;
 
   return {
-    subject: 'Новая заявка на запись — SLOTTY',
+    subject: 'Новая запись в SLOTTY',
     html: bookingEmailHtml({
       title: 'Новая заявка на запись',
       intro: 'Клиент записался онлайн. Подтвердите или отклоните заявку в кабинете мастера.',
       rows,
-      ctaLabel: 'Открыть заявки',
-      ctaUrl: masterPendingAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
+  };
+}
+
+/** Напоминание клиенту (1ч / 24ч). */
+export function clientBookingReminderEmail(
+  ctx: AppointmentNotifyContext,
+  kind: 'booking_reminder_1h' | 'booking_reminder_24h',
+): NotifyUserEmail {
+  const { when } = whenRows(ctx);
+  const cta = clientCta(ctx);
+  const lead = kind === 'booking_reminder_24h' ? 'завтра' : 'через 1 час';
+  return {
+    subject: 'Напоминание: запись через 1 час — SLOTTY',
+    html: bookingEmailHtml({
+      title: 'Напоминание о записи',
+      intro: `Напоминание: ${lead} у вас запись в SLOTTY.`,
+      rows: [
+        { label: 'Услуга', value: ctx.serviceTitle },
+        { label: 'Мастер', value: ctx.masterName },
+        { label: 'Дата и время', value: when },
+      ],
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
+    }),
+    text: `Напоминание: запись ${lead}.\n${plainDetails(ctx, when)}\n${cta.url}`,
+  };
+}
+
+/** Напоминание мастеру (1ч / 24ч). */
+export function masterBookingReminderEmail(
+  ctx: AppointmentNotifyContext,
+  kind: 'booking_reminder_1h' | 'booking_reminder_24h',
+): NotifyUserEmail {
+  const { when } = whenRows(ctx);
+  const cta = masterCta(ctx);
+  const lead = kind === 'booking_reminder_24h' ? 'завтра' : 'через 1 час';
+  return {
+    subject: 'Напоминание: запись через 1 час — SLOTTY',
+    html: bookingEmailHtml({
+      title: 'Напоминание о записи',
+      intro: `Через ${lead === 'завтра' ? 'сутки' : 'час'} у вас запись с клиентом.`,
+      rows: [
+        { label: 'Клиент', value: ctx.clientName },
+        { label: 'Услуга', value: ctx.serviceTitle },
+        { label: 'Дата и время', value: when },
+      ],
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
+    }),
+    text: `Напоминание: запись ${lead}.\nКлиент: ${ctx.clientName}\n${cta.url}`,
   };
 }
 
 /** Мастер: клиент отменил. */
 export function masterClientCancelledEmail(ctx: AppointmentNotifyContext): NotifyUserEmail {
   const { when } = whenRows(ctx);
-  const text = `Клиент отменил запись.\nКлиент: ${ctx.clientName}\nУслуга: ${ctx.serviceTitle}\nКогда: ${when}\n${masterPendingAppointmentsUrl()}`;
+  const cta = masterCta(ctx);
+  const text = `Клиент отменил запись.\nКлиент: ${ctx.clientName}\nУслуга: ${ctx.serviceTitle}\nКогда: ${when}\n${cta.url}`;
 
   return {
     subject: 'Клиент отменил запись — SLOTTY',
@@ -218,8 +305,9 @@ export function masterClientCancelledEmail(ctx: AppointmentNotifyContext): Notif
         { label: 'Услуга', value: ctx.serviceTitle },
         { label: 'Было', value: when },
       ],
-      ctaLabel: 'К записям',
-      ctaUrl: masterPendingAppointmentsUrl(),
+      ctaLabel: cta.label,
+      ctaUrl: cta.url,
+      voucherNumber: ctx.voucherNumber,
     }),
     text,
   };

@@ -5,7 +5,17 @@ export const MASTER_APPOINTMENTS_DEMO_KEY = 'slotty_master_appointments_demo';
 
 export const OVERVIEW_MAX_RANGE_DAYS = 90;
 
-export type DemoAppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+export type DemoAppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'client_arrived'
+  | 'in_progress'
+  | 'master_marked_completed'
+  | 'client_confirmed_completed'
+  | 'completed'
+  | 'no_show'
+  | 'cancelled'
+  | 'disputed';
 
 export type DemoMasterAppointment = {
   id: string;
@@ -26,6 +36,35 @@ export type DemoMasterAppointment = {
   clientNote?: string;
   clientReferencePhotoUrl?: string | null;
   status: DemoAppointmentStatus;
+  /** Сырой статус из API (до нормализации). */
+  dbStatus?: string;
+  voucherNumber?: string | null;
+  durationMinutes?: number;
+  bookingSource?: string | null;
+  clientEmail?: string | null;
+  clientTelegramUsername?: string | null;
+  clientTelegramId?: string | null;
+  cancelReason?: string | null;
+  visitFormat?: string | null;
+  clientStats?: {
+    totalBookings: number;
+    cancellationsByClient: number;
+    cancellationsByMaster: number;
+    noShows: number;
+    isFirstTime: boolean;
+  };
+  timeline?: Array<{
+    eventType: string;
+    label: string;
+    createdAt: string;
+    comment?: string | null;
+    lateMinutes?: number | null;
+  }>;
+  clientSignal?: {
+    kind: 'on_the_way' | 'running_late' | 'reported_arrived' | null;
+    lateMinutes: number | null;
+    comment: string | null;
+  };
   /** Короткий адрес для сводки / деталей. */
   addressShort?: string;
   dateLabel?: string;
@@ -205,19 +244,13 @@ export function ensureDemoAppointmentsSeeded(): DemoMasterAppointment[] {
   return seed;
 }
 
+import {
+  appointmentStatusLabel as appointmentStatusLabelCanonical,
+  normalizeDbStatus,
+} from '../../appointments/appointmentStatus';
+
 export function appointmentStatusLabel(s: DemoAppointmentStatus): string {
-  switch (s) {
-    case 'pending':
-      return 'Новая';
-    case 'confirmed':
-      return 'Подтверждена';
-    case 'completed':
-      return 'Завершена';
-    case 'cancelled':
-      return 'Отменена';
-    default:
-      return s;
-  }
+  return appointmentStatusLabelCanonical(normalizeDbStatus(s));
 }
 
 export function countAppointmentsOnDate(rows: DemoMasterAppointment[], iso: string): number {
@@ -310,9 +343,15 @@ export function pickNearestUpcomingAppointment(
   rows: DemoMasterAppointment[],
   todayIso: string = isoDateLocal(new Date()),
 ): DemoMasterAppointment | null {
-  const candidates = rows.filter(
-    (r) => (r.status === 'pending' || r.status === 'confirmed') && r.date >= todayIso,
-  );
+  const now = new Date();
+  const candidates = rows.filter((r) => {
+    if (r.status === 'pending' && r.date >= todayIso) return true;
+    if (r.status === 'confirmed' || r.status === 'client_arrived' || r.status === 'in_progress') {
+      if (r.endsAt) return new Date(r.endsAt) >= now;
+      return r.date >= todayIso;
+    }
+    return false;
+  });
   if (!candidates.length) return null;
   const sorted = [...candidates].sort((a, b) => {
     const da = `${a.date}T${timeToSortKey(a.time)}`;

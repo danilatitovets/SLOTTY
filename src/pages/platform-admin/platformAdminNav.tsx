@@ -102,7 +102,7 @@ export const PLATFORM_ADMIN_NAV: PlatformAdminNavItem[] = [
     icon: HiEnvelope,
     title: 'Email-рассылки и доставка',
     description:
-      'Маркетинговые кампании для подписчиков, тестовые письма, логи Telegram и ошибки напоминаний о записях.',
+      'Email-рассылки, логи доставки и вкладка «Диагностика»: Resend/Telegram, workers, retry failed jobs.',
   },
   {
     to: PLATFORM_ADMIN_AUDIT_PATH,

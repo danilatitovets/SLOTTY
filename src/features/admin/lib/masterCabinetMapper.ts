@@ -1,6 +1,8 @@
 import { LOCATION_EMPTY_SENTINEL } from '../../../shared/lib/emptyDisplayText';
 import { addDays } from '../../booking/lib/calendar';
 import type { DemoAppointmentStatus, DemoMasterAppointment } from '../../master/model/demoMasterAppointments';
+import { dbStatusToUi } from '../../appointments/appointmentStatus';
+import { formatServiceName } from '../../../shared/lib/displayFormat';
 import { isoDateLocal } from '../../master/model/demoMasterAppointments';
 import type {
   MasterCertificate,
@@ -308,9 +310,7 @@ function normalizeBookingRulesFields(
 }
 
 function mapDbAppointmentStatus(s: string): DemoAppointmentStatus {
-  if (s === 'pending' || s === 'confirmed') return s;
-  if (s === 'completed' || s === 'no_show') return 'completed';
-  return 'cancelled';
+  return dbStatusToUi(s) as DemoAppointmentStatus;
 }
 
 function formatHmLocal(d: Date): string {
@@ -328,8 +328,17 @@ export function mapMasterAppointmentRowToDemo(row: {
   status: string;
   price_snapshot: string;
   service_title_snapshot: string;
+  service_duration_snapshot?: number | null;
   client_name: string;
   client_phone?: string | null;
+  client_email_snapshot?: string | null;
+  client_email?: string | null;
+  client_telegram_username_snapshot?: string | null;
+  client_telegram_username?: string | null;
+  client_telegram_id_snapshot?: string | null;
+  booking_source?: string | null;
+  voucher_number?: string | null;
+  cancel_reason?: string | null;
   client_avatar_url?: string | null;
   client_note: string | null;
   client_reference_photo_url?: string | null;
@@ -339,24 +348,34 @@ export function mapMasterAppointmentRowToDemo(row: {
   const time = formatHmLocal(d);
   const price = Number(row.price_snapshot);
   const phone = row.client_phone?.trim();
+  const email = (row.client_email_snapshot ?? row.client_email)?.trim();
+  const telegram = (row.client_telegram_username_snapshot ?? row.client_telegram_username)?.trim();
   const note = row.client_note?.trim();
   const photoUrl = row.client_reference_photo_url?.trim() || null;
+  const dbStatus = row.status;
   return {
     id: row.id,
     serviceId: row.service_id,
     slotId: row.slot_id,
     startsAt: row.starts_at,
     endsAt: row.ends_at,
-    clientName: row.client_name || 'Клиент',
+    clientName: row.client_name || 'Клиент SLOTTY',
     clientAvatarUrl: row.client_avatar_url?.trim() || null,
-    serviceTitle: row.service_title_snapshot || 'Услуга',
+    serviceTitle: formatServiceName(row.service_title_snapshot || 'Услуга'),
     date,
     time,
     priceByn: Number.isFinite(price) ? price : 0,
-    contact: phone || undefined,
+    contact: phone || telegram || email || undefined,
     clientNote: note || undefined,
     clientReferencePhotoUrl: photoUrl,
-    status: mapDbAppointmentStatus(row.status),
+    status: mapDbAppointmentStatus(dbStatus),
+    dbStatus,
+    voucherNumber: row.voucher_number ?? null,
+    durationMinutes: row.service_duration_snapshot ?? undefined,
+    bookingSource: row.booking_source ?? null,
+    clientEmail: email || null,
+    clientTelegramUsername: telegram?.replace(/^@+/, '') || null,
+    cancelReason: row.cancel_reason?.trim() || null,
   };
 }
 

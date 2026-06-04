@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { afterBookingMutation } from '../../features/appointments/bookingDataSync';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { isDevDemoAllowed, isProductionApiMisconfigured } from '../../shared/lib/appMode';
 import { getMySubscription, type MasterSubscriptionDto } from '../../features/admin/api/adminBillingApi';
@@ -16,8 +17,11 @@ import {
   fetchMasterAppointments,
   fetchMasterCabinet,
   patchMasterAppointmentCancel,
+  patchMasterAppointmentClientArrived,
   patchMasterAppointmentComplete,
   patchMasterAppointmentConfirm,
+  patchMasterAppointmentNoShow,
+  patchMasterAppointmentStart,
   patchMasterMe,
   patchMasterService,
   postMasterService,
@@ -764,10 +768,24 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         if (!before || before.status === row.status) continue;
         if (before.status === 'pending' && row.status === 'confirmed') {
           calls.push(patchMasterAppointmentConfirm(row.id));
-        } else if (before.status === 'confirmed' && row.status === 'completed') {
-          calls.push(patchMasterAppointmentComplete(row.id));
+        } else if (before.status === 'confirmed' && row.status === 'client_arrived') {
+          calls.push(patchMasterAppointmentClientArrived(row.id));
+        } else if (before.status === 'client_arrived' && row.status === 'in_progress') {
+          calls.push(patchMasterAppointmentStart(row.id));
         } else if (
-          (before.status === 'pending' || before.status === 'confirmed') &&
+          (before.status === 'confirmed' ||
+            before.status === 'client_arrived' ||
+            before.status === 'in_progress') &&
+          row.status === 'completed'
+        ) {
+          calls.push(patchMasterAppointmentComplete(row.id));
+        } else if (before.status === 'confirmed' && row.status === 'no_show') {
+          calls.push(patchMasterAppointmentNoShow(row.id));
+        } else if (
+          (before.status === 'pending' ||
+            before.status === 'confirmed' ||
+            before.status === 'client_arrived' ||
+            before.status === 'in_progress') &&
           row.status === 'cancelled'
         ) {
           calls.push(
@@ -800,6 +818,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
           /* keep previous */
         }
         setCabinetError(null);
+        afterBookingMutation();
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Не удалось обновить запись';
         setCabinetError(msg);

@@ -8,6 +8,7 @@ import {
 import { mapMasterAppointmentRowToDemo } from '../../../features/admin/lib/masterCabinetMapper';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import type { AppointmentsTabId } from './appointmentsTypes';
+import { subscribeBookingDataRefresh } from '../../../features/appointments/bookingDataSync';
 
 const PAGE_SIZE = 30;
 
@@ -99,6 +100,13 @@ export function useMasterAppointmentsPage({ enabled, tab }: Options) {
     offsetRef.current = 0;
     await Promise.all([loadStats(), loadPage('reset')]);
   }, [loadStats, loadPage]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribeBookingDataRefresh(() => {
+      void reload();
+    });
+  }, [enabled, reload]);
 
   const loadMore = useCallback(() => {
     if (!hasMore || loading || loadingMore) return;

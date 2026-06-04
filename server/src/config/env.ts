@@ -142,24 +142,42 @@ const envSchema = z.object({
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).optional(),
   ),
-  /** Планировщик напоминаний о записи (за 24ч и 1ч). По умолчанию включён. */
+  /** Legacy poll напоминаний (без notification_jobs). По умолчанию выключен. */
+  APPOINTMENT_REMINDERS_LEGACY: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
+  /** @deprecated Используйте NOTIFICATION_JOBS_ENABLED */
   APPOINTMENT_REMINDERS_ENABLED: z
     .string()
     .optional()
     .transform((v) => v !== 'false' && v !== '0'),
-  /** Интервал проверки напоминаний, мс (по умолчанию 5 мин). */
   APPOINTMENT_REMINDERS_INTERVAL_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
+  /** Worker notification_jobs (email/Telegram напоминания). По умолчанию включён. */
+  NOTIFICATION_JOBS_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== 'false' && v !== '0'),
+  /** Интервал worker notification_jobs, мс (по умолчанию 45 с). */
+  NOTIFICATION_JOBS_INTERVAL_MS: z.coerce.number().int().min(15_000).max(3_600_000).default(45_000),
+  /** Через сколько часов auto-complete после master_marked_completed (по умолчанию 24). */
+  BOOKING_AUTO_COMPLETE_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   /** Resend API key; без ключа в dev письма логируются в консоль. */
   RESEND_API_KEY: z.preprocess(
     (v) => (v === '' || v === undefined || v === null ? undefined : String(v).trim()),
     z.string().min(1).optional(),
   ),
-  /** Отправитель Resend; допускается alias EMAIL_FROM в Railway. */
+  /** Отправитель Resend; допускается EMAIL_FROM / RESEND_FROM_EMAIL в Railway. */
   RESEND_FROM: z.preprocess(
     (v) => {
-      const raw = v ?? envFirst('RESEND_FROM', 'EMAIL_FROM');
+      const raw = v ?? envFirst('RESEND_FROM', 'EMAIL_FROM', 'RESEND_FROM_EMAIL');
       if (raw === '' || raw === undefined || raw === null) return undefined;
-      return String(raw).trim();
+      const trimmed = String(raw).trim();
+      const name = process.env.RESEND_FROM_NAME?.trim();
+      if (name && !trimmed.includes('<')) {
+        return `${name} <${trimmed}>`;
+      }
+      return trimmed;
     },
     z.string().min(3).optional(),
   ),

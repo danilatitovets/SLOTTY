@@ -2,6 +2,9 @@ import { query } from '../../config/db.js';
 import { notifyUser } from '../notifications/notifyUser.js';
 import { notifyMasterEnteredTopIfNeeded } from '../masters/masterCatalogNotifications.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { canClientLeaveReview, normalizeDbStatus } from '../../lib/appointmentStatus.js';
+import { insertBookingEvent } from '../appointments/bookingEvents.service.js';
+import { getOpenDisputeForAppointment } from '../appointments/bookingDisputes.service.js';
 
 export type CreateReviewInput = {
   appointmentId: string;
@@ -34,16 +37,16 @@ export async function createReviewForCompletedAppointment(
     throw ApiError.forbidden('Нельзя оставить отзыв к чужой записи', 'NOT_YOUR_APPOINTMENT');
   }
 
-  const endsAt = new Date(appt.ends_at as Date);
-  const visitEnded = !Number.isNaN(endsAt.getTime()) && endsAt.getTime() < Date.now();
-  const statusOk =
-    appt.status === 'completed' ||
-    appt.status === 'no_show' ||
-    (appt.status === 'confirmed' && visitEnded);
-
-  if (!statusOk) {
+  const openDispute = await getOpenDisputeForAppointment(input.appointmentId);
+  if (!canClientLeaveReview(appt.status, Boolean(openDispute && ['open', 'in_review'].includes(openDispute.status)))) {
     throw ApiError.conflict(
-      'Отзыв можно оставить после завершённого визита',
+      'Отзыв можно оставить после завершённого визита без открытого спора',
+      'APPOINTMENT_NOT_REVIEWABLE',
+    );
+  }
+  if (normalizeDbStatus(appt.status) !== 'completed') {
+    throw ApiError.conflict(
+      'Отзыв можно оставить только после завершения записи',
       'APPOINTMENT_NOT_REVIEWABLE',
     );
   }
@@ -69,6 +72,15 @@ export async function createReviewForCompletedAppointment(
   if (!reviewId) {
     throw ApiError.internal('Не удалось сохранить отзыв', 'REVIEW_INSERT_FAILED');
   }
+
+  await insertBookingEvent({
+    appointmentId: input.appointmentId,
+    eventType: 'booking.review_left',
+    newStatus: 'completed',
+    actorUserId: clientId,
+    actorRole: 'client',
+    metadata: { reviewId, rating: input.rating },
+  });
 
   await notifyUser({
     userId: appt.master_id,

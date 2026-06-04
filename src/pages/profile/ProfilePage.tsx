@@ -13,20 +13,14 @@ import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import { ADMIN_PATH, BECOME_MASTER_PATH, getMasterPath, getProfilePath, PROFILE_NOTIFICATIONS_PATH, PROFILE_SETTINGS_PATH, SERVICES_PATH } from '../../app/paths';
 import { setProfileRole } from '../../features/profile/lib/setProfileRole';
 import { useIsMasterUser } from '../../features/profile/hooks/useIsMasterUser';
-import {
-  type DemoAppointmentRecord,
-  type DemoAppointmentTab,
-  buildYandexMapWidgetUrl,
-  buildYandexMapsRouteUrl,
-} from '../../features/appointments/model/demoAppointments';
+import { type DemoAppointmentRecord, type DemoAppointmentTab } from '../../features/appointments/model/demoAppointments';
+import { ClientAppointmentDetailSheetContent } from '../../features/appointments/clientBooking/ClientAppointmentDetailSheetContent';
 import {
   emptyClientAppointments,
   fetchClientAppointmentsPage,
   mergeClientAppointmentsState,
   type ClientAppointmentsState,
 } from '../../features/appointments/api/clientAppointments';
-import { masterLocationDetailRows } from '../../features/profile/model/masterLocation';
-import { YandexMapsRouteIcon } from '../../shared/ui/YandexMapsRouteIcon';
 import { removeMyFavoriteMaster, type FavoriteMasterDto } from '../../features/profile/api/clientFavorites';
 import {
   fetchFavoritesForDisplay,
@@ -66,12 +60,8 @@ import {
   clientProfileSubTabIdle,
   clientProfileSubTabTrack,
 } from './clientProfile/clientProfileTheme';
-import {
-  formatPriceByn,
-  statusClassName,
-  statusDetailsRu,
-  statusLabelRu,
-} from './profileFormat';
+import { formatPriceByn, statusClassName, statusLabelRu } from './profileFormat';
+import { subscribeBookingDataRefresh } from '../../features/appointments/bookingDataSync';
 
 function IconChevronRight({ className }: { className?: string }) {
   return (
@@ -435,15 +425,6 @@ function EmptyState({
   );
 }
 
-function DetailSheetRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4 py-2 text-[14px] first:pt-0 last:pb-0">
-      <span className="shrink-0 font-medium text-neutral-500">{label}</span>
-      <span className="min-w-0 text-right font-semibold text-neutral-950">{value}</span>
-    </div>
-  );
-}
-
 function AppointmentBottomSheet({
   onClose,
   children,
@@ -754,6 +735,12 @@ export function ProfilePage() {
     void loadClientAppointments();
   }, [loadClientAppointments, searchParams]);
 
+  useEffect(() => {
+    return subscribeBookingDataRefresh(() => {
+      void loadClientAppointments();
+    });
+  }, [loadClientAppointments]);
+
   const focusAppointmentId = searchParams.get('focus');
 
   useEffect(() => {
@@ -867,13 +854,6 @@ export function ProfilePage() {
     setCancelModal({ open: true, phase: 'confirm', row });
   }, []);
 
-  const openCancelFromDetails = useCallback(() => {
-    if (!selectedAppointment || selectedAppointment.status === 'cancelled') return;
-    const row = selectedAppointment;
-    setSelectedAppointmentId(null);
-    setCancelModal({ open: true, phase: 'confirm', row });
-  }, [selectedAppointment]);
-
   const closeCancelModal = useCallback(() => {
     setCancelModal({ open: false });
   }, []);
@@ -942,12 +922,6 @@ export function ProfilePage() {
   const openDownloadPdf = useCallback((row: DemoAppointmentRecord) => {
     openBookingVoucherPrint(demoAppointmentToVoucherPayload(row), HEADER_LOGO_SRC);
   }, []);
-
-  const isDetailsUpcoming = useMemo(
-    () =>
-      Boolean(selectedAppointment && apptState.upcoming.some((a) => a.id === selectedAppointment.id)),
-    [apptState.upcoming, selectedAppointment],
-  );
 
   const apptRows = apptSubTab === 'upcoming' ? apptState.upcoming : apptState.past;
   const showApptList = apptRows.length > 0;
@@ -1469,93 +1443,18 @@ export function ProfilePage() {
 
       {selectedAppointment ? (
         <AppointmentBottomSheet onClose={closeDetails} labelledBy="appointment-details-title">
-          <h2
-            id="appointment-details-title"
-            className="text-[26px] font-semibold tracking-[-0.055em] text-neutral-950"
-          >
-            Детали записи
-          </h2>
-
-          <div className="mt-4 rounded-[28px] border border-neutral-200/70 bg-white px-4 py-3 shadow-[0_4px_20px_rgba(17,17,17,0.04)]">
-            <DetailSheetRow label="Мастер" value={selectedAppointment.masterName} />
-            <DetailSheetRow label="Услуга" value={selectedAppointment.serviceTitle} />
-            <DetailSheetRow label="Дата" value={selectedAppointment.dateLabel} />
-            <DetailSheetRow label="Время" value={selectedAppointment.timeLabel} />
-            {masterLocationDetailRows(selectedAppointment.location, { revealed: true }).map((line) => (
-              <DetailSheetRow key={line.label} label={line.label} value={line.value} />
-            ))}
-            <DetailSheetRow label="Стоимость" value={formatPriceByn(selectedAppointment.price)} />
-            <DetailSheetRow label="Статус" value={statusDetailsRu(selectedAppointment.status)} />
-          </div>
-
-          <div className="mt-4 overflow-hidden rounded-[28px] border border-neutral-200/70 bg-white p-2 shadow-[0_4px_20px_rgba(17,17,17,0.04)]">
-            <p className="px-2 pb-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-neutral-400">
-              Яндекс.Карты
-            </p>
-            <div className="overflow-hidden rounded-[22px] bg-neutral-200 shadow-[inset_0_0_0_1px_rgba(17,17,17,0.04)]">
-              <iframe
-                title={`Карта: ${selectedAppointment.addressShort}`}
-                src={buildYandexMapWidgetUrl(selectedAppointment)}
-                className="block h-[min(220px,42dvh)] w-full min-h-[180px] border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-            <a
-              href={buildYandexMapsRouteUrl(selectedAppointment)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-[22px] bg-white px-4 py-2.5 text-[14px] font-semibold text-neutral-900 shadow-[0_4px_14px_rgba(17,17,17,0.06)] transition active:scale-[0.98] hover:bg-neutral-50"
-            >
-              <YandexMapsRouteIcon className="shrink-0 text-[#E29595]" />
-              Построить маршрут в Яндекс.Картах
-            </a>
-          </div>
-
-          <p className="mt-3 text-[13px] leading-relaxed text-neutral-500">
-            Мы напомним вам о визите в Telegram.
-          </p>
-
-          <div className="mt-5 flex flex-col gap-2">
-            <button
-              type="button"
-              title="Откроется диалог печати — выберите «Сохранить как PDF»"
-              onClick={() => openBookingVoucherPrint(demoAppointmentToVoucherPayload(selectedAppointment), HEADER_LOGO_SRC)}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-full border-2 border-[#E29595] bg-white text-[14px] font-semibold text-[#c47878] transition hover:bg-[#fff8f8] active:scale-[0.99]"
-            >
-              <IconPdf className="h-4 w-4 shrink-0" />
-              Скачать PDF
-            </button>
-
-            <button
-              type="button"
-              onClick={closeDetails}
-              className="flex min-h-10 w-full items-center justify-center rounded-full bg-[#F1EFEF] px-4 text-[14px] font-semibold text-neutral-900 transition active:scale-[0.98]"
-            >
-              Закрыть
-            </button>
-
-            {isDetailsUpcoming && selectedAppointment.status !== 'cancelled' ? (
-              <button
-                type="button"
-                onClick={openCancelFromDetails}
-                className="flex min-h-10 w-full items-center justify-center rounded-full bg-[#E29595] px-4 text-[14px] font-semibold text-white shadow-[0_10px_26px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-              >
-                Отменить запись
-              </button>
-            ) : null}
-
-            {!isDetailsUpcoming && selectedAppointment.status === 'completed' ? (
-              <button
-                type="button"
-                onClick={() => openReview(selectedAppointment)}
-                className="flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-[#E29595] px-4 text-[14px] font-semibold text-white shadow-[0_10px_26px_rgba(226,149,149,0.22)] transition active:scale-[0.98]"
-              >
-                <IconReviewStar className="h-4 w-4 shrink-0 opacity-95" />
-                Оставить отзыв
-              </button>
-            ) : null}
-          </div>
+          <ClientAppointmentDetailSheetContent
+            row={selectedAppointment}
+            onClose={closeDetails}
+            onRefreshList={loadClientAppointments}
+            onOpenReview={(id) => {
+              closeDetails();
+              const found =
+                apptState.upcoming.find((a) => a.id === id) ??
+                apptState.past.find((a) => a.id === id);
+              if (found) openReview(found);
+            }}
+          />
         </AppointmentBottomSheet>
       ) : null}
 

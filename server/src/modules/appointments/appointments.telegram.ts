@@ -1,6 +1,7 @@
 import { notifyUser } from '../notifications/notifyUser.js';
 import { masterClientCancelledBooking } from '../notifications/templates/appointmentNotificationTemplates.js';
-import { masterNewBookingTelegramKeyboard } from '../notifications/telegramAppointmentKeyboard.js';
+import { masterBookingTelegramKeyboard } from '../notifications/telegramAppointmentKeyboard.js';
+import { scheduleJobsAfterBookingCreated } from '../notifications/notificationJobs.schedule.js';
 import { notifyClientBookingCreated } from './appointments.clientNotifications.js';
 import { notifyMasterBookingCreated } from './appointments.masterNotifications.js';
 import { masterClientCancelledEmail } from './appointmentNotifyEmail.js';
@@ -41,7 +42,16 @@ function toContext(payload: AppointmentCreatedPayload): AppointmentNotifyContext
 export async function notifyAppointmentCreated(payload: AppointmentCreatedPayload): Promise<void> {
   try {
     const ctx = toContext(payload);
-    await Promise.all([notifyClientBookingCreated(ctx), notifyMasterBookingCreated(ctx)]);
+    await scheduleJobsAfterBookingCreated(payload.appointmentId);
+    const results = await Promise.allSettled([
+      notifyClientBookingCreated(ctx),
+      notifyMasterBookingCreated(ctx),
+    ]);
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        logNotifyError('notifyAppointmentCreated.channel', r.reason);
+      }
+    }
   } catch (e) {
     logNotifyError('notifyAppointmentCreated', e);
   }
@@ -62,7 +72,7 @@ export async function notifyMasterClientCancelledBooking(
       ...payload,
       relatedEntityType: 'appointment',
       relatedEntityId: appointmentId,
-      telegramReplyMarkup: masterNewBookingTelegramKeyboard() as unknown as Record<string, unknown>,
+      telegramReplyMarkup: masterBookingTelegramKeyboard(ctx) as unknown as Record<string, unknown>,
       email: masterClientCancelledEmail(ctx),
     });
   } catch (e) {

@@ -30,6 +30,10 @@ async function tick(): Promise<void> {
 
 /** Периодическая проверка записей и отправка напоминаний в Telegram + in-app. */
 export function startAppointmentRemindersScheduler(): void {
+  if (!env.APPOINTMENT_REMINDERS_LEGACY) {
+    console.log('[reminders] legacy poll disabled (use notification_jobs worker)');
+    return;
+  }
   if (!env.APPOINTMENT_REMINDERS_ENABLED) {
     console.log('[reminders] scheduler disabled (APPOINTMENT_REMINDERS_ENABLED=false)');
     return;

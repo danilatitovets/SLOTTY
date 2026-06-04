@@ -52,7 +52,7 @@ export function PlatformAdminPage() {
         <Route path="billing" element={<PlatformAdminBillingHub />} />
         <Route path="payments" element={<PlatformAdminPaymentsTab />} />
         <Route path="payments/:paymentId" element={<PlatformAdminPaymentsTab />} />
-        <Route path="notifications" element={<PlatformAdminNotificationsHub />} />
+        <Route path="notifications/*" element={<PlatformAdminNotificationsHub />} />
         <Route path="audit" element={<PlatformAdminAuditTab />} />
         <Route path="*" element={<Navigate to={PLATFORM_ADMIN_PATH} replace />} />
       </Route>

@@ -51,7 +51,8 @@ import {
   filterHistoryByPeriod,
   groupAppointmentsByDay,
   groupAppointmentsByMonth,
-  isUpcomingConfirmed,
+  isHistoryAppointment,
+  isUpcomingTabAppointment,
   pickNearestUpcoming,
   uniqueServiceTitles,
 } from './appointmentsFormat';
@@ -79,7 +80,9 @@ const APPOINTMENT_FOCUS_PARAM = 'focus';
 
 function appointmentsTabForStatus(status: string): AppointmentsTabId {
   if (status === 'pending') return 'requests';
-  if (status === 'confirmed') return 'upcoming';
+  if (status === 'confirmed' || status === 'client_arrived' || status === 'in_progress') {
+    return 'upcoming';
+  }
   return 'history';
 }
 
@@ -210,10 +213,8 @@ export function AdminAppointmentsTab({
       };
     }
     const requests = appointments.filter((a) => a.status === 'pending').length;
-    const upcoming = appointments.filter((a) => isUpcomingConfirmed(a)).length;
-    const history = appointments.filter(
-      (a) => a.status === 'completed' || a.status === 'cancelled',
-    ).length;
+    const upcoming = appointments.filter((a) => isUpcomingTabAppointment(a)).length;
+    const history = appointments.filter((a) => isHistoryAppointment(a)).length;
     return { requests, upcoming, history };
   }, [appointments, remote.stats, useRemoteList]);
 
@@ -224,12 +225,12 @@ export function AdminAppointmentsTab({
 
   const upcomingRows = useMemo(() => {
     if (useRemoteList && tab === 'upcoming') return listAppointments;
-    return listAppointments.filter((a) => isUpcomingConfirmed(a));
+    return listAppointments.filter((a) => isUpcomingTabAppointment(a));
   }, [listAppointments, tab, useRemoteList]);
 
   const historyRows = useMemo(() => {
     if (useRemoteList && tab === 'history') return listAppointments;
-    return listAppointments.filter((a) => a.status === 'completed' || a.status === 'cancelled');
+    return listAppointments.filter((a) => isHistoryAppointment(a));
   }, [listAppointments, tab, useRemoteList]);
 
   const requestsFiltered = useMemo(() => {
@@ -282,7 +283,9 @@ export function AdminAppointmentsTab({
     if (historyService !== 'all') {
       rows = rows.filter((a) => a.serviceTitle === historyService);
     }
-    if (historyStatus === 'completed') rows = rows.filter((a) => a.status === 'completed');
+    if (historyStatus === 'completed') {
+      rows = rows.filter((a) => a.status === 'completed' || a.status === 'no_show');
+    }
     if (historyStatus === 'cancelled') rows = rows.filter((a) => a.status === 'cancelled');
     rows = filterHistoryByPeriod(rows, historyPeriod);
     return rows;
@@ -485,6 +488,16 @@ export function AdminAppointmentsTab({
   const renderUpcoming = () => {
     if (listLoadingBlock) return listLoadingBlock;
     if (listErrorBlock) return listErrorBlock;
+    if (!upcomingFiltered.length && useRemoteList && stats.upcoming > 0) {
+      return (
+        <div className="rounded-[12px] bg-[#FFF4F6] px-4 py-5 text-center">
+          <p className="text-[15px] font-semibold text-[#111827]">Записи загружаются…</p>
+          <button type="button" className={`${apptPinkBtn} mt-3`} onClick={() => void remote.reload()}>
+            Обновить список
+          </button>
+        </div>
+      );
+    }
     if (!upcomingFiltered.length) {
       return (
         <AppointmentsEmptyState

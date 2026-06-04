@@ -114,6 +114,20 @@ export function getProfileSettingsDocumentPath(docId: string): string {
 /** Экран записи: дата и слоты. */
 export const BOOKING_PATH = '/zapis';
 
+/** Deep link: конкретная запись клиента (номер SL-…). */
+export const CLIENT_APPOINTMENT_PATH = '/client/appointments/:bookingCode';
+
+/** Deep link: конкретная запись в кабинете мастера. */
+export const MASTER_APPOINTMENT_PATH = '/master/appointments/:bookingCode';
+
+export function getClientAppointmentPath(bookingCode: string): string {
+  return `/client/appointments/${encodeURIComponent(bookingCode.trim().toUpperCase())}`;
+}
+
+export function getMasterAppointmentPath(bookingCode: string): string {
+  return `/master/appointments/${encodeURIComponent(bookingCode.trim().toUpperCase())}`;
+}
+
 /** Онбординг мастера (демо, до кабинета). */
 export const BECOME_MASTER_PATH = '/become-master';
 
@@ -144,6 +158,8 @@ export const PLATFORM_ADMIN_PAYMENTS_PATH = '/platform-admin/payments';
 export const PAYMENT_SUCCESS_PATH = '/payment/success';
 export const PAYMENT_FAIL_PATH = '/payment/fail';
 export const PLATFORM_ADMIN_NOTIFICATIONS_PATH = '/platform-admin/notifications';
+export const PLATFORM_ADMIN_NOTIFICATIONS_DIAGNOSTICS_PATH =
+  '/platform-admin/notifications/diagnostics';
 
 /** Отписка от newsletter по токену из письма. */
 export const UNSUBSCRIBE_NEWSLETTER_PATH = '/unsubscribe/newsletter/:token';

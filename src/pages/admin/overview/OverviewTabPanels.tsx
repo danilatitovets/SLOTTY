@@ -34,9 +34,7 @@ import {
   OverviewSectionCard,
   OverviewWideMetricCard,
 } from './OverviewSharedUi';
-
-const SLOTTY_GRADIENT =
-  'bg-gradient-to-br from-[#111827] via-[#2b2430] to-[#ff5f7a]';
+import { OverviewSummaryHeroBackground } from './OverviewSummaryHeroBackground';
 
 function jsToScheduleWeekday(d: Date): number {
   const js = d.getDay();
@@ -107,19 +105,10 @@ function SummaryMobileHeroCard({
   appointmentsPath: string;
 }) {
   return (
-    <section
-      className={`relative overflow-hidden rounded-[16px] ${SLOTTY_GRADIENT} p-5 text-white`}
-    >
-      <div
-        className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#ff8aa0]/35 blur-3xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -bottom-16 -left-12 h-32 w-32 rounded-full bg-[#ff5f7a]/20 blur-3xl"
-        aria-hidden
-      />
+    <section className="relative overflow-hidden rounded-[16px] p-5 text-white">
+      <OverviewSummaryHeroBackground />
 
-      <div className="relative min-w-0">
+      <div className="relative z-10 min-w-0">
         <h1 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-white">
           Привет, {firstName}. Сегодня всё под контролем.
         </h1>
@@ -322,15 +311,13 @@ function DesktopHeroCard({
     <section
       className={
         embedded
-          ? `relative overflow-hidden ${SLOTTY_GRADIENT} p-6 text-white lg:p-8`
-          : `relative overflow-hidden rounded-[32px] ${SLOTTY_GRADIENT} p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8`
+          ? 'relative overflow-hidden p-6 text-white lg:p-8'
+          : 'relative overflow-hidden rounded-[32px] p-6 text-white shadow-[0_22px_65px_rgba(17,24,39,0.18)] lg:p-8'
       }
     >
-      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#ff8aa0]/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-1/3 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-64 w-64 rounded-full bg-[#ff5f7a]/20 blur-3xl" />
+      <OverviewSummaryHeroBackground />
 
-      <div className="relative grid gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
+      <div className="relative z-10 grid gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
         <div>
 
 

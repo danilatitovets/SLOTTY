@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { query } from '../../config/db.js';
 import { env } from '../../config/env.js';
 import { getAppointmentRemindersSchedulerStatus } from '../appointments/appointmentReminders.scheduler.js';
+import { getNotificationJobsWorkerStatus } from '../notifications/notificationJobs.worker.js';
+import { isResendConfigured, resolveResendFrom } from '../email/emailConfig.js';
 
 const migrationsDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -46,5 +48,8 @@ export function getRuntimeHealth() {
     redisConfigured: Boolean(env.REDIS_URL?.trim()),
     sentryConfigured: Boolean(env.SENTRY_DSN?.trim()),
     reminders: getAppointmentRemindersSchedulerStatus(),
+    notificationJobs: getNotificationJobsWorkerStatus(),
+    resendConfigured: isResendConfigured(),
+    resendFrom: resolveResendFrom(),
   };
 }

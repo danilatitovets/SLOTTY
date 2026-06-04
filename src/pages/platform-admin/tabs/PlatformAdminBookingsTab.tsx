@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { subscribeBookingDataRefresh } from '../../../features/appointments/bookingDataSync';
 import {
   blockUser,
   getClientBookingStats,
@@ -52,6 +54,7 @@ export function PlatformAdminBookingsTab() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [selectedPreview, setSelectedPreview] = useState<PlatformBookingListItem | null>(null);
 
@@ -109,9 +112,29 @@ export function PlatformAdminBookingsTab() {
     return () => clearTimeout(t);
   }, [view, loadBookings, loadProblemClients]);
 
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || view !== 'bookings') return;
+    setSelectedBookingId(openId);
+    const hit = bookings.find((b) => b.id === openId);
+    if (hit) setSelectedPreview(hit);
+  }, [searchParams, bookings, view]);
+
+  useEffect(() => {
+    if (view !== 'bookings') return;
+    return subscribeBookingDataRefresh(() => {
+      void loadBookings(0);
+    });
+  }, [view, loadBookings]);
+
   function openBooking(b: PlatformBookingListItem) {
     setSelectedBookingId(b.id);
     setSelectedPreview(b);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('open', b.id);
+      return next;
+    });
   }
 
   function focusClient(client: PlatformClientBookingStats) {

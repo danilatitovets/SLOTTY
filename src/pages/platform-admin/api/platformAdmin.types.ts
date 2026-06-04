@@ -182,6 +182,7 @@ export type PlatformServiceListItem = {
 
 export type PlatformBookingListItem = {
   id: string;
+  bookingCode: string | null;
   clientId: string;
   clientName: string;
   clientAccountStatus: string;

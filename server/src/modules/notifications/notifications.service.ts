@@ -18,6 +18,7 @@ export type NotificationRow = {
   body: string;
   related_entity_type: string | null;
   related_entity_id: string | null;
+  booking_code: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -36,10 +37,13 @@ export async function listNotifications(
     read_at: Date | string | null;
     created_at: Date | string;
   }>(
-    `select id, type::text, title, body, related_entity_type, related_entity_id, read_at, created_at
-       from public.notifications
-      where user_id = $1
-      order by created_at desc
+    `select n.id, n.type::text, n.title, n.body, n.related_entity_type, n.related_entity_id,
+            n.read_at, n.created_at, bv.voucher_number as booking_code
+       from public.notifications n
+       left join public.booking_vouchers bv
+         on n.related_entity_type = 'appointment' and bv.appointment_id = n.related_entity_id
+      where n.user_id = $1
+      order by n.created_at desc
       limit 200`,
     [userId],
   );
@@ -50,6 +54,7 @@ export async function listNotifications(
     body: row.body,
     related_entity_type: row.related_entity_type,
     related_entity_id: row.related_entity_id,
+    booking_code: (row as { booking_code?: string | null }).booking_code ?? null,
     read_at: toIso(row.read_at),
     created_at: toIso(row.created_at) ?? new Date().toISOString(),
   }));

@@ -8,13 +8,23 @@ import { ApiError } from '../../utils/ApiError.js';
 import {
   cancelClientAppointment,
   createAppointmentTx,
+  getClientAppointmentByVoucher,
+  getMasterAppointmentByVoucher,
   getMasterAppointmentStats,
   listClientAppointments,
   listMasterAppointments,
   MASTER_APPOINTMENTS_LIST_MAX,
   masterCancelAppointment,
-  masterCompleteAppointment,
+  masterClientArrivedAppointment,
   masterConfirmAppointment,
+  masterNoShowAppointment,
+  masterStartAppointment,
+  masterMarkCompletedAppointment,
+  clientConfirmCompletedAppointment,
+  createClientBookingDispute,
+  createMasterBookingDispute,
+  clientBookingSignal,
+  addClientBookingComment,
 } from './appointments.service.js';
 import { uploadBookingReferencePhoto } from './appointments.storage.js';
 import { notifyAppointmentCreated, notifyMasterClientCancelledBooking } from './appointments.telegram.js';
@@ -94,8 +104,25 @@ clientAppointmentsRouter.get(
   }),
 );
 
+const voucherParam = z
+  .string()
+  .min(1)
+  .transform((v) => v.trim().toUpperCase())
+  .refine((v) => /^SL-[A-Z0-9]{12}$/.test(v), 'Invalid booking code');
+
+clientAppointmentsRouter.get(
+  '/voucher/:voucherNumber',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const appointment = await getClientAppointmentByVoucher(req.user!.id, voucherNumber);
+    res.json({ appointment });
+  }),
+);
+
 const cancelReasonBody = z.object({
   reason: z.string().max(2000).optional(),
+  reasonCategory: z.string().max(64).optional(),
+  comment: z.string().max(2000).optional(),
 });
 
 clientAppointmentsRouter.patch(
@@ -103,9 +130,146 @@ clientAppointmentsRouter.patch(
   asyncHandler(async (req, res) => {
     const appointmentId = z.string().uuid().parse(req.params.appointmentId);
     const body = cancelReasonBody.parse(req.body ?? {});
-    const { masterId } = await cancelClientAppointment(req.user!.id, appointmentId, body.reason);
+    const reasonText = [body.reason, body.comment].filter(Boolean).join(' — ') || body.reason;
+    const { masterId } = await cancelClientAppointment(
+      req.user!.id,
+      appointmentId,
+      reasonText,
+      body.reasonCategory,
+    );
     void notifyMasterClientCancelledBooking(masterId, appointmentId);
     res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.patch(
+  '/voucher/:voucherNumber/cancel',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = cancelReasonBody.parse(req.body ?? {});
+    const reasonText = [body.reason, body.comment].filter(Boolean).join(' — ') || body.reason;
+    const { masterId } = await cancelClientAppointment(
+      req.user!.id,
+      row.id,
+      reasonText,
+      body.reasonCategory,
+    );
+    void notifyMasterClientCancelledBooking(masterId, row.id);
+    res.status(204).send();
+  }),
+);
+
+const clientDisputeBody = z.object({
+  reason: z.string().min(1).max(64),
+  comment: z.string().min(10).max(2000),
+});
+
+const masterDisputeBody = z.object({
+  reason: z.string().min(1).max(64),
+  comment: z.string().max(2000).optional(),
+});
+
+const signalBody = z.object({
+  comment: z.string().max(500).optional(),
+  lateMinutes: z.coerce.number().int().min(1).max(240).optional(),
+});
+
+const commentBody = z.object({
+  message: z.string().min(1).max(2000),
+});
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/confirm-completed',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    await clientConfirmCompletedAppointment(req.user!.id, row.id);
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/dispute',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = clientDisputeBody.parse(req.body ?? {});
+    const out = await createClientBookingDispute(req.user!.id, row.id, body);
+    res.status(201).json(out);
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/on-the-way',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = signalBody.parse(req.body ?? {});
+    await clientBookingSignal(req.user!.id, row.id, 'on_the_way', { comment: body.comment });
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/running-late',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = signalBody.parse(req.body ?? {});
+    await clientBookingSignal(req.user!.id, row.id, 'running_late', {
+      comment: body.comment,
+      lateMinutes: body.lateMinutes,
+    });
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/reported-arrived',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = signalBody.parse(req.body ?? {});
+    await clientBookingSignal(req.user!.id, row.id, 'reported_arrived', { comment: body.comment });
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/voucher/:voucherNumber/comment',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const { requireAppointmentForClientByVoucher } = await import('./appointments.access.js');
+    const row = await requireAppointmentForClientByVoucher(req.user!.id, voucherNumber);
+    const body = commentBody.parse(req.body ?? {});
+    await addClientBookingComment(req.user!.id, row.id, body.message);
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/:appointmentId/confirm-completed',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    await clientConfirmCompletedAppointment(req.user!.id, appointmentId);
+    res.status(204).send();
+  }),
+);
+
+clientAppointmentsRouter.post(
+  '/:appointmentId/dispute',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const body = clientDisputeBody.parse(req.body ?? {});
+    const out = await createClientBookingDispute(req.user!.id, appointmentId, body);
+    res.status(201).json(out);
   }),
 );
 
@@ -114,6 +278,11 @@ masterAppointmentsRouter.use(requireMasterPlatformWrite);
 
 const masterCancelBody = z.object({
   reason: z.string().min(1).max(2000),
+  category: z.string().max(64).optional(),
+});
+
+const masterCommentBody = z.object({
+  comment: z.string().max(2000).optional(),
 });
 
 masterAppointmentsRouter.get(
@@ -137,6 +306,15 @@ masterAppointmentsRouter.get(
   }),
 );
 
+masterAppointmentsRouter.get(
+  '/voucher/:voucherNumber',
+  asyncHandler(async (req, res) => {
+    const voucherNumber = voucherParam.parse(req.params.voucherNumber);
+    const appointment = await getMasterAppointmentByVoucher(req.user!.id, voucherNumber);
+    res.json({ appointment });
+  }),
+);
+
 masterAppointmentsRouter.patch(
   '/:appointmentId/confirm',
   asyncHandler(async (req, res) => {
@@ -150,7 +328,54 @@ masterAppointmentsRouter.patch(
   '/:appointmentId/complete',
   asyncHandler(async (req, res) => {
     const appointmentId = z.string().uuid().parse(req.params.appointmentId);
-    await masterCompleteAppointment(req.user!.id, appointmentId);
+    await masterMarkCompletedAppointment(req.user!.id, appointmentId);
+    res.status(204).send();
+  }),
+);
+
+masterAppointmentsRouter.patch(
+  '/:appointmentId/mark-completed',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    await masterMarkCompletedAppointment(req.user!.id, appointmentId);
+    res.status(204).send();
+  }),
+);
+
+masterAppointmentsRouter.post(
+  '/:appointmentId/dispute',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const body = masterDisputeBody.parse(req.body ?? {});
+    const out = await createMasterBookingDispute(req.user!.id, appointmentId, body);
+    res.status(201).json(out);
+  }),
+);
+
+masterAppointmentsRouter.patch(
+  '/:appointmentId/client-arrived',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    await masterClientArrivedAppointment(req.user!.id, appointmentId);
+    res.status(204).send();
+  }),
+);
+
+masterAppointmentsRouter.patch(
+  '/:appointmentId/start',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    await masterStartAppointment(req.user!.id, appointmentId);
+    res.status(204).send();
+  }),
+);
+
+masterAppointmentsRouter.patch(
+  '/:appointmentId/no-show',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const body = masterCommentBody.parse(req.body ?? {});
+    await masterNoShowAppointment(req.user!.id, appointmentId, body.comment);
     res.status(204).send();
   }),
 );
@@ -160,7 +385,7 @@ masterAppointmentsRouter.patch(
   asyncHandler(async (req, res) => {
     const appointmentId = z.string().uuid().parse(req.params.appointmentId);
     const body = masterCancelBody.parse(req.body ?? {});
-    await masterCancelAppointment(req.user!.id, appointmentId, body.reason);
+    await masterCancelAppointment(req.user!.id, appointmentId, body.reason, body.category);
     res.status(204).send();
   }),
 );

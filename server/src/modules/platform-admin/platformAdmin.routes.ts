@@ -26,6 +26,13 @@ import {
   listPlatformBookings,
 } from './platformAdmin.bookings.service.js';
 import {
+  getPlatformBookingAuditSummary,
+  getPlatformBookingDisputes,
+  getPlatformBookingEvents,
+  getPlatformBookingNotifications,
+} from './platformAdmin.bookingAudit.service.js';
+import { resolveBookingDisputeByAdmin } from '../appointments/bookingDisputeResolve.service.js';
+import {
   getPlatformMaster,
   hidePlatformMaster,
   listPlatformMasterPicker,
@@ -83,6 +90,16 @@ import {
   listAppointmentReminderFailures,
   listNotificationDeliveries,
 } from './platformAdmin.notifications.service.js';
+import {
+  listJobsForAdmin,
+  rebuildRemindersByBookingCode,
+  retryAllFailedNotificationJobs,
+  retryNotificationJob,
+  sendTestBookingEmailByCode,
+  sendTestEmailToAdmin,
+  sendTestTelegramToAdmin,
+  getExtendedNotificationDiagnostics,
+} from './platformAdmin.notificationJobs.service.js';
 
 export const platformAdminRouter = Router();
 
@@ -413,6 +430,61 @@ platformAdminRouter.get(
   }),
 );
 
+const voucherParam = z
+  .string()
+  .min(1)
+  .transform((v) => v.trim().toUpperCase())
+  .refine((v) => /^SL-[A-Z0-9]{12}$/.test(v), 'Invalid booking code');
+
+platformAdminRouter.get(
+  '/bookings/voucher/:bookingCode/events',
+  asyncHandler(async (req, res) => {
+    const code = voucherParam.parse(req.params.bookingCode);
+    res.json(await getPlatformBookingEvents(code));
+  }),
+);
+
+platformAdminRouter.get(
+  '/bookings/voucher/:bookingCode/disputes',
+  asyncHandler(async (req, res) => {
+    const code = voucherParam.parse(req.params.bookingCode);
+    res.json(await getPlatformBookingDisputes(code));
+  }),
+);
+
+platformAdminRouter.get(
+  '/bookings/voucher/:bookingCode/notifications',
+  asyncHandler(async (req, res) => {
+    const code = voucherParam.parse(req.params.bookingCode);
+    res.json(await getPlatformBookingNotifications(code));
+  }),
+);
+
+platformAdminRouter.get(
+  '/bookings/voucher/:bookingCode/audit',
+  asyncHandler(async (req, res) => {
+    const code = voucherParam.parse(req.params.bookingCode);
+    res.json(await getPlatformBookingAuditSummary(code));
+  }),
+);
+
+const resolveDisputeBody = z.object({
+  resolution: z.enum(['client_supported', 'master_supported', 'neutral', 'rejected']),
+  adminNote: z.string().min(5).max(2000),
+  finalStatus: z.enum(['completed', 'no_show', 'cancelled_by_master']).optional().nullable(),
+});
+
+platformAdminRouter.post(
+  '/bookings/voucher/:bookingCode/disputes/:disputeId/resolve',
+  asyncHandler(async (req, res) => {
+    const code = voucherParam.parse(req.params.bookingCode);
+    const disputeId = z.string().uuid().parse(req.params.disputeId);
+    const body = resolveDisputeBody.parse(req.body ?? {});
+    await resolveBookingDisputeByAdmin(req.user!.id, code, disputeId, body);
+    res.status(204).send();
+  }),
+);
+
 platformAdminRouter.get(
   '/promo-codes',
   asyncHandler(async (_req, res) => {
@@ -684,5 +756,85 @@ platformAdminRouter.get(
     const limit = z.coerce.number().int().min(1).max(100).optional().parse(req.query.limit);
     const offset = z.coerce.number().int().min(0).optional().parse(req.query.offset);
     res.json(await listAppointmentReminderFailures({ search, limit, offset }));
+  }),
+);
+
+platformAdminRouter.get(
+  '/notifications/diagnostics',
+  asyncHandler(async (_req, res) => {
+    res.json(await getExtendedNotificationDiagnostics());
+  }),
+);
+
+platformAdminRouter.get(
+  '/notifications/jobs',
+  asyncHandler(async (req, res) => {
+    const bookingCode = z.string().optional().parse(req.query.bookingCode);
+    const appointmentId = z.string().uuid().optional().parse(req.query.appointmentId);
+    const limit = z.coerce.number().int().min(1).max(200).optional().parse(req.query.limit);
+    const jobs = await listJobsForAdmin({ bookingCode, appointmentId, limit });
+    res.json({ jobs });
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/test-email',
+  asyncHandler(async (req, res) => {
+    const out = await sendTestEmailToAdmin(req.user!.id);
+    res.json(out);
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/test-telegram',
+  asyncHandler(async (req, res) => {
+    const out = await sendTestTelegramToAdmin(req.user!.id);
+    res.json(out);
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/test-booking/:bookingCode',
+  asyncHandler(async (req, res) => {
+    const bookingCode = z.string().min(1).parse(req.params.bookingCode);
+    const out = await sendTestBookingEmailByCode(req.user!.id, bookingCode);
+    res.json(out);
+  }),
+);
+
+const testBookingBody = z.object({ bookingCode: z.string().min(1) });
+
+platformAdminRouter.post(
+  '/notifications/test-booking-email',
+  asyncHandler(async (req, res) => {
+    const body = testBookingBody.parse(req.body ?? {});
+    const out = await sendTestBookingEmailByCode(req.user!.id, body.bookingCode);
+    res.json(out);
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/rebuild-reminders',
+  asyncHandler(async (req, res) => {
+    const body = testBookingBody.parse(req.body ?? {});
+    await rebuildRemindersByBookingCode(body.bookingCode);
+    res.status(204).send();
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/retry/:jobId',
+  asyncHandler(async (req, res) => {
+    const jobId = z.string().uuid().parse(req.params.jobId);
+    await retryNotificationJob(jobId);
+    res.status(204).send();
+  }),
+);
+
+platformAdminRouter.post(
+  '/notifications/retry-failed',
+  asyncHandler(async (_req, res) => {
+    const result = await retryAllFailedNotificationJobs();
+    res.json(result);
   }),
 );

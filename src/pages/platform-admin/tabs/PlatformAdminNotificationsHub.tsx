@@ -3,17 +3,21 @@ import { PlatformAdminPageIntro } from '../shared/PlatformAdminPageIntro';
 import { paFilterChip } from '../platformAdminTheme';
 import { PlatformAdminEmailCampaignsTab } from './PlatformAdminEmailCampaignsTab';
 import { PlatformAdminDeliveriesTab } from './PlatformAdminDeliveriesTab';
+import { PlatformAdminNotificationsDiagnosticsTab } from './PlatformAdminNotificationsDiagnosticsTab';
 
-type NotificationsKind = 'campaigns' | 'deliveries';
+type NotificationsKind = 'campaigns' | 'deliveries' | 'diagnostics';
 
 const SEGMENTS: { id: NotificationsKind; label: string }[] = [
   { id: 'campaigns', label: 'Email-рассылки' },
   { id: 'deliveries', label: 'Логи доставки' },
+  { id: 'diagnostics', label: 'Диагностика' },
 ];
 
 export function PlatformAdminNotificationsHub() {
   const [params, setParams] = useSearchParams();
-  const kind: NotificationsKind = params.get('tab') === 'deliveries' ? 'deliveries' : 'campaigns';
+  const tab = params.get('tab');
+  const kind: NotificationsKind =
+    tab === 'deliveries' ? 'deliveries' : tab === 'diagnostics' ? 'diagnostics' : 'campaigns';
 
   return (
     <div>
@@ -29,7 +33,7 @@ export function PlatformAdminNotificationsHub() {
             className={paFilterChip(kind === seg.id)}
             onClick={() => {
               if (seg.id === 'campaigns') setParams({});
-              else setParams({ tab: seg.id });
+              else setParams({ tab: seg.id === 'diagnostics' ? 'diagnostics' : seg.id });
             }}
           >
             {seg.label}
@@ -37,7 +41,13 @@ export function PlatformAdminNotificationsHub() {
         ))}
       </div>
 
-      {kind === 'campaigns' ? <PlatformAdminEmailCampaignsTab /> : <PlatformAdminDeliveriesTab />}
+      {kind === 'campaigns' ? (
+        <PlatformAdminEmailCampaignsTab />
+      ) : kind === 'deliveries' ? (
+        <PlatformAdminDeliveriesTab />
+      ) : (
+        <PlatformAdminNotificationsDiagnosticsTab />
+      )}
     </div>
   );
 }

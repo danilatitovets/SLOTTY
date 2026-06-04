@@ -237,7 +237,10 @@ export type MasterAppointmentStatsDto = {
   history: number;
   completedCount: number;
   cancelledCount: number;
+  noShowCount?: number;
   earnedTotal: number;
+  expectedTotal?: number;
+  disputedTotal?: number;
 };
 
 function buildAppointmentsQuery(params?: {
@@ -295,17 +298,43 @@ export async function patchMasterAppointmentConfirm(appointmentId: string): Prom
 }
 
 export async function patchMasterAppointmentComplete(appointmentId: string): Promise<void> {
-  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/complete`, { method: 'PATCH' });
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/mark-completed`, {
+    method: 'PATCH',
+  });
   if (!res.ok) throw new Error(await readApiError(res));
 }
 
 export async function patchMasterAppointmentCancel(
   appointmentId: string,
   reason: string,
+  category?: string,
 ): Promise<void> {
   const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/cancel`, {
     method: 'PATCH',
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify({ reason, category }),
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+}
+
+export async function patchMasterAppointmentClientArrived(appointmentId: string): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/client-arrived`, {
+    method: 'PATCH',
+  });
+  if (!res.ok) throw new Error(await readApiError(res));
+}
+
+export async function patchMasterAppointmentStart(appointmentId: string): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/start`, { method: 'PATCH' });
+  if (!res.ok) throw new Error(await readApiError(res));
+}
+
+export async function patchMasterAppointmentNoShow(
+  appointmentId: string,
+  comment?: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/masters/me/appointments/${appointmentId}/no-show`, {
+    method: 'PATCH',
+    body: JSON.stringify({ comment }),
   });
   if (!res.ok) throw new Error(await readApiError(res));
 }

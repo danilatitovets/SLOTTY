@@ -2,6 +2,8 @@ import type { MasterLocation } from '../../profile/model/masterLocation';
 import { formatClientAppointmentAddress } from '../../profile/model/masterLocation';
 import { apiFetch } from '../../../shared/api/backendClient';
 import { readSlottyApiErrorMessage } from '../../../shared/api/slottyApiErrorMessage';
+import { dbStatusToUi } from '../appointmentStatus';
+import { formatMasterName, formatServiceName } from '../../../shared/lib/displayFormat';
 import type { DemoAppointmentRecord, DemoAppointmentStatus, DemoAppointmentTab } from '../model/demoAppointments';
 
 /** Ответ GET /api/me/appointments (поля из PostgreSQL). */
@@ -40,19 +42,7 @@ export function emptyClientAppointments(): ClientAppointmentsState {
 }
 
 function mapDbStatus(status: string): DemoAppointmentStatus {
-  switch (status) {
-    case 'pending':
-    case 'confirmed':
-      return status;
-    case 'completed':
-    case 'no_show':
-      return 'completed';
-    case 'cancelled_by_client':
-    case 'cancelled_by_master':
-      return 'cancelled';
-    default:
-      return 'completed';
-  }
+  return dbStatusToUi(status) as DemoAppointmentStatus;
 }
 
 function formatWhenLabels(startsAt: string): { dateLabel: string; timeLabel: string } {
@@ -120,8 +110,8 @@ export function mapServerAppointmentToRecord(
   return {
     id: row.id,
     masterId: row.master_id,
-    masterName: row.master_display_name || 'Мастер',
-    serviceTitle: row.service_title_snapshot || 'Услуга',
+    masterName: formatMasterName(row.master_display_name),
+    serviceTitle: formatServiceName(row.service_title_snapshot),
     dateLabel,
     timeLabel,
     location,
@@ -199,7 +189,14 @@ export function splitClientAppointments(rows: ServerClientAppointment[]): Client
   for (const row of rows) {
     const endMs = new Date(row.ends_at).getTime();
     const activeFuture =
-      (row.status === 'pending' || row.status === 'confirmed') && endMs > now;
+      [
+        'pending',
+        'confirmed',
+        'client_arrived',
+        'in_progress',
+        'master_marked_completed',
+        'client_confirmed_completed',
+      ].includes(row.status) && endMs > now;
     if (activeFuture) upcomingRaw.push(row);
     else pastRaw.push(row);
   }

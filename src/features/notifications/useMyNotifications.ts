@@ -5,6 +5,7 @@ import {
   type MeNotificationRow,
   type NotificationAudience,
 } from '../profile/api/clientNotifications';
+import { subscribeBookingDataRefresh } from '../appointments/bookingDataSync';
 
 type Options = {
   /** Периодическое обновление списка (бейдж в шапке кабинета). */
@@ -51,6 +52,13 @@ export function useMyNotifications(enabled = true, options?: Options) {
     const onFocus = () => void reload({ quiet: true });
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
+  }, [enabled, reload]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    return subscribeBookingDataRefresh(() => {
+      void reload({ quiet: true });
+    });
   }, [enabled, reload]);
 
   const markAsRead = useCallback(

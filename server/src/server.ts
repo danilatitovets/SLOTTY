@@ -3,6 +3,8 @@ import { env } from './config/env.js';
 import { initSentry } from './lib/sentry.js';
 import { getGoogleOAuthDiagnostics } from './modules/auth/googleOAuth.service.js';
 import { startAppointmentRemindersScheduler } from './modules/appointments/appointmentReminders.scheduler.js';
+import { startNotificationJobsWorker } from './modules/notifications/notificationJobs.worker.js';
+import { startBookingAutoCompleteWorker } from './modules/appointments/bookingAutoComplete.worker.js';
 import { initTelegramBotTransport } from './modules/telegram/telegram.service.js';
 import { logResendConfigStatus } from './modules/email/emailConfig.js';
 import { logBePaidConfigStatus } from './modules/payments/bepaid.config.js';
@@ -35,6 +37,8 @@ app.listen(env.PORT, () => {
   logBePaidConfigStatus();
   void logAuthSessionsTableStatus();
   void initTelegramBotTransport();
+  startNotificationJobsWorker();
+  startBookingAutoCompleteWorker();
   startAppointmentRemindersScheduler();
   void import('./modules/auth/googleLoginPending.store.js').then(({ warnIfPendingStoreNotShared }) => {
     warnIfPendingStoreNotShared();

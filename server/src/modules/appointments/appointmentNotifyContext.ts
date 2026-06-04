@@ -1,5 +1,6 @@
 import { query } from '../../config/db.js';
 import { resolveClientNotifyLabel, type ClientProfileNotifyFields } from './clientNotifyLabel.js';
+import { formatServiceName } from '../../lib/displayFormat.js';
 
 export type AppointmentNotifyContext = {
   appointmentId: string;
@@ -57,7 +58,7 @@ export async function fetchAppointmentNotifyContext(
     appointmentId: row.id,
     clientId: row.client_id,
     masterId: row.master_id,
-    serviceTitle: row.service_title_snapshot || 'Услуга',
+    serviceTitle: formatServiceName(row.service_title_snapshot),
     startsAt,
     voucherNumber: row.voucher_number,
     clientName: resolveClientNotifyLabel(clientFields),

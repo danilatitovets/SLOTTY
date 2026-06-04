@@ -24,6 +24,8 @@ import {
 import { AdminPage } from '../pages/admin/AdminPage';
 import { PlatformAdminPage } from '../pages/platform-admin/PlatformAdminPage';
 import { BookingPage } from '../pages/booking/BookingPage';
+import { ClientBookingDetailPage } from '../pages/booking/ClientBookingDetailPage';
+import { MasterBookingDetailPage } from '../pages/booking/MasterBookingDetailPage';
 import { Home } from '../pages/Home';
 import { BecomeMasterPage } from '../pages/master-onboarding/BecomeMasterPage';
 import { MasterProfilePage } from '../pages/master/MasterProfilePage';
@@ -102,6 +104,8 @@ export function AppRoutes() {
           <Route path={SERVICES_PATH} element={<ServicesCatalogPage />} />
           <Route path={`${SERVICES_PATH}/category/:categoryCode`} element={<ServiceCategoryPage />} />
           <Route path={MASTERS_PATH} element={<MastersCatalogPage />} />
+          <Route path="/client/appointments/:bookingCode" element={<ClientBookingDetailPage />} />
+          <Route path="/master/appointments/:bookingCode" element={<MasterBookingDetailPage />} />
           <Route path={PROFILE_PATH} element={<ProfilePage />} />
           <Route path={PROFILE_NOTIFICATIONS_PATH} element={<ClientNotificationsPage />} />
           <Route path={`${PROFILE_SETTINGS_PATH}/*`} element={<ClientSettingsPage />} />

@@ -1,6 +1,7 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { listMasterAppointments } from '../appointments/appointments.service.js';
+import { dbStatusToUi } from '../../lib/appointmentStatus.js';
 import { isoDateLocal } from './masterOverview.dateUtils.js';
 import {
   computeOverviewClients,
@@ -14,8 +15,9 @@ import {
 } from './masterOverview.analytics.js';
 
 function mapDbAppointmentStatus(s: string): OverviewAppointmentRow['status'] {
-  if (s === 'pending' || s === 'confirmed') return s;
-  if (s === 'completed' || s === 'no_show') return 'completed';
+  const ui = dbStatusToUi(s);
+  if (ui === 'pending' || ui === 'confirmed' || ui === 'completed') return ui;
+  if (ui === 'no_show') return 'completed';
   return 'cancelled';
 }
 
@@ -25,15 +27,7 @@ function padTimeFromDate(d: Date): string {
 
 async function loadOverviewAppointments(masterId: string): Promise<OverviewAppointmentRow[]> {
   const { items: rows } = await listMasterAppointments(masterId, { limit: 100, offset: 0 });
-  return rows.map((raw) => {
-    const row = raw as {
-      id: string;
-      starts_at: Date | string;
-      price_snapshot: string;
-      client_name: string;
-      service_title_snapshot: string;
-      status: string;
-    };
+  return rows.map((row) => {
     const d = new Date(row.starts_at);
     const price = Number(row.price_snapshot);
     return {

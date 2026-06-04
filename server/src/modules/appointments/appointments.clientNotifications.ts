@@ -5,6 +5,10 @@ import {
   clientBookingCancelledBySelf,
   clientBookingCompleted,
   clientBookingConfirmed,
+  clientBookingDisputedAck,
+  clientBookingDisputedByMaster,
+  clientBookingMasterMarkedCompleted,
+  clientBookingNoShow,
   clientBookingRequestCreated,
 } from '../notifications/templates/appointmentNotificationTemplates.js';
 import {
@@ -22,7 +26,9 @@ const related = (ctx: AppointmentNotifyContext) => ({
   relatedEntityId: ctx.appointmentId,
 });
 
-const clientTelegramMarkup = clientBookingTelegramKeyboard() as unknown as Record<string, unknown>;
+function clientMarkup(ctx: AppointmentNotifyContext, allowCancel = false) {
+  return clientBookingTelegramKeyboard(ctx, { allowCancel }) as unknown as Record<string, unknown>;
+}
 
 /** Клиент отправил заявку на запись (pending). */
 export async function notifyClientBookingCreated(ctx: AppointmentNotifyContext): Promise<void> {
@@ -31,7 +37,8 @@ export async function notifyClientBookingCreated(ctx: AppointmentNotifyContext):
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientTelegramMarkup,
+    bookingCode: ctx.voucherNumber,
+    telegramReplyMarkup: clientMarkup(ctx, true),
     email: clientBookingCreatedEmail(ctx),
   });
 }
@@ -43,7 +50,8 @@ export async function notifyClientBookingConfirmed(ctx: AppointmentNotifyContext
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientTelegramMarkup,
+    telegramReplyMarkup: clientMarkup(ctx, true),
+    bookingCode: ctx.voucherNumber,
     email: clientBookingConfirmedEmail(ctx),
   });
 }
@@ -55,7 +63,7 @@ export async function notifyClientBookingCancelledByMaster(ctx: AppointmentNotif
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientTelegramMarkup,
+    telegramReplyMarkup: clientMarkup(ctx),
     email: clientBookingCancelledByMasterEmail(ctx),
   });
 }
@@ -67,8 +75,53 @@ export async function notifyClientBookingCompleted(ctx: AppointmentNotifyContext
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientTelegramMarkup,
+    telegramReplyMarkup: clientMarkup(ctx),
     email: clientBookingCompletedEmail(ctx),
+  });
+}
+
+export async function notifyClientMasterMarkedCompleted(ctx: AppointmentNotifyContext): Promise<void> {
+  const payload = clientBookingMasterMarkedCompleted(ctx);
+  await notifyUser({
+    userId: ctx.clientId,
+    ...payload,
+    ...related(ctx),
+    telegramReplyMarkup: clientMarkup(ctx),
+    bookingCode: ctx.voucherNumber,
+  });
+}
+
+export async function notifyClientDisputedAck(ctx: AppointmentNotifyContext): Promise<void> {
+  const payload = clientBookingDisputedAck(ctx);
+  await notifyUser({
+    userId: ctx.clientId,
+    ...payload,
+    ...related(ctx),
+    telegramReplyMarkup: clientMarkup(ctx),
+    bookingCode: ctx.voucherNumber,
+  });
+}
+
+export async function notifyClientDisputedByMaster(ctx: AppointmentNotifyContext): Promise<void> {
+  const payload = clientBookingDisputedByMaster(ctx);
+  await notifyUser({
+    userId: ctx.clientId,
+    ...payload,
+    ...related(ctx),
+    telegramReplyMarkup: clientMarkup(ctx),
+    bookingCode: ctx.voucherNumber,
+  });
+}
+
+/** Неявка клиента на подтверждённую запись. */
+export async function notifyClientBookingNoShow(ctx: AppointmentNotifyContext): Promise<void> {
+  const payload = clientBookingNoShow(ctx);
+  await notifyUser({
+    userId: ctx.clientId,
+    ...payload,
+    ...related(ctx),
+    telegramReplyMarkup: clientMarkup(ctx),
+    bookingCode: ctx.voucherNumber,
   });
 }
 
@@ -79,14 +132,22 @@ export async function notifyClientBookingCancelledBySelf(ctx: AppointmentNotifyC
     userId: ctx.clientId,
     ...payload,
     ...related(ctx),
-    telegramReplyMarkup: clientTelegramMarkup,
+    telegramReplyMarkup: clientMarkup(ctx),
     email: clientBookingCancelledBySelfEmail(ctx),
   });
 }
 
 export async function notifyClientByAppointmentId(
   appointmentId: string,
-  kind: 'confirmed' | 'cancelled_by_master' | 'completed' | 'cancelled_by_self',
+  kind:
+    | 'confirmed'
+    | 'cancelled_by_master'
+    | 'completed'
+    | 'cancelled_by_self'
+    | 'no_show'
+    | 'master_marked_completed'
+    | 'disputed_ack'
+    | 'disputed_by_master',
 ): Promise<void> {
   const ctx = await fetchAppointmentNotifyContext(appointmentId);
   if (!ctx) return;
@@ -103,6 +164,18 @@ export async function notifyClientByAppointmentId(
       break;
     case 'cancelled_by_self':
       await notifyClientBookingCancelledBySelf(ctx);
+      break;
+    case 'no_show':
+      await notifyClientBookingNoShow(ctx);
+      break;
+    case 'master_marked_completed':
+      await notifyClientMasterMarkedCompleted(ctx);
+      break;
+    case 'disputed_ack':
+      await notifyClientDisputedAck(ctx);
+      break;
+    case 'disputed_by_master':
+      await notifyClientDisputedByMaster(ctx);
       break;
     default:
       break;

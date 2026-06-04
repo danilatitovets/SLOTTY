@@ -1,7 +1,4 @@
-import {
-  ADMIN_APPOINTMENTS_PATH,
-  ADMIN_BILLING_PATH,
-} from '../../../app/paths';
+import { ADMIN_APPOINTMENTS_PATH, ADMIN_BILLING_PATH, getMasterAppointmentPath } from '../../../app/paths';
 import type { MeNotificationRow } from '../../../features/profile/api/clientNotifications';
 import type { AppointmentsTabId } from '../appointments/appointmentsTypes';
 
@@ -57,11 +54,26 @@ function buildAppointmentsAction(
 export function resolveMasterNotificationAction(
   item: MeNotificationRow,
 ): MasterNotificationAction | null {
-  if (item.related_entity_type === 'appointment' && item.related_entity_id) {
-    return buildAppointmentsAction(item, item.related_entity_id);
+  const bookingCode = item.booking_code?.trim().toUpperCase();
+  if (item.related_entity_type === 'appointment') {
+    if (bookingCode) {
+      const to = getMasterAppointmentPath(bookingCode);
+      return { label: 'Открыть запись', pathname: to, to };
+    }
+    if (item.related_entity_id) {
+      console.warn('[notifications] appointment without booking_code', {
+        id: item.id,
+        appointmentId: item.related_entity_id,
+      });
+      return buildAppointmentsAction(item, item.related_entity_id);
+    }
   }
 
   if (APPOINTMENT_NOTIFY_TYPES.has(item.type)) {
+    if (bookingCode) {
+      const to = getMasterAppointmentPath(bookingCode);
+      return { label: 'Открыть запись', pathname: to, to };
+    }
     return buildAppointmentsAction(item, null);
   }
 

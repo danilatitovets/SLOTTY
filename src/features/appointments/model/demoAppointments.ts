@@ -4,7 +4,17 @@
 
 import type { MasterLocation } from '../../profile/model/masterLocation';
 
-export type DemoAppointmentStatus = 'confirmed' | 'pending' | 'completed' | 'cancelled';
+export type DemoAppointmentStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'client_arrived'
+  | 'in_progress'
+  | 'master_marked_completed'
+  | 'client_confirmed_completed'
+  | 'completed'
+  | 'no_show'
+  | 'cancelled'
+  | 'disputed';
 
 export type DemoAppointmentTab = 'upcoming' | 'past';
 

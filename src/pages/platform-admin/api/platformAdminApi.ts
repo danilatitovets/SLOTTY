@@ -356,6 +356,145 @@ export async function getPlatformBooking(id: string): Promise<PlatformBookingDet
   return data.booking;
 }
 
+export type PlatformBookingEventRow = {
+  id: string;
+  eventType: string;
+  label: string;
+  createdAt: string;
+  comment: string | null;
+};
+
+export type PlatformBookingDisputeRow = {
+  id: string;
+  reason: string;
+  comment: string | null;
+  status: string;
+  createdByRole: string;
+  resolution: string | null;
+  adminNote: string | null;
+  createdAt: string;
+};
+
+export type PlatformBookingNotificationJob = {
+  id: string;
+  jobType: string;
+  channel: string;
+  status: string;
+  scheduledAt: string;
+  attempts: number;
+  lastError: string | null;
+  providerMessageId: string | null;
+};
+
+export type PlatformBookingAuditSummary = {
+  status: string;
+  cancelReason: string | null;
+  noShowAt: string | null;
+  autoCompletedAt: string | null;
+  clientSignal: {
+    kind: 'on_the_way' | 'running_late' | 'reported_arrived' | null;
+    lateMinutes: number | null;
+    comment: string | null;
+  } | null;
+};
+
+function voucherPath(code: string, suffix: string): string {
+  const v = encodeURIComponent(code.trim().toUpperCase());
+  return `/api/platform-admin/bookings/voucher/${v}${suffix}`;
+}
+
+export async function getPlatformBookingEvents(bookingCode: string): Promise<{
+  events: PlatformBookingEventRow[];
+}> {
+  const res = await apiFetch(voucherPath(bookingCode, '/events'));
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    events: Array<{
+      id: string;
+      eventType: string;
+      label: string;
+      createdAt: string;
+      comment: string | null;
+    }>;
+  };
+  return { events: data.events };
+}
+
+export async function getPlatformBookingDisputes(bookingCode: string): Promise<{
+  disputes: PlatformBookingDisputeRow[];
+  openDispute: { id: string } | null;
+}> {
+  const res = await apiFetch(voucherPath(bookingCode, '/disputes'));
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    disputes: PlatformBookingDisputeRow[];
+    openDispute: { id: string; status?: string } | null;
+  };
+  return {
+    disputes: data.disputes,
+    openDispute: data.openDispute?.id ? { id: data.openDispute.id } : null,
+  };
+}
+
+export async function getPlatformBookingNotifications(bookingCode: string): Promise<{
+  jobs: PlatformBookingNotificationJob[];
+}> {
+  const res = await apiFetch(voucherPath(bookingCode, '/notifications'));
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as {
+    jobs: Array<{
+      id: string;
+      job_type: string;
+      channel: string;
+      status: string;
+      scheduled_at: string;
+      attempts: number;
+      last_error: string | null;
+      provider_message_id: string | null;
+    }>;
+  };
+  return {
+    jobs: data.jobs.map((j) => ({
+      id: j.id,
+      jobType: j.job_type,
+      channel: j.channel,
+      status: j.status,
+      scheduledAt: j.scheduled_at,
+      attempts: j.attempts,
+      lastError: j.last_error,
+      providerMessageId: j.provider_message_id,
+    })),
+  };
+}
+
+export async function getPlatformBookingAudit(bookingCode: string): Promise<PlatformBookingAuditSummary> {
+  const res = await apiFetch(voucherPath(bookingCode, '/audit'));
+  if (!res.ok) throw new Error(await readErr(res));
+  const data = (await res.json()) as PlatformBookingAuditSummary;
+  return data;
+}
+
+export async function resolvePlatformBookingDispute(
+  bookingCode: string,
+  disputeId: string,
+  body: {
+    resolution: 'client_supported' | 'master_supported' | 'neutral' | 'rejected';
+    adminNote: string;
+    finalStatus?: 'completed' | 'no_show' | 'cancelled_by_master' | null;
+  },
+): Promise<void> {
+  const res = await apiFetch(voucherPath(bookingCode, `/disputes/${disputeId}/resolve`), {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+}
+
+export function getPlatformAdminBookingDeepLink(bookingId: string): string {
+  const params = new URLSearchParams({ open: bookingId });
+  return `/platform-admin/bookings?${params.toString()}`;
+}
+
 export async function getClientBookingStats(params?: {
   period?: 'all' | 'week' | 'month';
   minCancellations?: number;
@@ -664,4 +803,74 @@ export async function getAppointmentReminderFailures(params?: {
   const res = await apiFetch(`/api/platform-admin/notifications/reminder-failures?${q}`);
   if (!res.ok) throw new Error(await readErr(res));
   return (await res.json()) as PlatformPagedResult<AppointmentReminderFailureAdmin>;
+}
+
+export type NotificationDiagnosticsFull = {
+  resendConfigured: boolean;
+  resendFrom: string | null;
+  telegramConfigured: boolean;
+  notificationJobsEnabled: boolean;
+  environment: string;
+  appPublicUrl: string;
+  notificationWorker: {
+    enabled: boolean;
+    running: boolean;
+    intervalMs: number;
+    lastTickAt: string | null;
+    lastTickError: string | null;
+    lastReport: { claimed: number; sent: number; failed: number; skipped: number } | null;
+  };
+  autoCompleteWorker: {
+    running: boolean;
+    lastTickAt: string | null;
+    lastProcessed: number;
+    lastError: string | null;
+  };
+  jobCounts: Record<string, number>;
+  pendingJobs: number;
+  failedJobs: number;
+  lastFailedJobs: Array<{
+    id: string;
+    jobType: string;
+    channel: string;
+    lastError: string | null;
+    attempts: number;
+    updatedAt: string;
+    appointmentId: string;
+  }>;
+};
+
+export async function getNotificationDiagnosticsFull(): Promise<NotificationDiagnosticsFull> {
+  const res = await apiFetch('/api/platform-admin/notifications/diagnostics');
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as NotificationDiagnosticsFull;
+}
+
+export async function postTestNotificationEmail(): Promise<{ to: string; messageId: string | null }> {
+  const res = await apiFetch('/api/platform-admin/notifications/test-email', { method: 'POST' });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { to: string; messageId: string | null };
+}
+
+export async function postTestNotificationTelegram(): Promise<{ status: string; skipped?: boolean }> {
+  const res = await apiFetch('/api/platform-admin/notifications/test-telegram', { method: 'POST' });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { status: string; skipped?: boolean };
+}
+
+export async function postTestBookingNotification(
+  bookingCode: string,
+): Promise<{ to: string; messageId: string | null }> {
+  const code = encodeURIComponent(bookingCode.trim().toUpperCase());
+  const res = await apiFetch(`/api/platform-admin/notifications/test-booking/${code}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { to: string; messageId: string | null };
+}
+
+export async function postNotificationRetryFailed(): Promise<{ retried: number; stillFailed: number }> {
+  const res = await apiFetch('/api/platform-admin/notifications/retry-failed', { method: 'POST' });
+  if (!res.ok) throw new Error(await readErr(res));
+  return (await res.json()) as { retried: number; stillFailed: number };
 }

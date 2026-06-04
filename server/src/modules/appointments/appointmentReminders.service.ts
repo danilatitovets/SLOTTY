@@ -1,8 +1,14 @@
 import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../../config/db.js';
+import { formatClientName, formatServiceName } from '../../lib/displayFormat.js';
 import { notifyUser } from '../notifications/notifyUser.js';
+import {
+  clientBookingTelegramKeyboard,
+  masterBookingTelegramKeyboard,
+} from '../notifications/telegramAppointmentKeyboard.js';
 import { escapeTelegramHtml } from '../telegram/telegram.service.js';
 import { formatAppointmentDateTime } from '../telegram/formatAppointmentDateTime.js';
+import type { AppointmentNotifyContext } from './appointmentNotifyContext.js';
 
 export type ReminderKind = '24h' | '1h';
 
@@ -12,7 +18,9 @@ type DueAppointmentRow = {
   master_id: string;
   starts_at: Date | string;
   service_title_snapshot: string;
-  client_name: string;
+  client_full_name: string;
+  client_phone: string | null;
+  client_telegram_username: string | null;
   master_name: string;
   voucher_number: string | null;
 };
@@ -51,14 +59,20 @@ function buildTelegramTexts(row: DueAppointmentRow, kind: ReminderKind): {
   masterBody: string;
 } {
   const { date, time } = formatAppointmentDateTime(row.starts_at);
-  const svc = escapeTelegramHtml(row.service_title_snapshot || 'Услуга');
+  const serviceTitle = formatServiceName(row.service_title_snapshot);
+  const clientLabel = formatClientName({
+    full_name: row.client_full_name,
+    phone: row.client_phone,
+    telegram_username: row.client_telegram_username,
+  });
+  const svc = escapeTelegramHtml(serviceTitle);
   const masterName = escapeTelegramHtml(row.master_name || 'Мастер');
-  const clientName = escapeTelegramHtml(row.client_name || 'Клиент');
+  const clientName = escapeTelegramHtml(clientLabel);
   const voucher = row.voucher_number ? escapeTelegramHtml(row.voucher_number) : null;
   const lead = REMINDER_WINDOWS[kind].leadPhrase;
 
-  const clientBody = `${lead}: ${row.service_title_snapshot || 'Услуга'} — ${date}, ${time}. Мастер: ${row.master_name || 'Мастер'}.`;
-  const masterBody = `${lead}: ${row.service_title_snapshot || 'Услуга'} — ${date}, ${time}. Клиент: ${row.client_name || 'Клиент'}.`;
+  const clientBody = `${lead}: ${serviceTitle} — ${date}, ${time}. Мастер: ${row.master_name || 'Мастер'}.`;
+  const masterBody = `${lead}: ${serviceTitle} — ${date}, ${time}. Клиент: ${clientLabel}.`;
 
   const clientText =
     `<b>${escapeTelegramHtml(REMINDER_WINDOWS[kind].clientTitle)}</b>\n` +
@@ -66,7 +80,7 @@ function buildTelegramTexts(row: DueAppointmentRow, kind: ReminderKind): {
     `Дата: ${escapeTelegramHtml(date)}\n` +
     `Время: ${escapeTelegramHtml(time)}\n` +
     `Мастер: ${masterName}` +
-    (voucher ? `\nНомер записи: <code>${voucher}</code>` : '');
+    (voucher ? `\n\n<i>№ ${voucher}</i>` : '');
 
   const masterText =
     `<b>${escapeTelegramHtml(REMINDER_WINDOWS[kind].masterTitle)}</b>\n` +
@@ -74,7 +88,7 @@ function buildTelegramTexts(row: DueAppointmentRow, kind: ReminderKind): {
     `Услуга: ${svc}\n` +
     `Дата: ${escapeTelegramHtml(date)}\n` +
     `Время: ${escapeTelegramHtml(time)}` +
-    (voucher ? `\nНомер записи: <code>${voucher}</code>` : '');
+    (voucher ? `\n\n<i>№ ${voucher}</i>` : '');
 
   return { clientText, masterText, clientBody, masterBody };
 }
@@ -83,7 +97,9 @@ async function fetchDueAppointments(kind: ReminderKind): Promise<DueAppointmentR
   const win = REMINDER_WINDOWS[kind];
   const r = await query<DueAppointmentRow>(
     `select a.id, a.client_id, a.master_id, a.starts_at, a.service_title_snapshot,
-            coalesce(nullif(trim(pc.full_name), ''), 'Клиент') as client_name,
+            coalesce(pc.full_name, '') as client_full_name,
+            pc.phone as client_phone,
+            pc.telegram_username as client_telegram_username,
             coalesce(nullif(trim(mp.display_name), ''), 'Мастер') as master_name,
             bv.voucher_number
        from public.appointments a
@@ -223,9 +239,30 @@ async function markReminderFailed(
   );
 }
 
+function reminderNotifyContext(row: DueAppointmentRow): AppointmentNotifyContext {
+  const startsAt =
+    row.starts_at instanceof Date ? row.starts_at.toISOString() : String(row.starts_at);
+  return {
+    appointmentId: row.id,
+    clientId: row.client_id,
+    masterId: row.master_id,
+    serviceTitle: formatServiceName(row.service_title_snapshot),
+    startsAt,
+    voucherNumber: row.voucher_number,
+    clientName: formatClientName({
+      full_name: row.client_full_name,
+      phone: row.client_phone,
+      telegram_username: row.client_telegram_username,
+    }),
+    clientPhone: row.client_phone?.trim() || null,
+    masterName: row.master_name || 'Мастер',
+  };
+}
+
 async function deliverReminderForRow(row: DueAppointmentRow, kind: ReminderKind): Promise<void> {
   const meta = REMINDER_WINDOWS[kind];
   const { clientText, masterText, clientBody, masterBody } = buildTelegramTexts(row, kind);
+  const ctx = reminderNotifyContext(row);
 
   const claimed = await withTransaction(async (client) =>
     claimReminderDelivery(client, row.id, kind),
@@ -242,6 +279,10 @@ async function deliverReminderForRow(row: DueAppointmentRow, kind: ReminderKind)
       body: clientBody,
       ...related,
       telegramHtml: clientText,
+      telegramReplyMarkup: clientBookingTelegramKeyboard(ctx, { allowCancel: true }) as unknown as Record<
+        string,
+        unknown
+      >,
     });
     await notifyUser({
       userId: row.master_id,
@@ -250,6 +291,7 @@ async function deliverReminderForRow(row: DueAppointmentRow, kind: ReminderKind)
       body: masterBody,
       ...related,
       telegramHtml: masterText,
+      telegramReplyMarkup: masterBookingTelegramKeyboard(ctx) as unknown as Record<string, unknown>,
     });
     await markReminderSent(row.id, kind);
   } catch (e) {

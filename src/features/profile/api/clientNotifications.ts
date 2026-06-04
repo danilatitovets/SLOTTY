@@ -8,6 +8,7 @@ export type MeNotificationRow = {
   body: string;
   related_entity_type: string | null;
   related_entity_id: string | null;
+  booking_code?: string | null;
   read_at: string | null;
   created_at: string;
 };

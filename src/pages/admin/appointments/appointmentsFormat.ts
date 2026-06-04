@@ -3,6 +3,7 @@ import {
   isoDateLocal,
   type DemoMasterAppointment,
 } from '../../../features/master/model/demoMasterAppointments';
+import { dbStatusToUi, isUpcomingTabStatus } from '../../../features/appointments/appointmentStatus';
 import { profileDisplayInitials } from '../../../features/profile/lib/profileDisplayAvatar';
 import { formatBynRu } from '../overview/overviewFormat';
 
@@ -26,6 +27,17 @@ export function formatVisitPlace(addressShort?: string): string {
 }
 
 /** Оценка длительности по названию услуги (нет поля в модели). */
+export function formatDurationMinutes(minutes?: number | null, serviceTitle?: string): string {
+  if (minutes != null && minutes > 0) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h && m) return `${h} ч ${m} мин`;
+    if (h) return `${h} ч`;
+    return `${m} мин`;
+  }
+  return estimateDurationLabel(serviceTitle ?? '');
+}
+
 export function estimateDurationLabel(serviceTitle: string): string {
   const t = serviceTitle.toLowerCase();
   if (t.includes('педикюр')) return '1 ч 15 мин';
@@ -142,25 +154,30 @@ export function formatCardDateTime(iso: string, time: string): string {
   return `${day}, ${weekday} · ${time}`;
 }
 
-export function isUpcomingConfirmed(
+export function isUpcomingTabAppointment(
   row: DemoMasterAppointment,
-  todayIso = isoDateLocal(new Date()),
+  now = new Date(),
 ): boolean {
-  if (row.status !== 'confirmed') return false;
-  const now = new Date();
+  const db = row.dbStatus ?? row.status;
+  if (!isUpcomingTabStatus(db)) return false;
+  if (row.endsAt) return new Date(row.endsAt).getTime() >= now.getTime();
   const slot = new Date(`${row.date}T${timeSortKey(row.time)}:00`);
-  if (row.date > todayIso) return true;
-  if (row.date < todayIso) return false;
   return slot.getTime() >= now.getTime() - 60_000;
+}
+
+/** @deprecated используйте isUpcomingTabAppointment */
+export function isUpcomingConfirmed(row: DemoMasterAppointment): boolean {
+  return isUpcomingTabAppointment(row, new Date());
 }
 
 export function pickNearestUpcoming(
   rows: DemoMasterAppointment[],
-  todayIso = isoDateLocal(new Date()),
 ): DemoMasterAppointment | null {
-  const upcoming = rows.filter((r) => isUpcomingConfirmed(r, todayIso));
-  if (!upcoming.length) return null;
-  return [...upcoming].sort(compareAppointmentsByDateAsc)[0] ?? null;
+  const pending = rows.filter((r) => r.status === 'pending');
+  const upcoming = rows.filter((r) => isUpcomingTabAppointment(r));
+  const candidates = [...pending, ...upcoming];
+  if (!candidates.length) return null;
+  return [...candidates].sort(compareAppointmentsByDateAsc)[0] ?? null;
 }
 
 export function filterHistoryByPeriod(
@@ -176,6 +193,16 @@ export function filterHistoryByPeriod(
 
 export function historyStatusLabel(status: DemoMasterAppointment['status']): string {
   if (status === 'completed') return 'Завершено';
+  if (status === 'no_show') return 'Неявка';
   if (status === 'cancelled') return 'Отменено';
   return 'Отменено';
+}
+
+export function isHistoryAppointment(row: DemoMasterAppointment): boolean {
+  const db = row.dbStatus ?? row.status;
+  if (db === 'completed' || db === 'no_show') return true;
+  if (db === 'cancelled_by_client' || db === 'cancelled_by_master') return true;
+  if (dbStatusToUi(db) === 'cancelled') return true;
+  if (isUpcomingTabStatus(db) && row.endsAt && new Date(row.endsAt) < new Date()) return true;
+  return false;
 }

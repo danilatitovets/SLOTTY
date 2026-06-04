@@ -1,4 +1,4 @@
-import { PROFILE_PATH } from '../../app/paths';
+import { getClientAppointmentPath, PROFILE_PATH } from '../../app/paths';
 import type { MeNotificationRow } from '../profile/api/clientNotifications';
 
 export type ClientNotificationAction = {
@@ -18,18 +18,37 @@ const APPOINTMENT_NOTIFY_TYPES = new Set([
 export function resolveClientNotificationAction(
   item: MeNotificationRow,
 ): ClientNotificationAction | null {
-  if (item.related_entity_type === 'appointment' && item.related_entity_id) {
-    const params = new URLSearchParams({
-      tab: 'appointments',
-      focus: item.related_entity_id,
-    });
-    return {
-      label: 'Открыть запись',
-      to: `${PROFILE_PATH}?${params.toString()}`,
-    };
+  const bookingCode = item.booking_code?.trim().toUpperCase();
+  if (item.related_entity_type === 'appointment') {
+    if (bookingCode) {
+      return {
+        label: 'Открыть запись',
+        to: getClientAppointmentPath(bookingCode),
+      };
+    }
+    if (item.related_entity_id) {
+      console.warn('[notifications] appointment without booking_code', {
+        id: item.id,
+        appointmentId: item.related_entity_id,
+      });
+      const params = new URLSearchParams({
+        tab: 'appointments',
+        focus: item.related_entity_id,
+      });
+      return {
+        label: 'Открыть запись',
+        to: `${PROFILE_PATH}?${params.toString()}`,
+      };
+    }
   }
 
   if (APPOINTMENT_NOTIFY_TYPES.has(item.type)) {
+    if (bookingCode) {
+      return {
+        label: 'Открыть запись',
+        to: getClientAppointmentPath(bookingCode),
+      };
+    }
     const params = new URLSearchParams({ tab: 'appointments' });
     return {
       label: 'Мои записи',

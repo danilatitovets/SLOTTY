@@ -487,7 +487,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
       const copy: ManagedService = {
         ...service,
         id: newServiceId(),
-        title: `${service.title} копия`,
+        title: `${service.title.trim()} · 2`,
         isActive: false,
         sortOrder: services.length,
       };

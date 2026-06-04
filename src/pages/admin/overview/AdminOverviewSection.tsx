@@ -3,12 +3,13 @@ import { ADMIN_APPOINTMENTS_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { AdminAppointmentDetailSheet } from '../shared/AdminAppointmentDetailSheet';
 import { useAdminAppointments, useAdminMasterCabinet, useAdminMasterDraft } from '../useAdminMasterData';
+import { afterBookingMutation } from '../../../features/appointments/bookingDataSync';
 import { AdminOverviewTab } from './AdminOverviewTab';
 
 export function AdminOverviewSection() {
   const { draft } = useAdminMasterDraft();
-  const { useCabinetApi } = useAdminMasterCabinet();
-  const { appointments, persistAppointments } = useAdminAppointments();
+  const { useCabinetApi, reloadCabinet } = useAdminMasterCabinet();
+  const { appointments } = useAdminAppointments();
   const [detailAppt, setDetailAppt] = useState<DemoMasterAppointment | null>(null);
 
   return (
@@ -24,8 +25,10 @@ export function AdminOverviewSection() {
       <AdminAppointmentDetailSheet
         appointment={detailAppt}
         onClose={() => setDetailAppt(null)}
-        onUpdateAppointment={(next) => {
-          persistAppointments(appointments.map((a) => (a.id === next.id ? next : a)));
+        useLiveApi={useCabinetApi}
+        onAfterAction={async () => {
+          afterBookingMutation();
+          if (useCabinetApi) await reloadCabinet();
         }}
       />
     </>

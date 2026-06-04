@@ -42,7 +42,12 @@ export async function sendSlottyEmailDetailed(params: SendMailParams): Promise<S
   });
 
   if (error) {
-    console.error('[SLOTTY email] Resend error:', error);
+    const errPayload = {
+      message: error.message,
+      name: error.name,
+      statusCode: (error as { statusCode?: number }).statusCode ?? null,
+    };
+    console.error('[email.send.failed]', JSON.stringify({ to: params.to, from, ...errPayload }));
     throw new Error(error.message || 'Failed to send email');
   }
 

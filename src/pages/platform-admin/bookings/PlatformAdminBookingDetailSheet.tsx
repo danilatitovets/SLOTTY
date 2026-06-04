@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { subscribeBookingDataRefresh } from '../../../features/appointments/bookingDataSync';
 import { getPlatformBooking } from '../api/platformAdminApi';
 import type { PlatformBookingDetail, PlatformBookingListItem } from '../api/platformAdmin.types';
 import {
@@ -7,6 +8,7 @@ import {
   StatusBadge,
 } from '../shared/PlatformAdminSharedUi';
 import { paCard, paGhostBtn } from '../platformAdminTheme';
+import { PlatformAdminBookingAuditPanel } from './PlatformAdminBookingAuditPanel';
 
 function formatWhen(iso: string) {
   return new Date(iso).toLocaleString('ru-RU', {
@@ -65,6 +67,13 @@ export function PlatformAdminBookingDetailSheet({
     void load();
   }, [bookingId, load]);
 
+  useEffect(() => {
+    if (!bookingId) return;
+    return subscribeBookingDataRefresh(() => {
+      void load();
+    });
+  }, [bookingId, load]);
+
   if (!bookingId) return null;
 
   const title = detail?.serviceTitle ?? listPreview?.serviceTitle ?? 'Запись';
@@ -82,7 +91,9 @@ export function PlatformAdminBookingDetailSheet({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-[20px] font-bold text-[#111827]">{title}</h2>
-              <p className="mt-1 font-mono text-[12px] text-[#9CA3AF]">{bookingId}</p>
+              <p className="mt-1 font-mono text-[12px] text-[#9CA3AF]">
+                {detail?.bookingCode ?? listPreview?.bookingCode ?? bookingId}
+              </p>
             </div>
             <button type="button" className={paGhostBtn} onClick={onClose}>
               Закрыть
@@ -233,6 +244,16 @@ export function PlatformAdminBookingDetailSheet({
                   </ul>
                 </section>
               ) : null}
+
+              <section>
+                <h3 className="mb-3 text-[13px] font-bold uppercase tracking-wide text-[#9CA3AF]">
+                  Аудит записи
+                </h3>
+                <PlatformAdminBookingAuditPanel
+                  bookingCode={detail.bookingCode}
+                  onResolved={() => void load()}
+                />
+              </section>
 
               <p className="text-[12px] text-[#9CA3AF]">Создана: {formatWhen(detail.createdAt)}</p>
             </div>
