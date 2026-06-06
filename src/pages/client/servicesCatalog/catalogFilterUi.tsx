@@ -39,6 +39,7 @@ export function FilterSection({
   defaultOpen = false,
   collapsible = true,
   variant = 'default',
+  activeHint,
 }: {
   icon: IconType;
   title: string;
@@ -46,6 +47,8 @@ export function FilterSection({
   defaultOpen?: boolean;
   collapsible?: boolean;
   variant?: CatalogFilterUiVariant;
+  /** Короткая подсказка выбранного значения, когда секция свёрнута */
+  activeHint?: string | null;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -80,11 +83,14 @@ export function FilterSection({
         aria-expanded={open}
         className="mb-2.5 flex w-full items-center justify-between gap-2 text-left"
       >
-        <span className="flex min-w-0 items-center gap-2.5">
+        <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className={catalogFilterSectionIconClass}>
             <Icon className="h-4 w-4" aria-hidden />
           </span>
-          <h3 className={catalogFilterSectionTitleClass}>{title}</h3>
+          <h3 className={`${catalogFilterSectionTitleClass} shrink-0`}>{title}</h3>
+          {!open && activeHint ? (
+            <span className="min-w-0 truncate text-[12px] font-medium text-[#F47C8C]">{activeHint}</span>
+          ) : null}
         </span>
         <HiChevronDown
           className={`h-4 w-4 shrink-0 text-[#6B7280] transition ${open ? 'rotate-180' : ''}`}
@@ -181,7 +187,7 @@ export function FilterSwitch({
         }`}
       >
         <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition ${
             active ? 'left-[22px]' : 'left-0.5'
           }`}
         />

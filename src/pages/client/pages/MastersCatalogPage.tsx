@@ -5,7 +5,6 @@ import type { ClientOutletContext } from '../clientOutletContext';
 import { QuickChips } from '../components/QuickChips';
 import { MasterCard } from '../components/MasterCard';
 import { MasterSectionRail } from '../components/MasterSectionRail';
-import { TopMastersSection } from '../components/TopMastersSection';
 import { GeoPromptCard } from '../components/GeoPromptCard';
 import { CategoryMasterFilterSheet } from '../components/CategoryMasterFilterSheet';
 import { SkeletonMasterCard } from '../components/SkeletonCards';
@@ -21,11 +20,14 @@ import {
   DEFAULT_CATEGORY_MASTER_FILTERS,
   filtersToMastersQuickChips,
   hasActiveCatalogFilters,
+  filtersForTopRankCatalog,
+  getMastersViewTab,
   parseMastersCatalogFiltersFromSearch,
   toggleMastersQuickChip,
   type CategoryMasterFilters,
 } from '../lib/categoryMasterFilters';
 import { MastersCatalogDesktop } from '../mastersCatalog/MastersCatalogDesktop';
+import { MastersCatalogTopRankView } from '../mastersCatalog/MastersCatalogTopRankView';
 import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
 import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
 import { catalogCanvasClass } from '../servicesCatalog/servicesCatalogTheme';
@@ -62,9 +64,14 @@ export function MastersCatalogPage() {
   const flatMode =
     search.trim().length > 0 || hasActiveCatalogFilters(filters);
 
+  const mastersViewTab = getMastersViewTab(filters);
+  const isTopRankView = mastersViewTab === 'top';
+
+  const apiFilters = isTopRankView ? filtersForTopRankCatalog(filters) : filters;
+
   const apiParams = useMemo(
-    () => categoryFiltersToApiParams(filters, { limit: 80, search: search.trim() || undefined }, hasGeo),
-    [filters, search, hasGeo],
+    () => categoryFiltersToApiParams(apiFilters, { limit: 80, search: search.trim() || undefined }, hasGeo),
+    [apiFilters, search, hasGeo],
   );
 
   const { listings, categories, loading, error, reload } = useCatalogData(apiParams);
@@ -105,7 +112,7 @@ export function MastersCatalogPage() {
     [categories],
   );
 
-  const resultCount = loading || error ? null : feed.total;
+  const resultCount = loading || error || isTopRankView ? null : feed.total;
 
   const quickChipsRow = (
     <QuickChips chips={[...QUICK_CHIPS]} activeIds={quickChipIds} onToggle={toggleChip} />
@@ -144,14 +151,7 @@ export function MastersCatalogPage() {
         <div className="space-y-8">
           {feed.sections.map((section) => {
             if (section.id === 'top') {
-              return (
-                <TopMastersSection
-                  key={section.id}
-                  items={section.items}
-                  userLat={userLat}
-                  userLng={userLng}
-                />
-              );
+              return null;
             }
 
             if (section.layout === 'carousel') {
@@ -230,7 +230,19 @@ export function MastersCatalogPage() {
           </CatalogStickyToolbar>
 
           <div className={`flex flex-col gap-6 ${CLIENT_CONTENT_PAD_BOTTOM} pb-6`}>
-            {catalogBody}
+            {isTopRankView ? (
+              <MastersCatalogTopRankView
+                masters={masters}
+                loading={loading}
+                error={error}
+                onRetry={() => void reload()}
+                userLat={userLat}
+                userLng={userLng}
+                variant="mobile"
+              />
+            ) : (
+              catalogBody
+            )}
           </div>
         </div>
       </div>

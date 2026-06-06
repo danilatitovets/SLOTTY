@@ -16,6 +16,7 @@ import {
 import { MastersCatalogDesktopHero } from './MastersCatalogDesktopHero';
 import { MastersCatalogDesktopSidebar } from './MastersCatalogDesktopSidebar';
 import { MastersCatalogResults } from './MastersCatalogResults';
+import { MastersCatalogTopRankView } from './MastersCatalogTopRankView';
 
 type Props = {
   search: string;
@@ -54,6 +55,7 @@ export function MastersCatalogDesktop({
 }: Props) {
   const activeFilterCount = countActiveCategoryFilters(filters);
   const activeTab = getMastersViewTab(filters);
+  const isTopRankView = activeTab === 'top';
 
   useLayoutEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -94,6 +96,17 @@ export function MastersCatalogDesktop({
             </div>
 
             <div className="scrollbar-hidden relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-10">
+            {isTopRankView ? (
+              <MastersCatalogTopRankView
+                masters={masters}
+                loading={loading}
+                error={error}
+                onRetry={onRetry}
+                userLat={userLat}
+                userLng={userLng}
+                variant="desktop"
+              />
+            ) : (
             <MastersCatalogResults
               loading={loading}
               error={error}
@@ -108,6 +121,7 @@ export function MastersCatalogDesktop({
               onRequestGeo={onRequestGeo}
               showGeoPrompt={showGeoPrompt}
             />
+            )}
           </div>
           </div>
         </div>

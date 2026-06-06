@@ -5,6 +5,7 @@ import {
   HiCalendarDays,
   HiChevronRight,
   HiClock,
+  HiEye,
   HiStar,
   HiUserGroup,
   HiWallet,
@@ -16,6 +17,7 @@ import {
   formatMastersNearbyLabel,
   formatPriceFrom,
   formatSlotCardSubline,
+  formatWeeklyViewsLabel,
 } from '../lib/catalogFormat';
 import { getCatalogServicePhotoUrl } from '../../../features/catalog/catalogServicePhotos';
 
@@ -60,6 +62,39 @@ function StatRow({
       <span className={`shrink-0 text-right leading-snug ${valueClassName}`}>{value}</span>
     </div>
   );
+}
+
+type FolderTabTone = 'popular' | 'hit' | 'promo';
+
+function ServiceCardFolderTab({ label, tone }: { label: string; tone: FolderTabTone }) {
+  const tabBg =
+    tone === 'hit' ? 'bg-[#7C3AED]' : tone === 'promo' ? 'bg-[#F47C8C]' : 'bg-[#F47C8C]';
+  const foldBg =
+    tone === 'hit' ? 'bg-[#6D28D9]' : tone === 'promo' ? 'bg-[#E85A72]' : 'bg-[#E85A72]';
+
+  return (
+    <div className="pointer-events-none absolute right-4 top-0 z-20 flex items-start lg:right-5">
+      <span className={`mt-0 h-2 w-2 shrink-0 rounded-tr-[3px] ${foldBg}`} aria-hidden />
+      <span
+        className={`${tabBg} rounded-b-[10px] px-3 py-1.5 text-[11px] font-semibold leading-none text-white`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function serviceBadgeMeta(service: AggregatedServiceCard, showPromo: boolean) {
+  if (service.badge === 'hit') {
+    return { label: 'Топ выбор', tone: 'hit' as const };
+  }
+  if (service.badge === 'popular') {
+    return { label: 'Популярно', tone: 'popular' as const };
+  }
+  if (showPromo) {
+    return { label: 'Акция', tone: 'promo' as const };
+  }
+  return null;
 }
 
 export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Props) {
@@ -123,26 +158,15 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
   }
 
   if (isWide) {
-    const badgeLabel =
-      service.badge === 'hit'
-        ? 'Топ выбор'
-        : service.badge === 'popular'
-          ? 'Популярно'
-          : showPromo
-            ? 'Акция'
-            : null;
-    const badgeClass =
-      service.badge === 'hit'
-        ? 'bg-[#F3E8FF] text-[#7C3AED]'
-        : service.badge === 'popular'
-          ? 'bg-[#FFF1F4] text-[#F47C8C]'
-          : 'bg-[#F47C8C] text-white';
+    const badgeMeta = serviceBadgeMeta(service, showPromo);
 
     return (
       <Link
         to={getServiceCategoryPath(service.categoryCode)}
         className={`group relative flex w-full ${catalogListCardClass} lg:min-h-[148px] lg:flex-row`}
       >
+        {badgeMeta ? <ServiceCardFolderTab label={badgeMeta.label} tone={badgeMeta.tone} /> : null}
+
         <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#EBEBEB] lg:h-auto lg:w-[168px] lg:min-h-[148px]">
           <ImageReveal
             src={photo}
@@ -150,13 +174,6 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             className="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
             loading="lazy"
           />
-          {badgeLabel ? (
-            <span
-              className={`absolute left-3 top-3 rounded-[8px] px-2.5 py-1 text-[11px] font-semibold ${badgeClass}`}
-            >
-              {badgeLabel}
-            </span>
-          ) : null}
         </div>
 
         <div className="relative flex min-w-0 flex-1 flex-col p-5 lg:min-h-[148px] lg:p-4 lg:pr-[184px]">
@@ -191,6 +208,10 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
                   {formatMastersNearbyLabel(service.masterCount)}
                 </span>
               ) : null}
+              <span className="inline-flex items-center gap-1">
+                <HiEye className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
+                {formatWeeklyViewsLabel(service.weeklyViews)}
+              </span>
               <span className="inline-flex items-center gap-1">
                 <HiClock className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
                 {formatDurationMinutes(service.durationMinutes)}
@@ -232,11 +253,15 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
   }
 
   if (isGrid) {
+    const badgeMeta = serviceBadgeMeta(service, showPromo);
+
     return (
       <Link
         to={getServiceCategoryPath(service.categoryCode)}
-        className={`group flex h-full flex-col ${catalogListCardClass} hover:-translate-y-0.5`}
+        className={`group relative flex h-full flex-col ${catalogListCardClass} hover:-translate-y-0.5`}
       >
+        {badgeMeta ? <ServiceCardFolderTab label={badgeMeta.label} tone={badgeMeta.tone} /> : null}
+
         <div className="relative h-36 w-full shrink-0 overflow-hidden bg-[#FAFAFA]">
           <ImageReveal
             src={photo}
@@ -244,16 +269,6 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
             loading="lazy"
           />
-          {showPopular ? (
-            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-[#111827] shadow-sm">
-              🔥 Топ
-            </span>
-          ) : null}
-          {showPromo ? (
-            <span className="absolute right-3 top-3 rounded-full bg-[#F47C8C] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-              Акция
-            </span>
-          ) : null}
         </div>
 
         <div className="flex flex-1 flex-col p-4">
@@ -272,6 +287,11 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
               {formatDurationMinutes(service.durationMinutes)}
             </span>
           </div>
+
+          <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6B7280]">
+            <HiEye className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
+            {formatWeeklyViewsLabel(service.weeklyViews)}
+          </p>
 
           <div className={`mt-4 rounded-[14px] px-3 py-2.5 ${hasSlot ? 'bg-[#F6F7FB]' : 'bg-[#F6F7FB]'}`}>
             <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9CA3AF]">Ближайшее окно</p>

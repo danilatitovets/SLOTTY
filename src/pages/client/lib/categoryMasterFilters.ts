@@ -119,7 +119,7 @@ export function toggleMastersQuickChip(
     case 'top':
       if (on) {
         next.sortBy = 'rating';
-        if (!next.minRating) next.minRating = '48';
+        next.minRating = null;
       } else {
         next.minRating = null;
         if (next.sortBy === 'rating') next.sortBy = 'recommended';
@@ -194,6 +194,12 @@ export function categoryFiltersToApiParams(
 }
 
 /** Есть ли отличия от дефолта (для flatMode каталога). */
+export function filtersForTopRankCatalog(
+  f: CategoryMasterFilters,
+): CategoryMasterFilters {
+  return { ...f, minRating: null, sortBy: 'rating' };
+}
+
 export function hasActiveCatalogFilters(f: CategoryMasterFilters): boolean {
   return countActiveCategoryFilters(f) > 0;
 }
@@ -272,7 +278,6 @@ export function parseMastersCatalogFiltersFromSearch(
   }
   if (tab === 'top') {
     f.sortBy = 'rating';
-    f.minRating = '48';
   }
 
   if (searchParams.get('slots') === '1') f.onlyWithSlots = true;

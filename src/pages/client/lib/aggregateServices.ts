@@ -31,12 +31,31 @@ export type AggregatedServiceCard = {
   totalReviews: number;
   tags: string[];
   isNew: boolean;
+  /** Оценка просмотров категории за 7 дней (клиентский скоринг до API). */
+  weeklyViews: number;
 };
 
 function medianDuration(values: number[]): number {
   if (!values.length) return 90;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)] ?? 90;
+}
+
+function estimateWeeklyViews(input: {
+  masterCount: number;
+  totalReviews: number;
+  hasToday: boolean;
+  badge: AggregatedServiceCard['badge'];
+  avgRating: number;
+}): number {
+  const base =
+    input.masterCount * 140 +
+    input.totalReviews * 22 +
+    Math.round(input.avgRating * 45) +
+    (input.hasToday ? 120 : 0) +
+    (input.badge === 'popular' ? 260 : input.badge === 'hit' ? 180 : input.badge === 'sale' ? 90 : 0);
+
+  return Math.max(48, base);
 }
 
 export function aggregateServicesByCategory(
@@ -122,6 +141,13 @@ export function aggregateServicesByCategory(
       totalReviews,
       tags: subtitle.split(/,\s*/).filter(Boolean).slice(0, 4),
       isNew: totalReviews < 40 && masterIds.size >= 2,
+      weeklyViews: estimateWeeklyViews({
+        masterCount: masterIds.size,
+        totalReviews,
+        hasToday,
+        badge,
+        avgRating: topRating,
+      }),
     });
   }
 

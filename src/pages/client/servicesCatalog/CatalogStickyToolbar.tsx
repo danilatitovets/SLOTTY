@@ -74,7 +74,7 @@ export function CatalogStickyToolbar({
     <div className={`${belowPageToolbar ? 'mt-2' : ''} ${className}`.trim()}>
       <div className={stickyClass}>
         <header className={`${catalogDesktopPanel} ${panelPad}`}>
-          <CatalogSectionTabs className="hidden lg:flex" compact={compact} />
+          <CatalogSectionTabs compact={compact} />
 
           {children ? <div className={compact ? 'mt-1.5 lg:mt-2' : 'mt-0 lg:mt-3'}>{children}</div> : null}
 

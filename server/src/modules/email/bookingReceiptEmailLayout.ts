@@ -2,7 +2,7 @@
 export const BOOKING_RECEIPT_LOGO_SRC = '/photos/logo.webp';
 
 /** @deprecated Hero-баннер убран из писем — не адаптивен и ломается в Outlook. */
-export const BOOKING_RECEIPT_HERO_SRC = '/photos/xtr/1.png';
+export const BOOKING_RECEIPT_HERO_SRC = '/photos/xtr/1.webp';
 
 const BRAND = '#F47C8C';
 const BRAND_DARK = '#111827';

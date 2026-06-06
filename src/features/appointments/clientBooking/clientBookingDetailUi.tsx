@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { dbStatusToUi, type UiAppointmentStatus } from '../appointmentStatus';
 
-export const CLIENT_BOOKING_COMPLETED_HERO_BG = '/photos/визит%20азверешне/1.png';
+export const CLIENT_BOOKING_COMPLETED_HERO_BG =
+  '/photos/' + encodeURIComponent('визит азверешне') + '/1.webp';
 
 export const CLIENT_REVIEW_HERO_BG =
-  `/photos/${encodeURIComponent('отзыв')}/${encodeURIComponent('1.png')}`;
+  `/photos/${encodeURIComponent('отзыв')}/${encodeURIComponent('1.webp')}`;
 
 export function formatBookingCreatedAt(iso: string): string {
   const d = new Date(iso);

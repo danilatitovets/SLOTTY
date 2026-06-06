@@ -11,8 +11,9 @@ import {
   TIME_FILTER_OPTIONS,
   VISIT_FILTER_OPTIONS,
 } from './catalogFilterUi';
-import { HiBuildingStorefront, HiCalendarDays, HiClock, HiStar } from 'react-icons/hi2';
+import { HiAdjustmentsHorizontal, HiBuildingStorefront, HiCalendarDays, HiClock, HiStar } from 'react-icons/hi2';
 import { catalogFieldClass } from './servicesCatalogTheme';
+import { catalogServicesFilterHints } from './catalogFilterHints';
 
 type Props = {
   filters: CatalogFiltersState;
@@ -23,9 +24,8 @@ type Props = {
 export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid' }: Props) {
   const sidebar = layout === 'sidebar';
   const sheet = layout === 'sheet';
-  /** На мобиле (sheet, grid) — все секции свёрнуты; в десктоп-сайдбаре — раскрыты. */
-  const sectionOpen = sidebar;
   const uiVariant = sheet ? 'sheet' : 'default';
+  const hints = catalogServicesFilterHints(filters);
   const chipsClass = sidebar || sheet ? 'flex flex-wrap gap-2' : 'mt-3 flex flex-wrap gap-2';
   const rootClass = sidebar
     ? 'flex flex-col gap-4'
@@ -59,7 +59,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
       <FilterSection
         icon={HiCalendarDays}
         title="Когда"
-        defaultOpen={sectionOpen}
+        activeHint={hints.when}
         variant={uiVariant}
       >
         <div className={chipsClass}>
@@ -76,7 +76,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Время" defaultOpen={sectionOpen} variant={uiVariant}>
+      <FilterSection icon={HiClock} title="Время" activeHint={hints.time} variant={uiVariant}>
         <div className={chipsClass}>
           {TIME_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -94,7 +94,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
       <FilterSection
         icon={HiBanknotes}
         title="Цена, BYN"
-        defaultOpen={sectionOpen}
+        activeHint={hints.price}
         variant={uiVariant}
       >
         <div className={chipsClass}>
@@ -159,7 +159,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
       <FilterSection
         icon={HiStar}
         title="Рейтинг мастера"
-        defaultOpen={sectionOpen}
+        activeHint={hints.rating}
         variant={uiVariant}
       >
         <div className={chipsClass}>
@@ -176,7 +176,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBuildingStorefront} title="Где" defaultOpen={sectionOpen} variant={uiVariant}>
+      <FilterSection icon={HiBuildingStorefront} title="Где" activeHint={hints.visit} variant={uiVariant}>
         <div className={chipsClass}>
           {VISIT_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -194,7 +194,7 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
       <FilterSection
         icon={HiClock}
         title="Длительность"
-        defaultOpen={sectionOpen}
+        activeHint={hints.duration}
         variant={uiVariant}
       >
         <div className={chipsClass}>
@@ -211,12 +211,16 @@ export function ServicesCatalogFiltersPanel({ filters, onChange, layout = 'grid'
         </div>
       </FilterSection>
 
-      <FilterSwitch
-        active={filters.onlineBookingOnly}
-        label="Только с онлайн-записью"
-        variant={uiVariant}
-        onChange={(onlineBookingOnly) => set({ onlineBookingOnly })}
-      />
+      <FilterSection icon={HiAdjustmentsHorizontal} title="Дополнительно" activeHint={hints.extra} variant={uiVariant}>
+        <div className="flex flex-col gap-2.5">
+          <FilterSwitch
+            active={filters.onlineBookingOnly}
+            label="Только с онлайн-записью"
+            variant={uiVariant}
+            onChange={(onlineBookingOnly) => set({ onlineBookingOnly })}
+          />
+        </div>
+      </FilterSection>
     </div>
   );
 }

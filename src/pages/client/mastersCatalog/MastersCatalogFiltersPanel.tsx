@@ -9,6 +9,7 @@ import {
   VISIT_FILTER_OPTIONS,
 } from '../servicesCatalog/catalogFilterUi';
 import {
+  HiAdjustmentsHorizontal,
   HiBanknotes,
   HiBuildingStorefront,
   HiCalendarDays,
@@ -16,6 +17,7 @@ import {
   HiClock,
   HiStar,
 } from 'react-icons/hi2';
+import { mastersCatalogFilterHints } from './mastersCatalogFilterHints';
 
 type Props = {
   filters: CategoryMasterFilters;
@@ -46,10 +48,11 @@ const PRICE_OPTIONS = [
 
 export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
   const set = (patch: Partial<CategoryMasterFilters>) => onChange({ ...filters, ...patch });
+  const hints = mastersCatalogFilterHints(filters);
 
   return (
     <div className="flex flex-col gap-4">
-      <FilterSection icon={HiCalendarDays} title="Когда">
+      <FilterSection icon={HiCalendarDays} title="Когда" activeHint={hints.when}>
         <div className="flex flex-wrap gap-2">
           {DATE_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -63,7 +66,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Время">
+      <FilterSection icon={HiClock} title="Время" activeHint={hints.time}>
         <div className="flex flex-wrap gap-2">
           {TIME_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -77,7 +80,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBuildingStorefront} title="Где">
+      <FilterSection icon={HiBuildingStorefront} title="Где" activeHint={hints.visit}>
         <div className="flex flex-wrap gap-2">
           {VISIT_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -91,7 +94,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiStar} title="Рейтинг мастера">
+      <FilterSection icon={HiStar} title="Рейтинг мастера" activeHint={hints.rating}>
         <div className="flex flex-wrap gap-2">
           {RATING_OPTIONS.map(({ value, label }) => (
             <FilterChip
@@ -109,7 +112,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiChatBubbleLeftRight} title="Отзывы">
+      <FilterSection icon={HiChatBubbleLeftRight} title="Отзывы" activeHint={hints.reviews}>
         <div className="flex flex-wrap gap-2">
           {REVIEWS_OPTIONS.map(({ value, label }) => (
             <FilterChip
@@ -122,7 +125,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBanknotes} title="Цена, BYN">
+      <FilterSection icon={HiBanknotes} title="Цена, BYN" activeHint={hints.price}>
         <div className="flex flex-wrap gap-2">
           {PRICE_OPTIONS.map(({ value, label }) => (
             <FilterChip
@@ -135,7 +138,7 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Длительность">
+      <FilterSection icon={HiClock} title="Длительность" activeHint={hints.duration}>
         <div className="flex flex-wrap gap-2">
           {DURATION_FILTER_OPTIONS.map(({ value, label, icon }) => (
             <FilterChip
@@ -149,21 +152,25 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSwitch
-        active={filters.onlyWithSlots}
-        label="Только с онлайн-записью"
-        onChange={(onlyWithSlots) => set({ onlyWithSlots })}
-      />
-      <FilterSwitch
-        active={filters.promotionOnly}
-        label="Только с акциями"
-        onChange={(promotionOnly) => set({ promotionOnly })}
-      />
-      <FilterSwitch
-        active={filters.verifiedOnly}
-        label="Проверенные мастера"
-        onChange={(verifiedOnly) => set({ verifiedOnly })}
-      />
+      <FilterSection icon={HiAdjustmentsHorizontal} title="Дополнительно" activeHint={hints.extra}>
+        <div className="flex flex-col gap-2.5">
+          <FilterSwitch
+            active={filters.onlyWithSlots}
+            label="Только с онлайн-записью"
+            onChange={(onlyWithSlots) => set({ onlyWithSlots })}
+          />
+          <FilterSwitch
+            active={filters.promotionOnly}
+            label="Только с акциями"
+            onChange={(promotionOnly) => set({ promotionOnly })}
+          />
+          <FilterSwitch
+            active={filters.verifiedOnly}
+            label="Проверенные мастера"
+            onChange={(verifiedOnly) => set({ verifiedOnly })}
+          />
+        </div>
+      </FilterSection>
     </div>
   );
 }

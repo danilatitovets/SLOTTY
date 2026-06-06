@@ -10,47 +10,67 @@ import {
   shortMasterName,
 } from '../lib/catalogFormat';
 import { sortMastersByTopRank } from '../../../features/masters/lib/masterTopScore';
-import { clientPinkBtn } from '../clientTheme';
+import { TOP_MASTERS_PODIUM_BG, type TopMastersPodiumRank } from '../lib/topMastersPodiumAssets';
+import { catalogPrimaryBtn } from '../servicesCatalog/servicesCatalogTheme';
 import { MasterCardPortrait } from './MasterCardPortrait';
 
 type Props = {
   items: ServiceListingRecord[];
   userLat: number | null;
   userLng: number | null;
+  /** mobile — полноширинная секция в ленте; desktop — компактный блок под табами каталога */
+  variant?: 'mobile' | 'desktop';
+  title?: string;
+  subtitle?: string;
+  /** false — остальные места показываются снаружи (например, отдельной каруселью) */
+  showMoreInSection?: boolean;
+  /** Всегда рисовать пьедестал 1–2–3, даже если мастеров меньше трёх */
+  forcePodiumLayout?: boolean;
 };
 
 const RANK_STYLE = [
   {
     label: '1',
-    pedestal: 'h-[4.5rem]',
+    columnWidth: 'w-[7.75rem] sm:w-[8.25rem]',
+    pedestalHeight: 'h-[4.75rem] sm:h-[5rem]',
     photo: 'h-[4.5rem] w-[4.5rem] ring-[3px] ring-amber-300',
-    badge: 'bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.45)]',
+    badge: 'bg-gradient-to-br from-amber-300 to-amber-500 text-white',
     glow: 'shadow-[0_12px_32px_rgba(245,158,11,0.22)]',
     order: 'order-2',
     z: 'z-10',
     translate: '-translate-y-3',
+    bgPosition: '78% 100%',
   },
   {
     label: '2',
-    pedestal: 'h-[3.25rem]',
+    columnWidth: 'w-[7rem] sm:w-[7.5rem]',
+    pedestalHeight: 'h-[4rem] sm:h-[4.25rem]',
     photo: 'h-[3.75rem] w-[3.75rem] ring-[3px] ring-[#C4C9D4]',
-    badge: 'bg-gradient-to-br from-[#E8EBF0] to-[#B8BFCA] text-[#374151] shadow-md',
+    badge: 'bg-gradient-to-br from-[#E8EBF0] to-[#B8BFCA] text-[#374151]',
     glow: 'shadow-[0_8px_24px_rgba(17,24,39,0.08)]',
     order: 'order-1',
     z: 'z-0',
     translate: '',
+    bgPosition: '76% 100%',
   },
   {
     label: '3',
-    pedestal: 'h-[2.75rem]',
+    columnWidth: 'w-[6.75rem] sm:w-[7.25rem]',
+    pedestalHeight: 'h-[3.75rem] sm:h-[4rem]',
     photo: 'h-[3.5rem] w-[3.5rem] ring-[3px] ring-[#E8B48A]',
-    badge: 'bg-gradient-to-br from-[#F0D4B8] to-[#D4A574] text-white shadow-md',
+    badge: 'bg-gradient-to-br from-[#F0D4B8] to-[#D4A574] text-white',
     glow: 'shadow-[0_8px_24px_rgba(212,165,116,0.2)]',
     order: 'order-3',
     z: 'z-0',
     translate: '',
+    bgPosition: '74% 100%',
   },
 ] as const;
+
+function podiumBg(rank: number): string {
+  const key = Math.min(3, Math.max(1, rank)) as TopMastersPodiumRank;
+  return TOP_MASTERS_PODIUM_BG[key];
+}
 
 function TopMasterMiniCard({
   listing,
@@ -69,54 +89,64 @@ function TopMasterMiniCard({
 
   return (
     <div
-      className={`flex w-[5.5rem] shrink-0 flex-col items-center ${style.order} ${style.z} ${style.translate}`}
+      className={`flex ${style.columnWidth} shrink-0 flex-col items-center ${style.order} ${style.z} ${style.translate}`}
     >
-      <span
-        className={`mb-2 flex h-7 min-w-[1.75rem] items-center justify-center rounded-full px-2 text-[12px] font-bold ${style.badge}`}
-      >
-        {style.label}
-      </span>
+      <div className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white ring-1 ring-black/[0.06]">
+        <div className="flex flex-col items-center px-2 pb-2 pt-2.5">
+          <span
+            className={`mb-2 flex h-7 min-w-[1.75rem] items-center justify-center rounded-full px-2 text-[12px] font-bold ${style.badge}`}
+          >
+            {style.label}
+          </span>
 
-      <Link
-        to={getMasterPath(listing.masterId)}
-        className={`relative mb-2 overflow-hidden rounded-full ${style.photo} ${style.glow}`}
-      >
-        <MasterCardPortrait
-          masterName={listing.masterName}
-          photoUrl={listing.photoUrl}
-          className="relative h-full w-full"
-          imageClassName="h-full w-full rounded-full object-cover"
+          <Link
+            to={getMasterPath(listing.masterId)}
+            className={`mb-2 overflow-hidden rounded-full ${style.photo} ${style.glow}`}
+          >
+            <MasterCardPortrait
+              masterName={listing.masterName}
+              photoUrl={listing.photoUrl}
+              className="relative h-full w-full"
+              imageClassName="h-full w-full rounded-full object-cover"
+            />
+          </Link>
+
+          <Link to={getMasterPath(listing.masterId)} className="w-full text-center">
+            <p className="truncate px-0.5 text-[12px] font-semibold leading-tight text-[#111827]">
+              {shortMasterName(listing.masterName, 14)}
+            </p>
+            <p className="mt-0.5 truncate text-[10px] font-medium text-[#4B5563]">
+              {formatMasterCategoryLabel(listing.category)}
+            </p>
+          </Link>
+
+          <div className="mt-1.5 flex items-center justify-center gap-0.5 text-[11px] font-semibold text-[#111827]">
+            {!rating.isNew ? (
+              <>
+                <HiStar className="h-3 w-3 text-amber-400" aria-hidden />
+                {rating.primary}
+              </>
+            ) : (
+              <span className="text-[#C02658]">Новый</span>
+            )}
+          </div>
+
+          {slot ? (
+            <p className="mt-1 max-w-full truncate px-1 text-[10px] font-semibold text-[#374151]">
+              {slot}
+            </p>
+          ) : null}
+        </div>
+
+        <div
+          className={`w-full shrink-0 bg-cover bg-no-repeat ${style.pedestalHeight}`}
+          style={{
+            backgroundImage: `url(${podiumBg(rank)})`,
+            backgroundPosition: style.bgPosition,
+          }}
+          aria-hidden
         />
-      </Link>
-
-      <Link to={getMasterPath(listing.masterId)} className="w-full text-center">
-        <p className="truncate px-0.5 text-[12px] font-semibold leading-tight text-[#111827]">
-          {shortMasterName(listing.masterName, 14)}
-        </p>
-        <p className="mt-0.5 truncate text-[10px] text-[#9CA3AF]">
-          {formatMasterCategoryLabel(listing.category)}
-        </p>
-      </Link>
-
-      <div className="mt-1.5 flex items-center justify-center gap-0.5 text-[11px] font-semibold text-[#92400E]">
-        {!rating.isNew ? (
-          <>
-            <HiStar className="h-3 w-3 text-amber-400" aria-hidden />
-            {rating.primary}
-          </>
-        ) : (
-          <span className="text-[#F47C8C]">Новый</span>
-        )}
       </div>
-
-      {slot ? (
-        <p className="mt-1 max-w-full truncate px-1 text-[10px] font-medium text-[#F47C8C]">{slot}</p>
-      ) : null}
-
-      <div
-        className={`mt-2 w-full max-w-[5.25rem] rounded-t-[14px] bg-gradient-to-t from-[#F47C8C]/20 to-[#FFF1F4] ${style.pedestal}`}
-        aria-hidden
-      />
 
       <Link
         to={getBookingPath(
@@ -125,7 +155,7 @@ function TopMasterMiniCard({
           listing.nextSlotId ?? null,
           { from: 'services' },
         )}
-        className={`${clientPinkBtn} mt-2 min-h-9 w-full px-2 text-[11px]`}
+        className={`${catalogPrimaryBtn} mt-2 min-h-9 w-full px-2 text-[11px]`}
       >
         Запись
       </Link>
@@ -174,44 +204,109 @@ function TopMasterWideCard({ listing, rank }: { listing: ServiceListingRecord; r
   );
 }
 
-export function TopMastersSection({ items }: Props) {
+function TopMasterPodiumSpacer({ rank }: { rank: 2 | 3 }) {
+  const style = RANK_STYLE[rank - 1];
+  return (
+    <div
+      className={`flex ${style.columnWidth} shrink-0 flex-col items-center opacity-35 ${style.order} ${style.z} ${style.translate}`}
+      aria-hidden
+    >
+      <div className="flex w-full flex-col overflow-hidden rounded-[18px] bg-white ring-1 ring-black/[0.06]">
+        <div className="h-[7.5rem] bg-white" />
+        <div
+          className={`w-full shrink-0 bg-cover bg-no-repeat ${style.pedestalHeight}`}
+          style={{
+            backgroundImage: `url(${podiumBg(rank)})`,
+            backgroundPosition: style.bgPosition,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function TopMastersSection({
+  items,
+  variant = 'mobile',
+  title = 'Топ мастера',
+  subtitle = 'Рейтинг, отзывы и записи — честный топ по активности',
+  showMoreInSection = true,
+  forcePodiumLayout = false,
+}: Props) {
   if (!items.length) return null;
 
+  const isDesktop = variant === 'desktop';
   const sorted = sortMastersByTopRank(items);
 
   const top3 = sorted.slice(0, 3);
-  /** Пьедестал: 2-е | 1-е | 3-е слева направо. */
-  const podium =
-    top3.length >= 3 ? [top3[1]!, top3[0]!, top3[2]!] : top3;
-  const podiumRanks = top3.length >= 3 ? [2, 1, 3] : top3.map((_, i) => i + 1);
-  const rest = sorted.slice(3);
-  const usePodium = top3.length >= 3;
+  const rest = isDesktop || !showMoreInSection ? [] : sorted.slice(3);
+  const usePodium = forcePodiumLayout || top3.length >= 3;
+
+  const podiumEntries: Array<{ listing: ServiceListingRecord | null; rank: number }> = usePodium
+    ? top3.length >= 3
+      ? [
+          { listing: top3[1]!, rank: 2 },
+          { listing: top3[0]!, rank: 1 },
+          { listing: top3[2]!, rank: 3 },
+        ]
+      : top3.length === 2
+        ? [
+            { listing: top3[1]!, rank: 2 },
+            { listing: top3[0]!, rank: 1 },
+            { listing: null, rank: 3 },
+          ]
+        : [{ listing: null, rank: 2 }, { listing: top3[0]!, rank: 1 }, { listing: null, rank: 3 }]
+    : [];
 
   return (
-    <section className="-mx-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] px-4 py-5 shadow-[0_12px_40px_rgba(244,124,140,0.08)] sm:-mx-5 sm:px-5">
-      <div className="mb-4 flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#F47C8C] shadow-[0_6px_20px_rgba(244,124,140,0.18)]">
-          <HiTrophy className="h-6 w-6" aria-hidden />
+    <section
+      className={
+        isDesktop
+          ? 'overflow-hidden rounded-[16px] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] px-5 py-4'
+          : '-mx-4 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF1F4] via-white to-[#FAFAFA] px-4 py-5 sm:-mx-5 sm:px-5'
+      }
+    >
+      <div className={`flex items-start gap-3 ${isDesktop ? 'mb-3' : 'mb-4'}`}>
+        <span
+          className={`flex shrink-0 items-center justify-center rounded-2xl bg-white text-[#F47C8C] ${
+            isDesktop ? 'h-10 w-10' : 'h-11 w-11'
+          }`}
+        >
+          <HiTrophy className={isDesktop ? 'h-5 w-5' : 'h-6 w-6'} aria-hidden />
         </span>
         <div>
-          <h2 className="text-[22px] font-semibold tracking-tight text-[#111827]">Топ мастера</h2>
-          <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">
-            Рейтинг, отзывы и записи — честный топ по активности
-          </p>
+          <h2
+            className={`font-semibold tracking-tight text-[#111827] ${
+              isDesktop ? 'text-[18px]' : 'text-[22px]'
+            }`}
+          >
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">{subtitle}</p>
+          ) : null}
         </div>
       </div>
 
       {usePodium ? (
-        <div className="flex items-end justify-center gap-1 px-1 pb-1">
-          {podium.map((listing, i) => (
-            <TopMasterMiniCard
-              key={listing.masterId}
-              listing={listing}
-              rank={podiumRanks[i] ?? i + 1}
-              userLat={null}
-              userLng={null}
-            />
-          ))}
+        <div
+          className={`flex items-end justify-center pb-1 ${
+            isDesktop ? 'gap-4 px-1' : 'gap-2 px-0.5'
+          }`}
+        >
+          {podiumEntries.map(({ listing, rank }) =>
+            listing ? (
+              <TopMasterMiniCard
+                key={listing.masterId}
+                listing={listing}
+                rank={rank}
+                userLat={null}
+                userLng={null}
+              />
+            ) : (
+              <TopMasterPodiumSpacer key={`spacer-${rank}`} rank={rank as 2 | 3} />
+            ),
+          )}
         </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto py-1.5 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

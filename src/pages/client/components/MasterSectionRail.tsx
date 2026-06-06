@@ -8,19 +8,35 @@ type Props = {
   items: ServiceListingRecord[];
   userLat: number | null;
   userLng: number | null;
+  /** false на desktop — без отрицательных отступов */
+  inset?: boolean;
 };
 
-export function MasterSectionRail({ title, subtitle, items, userLat, userLng }: Props) {
+export function MasterSectionRail({
+  title,
+  subtitle,
+  items,
+  userLat,
+  userLng,
+  inset = true,
+}: Props) {
   if (!items.length) return null;
 
   return (
-    <section className="-mx-4 sm:-mx-5">
-      <div className="px-4 sm:px-5">
+    <section className={inset ? '-mx-4 sm:-mx-5' : ''}>
+      <div className={inset ? 'px-4 sm:px-5' : ''}>
         <SectionHeading title={title} subtitle={subtitle} />
       </div>
-      <div className="flex gap-3 overflow-x-auto px-4 py-1.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
+      <div
+        className={`flex items-stretch gap-3 overflow-x-auto py-1.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+          inset ? 'px-4 sm:px-5' : ''
+        }`}
+      >
         {items.map((listing) => (
-          <div key={listing.masterId} className="w-[min(88vw,340px)] shrink-0 snap-start">
+          <div
+            key={listing.masterId}
+            className="h-[25rem] w-[min(88vw,340px)] shrink-0 snap-start"
+          >
             <MasterCard
               listing={listing}
               userLat={userLat}

@@ -28,9 +28,9 @@ export const APPOINTMENTS_HERO_BG = '/photos/fon.webp';
 
 export { NOTHING_FOUND_ILLUSTRATION_SRC as APPOINTMENTS_EMPTY_ILLUSTRATION_SRC } from '../../../shared/ui/nothingFoundIllustrationSrc';
 
-/** Empty state вкладки «Заявки» (`public/photos/не найдены заявки/1-Photoroom.png`). */
+/** Empty state вкладки «Заявки» (`public/photos/не найдены заявки/1-Photoroom.webp`). */
 export const APPOINTMENTS_REQUESTS_EMPTY_ILLUSTRATION_SRC =
-  `/photos/${encodeURIComponent('не найдены заявки')}/1-Photoroom.png`;
+  `/photos/${encodeURIComponent('не найдены заявки')}/1-Photoroom.webp`;
 
 export const APPOINTMENTS_TAB_BAR_HEIGHT = '5.75rem';
 

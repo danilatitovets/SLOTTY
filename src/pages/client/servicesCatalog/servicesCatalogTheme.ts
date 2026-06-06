@@ -14,12 +14,11 @@ export const catalogDesktopChipActive =
 export const catalogDesktopChipIdle =
   'bg-[#F5F5F5] text-[#374151] transition hover:bg-[#EBEBEB] hover:text-[#111827]';
 
-/** Главные табы Услуги | Мастера — розовая pill */
-export const catalogSectionTabActive =
-  'bg-[#F47C8C] text-white font-semibold shadow-[0_4px_14px_rgba(244,124,140,0.28)]';
+/** Активная вкладка — текст поверх фоновой иллюстрации */
+export const catalogSectionTabActive = 'text-white font-semibold';
 
 export const catalogSectionTabIdle =
-  'bg-[#F5F5F5] text-[#374151] font-semibold transition hover:bg-[#EBEBEB] hover:text-[#111827]';
+  'bg-white text-[#374151] font-semibold transition hover:bg-[#FAFAFA] hover:text-[#111827]';
 
 /** Подтабы каталога — мягкий розовый */
 export const catalogViewTabActive =

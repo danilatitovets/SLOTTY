@@ -7,7 +7,7 @@ import {
 import { ADMIN_DESKTOP_LOGO_SRC } from '../../../../../app/headerLogo';
 import type { BillingSubscriptionResponse } from '../../../../../features/billing/api/masterBillingApi';
 
-export const SUBSCRIPTION_RECEIPT_BG_SRC = '/photos/xtr/1.png';
+export const SUBSCRIPTION_RECEIPT_BG_SRC = '/photos/xtr/1.webp';
 
 export type SubscriptionReceiptRow = { label: string; value: string };
 

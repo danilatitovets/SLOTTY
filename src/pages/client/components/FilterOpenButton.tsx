@@ -1,7 +1,7 @@
 import { HiAdjustmentsHorizontal } from 'react-icons/hi2';
 
 const fieldBase =
-  'rounded-full bg-[#F1EFEF] shadow-[0_2px_14px_rgba(17,24,39,0.05)] outline-none transition';
+  'rounded-full bg-[#F1EFEF] outline-none transition';
 
 type Props = {
   activeCount: number;
@@ -15,7 +15,7 @@ export function FilterOpenButton({ activeCount, onClick, className = '' }: Props
       type="button"
       onClick={onClick}
       aria-label={activeCount > 0 ? `Фильтры, выбрано ${activeCount}` : 'Фильтры'}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center ${fieldBase} text-[#6B7280] active:scale-95 hover:text-[#F47C8C] focus:bg-white focus:text-[#F47C8C] focus:shadow-[0_6px_24px_rgba(244,124,140,0.14)] ${className}`}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center ${fieldBase} text-[#6B7280] active:scale-95 hover:text-[#F47C8C] focus:bg-white focus:text-[#F47C8C] ${className}`}
     >
       <HiAdjustmentsHorizontal className="h-5 w-5" aria-hidden />
       {activeCount > 0 ? (

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
-const NOT_FOUND_ILLUSTRATION_SRC = '/photos/404/1.png';
+const NOT_FOUND_ILLUSTRATION_SRC = '/photos/404/1.webp';
 
 export function NotFoundPage() {
   const navigate = useNavigate();

@@ -241,3 +241,22 @@ export function masterDistrictLabel(listing: ServiceListingRecord): string | nul
   const city = listing.location.city?.trim();
   return city || null;
 }
+
+/** Подпись «N просмотров за неделю» для карточки услуги. */
+export function formatWeeklyViewsLabel(count: number): string {
+  const n = Math.max(0, Math.floor(count));
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  let word = 'просмотров';
+  if (mod10 === 1 && mod100 !== 11) word = 'просмотр';
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'просмотра';
+
+  const display =
+    n >= 10_000
+      ? `${Math.round(n / 1000)} тыс.`
+      : n >= 1000
+        ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')} тыс.`
+        : n.toLocaleString('ru-RU');
+
+  return `${display} ${word} / нед`;
+}

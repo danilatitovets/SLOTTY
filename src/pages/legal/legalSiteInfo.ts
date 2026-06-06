@@ -61,12 +61,12 @@ export const SITE_OPERATOR_LEGAL = formatSiteOperatorLegal();
 
 /** Фон блока «Оплата и возвраты» на юридических страницах. */
 export const PAYMENT_LEGAL_TRUST_BLOCK_BG =
-  `/photos/${encodeURIComponent('возрат')}/${encodeURIComponent('1.png')}`;
+  `/photos/${encodeURIComponent('возрат')}/${encodeURIComponent('1.webp')}`;
 
 /** Hero страницы политики конфиденциальности. */
 export const PRIVACY_LEGAL_HERO_BG =
-  `/photos/${encodeURIComponent('конфиденицальность')}/${encodeURIComponent('1.png')}`;
+  `/photos/${encodeURIComponent('конфиденицальность')}/${encodeURIComponent('1.webp')}`;
 
 /** Hero страницы пользовательского соглашения. */
 export const TERMS_LEGAL_HERO_BG =
-  `/photos/${encodeURIComponent('контракт')}/${encodeURIComponent('1.png')}`;
+  `/photos/${encodeURIComponent('контракт')}/${encodeURIComponent('1.webp')}`;
