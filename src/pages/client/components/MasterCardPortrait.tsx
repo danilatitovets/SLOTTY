@@ -13,6 +13,7 @@ type Props = {
   imageClassName?: string;
   loading?: 'lazy' | 'eager';
   badge?: ReactNode;
+  photoMaxEdge?: number;
 };
 
 /** Портрет мастера в карточке: своё фото или цветной плейсхолдер с инициалами (без Google). */
@@ -23,8 +24,9 @@ export function MasterCardPortrait({
   imageClassName = 'h-full w-full rounded-[14px] object-cover',
   loading = 'lazy',
   badge,
+  photoMaxEdge,
 }: Props) {
-  const src = masterListingPortraitUrl(photoUrl);
+  const src = masterListingPortraitUrl(photoUrl, photoMaxEdge);
 
   if (src) {
     return (

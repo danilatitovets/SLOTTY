@@ -105,9 +105,7 @@ export function MasterPaymentMethodsBlock({
 
       {banks.length > 0 ? (
         <div className={resolvedMethods.length ? 'mt-3' : ''}>
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-            Удобные банки
-          </p>
+          <p className="text-[13px] font-bold text-[#111827]">Удобные банки</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {visibleBanks.map((bank) => (
               <BankChip key={bank.id} name={bank.name} logoSrc={bank.logoSrc} variant={variant} />

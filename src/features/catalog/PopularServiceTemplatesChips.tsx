@@ -20,6 +20,19 @@ type Props = {
   collapsibleCompact?: boolean;
 };
 
+function formatTemplateDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h <= 0) return `${m} мин`;
+  if (m <= 0) return `${h} ч`;
+  return `${h} ч ${m} мин`;
+}
+
+function formatTemplatePrice(tm: ServiceTemplate): string {
+  const prefix = tm.priceType === 'from' ? 'от ' : '';
+  return `${prefix}${tm.price} BYN`;
+}
+
 function chipClass(active: boolean, variant: Variant): string {
   const base =
     'shrink-0 max-w-[min(100%,14rem)] rounded-full px-3.5 py-2 text-left text-[13px] font-semibold leading-snug transition active:scale-[0.98]';
@@ -50,7 +63,7 @@ function TemplatesRow({
   variant: Variant;
 }) {
   return (
-    <div className="-mx-1 flex flex-wrap gap-2 px-1 pb-0.5">
+    <div className="flex flex-wrap gap-2">
       {templates.map((tm) => (
         <button
           key={tm.id}
@@ -61,6 +74,45 @@ function TemplatesRow({
           {tm.title}
         </button>
       ))}
+    </div>
+  );
+}
+
+function TemplatesList({
+  templates,
+  selectedId,
+  onSelect,
+}: {
+  templates: ServiceTemplate[];
+  selectedId: string | null;
+  onSelect: (template: ServiceTemplate) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-[12px] bg-white ring-1 ring-[#EEEEEE]">
+      {templates.map((tm, index) => {
+        const active = selectedId === tm.id;
+        return (
+          <button
+            key={tm.id}
+            type="button"
+            onClick={() => onSelect(tm)}
+            className={`flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition active:scale-[0.99] ${
+              active ? 'bg-[#FFF1F4]' : 'hover:bg-[#FAFAFA]'
+            } ${index > 0 ? 'border-t border-[#F3F4F6]' : ''}`}
+          >
+            <span
+              className={`min-w-0 flex-1 text-[14px] font-semibold leading-snug ${
+                active ? 'text-[#F47C8C]' : 'text-[#111827]'
+              }`}
+            >
+              {tm.title}
+            </span>
+            <span className="shrink-0 text-[12px] font-medium tabular-nums text-[#6B7280]">
+              {formatTemplateDuration(tm.durationMinutes)} · {formatTemplatePrice(tm)}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -81,21 +133,30 @@ export function PopularServiceTemplatesChips({
     () => getServiceTemplatesForCategoryCode(categoryCode ?? ''),
     [categoryCode],
   );
+  const selectedTemplate = useMemo(
+    () => templates.find((tm) => tm.id === selectedId) ?? null,
+    [selectedId, templates],
+  );
 
   if (!collapsible) {
     if (templates.length === 0) return null;
 
+    const body =
+      variant === 'cabinet' ? (
+        <TemplatesList templates={templates} selectedId={selectedId} onSelect={onSelect} />
+      ) : (
+        <TemplatesRow
+          templates={templates}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          variant={variant}
+        />
+      );
+
     return (
       <div className={className}>
         <p className={labelClass[variant]}>Популярные услуги</p>
-        <div className="mt-2 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-          <TemplatesRow
-            templates={templates}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            variant={variant}
-          />
-        </div>
+        <div className="mt-2">{body}</div>
       </div>
     );
   }
@@ -113,9 +174,20 @@ export function PopularServiceTemplatesChips({
           aria-expanded={open}
           className="flex w-full items-center justify-between gap-3 rounded-[10px] bg-[#F5F5F5] px-3.5 py-2.5 text-left transition hover:bg-[#EBEBEB] active:scale-[0.99]"
         >
-          <span className="text-[13px] font-semibold text-[#111827]">Популярные услуги</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-semibold text-[#111827]">
+              {selectedTemplate && !open ? selectedTemplate.title : 'Шаблон из каталога'}
+            </span>
+            {!open ? (
+              <span className="mt-0.5 block text-[12px] font-medium text-[#6B7280]">
+                {selectedTemplate
+                  ? `${formatTemplateDuration(selectedTemplate.durationMinutes)} · ${formatTemplatePrice(selectedTemplate)}`
+                  : 'Быстро заполнить название, цену и длительность'}
+              </span>
+            ) : null}
+          </span>
           <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-[#F47C8C]">
-            {open ? 'Скрыть' : 'Показать'}
+            {open ? 'Скрыть' : 'Выбрать'}
             <HiChevronDown
               className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
               aria-hidden
@@ -124,15 +196,14 @@ export function PopularServiceTemplatesChips({
         </button>
 
         {open ? (
-          <div className="mt-2.5 overflow-x-auto [-webkit-overflow-scrolling:touch]">
-            <p className="mb-2 text-[12px] font-medium text-[#6B7280]">
-              Нажмите на услугу — подставим название, длительность и цену
-            </p>
-            <TemplatesRow
+          <div className="mt-2.5">
+            <TemplatesList
               templates={templates}
               selectedId={selectedId}
-              onSelect={onSelect}
-              variant={variant}
+              onSelect={(tm) => {
+                onSelect(tm);
+                setOpen(false);
+              }}
             />
           </div>
         ) : null}
@@ -183,20 +254,15 @@ export function PopularServiceTemplatesChips({
               Для этой категории нет готовых шаблонов — заполните услугу вручную ниже.
             </p>
           ) : (
-            <>
-              <p className="mb-2 text-[12px] font-medium text-[#6B7280]">
-                Нажмите на услугу — подставим название, длительность и цену
-              </p>
-              <TemplatesRow
-                templates={templates}
-                selectedId={selectedId}
-                onSelect={(tm) => {
-                  onSelect(tm);
-                  setOpen(false);
-                }}
-                variant={variant}
-              />
-            </>
+            <TemplatesRow
+              templates={templates}
+              selectedId={selectedId}
+              onSelect={(tm) => {
+                onSelect(tm);
+                setOpen(false);
+              }}
+              variant={variant}
+            />
           )}
         </div>
       ) : null}

@@ -1,4 +1,4 @@
-import { HiChevronRight } from 'react-icons/hi2';
+import { HiCalendarDays, HiChevronRight } from 'react-icons/hi2';
 import {
   getCategoryWorkPhotoUrl,
   resolveCategoryWorkCode,
@@ -7,7 +7,7 @@ import type { DemoMasterService } from '../../../features/services/model/demoMas
 import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import { SectionHeading } from '../components/SectionHeading';
 import { formatServicePrice, serviceDurationLabel } from './masterProfileUtils';
-import { catalogDesktopPanel } from './masterProfileTheme';
+import { catalogDesktopPanel, catalogPrimaryBtn } from './masterProfileTheme';
 
 type Props = {
   services: DemoMasterService[];
@@ -16,8 +16,8 @@ type Props = {
   highlightServiceId?: string | null;
   onSelect: (service: DemoMasterService) => void;
   onViewAll?: () => void;
+  onBookService?: (service: DemoMasterService) => void;
   layout?: 'stack' | 'desktop';
-  /** Только карточка без «Подробнее» и стрелки (превью в онбординге). */
   previewMode?: boolean;
 };
 
@@ -40,6 +40,7 @@ export function MasterServicesList({
   highlightServiceId,
   onSelect,
   onViewAll,
+  onBookService,
   layout = 'stack',
   previewMode = false,
 }: Props) {
@@ -80,23 +81,60 @@ export function MasterServicesList({
         className="mb-4"
       />
 
-      <ul className={isDesktop ? 'space-y-3' : 'space-y-3'}>
+      <ul className={isDesktop ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-2' : 'space-y-3'}>
         {visible.map((service) => {
           const highlighted = service.id === highlightServiceId;
           const cardClass = isDesktop
-            ? `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] lg:p-5 ${
-                highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
-              } ${previewMode ? '' : 'transition hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25'}`
-            : `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ring-1 ring-[#EEEEEE] ${
-                highlighted ? 'bg-[#FFF1F4] ring-2 ring-[#F47C8C]/30' : ''
-              } ${previewMode ? '' : 'transition active:scale-[0.99] hover:bg-[#FFF1F4] hover:ring-[#F47C8C]/25'}`;
+            ? `group flex h-full flex-col overflow-hidden rounded-[20px] bg-white text-left ${
+                highlighted ? 'ring-2 ring-[#F47C8C]/25' : ''
+              } ${previewMode ? '' : 'transition hover:-translate-y-0.5'}`
+            : `group flex w-full items-center gap-4 rounded-[16px] bg-white p-4 text-left ${
+                highlighted ? 'bg-[#FFF1F4]' : ''
+              } ${previewMode ? '' : 'transition active:scale-[0.99] hover:bg-[#FFF1F4]'}`;
+
+          if (isDesktop && !previewMode) {
+            return (
+              <li key={service.id} className="flex">
+                <article className={`${cardClass} w-full`}>
+                  <button type="button" onClick={() => onSelect(service)} className="block w-full text-left">
+                    <ImageReveal
+                      src={workPhotoUrl}
+                      alt=""
+                      className="aspect-[4/3] w-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="flex flex-1 flex-col p-4">
+                      <p className="font-bold leading-snug text-[#111827] text-[17px]">{service.title}</p>
+                      {service.description?.trim() ? (
+                        <p className="mt-1 line-clamp-2 text-[13px] text-[#6B7280]">{service.description.trim()}</p>
+                      ) : null}
+                      <p className="mt-2 inline-flex w-fit rounded-[8px] bg-[#F5F5F5] px-2 py-0.5 text-[12px] font-semibold text-[#6B7280]">
+                        {serviceDurationLabel(service.duration)}
+                      </p>
+                      <p className="mt-3 text-[20px] font-bold text-[#111827]">{formatServicePrice(service)}</p>
+                    </div>
+                  </button>
+                  <div className="mt-auto border-t border-[#F0F0F0] p-4 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => (onBookService ?? onSelect)(service)}
+                      className={`${catalogPrimaryBtn} w-full min-h-10 gap-2 text-[13px]`}
+                    >
+                      <HiCalendarDays className="h-4 w-4" aria-hidden />
+                      Выбрать время
+                    </button>
+                  </div>
+                </article>
+              </li>
+            );
+          }
 
           const cardBody = (
             <>
               <ImageReveal
                 src={workPhotoUrl}
                 alt=""
-                className={`shrink-0 rounded-[14px] object-cover ring-2 ring-white ${
+                className={`shrink-0 rounded-[14px] object-cover ${
                   isDesktop ? 'h-[72px] w-[72px]' : 'h-16 w-16'
                 }`}
                 loading="lazy"

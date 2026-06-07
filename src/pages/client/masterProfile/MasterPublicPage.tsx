@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { LOGIN_PATH, MASTERS_PATH, getBookingPath, getMasterPath } from '../../../app/paths';
 import { SeoHead } from '../../../shared/seo/SeoHead';
@@ -9,14 +9,13 @@ import { useFavoriteMaster } from '../../../features/profile/hooks/useFavoriteMa
 import { useClientErrorModal } from '../ClientErrorModalContext';
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { EmptyState } from '../components/EmptyState';
-import { MasterExtraSections } from './MasterExtraSections';
-import { MasterPublicHeroSection } from './MasterPublicHeroSection';
-import { MasterPortfolioRail } from './MasterPortfolioRail';
+import { MasterProfileMainContent } from './MasterProfileMainContent';
+import { MasterProfileStatsRow } from './MasterProfileStatsRow';
+import { MasterProfileHeroCoverStack } from './MasterProfileHeroCoverStack';
 import { MasterProfileMobileToolbar } from './MasterProfileMobileToolbar';
-import { MasterReviewsSection } from './MasterReviewsSection';
-import { MasterServicesList } from './MasterServicesList';
+import { MasterPublicHeroSection } from './MasterPublicHeroSection';
 import { MasterStickyActions } from './MasterStickyActions';
-import { MasterTrustStats } from './MasterTrustStats';
+import { masterProfileCanvasClass, masterProfileHeroContentOverlapClass } from './masterProfileTheme';
 import { PortfolioImagePreview } from './PortfolioImagePreview';
 import { ServiceDetailSheet } from './ServiceDetailSheet';
 import { CLIENT_MASTER_PROFILE_PAD_BOTTOM, CLIENT_MOBILE_PAGE_TOP } from '../clientNavConstants';
@@ -26,6 +25,7 @@ import { shareMasterProfile } from './masterProfileUtils';
 import { useMasterNearestSlot } from './useMasterNearestSlot';
 import { catalogCanvasClass } from './masterProfileTheme';
 import { useMasterPublicProfile } from './useMasterPublicProfile';
+import { useMasterTopRankStatus } from './useMasterTopRankStatus';
 import { MasterProfileReportSheet } from './MasterProfileReportSheet';
 
 export function MasterPublicPage() {
@@ -42,12 +42,25 @@ export function MasterPublicPage() {
 
   const { master, loading, error, reload } = useMasterPublicProfile(masterId);
   const { nearest, loading: nearestLoading } = useMasterNearestSlot(master);
+  const topRankStatus = useMasterTopRankStatus(master, nearest);
+  const topAchievements = topRankStatus.achievements;
+  const topAchievementsReady = topRankStatus.ready ?? true;
+
+  const errorModalShownRef = useRef(false);
 
   useEffect(() => {
-    if (!error) return;
+    if (!error) {
+      errorModalShownRef.current = false;
+      return;
+    }
+    if (errorModalShownRef.current) return;
+    errorModalShownRef.current = true;
     showError('Не удалось загрузить профиль мастера. Проверьте соединение.', {
       title: 'Мастер',
-      onRetry: reload,
+      onRetry: () => {
+        errorModalShownRef.current = false;
+        reload();
+      },
     });
   }, [error, reload, showError]);
 
@@ -149,6 +162,8 @@ export function MasterPublicPage() {
         userLng={userLng}
         nearest={nearest}
         nearestLoading={nearestLoading}
+        topAchievements={topAchievements}
+        topAchievementsReady={topAchievementsReady}
         isFavorite={isFavorite}
         favoriteDisabled={favoriteDisabled}
         onFavoriteToggle={() => void toggleFavorite()}
@@ -168,17 +183,23 @@ export function MasterPublicPage() {
         portfolioItems={master.portfolio ?? []}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass} ${CLIENT_MOBILE_PAGE_TOP} text-[#111827]`}>
-        <div className="mx-auto w-full max-w-lg px-4 pt-1">
-          <MasterProfileMobileToolbar
-            masterName={master.masterName}
-            isFavorite={isFavorite}
-            onFavoriteToggle={() => void toggleFavorite()}
-            favoriteDisabled={favoriteDisabled}
-            onShare={() => void onShare()}
-            onReport={openReport}
-          />
+      <div className={`relative z-0 lg:hidden min-h-dvh ${masterProfileCanvasClass} pt-0 text-[#111827]`}>
+        <MasterProfileHeroCoverStack
+          master={master}
+          layout="mobile"
+          toolbar={
+            <MasterProfileMobileToolbar
+              masterName={master.masterName}
+              isFavorite={isFavorite}
+              onFavoriteToggle={() => void toggleFavorite()}
+              favoriteDisabled={favoriteDisabled}
+              onShare={() => void onShare()}
+              onReport={openReport}
+            />
+          }
+        />
 
+        <div className={`mx-auto w-full max-w-lg px-4 ${masterProfileHeroContentOverlapClass}`}>
           <main className={`space-y-4 pb-6 ${CLIENT_MASTER_PROFILE_PAD_BOTTOM}`}>
             <MasterPublicHeroSection
               master={master}
@@ -187,32 +208,34 @@ export function MasterPublicPage() {
               nearest={nearest}
               nearestLoading={nearestLoading}
               layout="mobile"
+              profileCardOnly
               onChooseTime={() => goToBooking(nearest?.serviceId)}
             />
 
-            <MasterServicesList
-              services={master.services}
-              categoryCode={master.categoryCode}
-              categoryLabel={master.category}
-              highlightServiceId={highlightServiceId}
-              onSelect={setServiceSheet}
-              onViewAll={() => goToBooking()}
+            <MasterProfileStatsRow
+              master={master}
+              nearest={nearest}
+              nearestLoading={nearestLoading}
+              layout="mobile"
+              onChooseTime={goToBooking}
             />
 
-            {portfolioUrls.length > 0 ? (
-              <MasterPortfolioRail
-                items={master.portfolio ?? []}
-                onOpenGallery={setGalleryIndex}
-                onViewAll={() => setGalleryIndex(0)}
-              />
-            ) : null}
-
-            <MasterTrustStats master={master} />
-            <MasterReviewsSection reviews={master.reviews} />
-            <MasterExtraSections master={master} />
+            <MasterProfileMainContent
+              master={master}
+              topAchievements={topAchievements}
+        topAchievementsReady={topAchievementsReady}
+              highlightServiceId={highlightServiceId}
+              portfolioItems={master.portfolio ?? []}
+              onSelectService={setServiceSheet}
+              onChooseTime={goToBooking}
+              onOpenGallery={setGalleryIndex}
+              onBookFromReviews={() => goToBooking(nearest?.serviceId)}
+              layout="mobile"
+            />
           </main>
 
           <MasterStickyActions
+            master={master}
             onChooseTime={() => goToBooking()}
             phone={master.phone}
             contact={master.contact}

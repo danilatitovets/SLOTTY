@@ -1,6 +1,7 @@
 export type PendingDeadlineView = {
   line: string;
   helper: string;
+  timeLabel: string;
   tone: 'normal' | 'warning' | 'critical';
   confirmDisabled: boolean;
 };
@@ -20,6 +21,7 @@ export function formatPendingDeadline(
     return {
       line: 'Заявка истекает',
       helper: 'Окно скоро снова станет свободным. Обновите список.',
+      timeLabel,
       tone: 'critical',
       confirmDisabled: true,
     };
@@ -30,6 +32,7 @@ export function formatPendingDeadline(
     return {
       line: `Осталось ${minutesLeft} мин`,
       helper: `Ответьте до ${timeLabel}, иначе окно снова станет свободным.`,
+      timeLabel,
       tone: 'warning',
       confirmDisabled: false,
     };
@@ -39,6 +42,7 @@ export function formatPendingDeadline(
     return {
       line: 'Заявка скоро истечёт',
       helper: `Ответьте до ${timeLabel}, иначе окно снова станет свободным.`,
+      timeLabel,
       tone: 'warning',
       confirmDisabled: false,
     };
@@ -47,6 +51,7 @@ export function formatPendingDeadline(
   return {
     line: `Подтвердите до ${timeLabel}`,
     helper: `Ответьте до ${timeLabel}, иначе окно снова станет свободным.`,
+    timeLabel,
     tone: 'normal',
     confirmDisabled: false,
   };

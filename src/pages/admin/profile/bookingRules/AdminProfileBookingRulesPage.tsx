@@ -15,6 +15,7 @@ import {
   paymentLabelsToCodes,
   paymentCodesToLabels,
 } from '../../../../shared/payments/paymentMethodCodes';
+import { ServicesBrandPhotoLayers } from '../../services/ServicesBrandPhotoLayers';
 import { AdminBottomSheet } from '../../shared/AdminBottomSheet';
 import { AdminToast } from '../../shared/AdminToast';
 import { useAdminToast } from '../../shared/useAdminToast';
@@ -26,9 +27,11 @@ import {
   cabinetCardPad,
   cabinetInsetShell,
   cabinetOutlineBtn,
+  sheetCancelBtnClass,
   sheetFieldClass,
   sheetHintClass,
   sheetLabelClass,
+  sheetPrimaryBtnClass,
   sheetSegmentClass,
 } from '../adminProfileCabinetTheme';
 import { PaymentMethodIcon, PaymentRulesSheetFields } from './PaymentRulesSheetFields';
@@ -61,6 +64,12 @@ type EditCardId =
   | 'payment'
   | 'refund'
   | 'preparation';
+
+const rulesSheetPanel = 'overflow-hidden rounded-[16px] bg-white p-4 sm:p-5';
+
+function RulesSheetPanel({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`${rulesSheetPanel} ${className}`.trim()}>{children}</div>;
+}
 
 const CARD_META: Record<EditCardId, { title: string; icon: CabinetIconName }> = {
   booking: { title: 'Запись', icon: 'calendar' },
@@ -123,38 +132,50 @@ function CompletionRing({ percent }: { percent: number }) {
 }
 
 function ClientPreviewMockup({ lines, compact }: { lines: string[]; compact?: boolean }) {
+  const photoHeight = compact ? 'h-[4.5rem]' : 'h-[6.5rem] sm:h-[7rem]';
+
   return (
     <div
-      className={`w-full rounded-[18px] bg-white ring-1 ring-[#F3F4F6] lg:mx-auto lg:max-w-[280px] ${
-        compact ? 'p-3' : 'rounded-[22px] p-4'
+      className={`relative w-full min-w-0 overflow-hidden rounded-[16px] bg-white lg:mx-auto lg:max-w-[280px] ${
+        compact ? '' : 'ring-1 ring-[#EEEEEE]'
       }`}
     >
-      <p
-        className={`text-center font-semibold uppercase tracking-wide text-[#9CA3AF] ${
-          compact ? 'mb-2 text-[10px]' : 'mb-3 text-[11px]'
-        }`}
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 overflow-hidden ${photoHeight}`}
+        aria-hidden
       >
-        Правила мастера
-      </p>
-      <ul className="space-y-0">
-        {lines.map((line) => (
-          <li
-            key={line}
-            className={`border-b border-[#F3F4F6] leading-snug text-[#374151] last:border-0 ${
-              compact ? 'py-2 text-[12px]' : 'py-2.5 text-[13px]'
-            }`}
-          >
-            {line}
-          </li>
-        ))}
-      </ul>
-      <p
-        className={`text-center leading-relaxed text-[#9CA3AF] ${
-          compact ? 'mt-2 text-[10px]' : 'mt-3 text-[11px]'
-        }`}
-      >
-        Вопросы? Напишите мастеру в чат
-      </p>
+        <ServicesBrandPhotoLayers roundedClassName="rounded-t-[16px]" />
+        <span className="absolute inset-0 bg-gradient-to-b from-[#EF4444]/15 via-white/55 to-white" />
+      </div>
+
+      <div className={`relative z-10 ${compact ? 'px-3 py-3' : 'px-4 py-4 sm:px-5 sm:py-5'}`}>
+        <p
+          className={`font-bold uppercase tracking-[0.1em] text-[#9CA3AF] ${
+            compact ? 'text-[10px]' : 'text-[10px]'
+          }`}
+        >
+          Правила мастера
+        </p>
+        <ul className="mt-3 space-y-0 border-t border-[#F0F0F0] pt-3">
+          {lines.map((line) => (
+            <li
+              key={line}
+              className={`border-b border-[#F0F0F0] leading-snug text-[#374151] last:border-0 ${
+                compact ? 'py-2 text-[12px]' : 'py-2.5 text-[13px]'
+              }`}
+            >
+              {line}
+            </li>
+          ))}
+        </ul>
+        <p
+          className={`text-center leading-relaxed text-[#9CA3AF] ${
+            compact ? 'mt-2 text-[10px]' : 'mt-3 text-[11px]'
+          }`}
+        >
+          Вопросы? Напишите мастеру в чат
+        </p>
+      </div>
     </div>
   );
 }
@@ -170,8 +191,11 @@ function ClientPreviewPanel({
     <div className={compact ? '' : `${cabinetCard} ${cabinetCardPad}`}>
       {!compact ? (
         <div className="mb-4 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#FFF1F4] text-[#F47C8C]">
-            <HiShieldCheck className="h-5 w-5" />
+          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-white">
+            <ServicesBrandPhotoLayers roundedClassName="rounded-[10px]" />
+            <span className="relative z-10">
+              <HiShieldCheck className="h-5 w-5" aria-hidden />
+            </span>
           </span>
           <div>
             <h2 className="text-[15px] font-semibold text-[#111827]">Как это увидит клиент</h2>
@@ -179,9 +203,7 @@ function ClientPreviewPanel({
           </div>
         </div>
       ) : null}
-      <div className={`${cabinetInsetShell} ${compact ? 'p-4' : 'p-4 sm:p-5'}`}>
-        <ClientPreviewMockup lines={lines} compact={compact} />
-      </div>
+      <ClientPreviewMockup lines={lines} compact={compact} />
     </div>
   );
 }
@@ -362,28 +384,33 @@ function SegmentPicker<T extends string | number | boolean | null>({
   options,
   value,
   onChange,
+  layout = 'grid',
 }: {
   options: Array<{ value: T; label: string }>;
   value: T;
   onChange: (v: T) => void;
+  layout?: 'grid' | 'stack';
 }) {
+  const gridClass =
+    layout === 'stack'
+      ? 'grid grid-cols-1 gap-1.5'
+      : 'grid grid-cols-2 gap-1.5 sm:grid-cols-2';
+
   return (
-    <div className="mt-2 rounded-[12px] bg-[#F5F5F5] p-2">
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const on = opt.value === value;
-          return (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              className={sheetSegmentClass(on)}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className={`mt-2 rounded-[10px] bg-[#F5F5F5] p-1.5 ${gridClass}`}>
+      {options.map((opt) => {
+        const on = opt.value === value;
+        return (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`${sheetSegmentClass(on)} w-full text-left`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -505,115 +532,140 @@ export function AdminProfileBookingRulesPage({ useCabinetApi = true }: Props) {
     let body: ReactNode = null;
     if (editCard === 'booking') {
       body = (
-        <>
-          <p className={sheetLabelClass}>Минимальное время до записи</p>
-          <SegmentPicker
-            value={draft.minBookingNoticeMinutes}
-            onChange={(v) => patchDraft({ minBookingNoticeMinutes: v as number })}
-            options={MIN_NOTICE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
-          <p className={`${sheetLabelClass} mt-4`}>Подтверждение мастером</p>
-          <SegmentPicker
-            value={draft.requiresMasterConfirmation}
-            onChange={(v) => patchDraft({ requiresMasterConfirmation: v as boolean })}
-            options={[
-              { value: true, label: 'Заявка мастера' },
-              { value: false, label: 'Авто (скоро)' },
-            ]}
-          />
-        </>
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Минимальное время до записи</p>
+            <SegmentPicker
+              value={draft.minBookingNoticeMinutes}
+              onChange={(v) => patchDraft({ minBookingNoticeMinutes: v as number })}
+              options={MIN_NOTICE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
+          </RulesSheetPanel>
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Подтверждение мастером</p>
+            <SegmentPicker
+              value={draft.requiresMasterConfirmation}
+              onChange={(v) => patchDraft({ requiresMasterConfirmation: v as boolean })}
+              options={[
+                { value: true, label: 'Заявка мастера' },
+                { value: false, label: 'Авто (скоро)' },
+              ]}
+            />
+          </RulesSheetPanel>
+        </div>
       );
     } else if (editCard === 'cancel') {
       body = (
-        <>
-          <p className={sheetLabelClass}>Бесплатная отмена</p>
-          <SegmentPicker
-            value={draft.freeCancelBeforeMinutes}
-            onChange={(v) => patchDraft({ freeCancelBeforeMinutes: v as number })}
-            options={FREE_CANCEL_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
-          <p className={`${sheetLabelClass} mt-4`}>Поздняя отмена</p>
-          <SegmentPicker
-            value={draft.lateCancelPolicy}
-            onChange={(v) => patchDraft({ lateCancelPolicy: v as BookingRulesFormState['lateCancelPolicy'] })}
-            options={Object.entries(LATE_CANCEL_LABELS).map(([value, label]) => ({
-              value: value as BookingRulesFormState['lateCancelPolicy'],
-              label,
-            }))}
-          />
-        </>
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Бесплатная отмена</p>
+            <SegmentPicker
+              value={draft.freeCancelBeforeMinutes}
+              onChange={(v) => patchDraft({ freeCancelBeforeMinutes: v as number })}
+              options={FREE_CANCEL_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
+          </RulesSheetPanel>
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Поздняя отмена</p>
+            <SegmentPicker
+              value={draft.lateCancelPolicy}
+              onChange={(v) => patchDraft({ lateCancelPolicy: v as BookingRulesFormState['lateCancelPolicy'] })}
+              options={Object.entries(LATE_CANCEL_LABELS).map(([value, label]) => ({
+                value: value as BookingRulesFormState['lateCancelPolicy'],
+                label,
+              }))}
+              layout="stack"
+            />
+          </RulesSheetPanel>
+        </div>
       );
     } else if (editCard === 'lateness') {
       body = (
-        <>
-          <p className={sheetLabelClass}>Допустимое опоздание</p>
-          <SegmentPicker
-            value={draft.allowedLatenessMinutes}
-            onChange={(v) => patchDraft({ allowedLatenessMinutes: v as number })}
-            options={LATENESS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
-          <p className={`${sheetLabelClass} mt-4`}>Если клиент опоздал больше</p>
-          <SegmentPicker
-            value={draft.lateArrivalPolicy}
-            onChange={(v) =>
-              patchDraft({ lateArrivalPolicy: v as BookingRulesFormState['lateArrivalPolicy'] })
-            }
-            options={Object.entries(LATE_ARRIVAL_LABELS).map(([value, label]) => ({
-              value: value as BookingRulesFormState['lateArrivalPolicy'],
-              label,
-            }))}
-          />
-        </>
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Допустимое опоздание</p>
+            <SegmentPicker
+              value={draft.allowedLatenessMinutes}
+              onChange={(v) => patchDraft({ allowedLatenessMinutes: v as number })}
+              options={LATENESS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
+          </RulesSheetPanel>
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Если клиент опоздал больше</p>
+            <SegmentPicker
+              value={draft.lateArrivalPolicy}
+              onChange={(v) =>
+                patchDraft({ lateArrivalPolicy: v as BookingRulesFormState['lateArrivalPolicy'] })
+              }
+              options={Object.entries(LATE_ARRIVAL_LABELS).map(([value, label]) => ({
+                value: value as BookingRulesFormState['lateArrivalPolicy'],
+                label,
+              }))}
+              layout="stack"
+            />
+          </RulesSheetPanel>
+        </div>
       );
     } else if (editCard === 'no_show') {
       body = (
-        <>
-          <p className={sheetLabelClass}>Считать неявкой через</p>
-          <SegmentPicker
-            value={draft.noShowAfterMinutes}
-            onChange={(v) => patchDraft({ noShowAfterMinutes: v as number })}
-            options={NO_SHOW_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
-          <p className={`${sheetLabelClass} mt-4`}>Последствие</p>
-          <SegmentPicker
-            value={draft.noShowPolicy}
-            onChange={(v) => patchDraft({ noShowPolicy: v as BookingRulesFormState['noShowPolicy'] })}
-            options={Object.entries(NO_SHOW_POLICY_LABELS).map(([value, label]) => ({
-              value: value as BookingRulesFormState['noShowPolicy'],
-              label,
-            }))}
-          />
-        </>
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Считать неявкой через</p>
+            <SegmentPicker
+              value={draft.noShowAfterMinutes}
+              onChange={(v) => patchDraft({ noShowAfterMinutes: v as number })}
+              options={NO_SHOW_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
+          </RulesSheetPanel>
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Последствие</p>
+            <SegmentPicker
+              value={draft.noShowPolicy}
+              onChange={(v) => patchDraft({ noShowPolicy: v as BookingRulesFormState['noShowPolicy'] })}
+              options={Object.entries(NO_SHOW_POLICY_LABELS).map(([value, label]) => ({
+                value: value as BookingRulesFormState['noShowPolicy'],
+                label,
+              }))}
+              layout="stack"
+            />
+          </RulesSheetPanel>
+        </div>
       );
     } else if (editCard === 'reschedule') {
       body = (
-        <>
-          <p className={sheetLabelClass}>Перенос разрешён</p>
-          <SegmentPicker
-            value={draft.rescheduleEnabled}
-            onChange={(v) => patchDraft({ rescheduleEnabled: v as boolean })}
-            options={[
-              { value: true, label: 'Да' },
-              { value: false, label: 'Нет' },
-            ]}
-          />
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <p className={sheetLabelClass}>Перенос разрешён</p>
+            <SegmentPicker
+              value={draft.rescheduleEnabled}
+              onChange={(v) => patchDraft({ rescheduleEnabled: v as boolean })}
+              options={[
+                { value: true, label: 'Да' },
+                { value: false, label: 'Нет' },
+              ]}
+            />
+          </RulesSheetPanel>
           {draft.rescheduleEnabled ? (
             <>
-              <p className={`${sheetLabelClass} mt-4`}>Минимальное время до переноса</p>
-              <SegmentPicker
-                value={draft.rescheduleBeforeMinutes}
-                onChange={(v) => patchDraft({ rescheduleBeforeMinutes: v as number })}
-                options={RESCHEDULE_BEFORE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-              />
-              <p className={`${sheetLabelClass} mt-4`}>Сколько раз можно перенести</p>
-              <SegmentPicker
-                value={draft.rescheduleLimit}
-                onChange={(v) => patchDraft({ rescheduleLimit: v as number | null })}
-                options={RESCHEDULE_LIMIT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-              />
+              <RulesSheetPanel>
+                <p className={sheetLabelClass}>Минимальное время до переноса</p>
+                <SegmentPicker
+                  value={draft.rescheduleBeforeMinutes}
+                  onChange={(v) => patchDraft({ rescheduleBeforeMinutes: v as number })}
+                  options={RESCHEDULE_BEFORE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
+              </RulesSheetPanel>
+              <RulesSheetPanel>
+                <p className={sheetLabelClass}>Сколько раз можно перенести</p>
+                <SegmentPicker
+                  value={draft.rescheduleLimit}
+                  onChange={(v) => patchDraft({ rescheduleLimit: v as number | null })}
+                  options={RESCHEDULE_LIMIT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                />
+              </RulesSheetPanel>
             </>
           ) : null}
-        </>
+        </div>
       );
     } else if (editCard === 'payment') {
       const togglePaymentMethod = (opt: PaymentOption) => {
@@ -635,18 +687,20 @@ export function AdminProfileBookingRulesPage({ useCabinetApi = true }: Props) {
         });
       };
       body = (
-        <PaymentRulesSheetFields
-          paymentMethods={draft.paymentMethods}
-          onTogglePaymentMethod={togglePaymentMethod}
-          preferredBankIds={draft.preferredBankIds}
-          onTogglePreferredBank={toggleBank}
-          paymentComment={draft.paymentComment}
-          onPaymentCommentChange={(v) => patchDraft({ paymentComment: v })}
-        />
+        <RulesSheetPanel>
+          <PaymentRulesSheetFields
+            paymentMethods={draft.paymentMethods}
+            onTogglePaymentMethod={togglePaymentMethod}
+            preferredBankIds={draft.preferredBankIds}
+            onTogglePreferredBank={toggleBank}
+            paymentComment={draft.paymentComment}
+            onPaymentCommentChange={(v) => patchDraft({ paymentComment: v })}
+          />
+        </RulesSheetPanel>
       );
     } else if (editCard === 'refund') {
       body = (
-        <>
+        <RulesSheetPanel>
           <p className={sheetHintClass}>Доступно при онлайн-оплате.</p>
           <label className="mt-3 flex items-center gap-2">
             <input
@@ -664,39 +718,44 @@ export function AdminProfileBookingRulesPage({ useCabinetApi = true }: Props) {
               onChange={(e) => patchDraft({ refundPolicyText: e.target.value || null })}
               rows={3}
               placeholder="Например: возврат при отмене за 12+ часов, до 3 рабочих дней"
-              className={`${sheetFieldClass} mt-2 resize-none`}
+              className={`${sheetFieldClass} resize-none`}
             />
           </label>
-        </>
+        </RulesSheetPanel>
       );
     } else if (editCard === 'preparation') {
       body = (
-        <>
-          <label className="block">
-            <span className={sheetLabelClass}>Что важно знать клиенту</span>
-            <textarea
-              value={draft.visitPreparationText ?? ''}
-              onChange={(e) => patchDraft({ visitPreparationText: e.target.value || null })}
-              rows={2}
-              className={`${sheetFieldClass} mt-2 resize-none`}
-            />
-          </label>
-          <label className="mt-4 block">
-            <span className={sheetLabelClass}>Противопоказания / аллергии</span>
-            <textarea
-              value={draft.contraindicationsText ?? ''}
-              onChange={(e) => patchDraft({ contraindicationsText: e.target.value || null })}
-              rows={2}
-              className={`${sheetFieldClass} mt-2 resize-none`}
-            />
-          </label>
-        </>
+        <div className="space-y-4">
+          <RulesSheetPanel>
+            <label className="block">
+              <span className={sheetLabelClass}>Что важно знать клиенту</span>
+              <textarea
+                value={draft.visitPreparationText ?? ''}
+                onChange={(e) => patchDraft({ visitPreparationText: e.target.value || null })}
+                rows={2}
+                className={`${sheetFieldClass} resize-none`}
+              />
+            </label>
+          </RulesSheetPanel>
+          <RulesSheetPanel>
+            <label className="block">
+              <span className={sheetLabelClass}>Противопоказания / аллергии</span>
+              <textarea
+                value={draft.contraindicationsText ?? ''}
+                onChange={(e) => patchDraft({ contraindicationsText: e.target.value || null })}
+                rows={2}
+                className={`${sheetFieldClass} resize-none`}
+              />
+            </label>
+          </RulesSheetPanel>
+        </div>
       );
     }
 
     return (
       <AdminBottomSheet
         variant="catalog"
+        borderless
         open={editCard != null}
         onClose={() => {
           setEditCard(null);
@@ -704,11 +763,16 @@ export function AdminProfileBookingRulesPage({ useCabinetApi = true }: Props) {
         }}
         title={CARD_META[editCard].title}
         footer={
-          <div className="flex w-full flex-col gap-2 sm:flex-row">
-            <button type="button" onClick={() => setEditCard(null)} className={cabinetOutlineBtn}>
+          <div className="flex w-full gap-3">
+            <button type="button" onClick={() => setEditCard(null)} className={sheetCancelBtnClass}>
               Отмена
             </button>
-            <button type="button" onClick={() => void applyEdit()} className={`${settingsPinkBtn} w-full sm:flex-1`}>
+            <button
+              type="button"
+              disabled={editCard === 'payment' && saving}
+              onClick={() => void applyEdit()}
+              className={sheetPrimaryBtnClass}
+            >
               {editCard === 'payment' && saving ? 'Сохранение…' : 'Готово'}
             </button>
           </div>
@@ -796,7 +860,7 @@ export function AdminProfileBookingRulesPage({ useCabinetApi = true }: Props) {
         </div>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-[calc(var(--slotty-admin-desktop-topbar-h,4.75rem)+1rem)]">
+          <div className="sticky top-[calc(var(--slotty-admin-desktop-topbar-h,5rem)+1rem)]">
             <ClientPreviewPanel lines={previewLines} />
           </div>
         </aside>

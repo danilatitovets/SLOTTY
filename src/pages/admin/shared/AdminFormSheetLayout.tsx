@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
+import { SlottyImg } from '../../../shared/ui/SlottyImg';
 import {
   adminFormSheetSection,
   adminFormSheetSectionCatalog,
@@ -8,11 +9,37 @@ import {
   adminFormSheetSectionTitleCatalog,
   adminFormSheetHighlight,
   adminFormSheetMetricCatalog,
+  adminFormSheetStepDoneIconSrc,
 } from './adminFormSheetTheme';
 import { adminSheetBodyPad } from './adminCabinetSheetTheme';
 
 const STEPPER_CIRCLE =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition sm:h-10 sm:w-10';
+
+const STEPPER_DONE_ICON = 'h-9 w-9 object-contain sm:h-10 sm:w-10';
+
+function StepperStepMark({
+  done,
+  index,
+  large,
+}: {
+  done: boolean;
+  index: number;
+  large?: boolean;
+}) {
+  if (done) {
+    return (
+      <SlottyImg
+        src={adminFormSheetStepDoneIconSrc}
+        alt=""
+        className={large ? 'h-9 w-9 object-contain lg:h-11 lg:w-11' : STEPPER_DONE_ICON}
+        decoding="async"
+        aria-hidden
+      />
+    );
+  }
+  return <>{index + 1}</>;
+}
 
 function stepperCircleClass(active: boolean, done: boolean, accent: 'brand' | 'schedule'): string {
   if (active || done) {
@@ -63,10 +90,14 @@ export function AdminFormSheetStepper({
                 ) : null}
                 <div className="flex min-w-0 max-w-[4.75rem] shrink-0 flex-col items-center gap-1.5 sm:max-w-none sm:flex-1">
                   <div
-                    className={`${STEPPER_CIRCLE} ${stepperCircleClass(active, done, accent)}`}
+                    className={
+                      done
+                        ? 'flex shrink-0 items-center justify-center'
+                        : `${STEPPER_CIRCLE} ${stepperCircleClass(active, done, accent)}`
+                    }
                     aria-current={active ? 'step' : undefined}
                   >
-                    {done ? '✓' : index + 1}
+                    <StepperStepMark done={done} index={index} />
                   </div>
                   <span
                     className={`w-full text-center text-[10px] leading-tight sm:text-[11px] ${stepperLabelClass(active, done)}`}
@@ -95,11 +126,15 @@ export function AdminFormSheetStepper({
           return (
             <div key={label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
               <div
-                className={`${STEPPER_CIRCLE} lg:h-11 lg:w-11 lg:text-[14px] ${reached ? activeAccentClass : 'bg-[#EBEBEB] text-[#9CA3AF]'}`}
+                className={
+                  done
+                    ? 'flex shrink-0 items-center justify-center lg:h-11 lg:w-11'
+                    : `${STEPPER_CIRCLE} lg:h-11 lg:w-11 lg:text-[14px] ${reached ? activeAccentClass : 'bg-[#EBEBEB] text-[#9CA3AF]'}`
+                }
                 aria-current={active ? 'step' : undefined}
                 title={label}
               >
-                {done ? '✓' : index + 1}
+                <StepperStepMark done={done} index={index} large />
               </div>
               <span
                 className={`w-full truncate text-center text-[11px] font-semibold leading-tight ${

@@ -36,3 +36,7 @@ export const adminFormSheetSectionHintCatalog =
 
 export const adminFormSheetMetricCatalog =
   'rounded-[10px] bg-[#EBEBEB] px-4 py-3.5';
+
+/** `public/photos/значки/галочка.png` — пройденный шаг в степпере форм. */
+export const adminFormSheetStepDoneIconSrc =
+  `/photos/${encodeURIComponent('значки')}/${encodeURIComponent('галочка.png')}`;

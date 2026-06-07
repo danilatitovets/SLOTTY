@@ -45,7 +45,7 @@ function monthScore(m: ServiceListingRecord): number {
   );
 }
 
-function isLikelyNew(m: ServiceListingRecord): boolean {
+export function isLikelyNewMaster(m: ServiceListingRecord): boolean {
   return m.reviewsCount <= 3 && m.rating >= 4.3;
 }
 
@@ -113,7 +113,7 @@ export function buildMastersTopRankSections(masters: ServiceListingRecord[]): Ma
   });
 
   const newItems = takeTop(
-    [...masters].filter(isLikelyNew).sort((a, b) => masterTopRankScore(b) - masterTopRankScore(a)),
+    [...masters].filter(isLikelyNewMaster).sort((a, b) => masterTopRankScore(b) - masterTopRankScore(a)),
     6,
   );
   if (newItems.length >= 1) {

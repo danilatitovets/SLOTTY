@@ -12,12 +12,6 @@ const VISIBILITY_LABELS: Record<CatalogFiltersState['visibility'], string> = {
   hidden: 'Скрытые',
 };
 
-const PRICE_LABELS: Record<CatalogFiltersState['price'], string> = {
-  all: 'Любая цена',
-  fixed: 'Точная цена',
-  from: 'Цена «от»',
-};
-
 const DURATION_LABELS: Record<CatalogFiltersState['duration'], string> = {
   all: 'Любая длительность',
   short: 'До 30 мин',
@@ -42,7 +36,9 @@ export function catalogFilterChipLabel(
     case 'visibility':
       return VISIBILITY_LABELS[value as CatalogFiltersState['visibility']];
     case 'price':
-      return PRICE_LABELS[value as CatalogFiltersState['price']];
+      if (value === 'fixed') return 'Точная цена';
+      if (value === 'from') return 'Цена «от»';
+      return 'Любая цена';
     case 'duration':
       return DURATION_LABELS[value as CatalogFiltersState['duration']];
     case 'sort':
@@ -62,11 +58,18 @@ export function getActiveCatalogFilterChips(filters: CatalogFiltersState): Catal
       reset: { visibility: 'all' },
     });
   }
-  if (filters.price !== 'all') {
+  if (filters.price === 'fixed') {
     chips.push({
       key: 'price',
-      label: PRICE_LABELS[filters.price],
-      reset: { price: 'all' },
+      label: 'Точная цена',
+      reset: { price: 'all', priceFromMin: null },
+    });
+  }
+  if (filters.price === 'from' && filters.priceFromMin != null) {
+    chips.push({
+      key: 'priceFromMin',
+      label: `От ${filters.priceFromMin} BYN`,
+      reset: { price: 'all', priceFromMin: null },
     });
   }
   if (filters.duration !== 'all') {

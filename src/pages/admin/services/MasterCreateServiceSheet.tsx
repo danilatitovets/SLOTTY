@@ -3,30 +3,19 @@ import type { MasterDraft, MasterOnboardingService } from '../../../features/pro
 import { postMasterService } from '../../../features/admin/api/masterCabinetApi';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useMasterPlanEntitlements } from '../../../features/billing/useMasterPlanEntitlements';
-import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
-import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
-import {
-  catalogSheetPrimaryBtn,
-  catalogSheetSecondaryBtn,
-} from '../shared/adminCatalogSheetTheme';
-import {
-  sheetFieldClass,
-  sheetLabelClass,
-  sheetSegmentClass,
-} from '../profile/adminProfileCabinetTheme';
+import { ServicesServiceSheet } from './ServicesServiceSheet';
 import { useSingleFlight } from '../shared/useSingleFlight';
 import {
   getServiceTitlePlaceholder,
   templatePriceTypeToApp,
   type ServiceTemplate,
 } from '../../../constants/serviceTemplates';
-import { PopularServiceTemplatesChips } from '../../../features/catalog/PopularServiceTemplatesChips';
 import {
   cabinetServiceDtoToManaged,
   draftWithServices,
 } from './servicesCabinetSync';
 import type { ManagedService } from './servicesFormat';
+import { ServicesServiceFormFields } from './ServicesServiceFormFields';
 
 const DEFAULT_SERVICE_DURATION_MIN = 60;
 
@@ -46,8 +35,6 @@ function normalizeService(service: MasterOnboardingService, index: number): Mana
     sortOrder: item.sortOrder ?? index,
   };
 }
-
-const sheetSegmentWrap = 'grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5';
 
 type Props = {
   open: boolean;
@@ -75,6 +62,7 @@ export function MasterCreateServiceSheet({
   const [priceType, setPriceType] = useState<'fixed' | 'from'>('fixed');
   const [durationMin, setDurationMin] = useState(String(DEFAULT_SERVICE_DURATION_MIN));
   const [desc, setDesc] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [templateHighlightId, setTemplateHighlightId] = useState<string | null>(null);
 
@@ -98,6 +86,7 @@ export function MasterCreateServiceSheet({
     setPriceType('fixed');
     setDurationMin(String(DEFAULT_SERVICE_DURATION_MIN));
     setDesc('');
+    setIsActive(true);
     setFormError(null);
     setTemplateHighlightId(null);
   }, []);
@@ -144,7 +133,7 @@ export function MasterCreateServiceSheet({
         durationMin: durationNumber,
         priceByn: priceNumber,
         priceType,
-        isActive: true,
+        isActive,
         description: preparedDescription,
         sortOrder: services.length,
       };
@@ -189,6 +178,7 @@ export function MasterCreateServiceSheet({
     durationMin,
     freeServiceLimitReached,
     handleClose,
+    isActive,
     onCreated,
     onPersist,
     price,
@@ -200,93 +190,45 @@ export function MasterCreateServiceSheet({
   ]);
 
   return (
-    <AdminBottomSheet
-      variant="catalog"
+    <ServicesServiceSheet
       open={open}
       onClose={handleClose}
       title="Новая услуга"
-      footer={
-        <div className="flex w-full gap-3">
-          <button type="button" onClick={handleClose} disabled={busy} className={catalogSheetSecondaryBtn}>
-            Отмена
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void saveService()}
-            className={catalogSheetPrimaryBtn}
-          >
-            {busy ? 'Сохранение…' : 'Сохранить'}
-          </button>
-        </div>
-      }
+      mode="create"
+      busy={busy}
+      saveLabel="Сохранить"
+      onSave={() => void saveService()}
+      titleValue={title}
+      price={price}
+      durationMin={durationMin}
     >
-      <div className="space-y-4">
-        {formError ? (
-          <p className="rounded-[12px] bg-[#FEF2F2] px-3 py-2 text-[13px] font-semibold text-[#B91C1C]">
-            {formError}
-          </p>
-        ) : null}
-
-        <AdminFormSheetSection title="Основное" description="Название и цена для каталога">
-          <PopularServiceTemplatesChips
-            collapsible
-            collapsibleCompact
-            variant="cabinet"
-            categoryCode={serviceCategoryCode}
-            categoryLabel={draft.category}
-            selectedId={templateHighlightId}
-            onSelect={applyServiceTemplate}
-            className="mb-4"
-          />
-          <label className="block">
-            <AdminSheetFieldLabel required className={sheetLabelClass}>
-              Название услуги
-            </AdminSheetFieldLabel>
-            <input
-              value={title}
-              onChange={(event) => {
-                setTitle(event.target.value);
-                setTemplateHighlightId(null);
-              }}
-              className={sheetFieldClass}
-              placeholder={serviceTitlePlaceholder}
-            />
-          </label>
-          <label className="mt-4 block">
-            <AdminSheetFieldLabel required className={sheetLabelClass}>
-              Цена, BYN
-            </AdminSheetFieldLabel>
-            <input
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              inputMode="decimal"
-              className={sheetFieldClass}
-              placeholder="45"
-            />
-          </label>
-        </AdminFormSheetSection>
-
-        <AdminFormSheetSection title="Тип цены">
-          <div className={sheetSegmentWrap}>
-            {(
-              [
-                { id: 'fixed' as const, label: 'Точная цена' },
-                { id: 'from' as const, label: 'Цена от' },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setPriceType(item.id)}
-                className={sheetSegmentClass(priceType === item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </AdminFormSheetSection>
-      </div>
-    </AdminBottomSheet>
+      {({ step, stepError }) => (
+        <ServicesServiceFormFields
+          mode="create"
+          open={open}
+          step={step}
+          stepError={stepError}
+          title={title}
+          onTitleChange={setTitle}
+          price={price}
+          onPriceChange={setPrice}
+          priceType={priceType}
+          onPriceTypeChange={setPriceType}
+          isActive={isActive}
+          onIsActiveChange={setIsActive}
+          desc={desc}
+          onDescChange={setDesc}
+          durationMin={durationMin}
+          onDurationMinChange={setDurationMin}
+          formError={formError}
+          serviceCategoryCode={serviceCategoryCode}
+          categoryLabel={draft.category}
+          templateHighlightId={templateHighlightId}
+          onApplyTemplate={applyServiceTemplate}
+          onClearTemplateHighlight={() => setTemplateHighlightId(null)}
+          serviceTitlePlaceholder={serviceTitlePlaceholder}
+        />
+      )}
+    </ServicesServiceSheet>
   );
 }

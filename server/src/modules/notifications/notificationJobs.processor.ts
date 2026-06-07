@@ -168,7 +168,9 @@ export async function processNotificationJob(job: NotificationJobRow): Promise<P
       ? 'appointment_reminder'
     : job.job_type === 'booking_client_confirmed'
       ? 'appointment_confirmed'
-      : job.job_type === 'booking_master_new'
+      : job.job_type === 'booking_master_new' ||
+          job.job_type === 'booking_master_pending_reminder' ||
+          job.job_type === 'booking_master_pending_deadline'
         ? 'appointment_new'
         : 'appointment_pending';
 

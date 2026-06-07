@@ -55,9 +55,8 @@ export const catalogDesktopShellClass =
 /** Обёртка toolbar на десктопе (внутри fixed-shell, sticky не нужен) */
 export const catalogDesktopToolbarStickyClass = 'shrink-0 bg-[#F5F5F5]';
 
-/** Мобильный sticky: шапка каталога + поиск (один блок). */
-export const catalogStickyToolbarClass =
-  'sticky z-40 bg-[#F5F5F5]/95 backdrop-blur-sm';
+/** Мобильный sticky: липнет только белая карточка внутри, без серой подложки. */
+export const catalogStickyToolbarClass = 'sticky z-40';
 
 /** Только шапка каталога — липнет на мобиле; фон только у белой карточки, без серой подложки. */
 export const catalogMobilePageToolbarSticky =

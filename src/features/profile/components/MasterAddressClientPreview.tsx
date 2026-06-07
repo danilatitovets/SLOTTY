@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import { isEmptyDisplayValue } from '../../../shared/lib/emptyDisplayText';
 import {
-  HiArrowLeftOnRectangle,
+  HiArrowRightEndOnRectangle,
   HiArrowTrendingUp,
   HiBuildingOffice2,
   HiChatBubbleLeftEllipsis,
-  HiDevicePhoneMobile,
   HiHome,
   HiKey,
   HiMap,
   HiMapPin,
-  HiSquares2X2,
+  HiRectangleStack,
+  HiSpeakerWave,
 } from 'react-icons/hi2';
 import {
   buildLocationAfterBookingPreview,
@@ -39,10 +39,10 @@ const DETAIL_ICONS = {
   'map-pin': HiMapPin,
   building: HiBuildingOffice2,
   home: HiHome,
-  entrance: HiArrowLeftOnRectangle,
-  floor: HiSquares2X2,
+  entrance: HiArrowRightEndOnRectangle,
+  floor: HiRectangleStack,
   apartment: HiKey,
-  intercom: HiDevicePhoneMobile,
+  intercom: HiSpeakerWave,
   landmark: HiMap,
   directions: HiArrowTrendingUp,
   comment: HiChatBubbleLeftEllipsis,

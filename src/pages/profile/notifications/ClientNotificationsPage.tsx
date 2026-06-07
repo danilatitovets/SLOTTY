@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { HiArrowLeft } from 'react-icons/hi2';
-import { PROFILE_PATH } from '../../../app/paths';
-import { useMyNotifications } from '../../../features/notifications/useMyNotifications';
 import { useAuth } from '../../../features/auth/AuthProvider';
+import { useClientCabinetMobileTabNav } from '../clientProfile/clientCabinetMobileTabs';
+import { ClientCabinetMobileShell } from '../clientProfile/ClientCabinetMobileShell';
+import { useClientNotifications } from './ClientNotificationsContext';
+import { useIsMasterUser } from '../../../features/profile/hooks/useIsMasterUser';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
-import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../../client/clientNavConstants';
-import { catalogCanvasClass } from '../clientProfile/clientProfileTheme';
+import { ClientCabinetDesktopShell } from '../clientProfile/ClientCabinetDesktopShell';
 import { ClientNotificationCard } from './ClientNotificationCard';
 import { ClientNotificationDetailSheet } from './ClientNotificationDetailSheet';
 import { ClientNotificationsEmptyState } from './ClientNotificationsEmptyState';
@@ -16,33 +15,18 @@ import {
 } from './ClientNotificationsFilterBar';
 import { ClientNotificationsHero } from './ClientNotificationsHero';
 import {
-  clientNotificationsBackLinkClass,
-  clientNotificationsCanvasClass,
-  clientNotificationsDesktopShellClass,
   clientNotificationsErrorBox,
   clientNotificationsLoadingPanel,
   clientNotificationsPrimaryBtn,
 } from './clientNotificationsTheme';
 
-function ClientNotificationsPageHeader() {
-  return (
-    <>
-      <Link to={PROFILE_PATH} className={clientNotificationsBackLinkClass}>
-        <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-        Профиль
-      </Link>
-      <h1 className="mt-3 hidden text-[26px] font-bold tracking-[-0.04em] text-[#111827] lg:block">
-        Уведомления
-      </h1>
-    </>
-  );
-}
-
 export function ClientNotificationsPage() {
   const { isAuthenticated, backendConfigured } = useAuth();
+  const isMasterCabinet = useIsMasterUser();
   const enabled = isAuthenticated && backendConfigured;
-  const { notifications, loading, error, reload, markAsRead, markAllAsRead, unreadCount } =
-    useMyNotifications(enabled, { audience: 'client' });
+  const { activeTab, selectTab } = useClientCabinetMobileTabNav();
+  const { notifications, initialLoading, error, reload, markAsRead, markAllAsRead, unreadCount } =
+    useClientNotifications();
   const [filter, setFilter] = useState<ClientNotificationsFilter>('all');
   const [selected, setSelected] = useState<(typeof notifications)[number] | null>(null);
 
@@ -57,7 +41,7 @@ export function ClientNotificationsPage() {
   }, [filter, notifications]);
 
   const filterBar =
-    !loading && !error && notifications.length > 0 ? (
+    !initialLoading && !error && notifications.length > 0 ? (
       <ClientNotificationsFilterBar
         filter={filter}
         onFilter={setFilter}
@@ -79,14 +63,18 @@ export function ClientNotificationsPage() {
         Повторить
       </button>
     </div>
-  ) : loading ? (
+  ) : initialLoading ? (
     <div className={clientNotificationsLoadingPanel}>
       <LoadingVideo size="md" />
     </div>
   ) : notifications.length === 0 ? (
     <ClientNotificationsEmptyState
       title="Пока тихо"
-      text="Когда появятся новости о записях, они окажутся здесь."
+      text={
+        isMasterCabinet
+          ? 'Здесь только уведомления клиента. Уведомления о заявках и записях мастера — во вкладке «Мастер» вверху.'
+          : 'Когда появятся новости о записях, они окажутся здесь.'
+      }
     />
   ) : filtered.length === 0 ? (
     <ClientNotificationsEmptyState
@@ -109,7 +97,7 @@ export function ClientNotificationsPage() {
   );
 
   const content = (
-    <div className="space-y-4 lg:space-y-5">
+    <div className="space-y-4 pb-4 lg:space-y-5">
       <ClientNotificationsHero unreadCount={unreadCount} totalCount={notifications.length} />
       {filterBar}
       {listBody}
@@ -118,21 +106,16 @@ export function ClientNotificationsPage() {
 
   return (
     <>
-      <div
-        className={`lg:hidden min-h-dvh ${clientNotificationsCanvasClass} ${CLIENT_CONTENT_PAD_BOTTOM} ${CLIENT_HEADER_OFFSET}`}
+      <ClientCabinetMobileShell
+        grayCanvas
+        showMainTabs
+        mainTab={activeTab}
+        onSelectTab={selectTab}
       >
-        <div className="mx-auto w-full max-w-lg px-4 pb-10 pt-3">
-          <ClientNotificationsPageHeader />
-          <div className="mt-4">{content}</div>
-        </div>
-      </div>
+        {content}
+      </ClientCabinetMobileShell>
 
-      <div className={`hidden lg:block min-h-dvh ${catalogCanvasClass}`}>
-        <div className={clientNotificationsDesktopShellClass}>
-          <ClientNotificationsPageHeader />
-          <div className="mt-6">{content}</div>
-        </div>
-      </div>
+      <ClientCabinetDesktopShell title="Уведомления">{content}</ClientCabinetDesktopShell>
 
       <ClientNotificationDetailSheet
         item={selectedItem}

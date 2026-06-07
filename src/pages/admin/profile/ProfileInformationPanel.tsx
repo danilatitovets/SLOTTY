@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { EMPTY_DATE } from '../../../shared/lib/emptyDisplayText';
+import { EMPTY_DATE, valueOrEmptyField } from '../../../shared/lib/emptyDisplayText';
 import {
   HiCalendarDays,
   HiChatBubbleLeftRight,
@@ -109,6 +109,8 @@ type Props = {
   appointments: DemoMasterAppointment[];
   ratingMeta?: ProfileStatsRatingMeta;
   publicationStatus: MasterPublicationStatus | null;
+  onOpenCategoryChange?: () => void;
+  categoryChangeDisabled?: boolean;
 };
 
 export function ProfileInformationPanel({
@@ -116,9 +118,14 @@ export function ProfileInformationPanel({
   appointments,
   ratingMeta,
   publicationStatus,
+  onOpenCategoryChange,
+  categoryChangeDisabled = false,
 }: Props) {
   const stats = buildProfileStats(appointments, ratingMeta);
-  const completed = appointments.filter((a) => a.status === 'completed').length;
+  const completed =
+    ratingMeta?.completedBookingsCount != null
+      ? ratingMeta.completedBookingsCount
+      : appointments.filter((a) => a.status === 'completed').length;
   const reviews = ratingMeta?.reviewsCount ?? 0;
 
   return (
@@ -132,6 +139,24 @@ export function ProfileInformationPanel({
       <div className="mt-5 flex items-center justify-between gap-3 rounded-[14px] bg-[#f6f7fb] px-4 py-3.5">
         <span className="text-[13px] font-semibold text-[#374151]">Статус профиля</span>
         <ProfileStatusBadge status={publicationStatus} />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-[14px] bg-[#f6f7fb] px-4 py-3.5">
+        <span className="text-[13px] font-semibold text-[#374151]">Категория</span>
+        {onOpenCategoryChange ? (
+          <button
+            type="button"
+            onClick={onOpenCategoryChange}
+            disabled={categoryChangeDisabled}
+            className="max-w-[60%] truncate text-right text-[14px] font-semibold text-[#F47C8C] underline-offset-2 transition hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+          >
+            {valueOrEmptyField(draft.category)}
+          </button>
+        ) : (
+          <span className="max-w-[60%] truncate text-right text-[14px] font-semibold text-[#111827]">
+            {valueOrEmptyField(draft.category)}
+          </span>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">

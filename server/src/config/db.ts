@@ -31,3 +31,13 @@ export async function withTransaction<T>(
     client.release();
   }
 }
+
+/** Один клиент пула — без параллельного checkout (важно для Supabase session pooler). */
+export async function withPoolClient<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    return await fn(client);
+  } finally {
+    client.release();
+  }
+}

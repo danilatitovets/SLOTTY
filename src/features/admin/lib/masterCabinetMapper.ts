@@ -196,7 +196,7 @@ function cabinetLocationToDraft(loc: NonNullable<MasterCabinetDto['primaryLocati
     clientNote: loc.clientNote?.trim() || undefined,
     lat: loc.lat != null ? Number(loc.lat) : undefined,
     lng: loc.lng != null ? Number(loc.lng) : undefined,
-    showExactAddressAfterBooking: loc.showExactAddressAfterBooking === true,
+    showExactAddressAfterBooking: loc.showExactAddressAfterBooking !== false,
   };
 }
 
@@ -226,7 +226,7 @@ export function draftToPrimaryLocationBody(loc: MasterLocation): PrimaryLocation
     publicAddress,
     lat: loc.lat != null && Number.isFinite(loc.lat) ? loc.lat : null,
     lng: loc.lng != null && Number.isFinite(loc.lng) ? loc.lng : null,
-    showExactAddressAfterBooking: isHome ? loc.showExactAddressAfterBooking === true : false,
+    showExactAddressAfterBooking: isHome ? loc.showExactAddressAfterBooking !== false : false,
   };
 }
 

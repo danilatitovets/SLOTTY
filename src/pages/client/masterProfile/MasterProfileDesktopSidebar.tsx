@@ -1,12 +1,16 @@
 import { useCallback, useMemo } from 'react';
 import { HiCalendarDays, HiPhone } from 'react-icons/hi2';
+import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
+import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
+import type { MasterTopAchievement } from '../lib/resolveMasterTopRankStatus';
 import type { ExtendedMasterProfile, NearestSlotInfo } from './types';
 import { openPhoneDial, resolveMasterCallablePhone } from './masterProfileUtils';
+import { MasterProfileSidebarStats } from './MasterProfileSidebarStats';
 import {
   catalogDesktopPanel,
   catalogPrimaryBtn,
   catalogSecondaryBtn,
-  masterProfileBookingStickyClass,
+  masterProfileSidebarColClass,
   masterProfileMutedPanel,
 } from './masterProfileTheme';
 
@@ -14,6 +18,7 @@ type Props = {
   master: ExtendedMasterProfile;
   nearest?: NearestSlotInfo | null;
   nearestLoading?: boolean;
+  topAchievements?: MasterTopAchievement[];
   onChooseTime: () => void;
   onPhoneUnavailable?: () => void;
 };
@@ -22,6 +27,7 @@ export function MasterProfileDesktopSidebar({
   master,
   nearest,
   nearestLoading,
+  topAchievements = [],
   onChooseTime,
   onPhoneUnavailable,
 }: Props) {
@@ -30,6 +36,7 @@ export function MasterProfileDesktopSidebar({
     [master.contact, master.phone],
   );
   const hasSlot = Boolean(nearest?.label);
+  const showVerified = masterShowsVerifiedBadge(master);
 
   const handleCall = useCallback(() => {
     if (callablePhone && openPhoneDial(callablePhone)) return;
@@ -37,7 +44,7 @@ export function MasterProfileDesktopSidebar({
   }, [callablePhone, onPhoneUnavailable]);
 
   return (
-    <aside className={`w-full min-w-0 ${masterProfileBookingStickyClass}`}>
+    <div className={masterProfileSidebarColClass}>
       <div className={`${catalogDesktopPanel} box-border w-full space-y-4 p-5`}>
         <div>
           <p className="text-[20px] font-bold tracking-[-0.03em] text-[#111827]">Запись</p>
@@ -65,10 +72,17 @@ export function MasterProfileDesktopSidebar({
           Позвонить
         </button>
 
-        <p className="text-center text-[12px] leading-relaxed text-[#9CA3AF]">
-          Бесплатная отмена за 24 часа · напоминание в Telegram
-        </p>
+        <div className="border-t border-[#F0F0F0] pt-4">
+          <p className="mb-2 text-[13px] font-medium text-[#8E8E93]">О мастере</p>
+          {showVerified ? (
+            <p className="mb-3 flex items-center gap-1.5 text-[13px] font-medium text-[#374151]">
+              <MasterVerifiedBadge className="h-4 w-4 shrink-0 text-[#F47C8C]" />
+              Проверенный мастер
+            </p>
+          ) : null}
+          <MasterProfileSidebarStats master={master} topAchievements={topAchievements} />
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }

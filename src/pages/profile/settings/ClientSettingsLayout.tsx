@@ -1,60 +1,78 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { HiArrowLeft, HiBars3 } from 'react-icons/hi2';
 import { PROFILE_PATH } from '../../../app/paths';
-import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../../client/clientNavConstants';
+import { ADMIN_DESKTOP_CANVAS } from '../../admin/adminCabinetLayout';
+import { ClientCabinetMobileShell } from '../clientProfile/ClientCabinetMobileShell';
+import { ClientProfileDesktopTopBar } from '../clientProfile/ClientProfileDesktopTopBar';
+import { useClientCabinetShellData } from '../clientProfile/useClientCabinetShellData';
+import { ClientSettingsIconRail } from './ClientSettingsIconRail';
+import { ClientSettingsMobileDrawer } from './ClientSettingsMobileDrawer';
 import { ClientSettingsSidebar } from './ClientSettingsSidebar';
-import {
-  settingsContentClass,
-  settingsDesktopShellClass,
-  settingsLayoutGridClass,
-  settingsSidebarShellClass,
-  settingsWorkspaceBg,
-} from './clientSettingsTheme';
 
 export function ClientSettingsLayout() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  const shell = useClientCabinetShellData();
 
-  const body = (
-    <div className={settingsLayoutGridClass}>
-      <aside className={`hidden lg:block ${settingsSidebarShellClass}`}>
-        <ClientSettingsSidebar />
-      </aside>
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
 
-      <div className={settingsContentClass}>
-        <div className="mb-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileNavOpen((v) => !v)}
-            className="inline-flex min-h-10 items-center gap-2 rounded-[12px] border border-[#EAECEF] bg-white px-3 text-[14px] font-semibold text-[#374151]"
-          >
-            <HiBars3 className="h-5 w-5" aria-hidden />
-            Разделы настроек
-          </button>
-          {mobileNavOpen ? (
-            <div className={`mt-3 ${settingsSidebarShellClass}`}>
-              <ClientSettingsSidebar onNavigate={() => setMobileNavOpen(false)} />
-            </div>
-          ) : null}
-        </div>
+  const mobileBody = (
+    <>
+      <SettingsBackLink />
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="inline-flex min-h-10 items-center gap-2 rounded-[12px] border border-[#EAECEF] bg-white px-3 text-[14px] font-semibold text-[#374151]"
+        >
+          <HiBars3 className="h-5 w-5" aria-hidden />
+          Разделы настроек
+        </button>
+      </div>
+      <Outlet />
+      <ClientSettingsMobileDrawer
+        open={drawerOpen}
+        onClose={closeDrawer}
+        search={search}
+        onSearchChange={setSearch}
+      />
+    </>
+  );
+
+  const desktopBody = (
+    <main className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
+      <div className="mx-auto w-full max-w-5xl min-w-0 pb-8">
         <Outlet />
       </div>
-    </div>
+    </main>
   );
 
   return (
     <>
-      <div className={`lg:hidden min-h-dvh ${settingsWorkspaceBg} ${CLIENT_CONTENT_PAD_BOTTOM} ${CLIENT_HEADER_OFFSET}`}>
-        <div className="mx-auto w-full max-w-lg px-4 pb-10 pt-3">
-          <SettingsBackLink />
-          {body}
-        </div>
-      </div>
+      <ClientCabinetMobileShell>{mobileBody}</ClientCabinetMobileShell>
 
-      <div className={`hidden lg:block min-h-dvh ${settingsWorkspaceBg}`}>
-        <div className={settingsDesktopShellClass}>
-          <SettingsBackLink />
-          {body}
+      <div className={`hidden h-dvh min-h-0 overflow-hidden text-[#111827] lg:flex ${ADMIN_DESKTOP_CANVAS}`}>
+        <div className="sticky top-0 hidden h-dvh max-w-full shrink-0 overflow-x-hidden lg:flex">
+          <ClientSettingsIconRail />
+          <ClientSettingsSidebar search={search} onSearchChange={setSearch} />
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <ClientProfileDesktopTopBar
+            title="Настройки"
+            hasNewNotifications={shell.hasNewNotifications}
+            notificationCount={shell.notificationCount}
+          />
+          {desktopBody}
         </div>
       </div>
     </>
@@ -65,7 +83,7 @@ function SettingsBackLink() {
   return (
     <Link
       to={PROFILE_PATH}
-      className="mb-5 inline-flex min-h-10 items-center gap-1.5 text-[14px] font-semibold text-[#6B7280] transition hover:text-[#111827]"
+      className="mb-5 inline-flex min-h-10 items-center gap-1.5 text-[14px] font-semibold text-[#6B7280] transition hover:text-[#111827] lg:hidden"
     >
       <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
       Профиль

@@ -13,10 +13,13 @@ export function isMasterCardPortraitUrl(url: string | null | undefined): boolean
 }
 
 /** URL для `<img>` в карточке листинга; пустая строка → плейсхолдер с инициалами. */
-export function masterListingPortraitUrl(photoUrl: string | null | undefined): string {
+export function masterListingPortraitUrl(
+  photoUrl: string | null | undefined,
+  maxEdge = 256,
+): string {
   const raw = photoUrl?.trim();
   if (!raw || !isMasterCardPortraitUrl(raw)) return '';
-  return optimizeAvatarUrl(raw, 256) || raw;
+  return optimizeAvatarUrl(raw, maxEdge) || raw;
 }
 
 const MASTER_CARD_AVATAR_COLORS = [

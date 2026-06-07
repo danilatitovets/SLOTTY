@@ -1,5 +1,13 @@
 import type { ComponentType } from 'react';
 import { HiArchiveBox, HiCalendarDays, HiInbox } from 'react-icons/hi2';
+import {
+  adminSectionTabIconClass,
+  adminSectionTabIconToneClass,
+  adminSectionTabIndicatorClass,
+  adminSectionTabLabelClass,
+  adminSectionTabsNavClass,
+  adminSectionTabTextClass,
+} from '../shared/adminSectionTabsTheme';
 import type { AppointmentsTabId } from './appointmentsTypes';
 
 const TABS: Array<{
@@ -29,7 +37,7 @@ export function AppointmentsSectionTabs({ active, onChange, counts, className = 
 
   return (
     <nav
-      className={`flex w-full border-b border-[#eef0f5] ${className}`.trim()}
+      className={`${adminSectionTabsNavClass} ${className}`.trim()}
       aria-label="Разделы записей"
     >
       {TABS.map((tab) => {
@@ -42,15 +50,13 @@ export function AppointmentsSectionTabs({ active, onChange, counts, className = 
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-3.5 transition active:scale-[0.98] ${
-              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
-            }`}
+            className={adminSectionTabTextClass(selected)}
           >
             <Icon
-              className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}`}
+              className={`${adminSectionTabIconClass} ${adminSectionTabIconToneClass(selected)}`}
               aria-hidden
             />
-            <span className="truncate text-[13px] font-semibold sm:text-[14px]">{tab.label}</span>
+            <span className={adminSectionTabLabelClass}>{tab.label}</span>
             {n != null && n > 0 ? (
               <span
                 className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-[11px] font-black tabular-nums ${
@@ -60,12 +66,7 @@ export function AppointmentsSectionTabs({ active, onChange, counts, className = 
                 {n > 99 ? '99+' : n}
               </span>
             ) : null}
-            {selected ? (
-              <span
-                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
-                aria-hidden
-              />
-            ) : null}
+            {selected ? <span className={adminSectionTabIndicatorClass()} aria-hidden /> : null}
           </button>
         );
       })}

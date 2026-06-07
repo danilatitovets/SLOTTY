@@ -4,6 +4,7 @@ import {
   HiReceiptPercent,
   HiSquares2X2,
 } from 'react-icons/hi2';
+import { AdminSectionAttentionBadge } from '../shared/AdminSectionAttentionBadge';
 import { AdminSegmentTabNav } from '../shared/AdminSegmentTabNav';
 import type { ServicesTabId } from './servicesTypes';
 
@@ -17,11 +18,13 @@ const TABS = [
 type Props = {
   active: ServicesTabId;
   onChange: (tab: ServicesTabId) => void;
+  catalogAttention?: boolean;
 };
 
 export function ServicesTabBar({
   active,
   onChange,
+  catalogAttention = false,
   variant = 'mobile',
 }: Props & { variant?: 'mobile' | 'desktop' }) {
   if (variant === 'desktop') {
@@ -35,6 +38,11 @@ export function ServicesTabBar({
       onChange={onChange}
       ariaLabel="Разделы услуг"
       mode="mobile"
+      renderTabBadge={(tabId) =>
+        tabId === 'catalog' && catalogAttention ? (
+          <AdminSectionAttentionBadge className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5" />
+        ) : null
+      }
     />
   );
 }

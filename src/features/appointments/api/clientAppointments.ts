@@ -25,7 +25,16 @@ export type ServerClientAppointment = {
   location_city: string | null;
   location_street: string | null;
   location_building: string | null;
+  location_building_detail?: string | null;
   location_public_address: string | null;
+  location_entrance?: string | null;
+  location_floor?: string | null;
+  location_room?: string | null;
+  location_intercom?: string | null;
+  location_landmark?: string | null;
+  location_directions?: string | null;
+  location_client_note?: string | null;
+  location_show_exact_after_booking?: boolean;
   location_lat: number | string | null;
   location_lng: number | string | null;
   voucher_number: string | null;

@@ -43,6 +43,7 @@ export type MasterBookingByVoucher = {
     createdAt: string;
     comment?: string | null;
     lateMinutes?: number | null;
+    reviewId?: string | null;
   }>;
   lifecycle?: MasterAppointmentLifecycleResult;
   lifecycle_history?: MasterAppointmentLifecycleResult;

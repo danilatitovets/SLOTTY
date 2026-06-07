@@ -39,7 +39,13 @@ export function filterCatalogServices(
 
     const priceType = s.priceType ?? 'fixed';
     if (filters.price === 'fixed' && priceType === 'from') return false;
-    if (filters.price === 'from' && priceType !== 'from') return false;
+    if (
+      filters.price === 'from' &&
+      filters.priceFromMin != null &&
+      s.priceByn < filters.priceFromMin
+    ) {
+      return false;
+    }
 
     if (!matchesDuration(s.durationMin, filters.duration)) return false;
 

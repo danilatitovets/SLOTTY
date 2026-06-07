@@ -57,6 +57,7 @@ export type ClientSettingsNavItem = {
   id: string;
   to: string;
   label: string;
+  keywords: string[];
   icon: (p: { className?: string }) => ReactNode;
   matchPrefix?: boolean;
 };
@@ -75,13 +76,15 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
       {
         id: 'security',
         to: PROFILE_SETTINGS_LOGIN_METHODS_PATH,
-        label: 'Способы входа и безопасность',
+        label: 'Способы входа',
+        keywords: ['вход', 'telegram', 'google', 'пароль', 'безопасность', 'сессия'],
         icon: IconShield,
       },
       {
         id: 'privacy',
         to: PROFILE_SETTINGS_PRIVACY_PATH,
         label: 'Данные и приватность',
+        keywords: ['данные', 'экспорт', 'удаление', 'приватность', 'gdpr', 'аккаунт'],
         icon: IconLock,
       },
     ],
@@ -94,6 +97,7 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         id: 'support',
         to: PROFILE_SETTINGS_SUPPORT_PATH,
         label: 'Поддержка',
+        keywords: ['помощь', 'контакт', 'telegram', 'email', 'вопрос'],
         icon: IconHelp,
         matchPrefix: true,
       },
@@ -101,6 +105,7 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         id: 'system-status',
         to: PROFILE_SETTINGS_SYSTEM_STATUS_PATH,
         label: 'Статус системы',
+        keywords: ['статус', 'доступность', 'инцидент', 'работает'],
         icon: IconStatus,
       },
     ],
@@ -113,20 +118,26 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         id: 'documents',
         to: PROFILE_SETTINGS_DOCUMENTS_PATH,
         label: 'Условия и согласия',
+        keywords: ['условия', 'политика', 'конфиденциальность', 'согласие', 'оферта', 'документы'],
         icon: IconDocs,
+        matchPrefix: true,
       },
     ],
   },
 ];
+
+export function flattenClientSettingsNavItems(): ClientSettingsNavItem[] {
+  return CLIENT_SETTINGS_NAV_GROUPS.flatMap((group) => group.items);
+}
 
 export const CLIENT_SETTINGS_PAGE_META: Record<
   string,
   { title: string; description: string; breadcrumb: string }
 > = {
   security: {
-    title: 'Способы входа и безопасность',
-    description: 'Управляйте способами входа, резервным доступом и активными сессиями.',
-    breadcrumb: 'Способы входа и безопасность',
+    title: 'Способы входа',
+    description: 'Управляйте способами входа и резервным доступом к аккаунту.',
+    breadcrumb: 'Способы входа',
   },
   privacy: {
     title: 'Данные и приватность',

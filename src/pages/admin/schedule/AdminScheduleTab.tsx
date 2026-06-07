@@ -6,6 +6,7 @@ import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorag
 import { isUuid } from '../../../features/admin/lib/masterCabinetMapper';
 import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { useAdminAppointments } from '../useAdminMasterData';
+import { AdminDesktopSectionTabsShell } from '../shared/AdminDesktopSectionTabsShell';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { AdminToast } from '../shared/AdminToast';
 import { useAdminToast } from '../shared/useAdminToast';
@@ -24,15 +25,11 @@ import { ServicesTabFab } from '../services/ServicesTabFab';
 import { ScheduleSlotsListTab } from './ScheduleSlotsListTab';
 import {
   SCHEDULE_MOBILE_CANVAS,
-  scheduleDesktopCard,
-  scheduleDesktopTabsSticky,
   scheduleShellCard,
   scheduleTabContentPad,
-  scheduleTabPanelShell,
   scheduleTabPanelShellCalendar,
   scheduleTabPanelShellCreate,
 } from './adminScheduleTheme';
-import { SchedulePageHeader } from './SchedulePageHeader';
 import { SCHEDULE_TAB_INTRO_IMAGES } from './ScheduleTabIntro';
 import { computeScheduleTabMetrics } from './scheduleTabMetrics';
 import type { PlannedSlot, SchedulePageTab, ScheduleWindowView } from './scheduleTypes';
@@ -81,6 +78,7 @@ type OpenAddSheetOptions = {
   templateId?: string;
   withoutTemplate?: boolean;
   dateIso?: string;
+  serviceId?: string;
 };
 
 export function AdminScheduleTab({ draft }: Props) {
@@ -107,6 +105,7 @@ export function AdminScheduleTab({ draft }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [monthWizardOpen, setMonthWizardOpen] = useState(false);
   const [monthWizardDays, setMonthWizardDays] = useState<7 | 14 | 30>(30);
+  const handledAddWindowLinkRef = useRef<string | null>(null);
 
   const monthWizardServiceId = searchParams.get('serviceId');
 
@@ -274,7 +273,11 @@ export function AdminScheduleTab({ draft }: Props) {
       }
       if (opts?.templateId) {
         applyTemplate(opts.templateId);
-      } else if (opts?.withoutTemplate) {
+      } else if (opts?.serviceId) {
+        setSelectedTemplateId(null);
+        setManualMode(true);
+        setServiceId(opts.serviceId);
+      } else if (opts?.withoutTemplate || opts?.dateIso) {
         setSelectedTemplateId(null);
         setManualMode(true);
         setServiceId('');
@@ -286,6 +289,29 @@ export function AdminScheduleTab({ draft }: Props) {
     },
     [applyTemplate, templates.length],
   );
+
+  useEffect(() => {
+    if (searchParams.get('addWindow') !== '1') return;
+
+    const sid = searchParams.get('serviceId');
+    const linkKey = `${sid ?? ''}:${searchParams.toString()}`;
+    if (handledAddWindowLinkRef.current === linkKey) return;
+    handledAddWindowLinkRef.current = linkKey;
+
+    openAddSheet({
+      serviceId: sid && isUuid(sid) ? sid : undefined,
+    });
+
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('addWindow');
+        next.delete('serviceId');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [openAddSheet, searchParams, setSearchParams]);
 
   const useManualAddWindow = useCallback(() => {
     setSelectedTemplateId(null);
@@ -553,12 +579,15 @@ export function AdminScheduleTab({ draft }: Props) {
         ) : null}
 
         {pageTab === 'list' ? (
-          <div className={scheduleTabPanelShell}>
-            <div className="lg:p-6">
+          <div className={scheduleTabPanelShellCalendar}>
+            <div className={scheduleTabContentPad}>
               <ScheduleSlotsListTab
                 windows={windows}
                 loading={loading}
                 onWindowClick={(w) => setEditWindow(w)}
+                onCreateForDay={(iso) => openAddSheet({ dateIso: iso })}
+                canCreateForDay={masterWrite.canMutate}
+                createForDayDisabledTitle={masterWrite.mutateDisabledTitle}
               />
             </div>
           </div>
@@ -574,23 +603,15 @@ export function AdminScheduleTab({ draft }: Props) {
       <section
         className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem+env(safe-area-inset-bottom,0px))] lg:hidden ${SCHEDULE_MOBILE_CANVAS}`}
       >
-        {pageTab !== 'create' && pageTab !== 'calendar' ? (
-          <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
-        ) : null}
         {tabPanels}
       </section>
 
       <div className={`${scheduleShellCard} space-y-6`}>
-        <div className={`${scheduleDesktopCard} ${scheduleDesktopTabsSticky}`}>
+        <AdminDesktopSectionTabsShell>
           <ScheduleSectionTabs active={pageTab} onChange={setPageTab} />
-        </div>
+        </AdminDesktopSectionTabsShell>
 
-        <div className="min-w-0 w-full max-w-none space-y-6">
-          {pageTab !== 'create' && pageTab !== 'calendar' ? (
-            <SchedulePageHeader activeTab={pageTab} metrics={tabMetrics} />
-          ) : null}
-          {tabPanels}
-        </div>
+        <div className="min-w-0 w-full max-w-none space-y-6">{tabPanels}</div>
       </div>
 
       <CreateMonthScheduleWizard
@@ -679,6 +700,8 @@ export function AdminScheduleTab({ draft }: Props) {
       <EditWindowModal
         open={editWindowLive != null}
         window={editWindowLive}
+        masterId={draft.masterId}
+        draft={draft}
         appointments={appointments}
         onClose={() => setEditWindow(null)}
         services={visibleServices}

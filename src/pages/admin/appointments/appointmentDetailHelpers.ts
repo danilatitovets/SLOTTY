@@ -13,6 +13,7 @@ export type TimelineEvent = {
   createdAt: string;
   comment?: string | null;
   lateMinutes?: number | null;
+  reviewId?: string | null;
 };
 
 const HIDDEN_EVENT_TYPES = new Set(['booking.notification_sent', 'booking.notification_failed']);

@@ -1,31 +1,21 @@
-import { EMPTY_TELEGRAM } from '../../../shared/lib/emptyDisplayText';
-import type { ChangeEvent, ReactNode, RefObject } from 'react';
-import { useLayoutEffect } from 'react';
-import { Link } from 'react-router-dom';
+import type { ChangeEvent, RefObject } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { DemoAppointmentRecord, DemoAppointmentTab } from '../../../features/appointments/model/demoAppointments';
 import type { FavoriteMasterDto } from '../../../features/profile/api/clientFavorites';
 import type { BackendProfile } from '../../../features/auth/types';
-import { SERVICES_PATH } from '../../../app/paths';
-import { CLIENT_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
-import { NothingFoundCard } from '../../../shared/ui/NothingFoundCard';
-import { BelarusPhoneInline } from '../components/BelarusPhoneInline';
+import {
+  adminDesktopCabinetBody,
+  adminDesktopCabinetShell,
+  adminDesktopMainScroll,
+  ADMIN_DESKTOP_CANVAS,
+} from '../../admin/adminCabinetLayout';
 import {
   ClientProfileDesktopSidebar,
   type ClientProfileMainTab,
 } from './ClientProfileDesktopSidebar';
-import { ClientProfileAppointmentRow } from './ClientProfileAppointmentRow';
-import { ClientProfileFavoriteRow } from './ClientProfileFavoriteRow';
-import {
-  catalogCanvasClass,
-  catalogDesktopPanel,
-  catalogDesktopShellClass,
-  catalogPrimaryBtn,
-  clientProfileSectionTitle,
-  clientProfileSidebarWidth,
-  clientProfileSubTabActive,
-  clientProfileSubTabIdle,
-  clientProfileSubTabTrack,
-} from './clientProfileTheme';
+import { ClientProfileDesktopTopBar } from './ClientProfileDesktopTopBar';
+import { ClientProfileCabinetContent } from './ClientProfileCabinetContent';
+import { ClientCabinetMobileShell } from './ClientCabinetMobileShell';
 
 type Props = {
   mainTab: ClientProfileMainTab;
@@ -49,6 +39,7 @@ type Props = {
   telegramUserPhotoUrl: string | null;
   onApplyTelegramAvatar: () => void;
   hasNewNotifications: boolean;
+  notificationCount: number;
   onEditProfile: () => void;
   isMasterCabinet: boolean;
   clientShell: boolean;
@@ -72,43 +63,6 @@ type Props = {
   onRemoveFavorite: (masterId: string) => void;
 };
 
-function EmptyAppointments() {
-  return (
-    <NothingFoundCard
-      title="Записей пока нет"
-      picture="appointmentsEmpty"
-      action={
-        <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
-          Найти услуги
-        </Link>
-      }
-    />
-  );
-}
-
-function EmptyFavorites() {
-  return (
-    <NothingFoundCard
-      title="Избранных пока нет"
-      picture="clientsEmpty"
-      action={
-        <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
-          Найти услуги
-        </Link>
-      }
-    />
-  );
-}
-
-function ProfileField({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="px-6 py-4">
-      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#9CA3AF]">{label}</p>
-      <p className="mt-1.5 text-[16px] font-semibold text-[#111827]">{value}</p>
-    </div>
-  );
-}
-
 export function ClientProfileDesktop({
   mainTab,
   onSelectTab,
@@ -131,6 +85,7 @@ export function ClientProfileDesktop({
   telegramUserPhotoUrl,
   onApplyTelegramAvatar,
   hasNewNotifications,
+  notificationCount,
   onEditProfile,
   isMasterCabinet,
   clientShell,
@@ -153,6 +108,59 @@ export function ClientProfileDesktop({
   onDownloadPdf,
   onRemoveFavorite,
 }: Props) {
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+
+  const pageTitle =
+    mainTab === 'appointments' ? 'Мои записи' : mainTab === 'favorites' ? 'Избранное' : 'Профиль';
+
+  const cabinetContent = (
+    <ClientProfileCabinetContent
+      mainTab={mainTab}
+      displayName={displayName}
+      roleSubtitle={roleSubtitle}
+      profileInitials={profileInitials}
+      authLoading={authLoading}
+      isAuthenticated={isAuthenticated}
+      backendConfigured={backendConfigured}
+      profile={profile}
+      isTelegramWebApp={isTelegramWebApp}
+      telegramUsername={telegramUsername}
+      avatarPreviewUrl={avatarPreviewUrl}
+      profileAvatarUrl={profileAvatarUrl}
+      telegramPhotoUrl={telegramPhotoUrl}
+      avatarBusy={avatarBusy}
+      avatarErr={avatarErr}
+      avatarFileInputRef={avatarFileInputRef}
+      onAvatarFileChange={onAvatarFileChange}
+      telegramUserPhotoUrl={telegramUserPhotoUrl}
+      onApplyTelegramAvatar={onApplyTelegramAvatar}
+      apptSubTab={apptSubTab}
+      onApptSubTabChange={onApptSubTabChange}
+      apptRows={apptRows}
+      apptListLoading={apptListLoading}
+      apptHasMore={apptHasMore}
+      apptLoadingMore={apptLoadingMore}
+      onLoadMoreAppointments={onLoadMoreAppointments}
+      apptError={apptError}
+      favorites={favorites}
+      favoritesLoading={favoritesLoading}
+      favoritesError={favoritesError}
+      hasApiBackend={hasApiBackend}
+      onEditProfile={onEditProfile}
+      onOpenDetails={onOpenDetails}
+      onCancel={onCancel}
+      onReview={onReview}
+      onDownloadPdf={onDownloadPdf}
+      onRemoveFavorite={onRemoveFavorite}
+    />
+  );
+
+  useLayoutEffect(() => {
+    contentScrollRef.current?.scrollTo({ top: 0 });
+    mobileScrollRef.current?.scrollTo({ top: 0 });
+  }, [mainTab]);
+
   useLayoutEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
     const sync = () => {
@@ -166,225 +174,77 @@ export function ClientProfileDesktop({
     };
   }, []);
 
-  const telegramLabel = profile?.telegram_username
-    ? `@${profile.telegram_username}`
-    : telegramUsername
-      ? `@${telegramUsername}`
-      : isTelegramWebApp
-        ? 'Подключен'
-        : EMPTY_TELEGRAM;
-
   return (
-    <div className={`${catalogDesktopShellClass} hidden lg:flex ${catalogCanvasClass}`}>
-      <div className={`${CLIENT_DESKTOP_SHELL_CLASS} flex min-h-0 flex-1 flex-col overflow-hidden pb-10 pt-6`}>
-        <header className="mb-5 shrink-0">
-          <h1 className="text-[28px] font-bold tracking-[-0.04em] text-[#111827]">Мой профиль</h1>
+    <>
+      <div className={`hidden ${adminDesktopCabinetShell} text-[#111827] lg:flex ${ADMIN_DESKTOP_CANVAS}`}>
+        <ClientProfileDesktopTopBar
+          title={pageTitle}
+          hasNewNotifications={hasNewNotifications}
+          notificationCount={notificationCount}
+        />
+
+        <div className={adminDesktopCabinetBody}>
+        <ClientProfileDesktopSidebar
+          displayName={displayName}
+          roleSubtitle={roleSubtitle}
+          profileInitials={profileInitials}
+          authLoading={authLoading}
+          isAuthenticated={isAuthenticated}
+          avatarPreviewUrl={avatarPreviewUrl}
+          profileAvatarUrl={profileAvatarUrl}
+          telegramPhotoUrl={telegramPhotoUrl}
+          avatarBusy={avatarBusy}
+          avatarErr={avatarErr}
+          avatarFileInputRef={avatarFileInputRef}
+          onAvatarFileChange={onAvatarFileChange}
+          telegramUserPhotoUrl={telegramUserPhotoUrl}
+          onApplyTelegramAvatar={onApplyTelegramAvatar}
+          hasNewNotifications={hasNewNotifications}
+          mainTab={mainTab}
+          onSelectTab={onSelectTab}
+          isMasterCabinet={isMasterCabinet}
+          clientShell={clientShell}
+          upcomingCount={upcomingCount}
+          favoritesCount={favorites.length}
+        />
+
+        <div
+          ref={contentScrollRef}
+          className={`${adminDesktopMainScroll} ${ADMIN_DESKTOP_CANVAS} lg:pb-8`}
+        >
           {!authLoading && !backendConfigured ? (
-            <p className="mt-2 rounded-[10px] bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-950">
+            <div className="px-4 pt-3 lg:px-8 lg:pt-4">
+              <p className="rounded-[10px] bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-950">
+                В .env не задан VITE_API_URL — данные профиля с сервера недоступны.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="w-full min-w-0 px-4 pt-4 lg:mx-auto lg:max-w-6xl lg:bg-transparent lg:px-8 lg:pt-6 lg:shadow-none lg:ring-0">
+            {cabinetContent}
+          </div>
+        </div>
+        </div>
+      </div>
+
+      {clientShell ? (
+        <ClientCabinetMobileShell
+          showMainTabs
+          mainTab={mainTab}
+          onSelectTab={onSelectTab}
+          upcomingCount={upcomingCount}
+          favoritesCount={favorites.length}
+        >
+          {!authLoading && !backendConfigured ? (
+            <p className="mb-3 rounded-[10px] bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-950">
               В .env не задан VITE_API_URL — данные профиля с сервера недоступны.
             </p>
           ) : null}
-        </header>
-
-        <div className={`grid min-h-0 flex-1 gap-6 overflow-hidden ${clientProfileSidebarWidth}`}>
-          <div className="scrollbar-hidden min-h-0 overflow-y-auto overscroll-y-contain pb-2">
-            <ClientProfileDesktopSidebar
-              displayName={displayName}
-              roleSubtitle={roleSubtitle}
-              profileInitials={profileInitials}
-              authLoading={authLoading}
-              isAuthenticated={isAuthenticated}
-              avatarPreviewUrl={avatarPreviewUrl}
-              profileAvatarUrl={profileAvatarUrl}
-              telegramPhotoUrl={telegramPhotoUrl}
-              avatarBusy={avatarBusy}
-              avatarErr={avatarErr}
-              avatarFileInputRef={avatarFileInputRef}
-              onAvatarFileChange={onAvatarFileChange}
-              telegramUserPhotoUrl={telegramUserPhotoUrl}
-              onApplyTelegramAvatar={onApplyTelegramAvatar}
-              hasNewNotifications={hasNewNotifications}
-              mainTab={mainTab}
-              onSelectTab={onSelectTab}
-              isMasterCabinet={isMasterCabinet}
-              clientShell={clientShell}
-              upcomingCount={upcomingCount}
-              favoritesCount={favorites.length}
-            />
+          <div ref={mobileScrollRef} className="min-w-0 space-y-4">
+            {cabinetContent}
           </div>
-
-          <div className="relative z-0 flex min-h-0 min-w-0 flex-col">
-            {mainTab === 'appointments' ? (
-              <>
-                <div className={`${catalogDesktopPanel} mb-3 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 px-5 py-4`}>
-                  <h2 className={clientProfileSectionTitle}>Мои записи</h2>
-                  <div className={clientProfileSubTabTrack} role="tablist" aria-label="Тип записей">
-                    <button
-                      type="button"
-                      onClick={() => onApptSubTabChange('upcoming')}
-                      className={`min-h-9 rounded-[8px] px-4 text-[13px] transition ${
-                        apptSubTab === 'upcoming' ? clientProfileSubTabActive : clientProfileSubTabIdle
-                      }`}
-                    >
-                      Предстоящие
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onApptSubTabChange('past')}
-                      className={`min-h-9 rounded-[8px] px-4 text-[13px] transition ${
-                        apptSubTab === 'past' ? clientProfileSubTabActive : clientProfileSubTabIdle
-                      }`}
-                    >
-                      История
-                    </button>
-                  </div>
-                </div>
-
-                <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-4">
-                {!authLoading && !backendConfigured ? (
-                  <p className="rounded-[10px] bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-950">
-                    Укажите VITE_API_URL, чтобы загрузить записи.
-                  </p>
-                ) : !authLoading && !isAuthenticated ? (
-                  <NothingFoundCard
-                    title="Войдите в аккаунт"
-                    text="Откройте SLOTTY в Telegram Mini App — тогда здесь появятся ваши записи."
-                  />
-                ) : apptError ? (
-                  <p className="rounded-[10px] bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800">
-                    {apptError}
-                  </p>
-                ) : apptListLoading ? (
-                  <div className={`${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}>
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="px-6 py-5">
-                        <div className="h-5 max-w-[12rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-                        <div className="mt-2 h-4 max-w-[10rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-                        <div className="mt-3 h-4 max-w-[16rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-                      </div>
-                    ))}
-                  </div>
-                ) : apptRows.length === 0 ? (
-                  <div className={catalogDesktopPanel}>
-                    <div className="p-5">
-                      <EmptyAppointments />
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}>
-                    {apptRows.map((row) => (
-                      <ClientProfileAppointmentRow
-                        key={row.id}
-                        row={row}
-                        subTab={apptSubTab}
-                        onDetails={onOpenDetails}
-                        onCancel={onCancel}
-                        onReview={onReview}
-                        onDownloadPdf={onDownloadPdf}
-                      />
-                    ))}
-                  </div>
-                )}
-                {apptHasMore && apptRows.length > 0 ? (
-                  <button
-                    type="button"
-                    disabled={apptLoadingMore}
-                    onClick={onLoadMoreAppointments}
-                    className="mt-3 min-h-11 w-full rounded-[14px] border border-[#EAECEF] bg-white text-[14px] font-semibold text-[#374151] transition hover:bg-[#FAFAFA] active:scale-[0.98] disabled:opacity-60"
-                  >
-                    {apptLoadingMore ? 'Загрузка…' : 'Показать ещё'}
-                  </button>
-                ) : null}
-                </div>
-              </>
-            ) : null}
-
-            {mainTab === 'favorites' ? (
-              <>
-                <div className={`${catalogDesktopPanel} mb-3 flex shrink-0 items-center px-5 py-4`}>
-                  <h2 className={clientProfileSectionTitle}>Избранное</h2>
-                </div>
-
-                <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-4">
-                  <section>
-                {!authLoading && !backendConfigured ? (
-                  <p className="rounded-[10px] bg-amber-50 px-4 py-3 text-[14px] font-medium text-amber-950">
-                    Укажите VITE_API_URL, чтобы загрузить избранное.
-                  </p>
-                ) : !authLoading && hasApiBackend && !isAuthenticated ? (
-                  <NothingFoundCard
-                    title="Войдите в аккаунт"
-                    text="Войдите в аккаунт — избранные мастера сохранятся на сервере и будут доступны на всех устройствах."
-                  />
-                ) : favoritesError ? (
-                  <p className="rounded-[10px] bg-red-50 px-4 py-3 text-[14px] font-medium text-red-800">
-                    {favoritesError}
-                  </p>
-                ) : favoritesLoading ? (
-                  <div className={`${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}>
-                    {[0, 1].map((i) => (
-                      <div key={i} className="flex items-center gap-4 px-6 py-5">
-                        <div className="h-14 w-14 animate-pulse rounded-[12px] bg-[#EBEBEB]" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-5 max-w-[10rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-                          <div className="h-4 max-w-[8rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : favorites.length === 0 ? (
-                  <EmptyFavorites />
-                ) : (
-                  <ul className={`${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}>
-                    {favorites.map((row, i) => (
-                      <ClientProfileFavoriteRow
-                        key={row.masterId}
-                        row={row}
-                        onRemove={onRemoveFavorite}
-                        imagePriority={i < 8}
-                      />
-                    ))}
-                  </ul>
-                )}
-                  </section>
-                </div>
-              </>
-            ) : null}
-
-            {mainTab === 'profile' ? (
-              <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-4">
-              <section>
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <h2 className={clientProfileSectionTitle}>Личные данные</h2>
-                  {isAuthenticated ? (
-                    <button type="button" onClick={onEditProfile} className={catalogPrimaryBtn}>
-                      Редактировать
-                    </button>
-                  ) : null}
-                </div>
-                <div className={`${catalogDesktopPanel} divide-y divide-[#EEEEEE]`}>
-                  <ProfileField label="Имя" value={displayName} />
-                  <ProfileField label="Telegram" value={telegramLabel} />
-                  <ProfileField
-                    label="Телефон"
-                    value={<BelarusPhoneInline phone={profile?.phone} flagClassName="h-4 w-4 shrink-0 rounded-full object-cover" />}
-                  />
-                  <ProfileField
-                    label="Адрес"
-                    value={profile?.address?.trim() ? profile.address.trim() : 'Не указан'}
-                  />
-                  <ProfileField
-                    label="Роль"
-                    value={profile?.role === 'master' ? 'Мастер SLOTTY' : 'Клиент SLOTTY'}
-                  />
-                </div>
-              </section>
-
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
+        </ClientCabinetMobileShell>
+      ) : null}
+    </>
   );
 }

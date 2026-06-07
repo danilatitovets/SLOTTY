@@ -9,6 +9,7 @@ import {
   HiStar,
 } from 'react-icons/hi2';
 import { masterShowsVerifiedBadge } from '../../../features/masters/lib/masterVerifiedBadge';
+import { MasterProBadge } from '../../../shared/ui/MasterProBadge';
 import { MasterVerifiedBadge } from '../../../shared/ui/MasterVerifiedBadge';
 import { getBookingPath, getMasterPath } from '../../../app/paths';
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
@@ -65,17 +66,6 @@ const CARD_STAT_LABEL = 'mt-1 text-[11px] font-medium leading-snug text-[#9CA3AF
 /** Бейдж «Свободна» поверх фото — всегда с фоном, иначе теряется на светлых снимках. */
 const AVAILABILITY_BADGE =
   'inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold leading-none text-[#15803D] shadow-[0_2px_10px_rgba(0,0,0,0.14)] ring-1 ring-black/10 backdrop-blur-[2px]';
-
-const PRO_BADGE =
-  'inline-flex shrink-0 items-center rounded-full bg-[#FFE8EA] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#E29595] ring-1 ring-[#E29595]/20';
-
-function MasterProBadge({ className = '' }: { className?: string }) {
-  return (
-    <span className={`${PRO_BADGE} ${className}`} title="Мастер Pro">
-      Pro
-    </span>
-  );
-}
 
 function StatDivider({ compact = false }: { compact?: boolean }) {
   return (
@@ -393,10 +383,10 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
               <h3 className="text-[18px] font-bold leading-snug tracking-[-0.02em] text-[#111827]">
                 {listing.masterName}
               </h3>
-              {showPro ? <MasterProBadge className="mt-0.5" /> : null}
               {showVerified ? (
                 <MasterVerifiedBadge className="mt-1 h-4 w-4 shrink-0 text-[#F47C8C]" />
               ) : null}
+              {showPro ? <MasterProBadge className="mt-0.5 h-4 w-4" /> : null}
             </div>
 
             <div className="mt-2">
@@ -488,10 +478,10 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
                   <h3 className="min-w-0 truncate text-[16px] font-semibold leading-snug tracking-[-0.02em] text-[#111827]">
                     {listing.masterName}
                   </h3>
-                  {showPro ? <MasterProBadge /> : null}
                   {showVerified ? (
                     <MasterVerifiedBadge className="h-4 w-4 shrink-0 text-[#F47C8C]" />
                   ) : null}
+                  {showPro ? <MasterProBadge className="h-4 w-4" /> : null}
                 </div>
                 <p className="mt-0.5 truncate text-[12px] font-medium leading-snug text-[#6B7280]">
                   {formatMasterCardSpecialty(listing.category)}
@@ -632,10 +622,10 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
                 <h3 className="min-w-0 truncate text-[16px] font-semibold leading-snug tracking-[-0.02em] text-[#111827]">
                   {listing.masterName}
                 </h3>
-                {showPro ? <MasterProBadge /> : null}
                 {showVerified ? (
                   <MasterVerifiedBadge className="h-4 w-4 shrink-0 text-[#F47C8C]" />
                 ) : null}
+                {showPro ? <MasterProBadge className="h-4 w-4" /> : null}
               </div>
               <p className="mt-0.5 truncate text-[12px] font-medium leading-snug text-[#8E8E93]">
                 {formatMasterCardSpecialty(listing.category)}

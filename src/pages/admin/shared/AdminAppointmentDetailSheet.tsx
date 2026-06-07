@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { HiEllipsisHorizontal } from 'react-icons/hi2';
 import { fetchMasterAppointmentByVoucher, type MasterBookingByVoucher } from '../../../features/appointments/api/bookingByVoucher';
 import { dbStatusToUi } from '../../../features/appointments/appointmentStatus';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
@@ -9,6 +8,7 @@ import {
   type MasterAppointmentActionId,
   type MasterAppointmentsTab,
   type MasterAppointmentLifecycleResult,
+  type MasterAppointmentPhase,
 } from '../../../features/appointments/masterAppointmentLifecycle';
 import {
   patchMasterAppointmentCancel,
@@ -20,31 +20,41 @@ import {
 } from '../../../features/admin/api/masterCabinetApi';
 import { masterDispute } from '../../../features/appointments/api/bookingLifecycleApi';
 import { afterBookingMutation } from '../../../features/appointments/bookingDataSync';
-import { formatBynRu, formatDdMmYyyy } from '../overview/overviewFormat';
 import { AppointmentsClientSummary } from '../appointments/AppointmentsClientSummary';
+import {
+  apptDetailCloseBtn,
+  apptDetailNoteCard,
+  apptDetailSectionLabel,
+} from '../appointments/adminAppointmentsTheme';
+import { MasterAppointmentNextStepsMessage } from '../appointments/MasterAppointmentNextStepsMessage';
+import { MasterAppointmentClientReportBlock } from '../appointments/MasterAppointmentClientReportBlock';
+import { MasterAppointmentDetailHeader } from '../appointments/MasterAppointmentDetailHeader';
+import { MasterAppointmentReferencePhotoBlock } from '../appointments/MasterAppointmentReferencePhotoBlock';
+import { MasterAppointmentTimelineBlock } from '../appointments/MasterAppointmentTimelineBlock';
+import { MasterAppointmentWhenCard } from '../appointments/MasterAppointmentWhenCard';
+import { PendingDeadlineHint } from '../appointments/PendingDeadlineHint';
 import { SlideToConfirmButton } from '../appointments/SlideToConfirmButton';
 import {
   buildDetailHelperText,
-  formatTimelineEventTime,
   formatVoucherLabel,
   normalizeMasterTimeline,
 } from '../appointments/appointmentDetailHelpers';
 import {
+  bookingSourceLabel,
   clientNameInputForResolve,
-  formatDurationMinutes,
-  formatVisitPlace,
 } from '../appointments/appointmentsFormat';
 import { resolveNotificationClientName } from '../../../features/notifications/resolveNotificationClientName';
 import { AdminBottomSheet } from './AdminBottomSheet';
 import { MasterAppointmentNoShowModal } from './MasterAppointmentNoShowModal';
+import { MasterAppointmentReviewSheet } from './MasterAppointmentReviewSheet';
 import { MasterClientReportSheet } from './MasterClientReportSheet';
 import { resolveClientDisplayName } from '../appointments/appointmentDetailHelpers';
+import { appointmentDetailStatusTone } from '../appointments/appointmentDetailPresentation';
 import {
   catalogSheetField,
   catalogSheetLabel,
   catalogSheetPrimaryBtn,
   catalogSheetSecondaryBtn,
-  catalogSheetTitle,
 } from './adminCatalogSheetTheme';
 
 type Props = {
@@ -65,23 +75,6 @@ const CANCEL_CATEGORIES = [
   { id: 'other', label: 'Другое' },
 ] as const;
 
-function statusBadgeClass(phase: MasterAppointmentLifecycleResult['phase']): string {
-  switch (phase) {
-    case 'pending':
-      return 'bg-[#FFF4E8] text-[#B45309]';
-    case 'before_visit':
-    case 'visit_window':
-    case 'in_progress':
-      return 'bg-[#ECFDF5] text-[#16A34A]';
-    case 'requires_attention':
-      return 'bg-[#FEF2F2] text-[#B91C1C]';
-    case 'completed':
-      return 'bg-[#EEF2FF] text-[#4F46E5]';
-    default:
-      return 'bg-[#EBEBEB] text-[#6B7280]';
-  }
-}
-
 function actionBtnClass(action: MasterAppointmentAction, disabled: boolean): string {
   if (action.variant === 'primary') return catalogSheetPrimaryBtn;
   if (action.variant === 'danger') {
@@ -98,13 +91,16 @@ function appointmentTiming(appointment: DemoMasterAppointment) {
   return { startsAt, endsAt };
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#EEEEEE] py-3 last:border-b-0">
-      <span className="shrink-0 text-[13px] font-medium text-[#6B7280]">{label}</span>
-      <span className="min-w-0 text-right text-[14px] font-semibold leading-snug text-[#111827]">{value}</span>
-    </div>
-  );
+const NEXT_STEPS_PHASES = new Set<MasterAppointmentPhase>([
+  'pending',
+  'before_visit',
+  'visit_window',
+  'in_progress',
+  'requires_attention',
+]);
+
+function showNextStepsBanner(phase: MasterAppointmentPhase): boolean {
+  return NEXT_STEPS_PHASES.has(phase);
 }
 
 type LiveExtra = {
@@ -151,9 +147,10 @@ export function AdminAppointmentDetailSheet({
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [noShowOpen, setNoShowOpen] = useState(false);
   const [clientReportOpen, setClientReportOpen] = useState(false);
+  const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
+  const [reviewSheetReviewId, setReviewSheetReviewId] = useState<string | null>(null);
   const [reportSent, setReportSent] = useState(false);
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
   const [reason, setReason] = useState('');
@@ -318,9 +315,6 @@ export function AdminAppointmentDetailSheet({
     return { ...appointment, ...liveExtra.clientPatch };
   }, [appointment, liveExtra?.clientPatch]);
 
-  const phone = displayAppointment?.contact?.match(/^\+?\d/)
-    ? displayAppointment.contact.replace(/\s/g, '')
-    : null;
   const timeline = useMemo(() => {
     const raw = liveExtra?.timeline ?? appointment?.timeline;
     if (!raw?.length) return [];
@@ -335,18 +329,22 @@ export function AdminAppointmentDetailSheet({
   const helperText =
     displayAppointment && lifecycle ? buildDetailHelperText(lifecycle, displayAppointment) : null;
   const voucherLabel = formatVoucherLabel(displayAppointment?.voucherNumber);
+  const bookingSource = bookingSourceLabel(displayAppointment?.bookingSource);
+  const referencePhotoUrl = displayAppointment?.clientReferencePhotoUrl?.trim() || null;
 
-  const addressLine = (() => {
-    if (!appointment) return null;
-    const fmt = formatVisitPlace(appointment.addressShort);
-    if (fmt === 'На дому' && appointment.addressShort?.trim()) return appointment.addressShort.trim();
-    if (appointment.addressShort?.trim()) return appointment.addressShort.trim();
-    return null;
-  })();
+  const openClientReport = useCallback(() => {
+    setClientReportOpen(true);
+  }, []);
+
+  const openReviewSheet = useCallback((reviewId?: string | null) => {
+    setReviewSheetReviewId(reviewId?.trim() || null);
+    setReviewSheetOpen(true);
+  }, []);
 
   const renderActionButton = (action: MasterAppointmentAction | null) => {
-    if (!action || action.id === 'contact_client' || action.id === 'view_details') return null;
-    if (action.id === 'report_client' && reportSent) return null;
+    if (!action || action.id === 'contact_client' || action.id === 'view_details' || action.id === 'report_client') {
+      return null;
+    }
     return (
       <button
         key={action.id}
@@ -360,45 +358,17 @@ export function AdminAppointmentDetailSheet({
     );
   };
 
-  const footer = appointment && lifecycle?.allowsActiveLifecycle !== false ? (
+  const primaryFooterAction = renderActionButton(lifecycle?.primaryAction ?? null);
+  const secondaryFooterAction = renderActionButton(lifecycle?.secondaryAction ?? null);
+  const hasLifecycleFooter =
+    Boolean(primaryFooterAction || secondaryFooterAction) &&
+    appointment &&
+    lifecycle?.allowsActiveLifecycle !== false;
+
+  const footer = hasLifecycleFooter ? (
     <div className="flex w-full flex-col gap-2">
-      {renderActionButton(lifecycle?.primaryAction ?? null)}
-      {renderActionButton(lifecycle?.secondaryAction ?? null)}
-      {lifecycle?.moreActions.length ? (
-        <div className="relative">
-          <button
-            type="button"
-            disabled={actionsDisabled || busy}
-            onClick={() => setMoreOpen((v) => !v)}
-            className={`${catalogSheetSecondaryBtn} flex items-center justify-center gap-1.5`}
-          >
-            <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-            Ещё
-          </button>
-          {moreOpen ? (
-            <div className="absolute bottom-full left-0 right-0 z-10 mb-2 overflow-hidden rounded-[12px] bg-white py-1 shadow-lg ring-1 ring-[#EEEEEE]">
-              {lifecycle.moreActions.map((action) => (
-                <button
-                  key={action.id}
-                  type="button"
-                  disabled={actionsDisabled || busy}
-                  onClick={() => {
-                    setMoreOpen(false);
-                    if (action.id === 'contact_client' && phone) {
-                      window.location.href = `tel:${phone}`;
-                      return;
-                    }
-                    void executeAction(action.id);
-                  }}
-                  className="block w-full px-4 py-2.5 text-left text-[14px] font-semibold text-[#111827] hover:bg-[#F8F7F7]"
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      {primaryFooterAction}
+      {secondaryFooterAction}
     </div>
   ) : undefined;
 
@@ -514,93 +484,78 @@ export function AdminAppointmentDetailSheet({
         variant="catalog"
         open={Boolean(appointment)}
         onClose={onClose}
+        closeButtonClassName={apptDetailCloseBtn}
         headerContent={
-          appointment && lifecycle ? (
-            <div className="min-w-0 pr-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 id="admin-sheet-title" className={`${catalogSheetTitle} min-w-0 break-words`}>
-                  Запись
-                </h2>
-                <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusBadgeClass(lifecycle.phase)}`}
-                >
-                  {lifecycle.phaseLabel}
-                </span>
-              </div>
-              <p className="mt-1 text-[13px] font-medium text-[#6B7280]">
-                {formatDdMmYyyy(appointment.date)} · {appointment.timeLabel ?? appointment.time}
-              </p>
-              {lifecycle.warning ? (
-                <p className="mt-1 text-[12px] font-semibold text-[#B91C1C]">{lifecycle.warning}</p>
-              ) : null}
-            </div>
+          appointment && lifecycle && displayAppointment ? (
+            <MasterAppointmentDetailHeader
+              appointment={displayAppointment}
+              lifecycle={lifecycle}
+              warning={
+                lifecycle.warning && !showNextStepsBanner(lifecycle.phase) ? lifecycle.warning : null
+              }
+            />
           ) : undefined
         }
         footer={footer}
       >
         {displayAppointment && lifecycle ? (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-1 sm:space-y-5">
             {error ? (
               <p className="rounded-[10px] bg-[#FEF2F2] px-4 py-3 text-[14px] font-semibold text-[#EF4444]">
                 {error}
               </p>
             ) : null}
-            <AppointmentsClientSummary appointment={displayAppointment} />
+            <MasterAppointmentWhenCard
+              appointment={displayAppointment}
+              statusLabel={lifecycle.phaseLabel}
+              statusTone={appointmentDetailStatusTone(lifecycle.phase, displayAppointment)}
+            />
+
+            {lifecycle.phase === 'pending' ? (
+              <PendingDeadlineHint pendingExpiresAt={displayAppointment.pendingExpiresAt} />
+            ) : null}
+
+            {helperText && showNextStepsBanner(lifecycle.phase) ? (
+              <MasterAppointmentNextStepsMessage
+                text={helperText}
+                warning={lifecycle.warning}
+              />
+            ) : null}
+
+            <AppointmentsClientSummary appointment={displayAppointment} variant="detail" />
 
             {displayAppointment.clientNote?.trim() ? (
-              <div className="rounded-[10px] bg-white px-4 py-3 ring-1 ring-[#EEEEEE]">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-[#9CA3AF]">
-                  Комментарий клиента
-                </p>
-                <p className="mt-1 text-[14px] font-medium text-[#111827]">
+              <div className={apptDetailNoteCard}>
+                <p className={apptDetailSectionLabel}>Пожелания клиента</p>
+                <p className="mt-2 text-[14px] font-medium leading-relaxed text-[#111827]">
                   {displayAppointment.clientNote.trim()}
                 </p>
               </div>
             ) : null}
 
-            <div className="rounded-[10px] bg-white px-4 ring-1 ring-[#EEEEEE]">
-              {voucherLabel ? <SummaryRow label="Номер записи" value={voucherLabel} /> : null}
-              <SummaryRow label="Услуга" value={displayAppointment.serviceTitle} />
-              <SummaryRow
-                label="Длительность"
-                value={formatDurationMinutes(
-                  displayAppointment.durationMinutes,
-                  displayAppointment.serviceTitle,
-                )}
-              />
-              <SummaryRow label="Цена" value={formatBynRu(displayAppointment.priceByn)} />
-              <SummaryRow label="Формат" value={formatVisitPlace(displayAppointment.addressShort)} />
-              {addressLine ? <SummaryRow label="Адрес" value={addressLine} /> : null}
-            </div>
-
-            {helperText ? (
-              <div className="rounded-[10px] bg-[#FFF4F6] px-4 py-3">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-[#F47C8C]">Что дальше</p>
-                <p className="mt-1 text-[14px] font-medium leading-snug text-[#111827]">{helperText}</p>
-              </div>
+            {referencePhotoUrl ? (
+              <MasterAppointmentReferencePhotoBlock photoUrl={referencePhotoUrl} />
             ) : null}
 
-            {timeline.length ? (
-              <div className="space-y-2">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-[#9CA3AF]">История</p>
-                <ul className="overflow-hidden rounded-[10px] bg-white ring-1 ring-[#EEEEEE]">
-                  {timeline.map((ev) => (
-                    <li
-                      key={`${ev.eventType}-${ev.createdAt}`}
-                      className="border-b border-[#EEEEEE] px-4 py-3 last:border-b-0"
-                    >
-                      <p className="text-[14px] font-semibold text-[#111827]">{ev.label}</p>
-                      <p className="mt-0.5 text-[12px] font-medium text-[#9CA3AF]">
-                        {formatTimelineEventTime(ev.createdAt)}
-                      </p>
-                      {ev.comment?.trim() ? (
-                        <p className="mt-1 text-[13px] text-[#6B7280]">{ev.comment.trim()}</p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <MasterAppointmentTimelineBlock
+              events={timeline}
+              onReviewClick={useLiveApi ? openReviewSheet : undefined}
+            />
+
+            {voucherLabel || bookingSource !== 'Сайт' ? (
+              <p className="px-1 text-center text-[11px] font-medium leading-relaxed text-[#9CA3AF]">
+                {voucherLabel ? <>№ {voucherLabel}</> : null}
+                {voucherLabel && bookingSource !== 'Сайт' ? ' · ' : null}
+                {bookingSource !== 'Сайт' ? <>Запись через {bookingSource}</> : null}
+              </p>
             ) : null}
+
+            <MasterAppointmentClientReportBlock
+              clientName={resolveClientDisplayName(displayAppointment)}
+              reported={reportSent}
+              disabled={actionsDisabled || busy}
+              onReport={openClientReport}
+            />
           </div>
         ) : null}
       </AdminBottomSheet>
@@ -634,6 +589,18 @@ export function AdminAppointmentDetailSheet({
             setError(null);
             afterBookingMutation();
             if (useLiveApi) void reloadLiveExtra().catch(() => undefined);
+          }}
+        />
+      ) : null}
+
+      {appointment && useLiveApi ? (
+        <MasterAppointmentReviewSheet
+          open={reviewSheetOpen}
+          appointmentId={appointment.id}
+          reviewId={reviewSheetReviewId}
+          onClose={() => {
+            setReviewSheetOpen(false);
+            setReviewSheetReviewId(null);
           }}
         />
       ) : null}

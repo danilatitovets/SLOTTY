@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ADMIN_SCHEDULE_PATH, ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
@@ -40,8 +40,10 @@ import { AdminProfileBookingRulesPage } from './bookingRules/AdminProfileBooking
 import { useSingleFlight } from '../shared/useSingleFlight';
 import { AdminProfileAddressPage } from './address/AdminProfileAddressPage';
 import { MasterBookingLinkCard } from './MasterBookingLinkCard';
-import { MasterCategorySection } from './MasterCategorySection';
+import { MasterCategorySection, type MasterCategorySectionHandle } from './MasterCategorySection';
 import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
+import { ProfileServicesPreviewSection } from './ProfileServicesPreviewSection';
+import { ProfileAchievementsSection } from './ProfileAchievementsSection';
 import { TrustSection } from './AdminProfilePortfolioUi';
 import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import {
@@ -175,6 +177,8 @@ function MainSection({
     refreshDraft,
     useCabinetApi: cabinetApi,
   } = useAdminMasterCabinet();
+  const categorySectionRef = useRef<MasterCategorySectionHandle>(null);
+  const categoryChangeDisabled = Boolean(categoryChangePolicy?.hasActiveRequest);
 
   return (
     <div className="space-y-4">
@@ -196,11 +200,19 @@ function MainSection({
         useCabinetApi={Boolean(cabinetApi)}
         masterDisplayName={draft.name}
       />
-      <MainInfoCard draft={draft} onEdit={onEditMain} />
+      <MainInfoCard
+        draft={draft}
+        onEdit={onEditMain}
+        onOpenCategoryChange={() => categorySectionRef.current?.open()}
+        categoryChangeDisabled={categoryChangeDisabled}
+      />
       <AboutCard description={draft.description} />
       <ScheduleWorkCard draft={draft} onEditSchedule={onEditSchedule} />
       <ScheduleBookingWindowsHintContainer />
+      <ProfileServicesPreviewSection />
+      <ProfileAchievementsSection />
       <MasterCategorySection
+        ref={categorySectionRef}
         draft={draft}
         publicationStatus={publicationStatus}
         policy={categoryChangePolicy}

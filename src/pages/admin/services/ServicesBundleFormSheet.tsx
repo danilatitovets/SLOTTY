@@ -16,11 +16,12 @@ import {
 } from '../shared/AdminFormSheetLayout';
 import {
   catalogSheetField,
-  catalogSheetGhostBtn,
   catalogSheetPrimaryBtn,
   catalogSheetSecondaryBtn,
 } from '../shared/adminCatalogSheetTheme';
-import { servicesCatalogSearchInput } from './adminServicesTheme';
+import { servicesCatalogPriceText, servicesCatalogSearchInput, servicesSheetFormPanel } from './adminServicesTheme';
+import { ServicesFocusPhotoBackdrop } from './ServicesKpiPhotoBackdrop';
+import { ServicesSheetPriceHero } from './ServicesSheetPriceHero';
 import { sheetLabelClass } from '../profile/adminProfileCabinetTheme';
 import {
   calcBundleDiscount,
@@ -299,7 +300,20 @@ export function ServicesBundleFormSheet({
           </button>
         </div>
       ) : (
-        <>
+        <div className="flex w-full gap-2 sm:gap-3">
+          {step > 0 ? (
+            <button type="button" onClick={handleBack} className={catalogSheetSecondaryBtn}>
+              Назад
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onSave(buildBundle('draft'))}
+            className={catalogSheetSecondaryBtn}
+            aria-label="Сохранить черновик"
+          >
+            Черновик
+          </button>
           <button
             type="button"
             disabled={!canNext}
@@ -308,19 +322,7 @@ export function ServicesBundleFormSheet({
           >
             Опубликовать
           </button>
-          <button
-            type="button"
-            onClick={() => onSave(buildBundle('draft'))}
-            className={catalogSheetSecondaryBtn}
-          >
-            Сохранить черновик
-          </button>
-          {step > 0 ? (
-            <button type="button" onClick={handleBack} className={catalogSheetGhostBtn}>
-              Назад
-            </button>
-          ) : null}
-        </>
+        </div>
       )}
     </div>
   );
@@ -421,79 +423,94 @@ export function ServicesBundleFormSheet({
 
           {step === 1 ? (
             <AdminFormSheetSection title="Цена и выгода" variant="catalog">
-              <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-              <label className="block lg:col-span-2">
-                <span className={sheetLabelClass}>Название набора</span>
-                <input
-                  value={title}
-                  onChange={(e) => {
-                    setTitleTouched(true);
-                    setTitle(e.target.value);
-                  }}
-                  placeholder="Например: Маникюр + укрепление"
-                  className={`${catalogSheetField} mt-1.5`}
+              <div className="space-y-3">
+                <ServicesSheetPriceHero
+                  label="Цена набора"
+                  value={bundlePrice > 0 ? `${bundlePrice} BYN` : '—'}
                 />
-              </label>
 
-              <label className="block">
-                <span className={sheetLabelClass}>Описание</span>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Опишите, что входит в набор и почему это выгодно"
-                  className={`${catalogSheetField} mt-1.5 resize-none`}
-                />
-              </label>
+                <div className={`${servicesSheetFormPanel} space-y-3 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0`}>
+                  <label className="block lg:col-span-2">
+                    <span className={sheetLabelClass}>Название набора</span>
+                    <input
+                      value={title}
+                      onChange={(e) => {
+                        setTitleTouched(true);
+                        setTitle(e.target.value);
+                      }}
+                      placeholder="Например: Маникюр + укрепление"
+                      className={`${catalogSheetField} mt-1.5`}
+                    />
+                  </label>
 
-              <label className="block">
-                <span className={sheetLabelClass}>Обычная цена</span>
-                <div
-                  className={`${catalogSheetField} mt-1.5 cursor-default bg-[#FAFAFA] text-[#111827]`}
-                  aria-readonly
-                >
-                  {originalPrice} BYN
+                  <label className="block">
+                    <span className={sheetLabelClass}>Описание</span>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      placeholder="Опишите, что входит в набор и почему это выгодно"
+                      className={`${catalogSheetField} mt-1.5 resize-none`}
+                    />
+                  </label>
+
+                  <div className="block">
+                    <span className={sheetLabelClass}>Обычная цена</span>
+                    <div
+                      className={`${catalogSheetField} mt-1.5 flex items-center justify-between bg-[#FAFAFA] text-[#9CA3AF]`}
+                      aria-readonly
+                    >
+                      <span className="text-[15px] font-semibold line-through tabular-nums">
+                        {originalPrice} BYN
+                      </span>
+                      <span className="text-[12px] font-medium text-[#6B7280]">без скидки</span>
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className={sheetLabelClass}>Цена набора</span>
+                    <input
+                      value={bundlePriceInput}
+                      onChange={(e) => setBundlePriceInput(e.target.value)}
+                      inputMode="decimal"
+                      placeholder="70"
+                      className={`${catalogSheetField} mt-1.5 text-[20px] font-black tabular-nums tracking-[-0.04em] text-[#ff5f7a] ring-2 ring-[#FDE8ED] focus:bg-[#FFF1F4] focus:ring-[#F9A8B4]`}
+                    />
+                  </label>
+
+                  <label className="block lg:col-span-2">
+                    <span className={sheetLabelClass}>Длительность</span>
+                    <input
+                      value={String(durationMinutes)}
+                      onChange={(e) => {
+                        setDurationManual(true);
+                        setDurationMinutes(Number.parseInt(e.target.value, 10) || 0);
+                      }}
+                      inputMode="numeric"
+                      className={`${catalogSheetField} mt-1.5`}
+                    />
+                    <p className="mt-1 text-[12px] text-[#9CA3AF]">
+                      По умолчанию: {formatDurationRu(sumServicesDuration(services, selectedIds))}
+                    </p>
+                  </label>
                 </div>
-              </label>
 
-              <label className="block">
-                <span className={sheetLabelClass}>Цена набора</span>
-                <input
-                  value={bundlePriceInput}
-                  onChange={(e) => setBundlePriceInput(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="70"
-                  className={`${catalogSheetField} mt-1.5`}
-                />
-              </label>
-
-              {bundlePrice > 0 && originalPrice > bundlePrice ? (
-                <div className="lg:col-span-2 rounded-[10px] bg-[#EBEBEB] px-4 py-3.5">
-                  <p className="text-[12px] font-medium text-[#6B7280]">Выгода для клиента</p>
-                  <p className="mt-1 text-[24px] font-bold tabular-nums tracking-[-0.04em] text-[#111827]">
-                    −{discountPercent}%
-                  </p>
-                  <p className="mt-0.5 text-[14px] font-semibold text-[#16A34A]">
-                    Экономия {discountAmount} BYN
-                  </p>
-                </div>
-              ) : null}
-
-              <label className="block lg:col-span-2">
-                <span className={sheetLabelClass}>Длительность</span>
-                <input
-                  value={String(durationMinutes)}
-                  onChange={(e) => {
-                    setDurationManual(true);
-                    setDurationMinutes(Number.parseInt(e.target.value, 10) || 0);
-                  }}
-                  inputMode="numeric"
-                  className={`${catalogSheetField} mt-1.5`}
-                />
-                <p className="mt-1 text-[12px] text-[#9CA3AF]">
-                  По умолчанию: {formatDurationRu(sumServicesDuration(services, selectedIds))}
-                </p>
-              </label>
+                {bundlePrice > 0 && originalPrice > bundlePrice ? (
+                  <div className="relative overflow-hidden rounded-[14px] px-4 py-4">
+                    <ServicesFocusPhotoBackdrop />
+                    <div className="relative z-10">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/85">
+                        Выгода для клиента
+                      </p>
+                      <p className="mt-2 text-[30px] font-black tabular-nums leading-none tracking-[-0.05em] text-white">
+                        −{discountPercent}%
+                      </p>
+                      <p className="mt-2">
+                        <span className={servicesCatalogPriceText}>Экономия {discountAmount} BYN</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </AdminFormSheetSection>
           ) : null}

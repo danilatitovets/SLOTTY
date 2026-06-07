@@ -1,7 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { HiSparkles } from 'react-icons/hi2';
-import { ADMIN_DESKTOP_LOGO_SRC } from '../../app/headerLogo';
-import { ADMIN_PATH, PLATFORM_ADMIN_PATH } from '../../app/paths';
+import { ADMIN_PATH, ADMIN_SERVICES_PATH, PLATFORM_ADMIN_PATH } from '../../app/paths';
 import { planBadgeLabel } from '../../features/billing/model/masterPlans';
 import { useMasterPlanEntitlements } from '../../features/billing/useMasterPlanEntitlements';
 import { useAuth } from '../../features/auth/AuthProvider';
@@ -13,15 +12,16 @@ import { useAdminNotifications } from './notifications/AdminNotificationsContext
 import { useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import {
   ADMIN_BILLING_NAV,
-  ADMIN_HUB_PATH,
   ADMIN_MAIN_NAV,
   ADMIN_NOTIFICATIONS_NAV,
   ADMIN_SETTINGS_NAV,
   AdminCabinetNavLink,
 } from './adminCabinetNav';
+import { AdminSectionAttentionBadge } from './shared/AdminSectionAttentionBadge';
+import { useServicesCatalogAttention } from './services/useServicesCatalogAttention';
 import {
-  ADMIN_SIDEBAR_WIDTH,
   adminDesktopNavItemClass,
+  adminDesktopSidebarShell,
   adminSidebarFooterCard,
   adminSidebarFooterCardAccent,
   ADMIN_SIDEBAR_TARIFF_BG,
@@ -45,25 +45,11 @@ export function AdminDesktopSidebar() {
 
   const displayName = draft.name?.trim() || profile?.full_name?.trim() || 'Мастер';
   const showPlatformAdmin = isPlatformAdmin(profile);
+  const servicesNeedAttention = useServicesCatalogAttention();
 
   return (
-    <aside
-      className={`${ADMIN_SIDEBAR_WIDTH} sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-[#eef0f5] bg-white lg:flex`}
-    >
-      <div className="relative h-[5rem] shrink-0 overflow-hidden border-b border-[#eef0f5] px-5">
-        <Link
-          to={ADMIN_HUB_PATH}
-          className="inline-flex max-w-full -translate-y-8 no-underline"
-        >
-          <img
-            src={ADMIN_DESKTOP_LOGO_SRC}
-            alt="SLOTTY"
-            className="h-[10rem] w-auto max-w-full object-contain object-left"
-          />
-        </Link>
-      </div>
-
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 py-4" aria-label="Кабинет мастера">
+    <aside className={adminDesktopSidebarShell}>
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden px-3 py-4" aria-label="Кабинет мастера">
         <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
           Меню
         </p>
@@ -80,6 +66,9 @@ export function AdminDesktopSidebar() {
                 <>
                   <Icon className={`shrink-0 ${isActive ? 'text-[#ff5f7a]' : ''}`} />
                   <span className="truncate">{item.label}</span>
+                  {item.to === ADMIN_SERVICES_PATH && servicesNeedAttention ? (
+                    <AdminSectionAttentionBadge className="ml-auto" />
+                  ) : null}
                 </>
               );
             }}
@@ -159,7 +148,7 @@ export function AdminDesktopSidebar() {
         ) : null}
       </nav>
 
-      <div className="space-y-2 border-t border-[#EEEEEE] p-3">
+      <div className="shrink-0 space-y-2 border-t border-[#EEEEEE] p-3">
         <Link to={ADMIN_BILLING_NAV.to} className={`${adminSidebarFooterCardAccent} mb-0`}>
           <div
             className="pointer-events-none absolute inset-0 bg-cover bg-center"

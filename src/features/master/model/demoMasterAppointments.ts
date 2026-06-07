@@ -61,6 +61,7 @@ export type DemoMasterAppointment = {
     createdAt: string;
     comment?: string | null;
     lateMinutes?: number | null;
+    reviewId?: string | null;
   }>;
   clientSignal?: {
     kind: 'on_the_way' | 'running_late' | 'reported_arrived' | null;

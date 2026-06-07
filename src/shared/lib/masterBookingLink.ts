@@ -1,4 +1,4 @@
-import { getMasterPath } from '../../app/paths';
+import { getBookingPath, getMasterPath } from '../../app/paths';
 
 /** Канонический публичный origin (ссылки для клиентов, соцсети). */
 export const DEFAULT_PUBLIC_APP_ORIGIN = 'https://slotty.of.by';
@@ -63,6 +63,17 @@ export function buildTelegramMasterBookingUrl(
   const bot = botUsername.trim().replace(/^@+/, '');
   const start = buildMasterTelegramStartPayload(profileSlug, masterId);
   return `https://t.me/${bot}?start=${encodeURIComponent(start)}`;
+}
+
+/** Абсолютная ссылка на экран записи с выбранным слотом. */
+export function buildWebBookingAbsoluteUrl(
+  origin: string,
+  masterId: string,
+  serviceId: string,
+  slotId: string,
+): string {
+  const base = origin.replace(/\/$/, '');
+  return `${base}${getBookingPath(masterId, serviceId, slotId)}`;
 }
 
 /** Абсолютная ссылка на публичную карточку мастера в веб-приложении. */

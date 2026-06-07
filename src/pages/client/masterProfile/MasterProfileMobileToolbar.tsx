@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
-import { catalogDesktopPanel } from './masterProfileTheme';
+import {
+  masterProfileToolbarPositionClass,
+  masterProfileToolbarShellBase,
+  masterProfileToolbarSurfaceClass,
+} from './masterProfileTheme';
 import { MasterProfileToolbarInner } from './MasterProfileToolbarInner';
+import { useMasterProfileHeroCollapsed } from './useMasterProfileHeroCollapsed';
 
 type Props = {
   masterName: string;
@@ -19,46 +23,24 @@ export function MasterProfileMobileToolbar({
   onReport,
   favoriteDisabled = false,
 }: Props) {
-  const [compact, setCompact] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > 80);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const heroCollapsed = useMasterProfileHeroCollapsed(Boolean(masterName.trim()));
 
   return (
-    <div
-      className={`sticky z-40 top-[max(0.25rem,env(safe-area-inset-top,0px))] ${
-        compact
-          ? '-mx-4 border-b border-[#EEEEEE] bg-white px-4 py-2.5 shadow-[0_4px_16px_rgba(17,24,39,0.06)]'
-          : 'bg-transparent pb-2 pt-1'
-      }`}
+    <header
+      data-master-profile-toolbar="mobile"
+      className={`${masterProfileToolbarShellBase} ${masterProfileToolbarPositionClass(heroCollapsed, 'mobile')} ${masterProfileToolbarSurfaceClass(heroCollapsed)}`}
     >
-      {compact ? (
+      <div className="px-4 py-2.5">
         <MasterProfileToolbarInner
           masterName={masterName}
-          compact
           isFavorite={isFavorite}
           onFavoriteToggle={onFavoriteToggle}
           onShare={onShare}
           onReport={onReport}
           favoriteDisabled={favoriteDisabled}
+          heroCollapsed={heroCollapsed}
         />
-      ) : (
-        <div className={`${catalogDesktopPanel} px-4 py-2.5`}>
-          <MasterProfileToolbarInner
-            masterName={masterName}
-            compact={false}
-            isFavorite={isFavorite}
-            onFavoriteToggle={onFavoriteToggle}
-            onShare={onShare}
-            onReport={onReport}
-            favoriteDisabled={favoriteDisabled}
-          />
-        </div>
-      )}
-    </div>
+      </div>
+    </header>
   );
 }

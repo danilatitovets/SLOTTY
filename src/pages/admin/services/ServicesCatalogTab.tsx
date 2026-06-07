@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ADMIN_SCHEDULE_PATH } from '../../../app/paths';
 import { MasterPublicPreviewLink } from '../shared/MasterPublicPreviewLink';
 import { HiChevronLeft, HiChevronRight, HiFunnel, HiMagnifyingGlass } from 'react-icons/hi2';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import {
+  servicesCatalogAddBtn,
   servicesCatalogFilterBtn,
   servicesCatalogFilterBtnActive,
   servicesCatalogSearchInput,
@@ -12,6 +13,7 @@ import {
   servicesTabPanelShell,
   servicesTabScrollBottomPad,
 } from './adminServicesTheme';
+import { ServicesBrandPhotoLayers } from './ServicesBrandPhotoLayers';
 import { MiniPicture } from '../../../shared/ui/MiniPicture';
 import { profileDashboardCard } from '../profile/adminProfileDashboardTheme';
 import { useMasterPlatformAccess } from '../../../features/auth/context/MasterPlatformAccessContext';
@@ -28,6 +30,7 @@ import {
   ServicesCatalogFiltersSheet,
   type CatalogFiltersState,
 } from './ServicesCatalogFiltersSheet';
+import { useCatalogServiceDragReorder } from './useCatalogServiceDragReorder';
 
 type ServiceStats = {
   serviceId: string;
@@ -40,6 +43,7 @@ type Props = {
   services: ManagedService[];
   onAdd: () => void;
   onOpenMenu: (service: ManagedService) => void;
+  onReorder?: (activeId: string, overId: string) => void;
   serviceStats?: ServiceStats[];
   categoryLabel?: string | null;
   masterId?: string | null;
@@ -102,6 +106,7 @@ export function ServicesCatalogTab({
   services,
   onAdd,
   onOpenMenu,
+  onReorder,
   serviceStats = [],
   categoryLabel,
   masterId,
@@ -129,6 +134,17 @@ export function ServicesCatalogTab({
   const filterIsActive = catalogFiltersAreActive(filters);
   const activeFilterChips = useMemo(() => getActiveCatalogFilterChips(filters), [filters]);
 
+  const priceSuggestions = useMemo(() => {
+    const prices = [
+      ...new Set(
+        services
+          .map((s) => (Number.isFinite(s.priceByn) ? Math.round(s.priceByn) : 0))
+          .filter((p) => p > 0),
+      ),
+    ].sort((a, b) => a - b);
+    return prices.slice(0, 8);
+  }, [services]);
+
   useEffect(() => {
     setPage(0);
   }, [query, filters]);
@@ -143,6 +159,25 @@ export function ServicesCatalogTab({
 
   const statsById = useMemo(() => new Map(serviceStats.map((s) => [s.serviceId, s])), [serviceStats]);
 
+  const canReorder =
+    Boolean(onReorder) &&
+    masterWrite.canMutate &&
+    filters.sort === 'catalog' &&
+    !filterIsActive &&
+    !query.trim();
+
+  const handleReorder = useCallback(
+    (activeId: string, overId: string) => {
+      onReorder?.(activeId, overId);
+    },
+    [onReorder],
+  );
+
+  const { draggingId, overId, isDragging, onHandlePointerDown } = useCatalogServiceDragReorder({
+    enabled: canReorder,
+    onReorder: handleReorder,
+  });
+
   return (
     <div className={servicesTabPanelShell}>
       <div className={`${servicesTabContentPad} ${servicesTabScrollBottomPad}`}>
@@ -151,9 +186,6 @@ export function ServicesCatalogTab({
           <h2 className="text-[18px] font-black tracking-[-0.04em] text-[#111827] lg:text-[22px] lg:tracking-[-0.05em]">
             Услуги
           </h2>
-          <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
-            Создайте услуги, которые клиенты смогут выбрать при записи.
-          </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -161,9 +193,10 @@ export function ServicesCatalogTab({
             onClick={onAdd}
             disabled={!masterWrite.canMutate}
             title={masterWrite.mutateDisabledTitle}
-            className="inline-flex min-h-11 min-w-0 w-full items-center justify-center rounded-[12px] bg-[#F47C8C] px-3 text-[12px] font-bold text-white transition hover:opacity-95 active:scale-[0.98] disabled:opacity-45 sm:px-4 sm:text-[13px]"
+            className={servicesCatalogAddBtn}
           >
-            Добавить услугу
+            <ServicesBrandPhotoLayers />
+            <span className="relative z-10">Добавить услугу</span>
           </button>
           <MasterPublicPreviewLink
             masterId={masterId}
@@ -207,7 +240,7 @@ export function ServicesCatalogTab({
           <HiFunnel className="h-5 w-5" aria-hidden />
           {filterIsActive ? (
             <span
-              className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#F47C8C]"
+              className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white shadow-sm"
               aria-hidden
             />
           ) : null}
@@ -249,7 +282,9 @@ export function ServicesCatalogTab({
         </div>
       ) : (
         <>
-          <ul className="flex w-full max-w-none flex-col gap-2.5 lg:gap-3">
+          <ul
+            className={`flex w-full max-w-none flex-col gap-2.5 lg:gap-3 ${isDragging ? 'select-none' : ''}`}
+          >
             {pageItems.map((service) => {
               const stats = statsById.get(service.id);
               return (
@@ -261,6 +296,10 @@ export function ServicesCatalogTab({
                 availableSlotsCount={stats?.availableSlotsCount}
                 upcomingAppointmentsCount={stats?.upcomingAppointmentsCount}
                 onOpenMenu={onOpenMenu}
+                showDragHandle={canReorder}
+                isDragSource={draggingId === service.id}
+                isDragOver={overId === service.id && draggingId !== service.id}
+                onDragHandlePointerDown={(event) => onHandlePointerDown(service.id, event)}
               />
             );
             })}
@@ -281,6 +320,7 @@ export function ServicesCatalogTab({
         filters={filters}
         resultCount={filtered.length}
         totalCount={services.length}
+        priceSuggestions={priceSuggestions}
         onChange={patchFilters}
         onReset={() => setFilters(DEFAULT_CATALOG_FILTERS)}
         onClose={() => setFilterOpen(false)}

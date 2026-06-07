@@ -105,6 +105,18 @@ export async function fetchMasterReviewNotificationDetail(
   return data.review;
 }
 
+export async function fetchMasterAppointmentReview(
+  appointmentId: string,
+): Promise<MasterReviewNotificationDetail> {
+  const res = await apiFetch(
+    `/api/masters/me/appointments/${encodeURIComponent(appointmentId)}/review`,
+  );
+  if (!res.ok) throw new Error(await readApiError(res));
+  const data = (await res.json()) as { review?: MasterReviewNotificationDetail };
+  if (!data.review) throw new Error('Отзыв не найден');
+  return data.review;
+}
+
 export async function postOverviewReviewReply(reviewId: string, text: string): Promise<void> {
   const res = await apiFetch(`/api/masters/me/overview/reviews/${reviewId}/reply`, {
     method: 'POST',

@@ -23,16 +23,14 @@ export function getAddWindowStepSubtitle(step: AddWindowFormStep, ctx: AddWindow
     return 'День и время — услуга и длительность из шаблона';
   }
   if (step === 1) {
-    return templateMode
-      ? 'Услуга уже задана шаблоном'
-      : 'Услуга — что увидит клиент при записи на это окно';
+    return templateMode ? 'Услуга уже задана шаблоном' : 'Выберите услугу из каталога';
   }
   return 'Проверьте итог и при необходимости настройте повтор серии окон';
 }
 
 export const ADD_WINDOW_STEP_SUBTITLES: Record<AddWindowFormStep, string> = {
   0: 'День, начало и окончание — когда слот открыт для записи',
-  1: 'Услуга — что увидит клиент при записи на это окно',
+  1: 'Выберите услугу из каталога',
   2: 'Проверьте итог и при необходимости настройте повтор серии окон',
 };
 
@@ -73,7 +71,7 @@ export function validateAddWindowStep(step: AddWindowFormStep, ctx: AddWindowSte
   if (step === 1) {
     if (templateMode) return null;
     if (!serviceId.trim() || !isUuid(serviceId)) {
-      return 'Выберите услугу из каталога или «Любая услуга».';
+      return 'Выберите услугу из каталога.';
     }
     return null;
   }

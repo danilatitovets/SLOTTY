@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { HiArrowDownTray, HiXMark } from 'react-icons/hi2';
@@ -82,6 +82,7 @@ export function BookingSuccessCelebration({ compact }: { compact?: boolean }) {
 }
 
 export function BookingSuccessModal({ success }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const rows = buildBookingReceiptRows(success);
   const issuedAt = new Date().toLocaleString('ru-RU', {
     day: 'numeric',
@@ -96,6 +97,10 @@ export function BookingSuccessModal({ success }: Props) {
     const unlockScroll = lockBackgroundScroll();
 
     const blockBackgroundScroll = (event: WheelEvent | TouchEvent) => {
+      const scrollEl = scrollRef.current;
+      if (scrollEl && event.target instanceof Node && scrollEl.contains(event.target)) {
+        return;
+      }
       event.preventDefault();
     };
 
@@ -153,7 +158,10 @@ export function BookingSuccessModal({ success }: Props) {
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6"
+        >
           <div className="overflow-hidden rounded-[16px] border border-[#F3F4F6]">
             <img
               src={SUBSCRIPTION_RECEIPT_BG_SRC}

@@ -1,10 +1,14 @@
 import { useLayoutEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ADMIN_NOTIFICATIONS_PATH, MASTER_SETTINGS_PATH } from '../../app/paths';
+import { CabinetDesktopHeaderLogo } from '../../shared/layout/CabinetDesktopHeaderLogo';
+import { CabinetRoleSwitch } from '../../shared/layout/CabinetRoleSwitch';
 import { useAdminNotifications } from './notifications/AdminNotificationsContext';
-import { NotificationBellBadge, notificationBellLinkClass } from './notifications/notificationBellUi';
-import { ADMIN_PAGE_TITLES, IconNavNotifications, resolveAdminSectionMeta } from './adminCabinetNav';
+import { NotificationBellLink } from './notifications/notificationBellUi';
+import { ADMIN_HUB_PATH, ADMIN_PAGE_TITLES, resolveAdminSectionMeta } from './adminCabinetNav';
 import { ProfileCompletionHeaderCard } from './profile/ProfileCompletionHeaderCard';
+import { ADMIN_DESKTOP_TOPBAR_HEIGHT, ADMIN_SIDEBAR_WIDTH } from './adminCabinetLayout';
+
 export function AdminDesktopTopBar() {
   const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -34,30 +38,40 @@ export function AdminDesktopTopBar() {
   return (
     <header
       ref={headerRef}
-      className="sticky top-0 z-30 hidden shrink-0 border-b border-[#EAECEF] bg-white px-8 py-4 lg:block"
+      className="fixed inset-x-0 top-0 z-40 hidden border-b border-[#EAECEF] bg-white lg:flex"
+      style={{ height: ADMIN_DESKTOP_TOPBAR_HEIGHT }}
     >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.04em] text-[#111827]">{title}</h1>
+      <div className="flex h-full w-full items-stretch gap-4">
+        <div className={`${ADMIN_SIDEBAR_WIDTH} h-full shrink-0 px-5`}>
+          <CabinetDesktopHeaderLogo to={ADMIN_HUB_PATH} />
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <h1 className="min-w-0 flex-1 self-center truncate text-[22px] font-bold tracking-[-0.04em] text-[#111827]">
+          {title}
+        </h1>
+
+        <div className="self-center">
+          <CabinetRoleSwitch active="master" />
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4 self-center px-8">
           <ProfileCompletionHeaderCard variant="header" className="max-w-[14rem]" />
 
-          <Link
+          <NotificationBellLink
             to={ADMIN_NOTIFICATIONS_PATH}
-            className={notificationBellLinkClass(isNotifications, hasAttention, 'desktop')}
-            aria-label={
+            isActive={isNotifications}
+            hasUnread={hasAttention}
+            count={bellCount}
+            variant="desktop"
+            ringClass="ring-[#F5F6FA]"
+            ariaLabel={
               bellCount > 0
                 ? `Уведомления, ${bellCount} непрочитанных`
                 : hasAttention
                   ? 'Уведомления, есть задачи'
                   : 'Уведомления'
             }
-          >
-            <IconNavNotifications />
-            <NotificationBellBadge count={bellCount} ringClass="ring-[#F5F6FA]" />
-          </Link>
+          />
         </div>
       </div>
     </header>

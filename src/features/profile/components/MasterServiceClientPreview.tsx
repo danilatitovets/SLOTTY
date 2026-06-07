@@ -35,11 +35,7 @@ export function MasterServiceClientPreview({
           />
         </div>
       </div>
-      {service.description?.trim() ? (
-        <p className="text-[12px] font-medium leading-snug text-[#6B7280]">
-          Полное описание клиент откроет по кнопке «Подробнее» — в списке его нет.
-        </p>
-      ) : null}
+
     </div>
   );
 }

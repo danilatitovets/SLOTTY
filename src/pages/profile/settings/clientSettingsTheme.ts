@@ -28,7 +28,7 @@ export const settingsSecondaryBtnClass =
 export const settingsWorkspaceBg = 'bg-[#f6f7fb]';
 
 export const settingsSidebarShellClass =
-  'shrink-0 rounded-[20px] border border-[#EAECEF] bg-white p-3 shadow-[0_4px_24px_rgba(17,24,39,0.04)] lg:w-[260px] xl:w-[280px]';
+  'shrink-0 rounded-[16px] border border-[#EAECEF] bg-white p-3 shadow-[0_1px_3px_rgba(17,24,39,0.04)] lg:w-[240px] xl:w-[260px]';
 
 export const clientSettingsNavGroupLabel =
   'px-2 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9CA3AF] first:pt-1';

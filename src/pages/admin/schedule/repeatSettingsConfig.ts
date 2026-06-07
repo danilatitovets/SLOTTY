@@ -42,14 +42,16 @@ export type RepeatKindOption = {
   value: RepeatKind;
   label: string;
   description: string;
+  /** Шаг в днях — показываем на карточке выбора. */
+  intervalDays?: number;
 };
 
 export const REPEAT_KIND_OPTIONS: RepeatKindOption[] = [
-  { value: 'none', label: 'Одно окно', description: 'Только на выбранную дату' },
-  { value: 'weekly', label: 'Каждую неделю', description: 'Тот же день недели, через 7 дней' },
-  { value: 'biweekly', label: 'Раз в 2 недели', description: 'Тот же день, шаг 14 дней' },
-  { value: 'weekdays', label: 'По будням', description: 'Пн–Пт в выбранном периоде' },
-  { value: 'pick_weekdays', label: 'Свои дни', description: 'Отметьте дни недели и период' },
+  { value: 'none', label: 'Без повтора', description: 'Только выбранная дата' },
+  { value: 'weekly', label: 'Каждую неделю', description: 'Тот же день недели', intervalDays: 7 },
+  { value: 'biweekly', label: 'Каждые 2 недели', description: 'Тот же день, шаг 14 дней', intervalDays: 14 },
+  { value: 'weekdays', label: 'По будням', description: 'Пн–пт' },
+  { value: 'pick_weekdays', label: 'Дни недели', description: 'Выберите дни' },
 ];
 
 export const WEEKLY_COUNT_OPTIONS: { value: WeeklyRepeatCount; label: string }[] = [
@@ -76,42 +78,32 @@ export const PICK_WEEKDAYS_SPAN_OPTIONS: { value: PickWeekdaysSpanWeeks; label: 
   { value: 8, label: '8 недель' },
 ];
 
-export function formatRepeatSummary(settings: RepeatSettingsValue, dateCount?: number): string {
-  if (settings.kind === 'none') {
-    return 'Только на выбранную дату';
-  }
-
-  const kindLabel = REPEAT_KIND_OPTIONS.find((o) => o.value === settings.kind)?.label ?? '';
-
-  let detail = '';
+export function formatRepeatDetail(settings: RepeatSettingsValue): string {
   switch (settings.kind) {
+    case 'none':
+      return 'Только на выбранную дату';
     case 'weekly':
-      detail = `${settings.weeklyCount} ${weeksLabel(settings.weeklyCount)}`;
-      break;
+      return `Каждую неделю · ${settings.weeklyCount} ${weeksLabel(settings.weeklyCount)}`;
     case 'biweekly':
-      detail = `${settings.biweeklyCount} ${timesLabel(settings.biweeklyCount)}`;
-      break;
+      return `Каждые 2 недели · ${settings.biweeklyCount} ${timesLabel(settings.biweeklyCount)}`;
     case 'weekdays':
-      detail = `период ${settings.weekdaySpanWeeks} ${weeksLabel(settings.weekdaySpanWeeks)}`;
-      break;
+      return `Пн–пт · ${settings.weekdaySpanWeeks} ${weeksLabel(settings.weekdaySpanWeeks)}`;
     case 'pick_weekdays': {
       const days = settings.pickWeekdayMask
         .map((on, i) => (on ? WEEKDAY_SHORT[i] : null))
         .filter(Boolean)
         .join(', ');
-      detail = days
+      return days
         ? `${days} · ${settings.pickWeekdaysSpanWeeks} ${weeksLabel(settings.pickWeekdaysSpanWeeks)}`
-        : 'выберите дни';
-      break;
+        : 'Выберите дни недели';
     }
     default:
-      break;
+      return '';
   }
+}
 
-  const countSuffix =
-    dateCount != null && dateCount > 0 ? ` · ${dateCount} ${datesLabel(dateCount)}` : '';
-
-  return `${kindLabel} · ${detail}${countSuffix}`;
+export function formatRepeatSummary(settings: RepeatSettingsValue, _dateCount?: number): string {
+  return formatRepeatDetail(settings);
 }
 
 export type RepeatSummaryRow = { label: string; value: string };
@@ -122,7 +114,7 @@ export function formatRepeatSummaryRows(
   dateCount?: number,
 ): RepeatSummaryRow[] {
   if (settings.kind === 'none') {
-    return [{ label: 'Повтор', value: 'Только на выбранную дату' }];
+    return [{ label: 'Повтор', value: 'Без повтора' }];
   }
 
   const kindLabel = REPEAT_KIND_OPTIONS.find((o) => o.value === settings.kind)?.label ?? '';

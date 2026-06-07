@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import { AdminFormSheetLayout, AdminFormSheetStepper } from '../shared/AdminFormSheetLayout';
-import { catalogSheetSecondaryBtn } from '../shared/adminCatalogSheetTheme';
-import { scheduleSheetGhostBtn, scheduleSheetPrimaryBtn } from './adminScheduleTheme';
+import { scheduleSheetPrimaryBtn, scheduleSheetSecondaryBtn } from './adminScheduleTheme';
 import { AddWindowForm } from './AddWindowForm';
 import type { MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
 import type { PlannedSlot, WindowTemplate } from './scheduleTypes';
@@ -158,23 +157,25 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
 
   const footer =
     step < 2 ? (
-      <div className="flex flex-col gap-2">
-        <div className="flex w-full gap-3">
-          {step > 0 ? (
-            <button type="button" className={catalogSheetSecondaryBtn} disabled={saving} onClick={handleBack}>
-              Назад
-            </button>
-          ) : null}
-          <button type="button" className={scheduleSheetPrimaryBtn} disabled={saving} onClick={handleNext}>
-            Далее
+      <div className="flex w-full gap-3">
+        {step > 0 ? (
+          <button type="button" className={scheduleSheetSecondaryBtn} disabled={saving} onClick={handleBack}>
+            Назад
           </button>
-        </div>
-        <button type="button" className={catalogSheetSecondaryBtn} disabled={saving} onClick={onClose}>
-          Отмена
+        ) : (
+          <button type="button" className={scheduleSheetSecondaryBtn} disabled={saving} onClick={onClose}>
+            Отмена
+          </button>
+        )}
+        <button type="button" className={scheduleSheetPrimaryBtn} disabled={saving} onClick={handleNext}>
+          Далее
         </button>
       </div>
     ) : (
-      <div className="flex flex-col gap-2">
+      <div className="flex w-full gap-3">
+        <button type="button" className={scheduleSheetSecondaryBtn} disabled={saving} onClick={handleBack}>
+          Назад
+        </button>
         <button
           type="button"
           className={scheduleSheetPrimaryBtn}
@@ -182,9 +183,6 @@ export function AddWindowSheet({ open, onClose, createError, ...form }: Props) {
           onClick={handleSubmit}
         >
           {saving ? 'Сохранение…' : submitLabel}
-        </button>
-        <button type="button" className={scheduleSheetGhostBtn} disabled={saving} onClick={handleBack}>
-          Назад
         </button>
       </div>
     );

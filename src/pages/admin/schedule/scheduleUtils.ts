@@ -96,17 +96,52 @@ export function formatPreviewLine(dateIso: string, startTime: string, endTime: s
   return `${parts.dateLine}, ${parts.timeLine}`;
 }
 
+/** Первые N дат серии с тем же временем начала — для превью «сегодня и через неделю». */
+export function formatRepeatStepPreviewLines(
+  anchorIso: string,
+  startTime: string,
+  stepDays: number,
+  count = 2,
+): string[] {
+  if (!anchorIso.trim() || !startTime.trim() || stepDays <= 0 || count <= 0) return [];
+
+  const anchor = startOfLocalDay(parseIsoDate(anchorIso));
+  const todayTs = startOfLocalDay(new Date()).getTime();
+  const lines: string[] = [];
+
+  for (let i = 0; i < count; i += 1) {
+    const d = addDays(anchor, i * stepDays);
+    const isToday = startOfLocalDay(d).getTime() === todayTs;
+    const wd = formatWeekdayShort(d);
+    const datePart = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(d);
+    const dateLabel = isToday && i === 0 ? 'Сегодня' : `${wd}, ${datePart}`;
+    lines.push(`${dateLabel} · ${startTime}`);
+  }
+
+  return lines;
+}
+
 export function formatPreviewSummaryParts(
   dateIso: string,
   startTime: string,
   endTime: string,
 ): { dateLine: string; timeLine: string } {
-  const d = parseIsoDate(dateIso);
+  const timeLine = `${startTime}–${endTime}`;
+  const trimmed = dateIso.trim();
+  if (!trimmed) {
+    return { dateLine: '—', timeLine };
+  }
+
+  const d = parseIsoDate(trimmed);
+  if (Number.isNaN(d.getTime())) {
+    return { dateLine: trimmed, timeLine };
+  }
+
   const wd = formatWeekdayShort(d);
   const datePart = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(d);
   return {
     dateLine: `${wd}, ${datePart}`,
-    timeLine: `${startTime}–${endTime}`,
+    timeLine,
   };
 }
 
@@ -229,13 +264,39 @@ export function isScheduleWindowBooked(
 export const MSG_SCHEDULE_WINDOW_BOOKED =
   'На это окно есть запись — удалить нельзя. Сначала отмените запись в разделе «Заявки».';
 
-export function windowsCountRu(n: number): string {
+function windowsCountWordRu(n: number): string {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} окон`;
-  if (mod10 === 1) return `${n} окно`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} окна`;
-  return `${n} окон`;
+  if (mod100 >= 11 && mod100 <= 14) return 'окон';
+  if (mod10 === 1) return 'окно';
+  if (mod10 >= 2 && mod10 <= 4) return 'окна';
+  return 'окон';
+}
+
+export function windowsCountLabelRu(n: number): string {
+  return windowsCountWordRu(n);
+}
+
+export function windowsCountRu(n: number): string {
+  return `${n} ${windowsCountWordRu(n)}`;
+}
+
+export function groupPlannedSlotsByDay(
+  slots: PlannedSlot[],
+): Array<{ dateIso: string; slots: PlannedSlot[] }> {
+  const map = new Map<string, PlannedSlot[]>();
+  for (const slot of slots) {
+    const daySlots = map.get(slot.dateIso);
+    if (daySlots) daySlots.push(slot);
+    else map.set(slot.dateIso, [slot]);
+  }
+
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dateIso, daySlots]) => ({
+      dateIso,
+      slots: daySlots.sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    }));
 }
 
 export function serviceTitleById(services: MasterOnboardingService[], id: string | null): string {

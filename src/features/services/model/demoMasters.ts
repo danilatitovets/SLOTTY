@@ -103,6 +103,10 @@ export type DemoMasterProfile = {
   contacts?: MasterContact[];
   /** Telegram + Google + подтверждённый email в настройках входа. */
   isVerified?: boolean;
+  /** Pro / trial — с public detail API. */
+  isProEntitled?: boolean;
+  /** Завершённые записи — с public detail API. */
+  completedBookingsCount?: number;
   services: DemoMasterService[];
   /**
    * Слоты по id услуги. Пустой массив в значении — нет окон на эту услугу.

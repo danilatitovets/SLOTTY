@@ -19,7 +19,12 @@ import { TrialProBanner } from '../../features/billing/TrialProBanner';
 import { AdminMasterCabinetProvider, useAdminMasterCabinet } from './AdminMasterCabinetContext';
 import { ProfileSectionTabsBar, ProfileTabProvider } from './profile/profileTabContext';
 import { ADMIN_CABINET_SHELL_MAX } from './overview/adminOverviewTheme';
-import { ADMIN_DESKTOP_CANVAS } from './adminCabinetLayout';
+import {
+  adminDesktopCabinetBody,
+  adminDesktopCabinetShell,
+  adminDesktopMainScroll,
+  ADMIN_DESKTOP_CANVAS,
+} from './adminCabinetLayout';
 import {
   ADMIN_MAIN_NAV,
   resolveAdminNavItemMeta,
@@ -47,6 +52,8 @@ import { AdminContentLoadingOverlay } from './shared/AdminContentLoadingOverlay'
 import { LOADING_VIDEO_SRC } from '../../shared/ui/loadingVideoSrc';
 import { AdminCabinetStatusBanner } from './AdminCabinetStatusBanner';
 import { AdminMobileCabinetHeader } from './shared/AdminMobileCabinetHeader';
+import { AdminSectionAttentionBadge } from './shared/AdminSectionAttentionBadge';
+import { useServicesCatalogAttention } from './services/useServicesCatalogAttention';
 
 function UnreadBadge({ count, inverted }: { count: number; inverted?: boolean }) {
   const label = count > 9 ? '9+' : String(count);
@@ -127,6 +134,7 @@ function AdminLayoutInner() {
   const isNotifications = pathname === ADMIN_NOTIFICATIONS_PATH;
   const isBilling = pathname === ADMIN_BILLING_PATH;
   const isSettings = pathname.startsWith(MASTER_SETTINGS_PATH);
+  const servicesNeedAttention = useServicesCatalogAttention();
 
   useLayoutEffect(() => {
     const el = stickyShellRef.current;
@@ -204,23 +212,24 @@ function AdminLayoutInner() {
       : ADMIN_DESKTOP_CANVAS;
 
   return (
-    <div className={`flex min-h-dvh text-[#111827] ${pageShellBg} ${desktopCanvasBg}`}>
-      <AdminDesktopSidebar />
+    <div className={`${adminDesktopCabinetShell} text-[#111827] ${pageShellBg}`}>
+      <AdminDesktopTopBar />
 
-      <div
-        className={`relative flex min-h-dvh min-w-0 flex-1 flex-col ${desktopMainCanvasBg} ${
-          mobileGrayCanvas ? 'max-lg:bg-[#F5F5F5]' : ''
-        }`}
-      >
-        <AdminCabinetLoadingGate />
-        <ProfileTabProvider>
-          <AdminMobileCabinetHeader
-            shellRef={stickyShellRef}
-            menuOpen={menuOpen}
-            onMenuOpen={() => setMenuOpen(true)}
-          />
+      <div className={`${adminDesktopCabinetBody} ${desktopCanvasBg}`}>
+        <AdminDesktopSidebar />
 
-          <AdminDesktopTopBar />
+        <div
+          className={`${adminDesktopMainScroll} ${desktopMainCanvasBg} ${
+            mobileGrayCanvas ? 'max-lg:bg-[#F5F5F5]' : ''
+          }`}
+        >
+          <AdminCabinetLoadingGate />
+          <ProfileTabProvider>
+            <AdminMobileCabinetHeader
+              shellRef={stickyShellRef}
+              menuOpen={menuOpen}
+              onMenuOpen={() => setMenuOpen(true)}
+            />
 
           {!isProfileHome ? <AdminCabinetStatusBanner /> : null}
           {!isBilling ? <TrialProBanner entitlements={entitlements} className="mx-4 mb-3 lg:mx-0" /> : null}
@@ -286,7 +295,9 @@ function AdminLayoutInner() {
                         active={isActive}
                       />
                     </span>
-                    {isActive ? (
+                    {item.to === ADMIN_SERVICES_PATH && servicesNeedAttention ? (
+                      <AdminSectionAttentionBadge className="shrink-0 self-center" />
+                    ) : isActive ? (
                       <span className="shrink-0 self-center text-[12px] font-medium text-white/90" aria-hidden>
                         ●
                       </span>
@@ -416,6 +427,7 @@ function AdminLayoutInner() {
         </nav>
       </AdminBottomSheet>
 
+        </div>
       </div>
     </div>
   );

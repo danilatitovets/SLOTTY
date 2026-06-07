@@ -16,16 +16,36 @@ export type MeNotificationRow = {
 
 export type NotificationAudience = 'master' | 'client';
 
+const NOTIFICATIONS_FETCH_TIMEOUT_MS = 20_000;
+
 export async function fetchMyNotifications(
   audience?: NotificationAudience,
+  init?: { signal?: AbortSignal },
 ): Promise<MeNotificationRow[]> {
   const qs = audience ? `?audience=${encodeURIComponent(audience)}` : '';
-  const res = await apiFetch(`/api/me/notifications${qs}`);
-  if (!res.ok) {
-    throw new Error(await readSlottyApiErrorMessage(res));
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), NOTIFICATIONS_FETCH_TIMEOUT_MS);
+
+  const onExternalAbort = () => controller.abort();
+  init?.signal?.addEventListener('abort', onExternalAbort);
+
+  try {
+    const res = await apiFetch(`/api/me/notifications${qs}`, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(await readSlottyApiErrorMessage(res));
+    }
+    const data = (await res.json()) as { notifications?: MeNotificationRow[] };
+    return data.notifications ?? [];
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      if (init?.signal?.aborted) throw error;
+      throw new Error('Сервер не ответил вовремя. Проверьте API и попробуйте снова.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+    init?.signal?.removeEventListener('abort', onExternalAbort);
   }
-  const data = (await res.json()) as { notifications?: MeNotificationRow[] };
-  return data.notifications ?? [];
 }
 
 export async function markNotificationReadApi(notificationId: string): Promise<void> {

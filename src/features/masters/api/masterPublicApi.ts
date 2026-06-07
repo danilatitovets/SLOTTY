@@ -49,6 +49,8 @@ export type MasterPublicDetailDto = {
     phone: string | null;
     contact: string | null;
     isVerified: boolean;
+    isProEntitled?: boolean;
+    completedBookingsCount?: number;
     rating: number;
     reviewsCount: number;
     category: { code: string; name: string } | null;
@@ -220,6 +222,11 @@ export function mapMasterDetailToDemoProfile(detail: MasterPublicDetailDto): Dem
     phone: master.phone?.trim() || undefined,
     contact: master.contact?.trim() || undefined,
     isVerified: Boolean(master.isVerified),
+    isProEntitled: master.isProEntitled === true,
+    completedBookingsCount:
+      master.completedBookingsCount != null && Number.isFinite(master.completedBookingsCount)
+        ? Math.max(0, Math.round(master.completedBookingsCount))
+        : undefined,
     contacts: resolveFilledContacts({ contact: master.contact }),
     services,
     availableSlotsByServiceId,

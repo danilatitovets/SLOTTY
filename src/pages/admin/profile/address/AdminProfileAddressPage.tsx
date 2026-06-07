@@ -4,33 +4,35 @@ import {
   HiBuildingOffice2,
   HiCheck,
   HiHomeModern,
+  HiQuestionMarkCircle,
   HiTruck,
 } from 'react-icons/hi2';
 import { buildYandexMapWidgetUrl, buildYandexMapsRouteUrl } from '../../../../features/appointments/model/demoAppointments';
 import { sanitizeAtHomeRoomInput } from '../../../../features/profile/lib/masterAddressValidation';
 import type { MasterLocation } from '../../../../features/profile/model/masterLocation';
-import { makeYandexMapsPointUrl } from '../../../../shared/lib/yandexMapsExternal';
 import { searchAddress } from '../../../../shared/lib/location/nominatimGeocode';
+import { PickerSheet } from '../../../../shared/ui/PickerSheet';
+import { AdminBottomSheet } from '../../shared/AdminBottomSheet';
 import { AdminToast } from '../../shared/AdminToast';
 import { useAdminToast } from '../../shared/useAdminToast';
+import { ServicesBrandPhotoLayers } from '../../services/ServicesBrandPhotoLayers';
 import { AppointmentsEmptyState } from '../../appointments/AppointmentsEmptyState';
 import {
   splitReferenceLabelToStreetBuilding,
   splitReferenceLabelToStreetBuildingLenient,
 } from '../../../master-onboarding/OnboardingAddressMap';
+import { LocationPicker } from '../../../../shared/ui/location/LocationPicker';
 import { LocationPickerModalField } from '../../../../shared/ui/location/LocationPickerModalField';
-import { SettingsErrorState, SettingsSkeleton, SettingsStatusBadge } from '../../settings/workspace/settingsUi';
+import { SettingsErrorState, SettingsSkeleton } from '../../settings/workspace/settingsUi';
 import { settingsCabinetStack } from '../../settings/workspace/settingsCabinetUi';
-import { settingsPinkBtn } from '../../settings/workspace/settingsWorkspaceTheme';
 import {
-  cabinetCard,
-  cabinetCardPad,
-  cabinetInsetShell,
-  cabinetOutlineBtn,
+  sheetCancelBtnClass,
   sheetFieldClass,
   sheetLabelClass,
+  sheetPrimaryBtnClass,
   sheetSegmentClass,
 } from '../adminProfileCabinetTheme';
+import { AddressSection } from '../AdminProfileAddressUi';
 import type { MasterDraft } from '../../../../features/profile/lib/demoMasterStorage';
 import {
   afterBookingPreviewRows,
@@ -42,6 +44,7 @@ import {
   hasVerifiedMapPoint,
   locationFingerprint,
   MASTER_CABINET_CITY,
+  MINSK_DISTRICTS,
   previewLocationFromForm,
   resolveMapPointStatus,
   streetDisplayLine,
@@ -61,6 +64,16 @@ const VISIT_FORMATS: Array<{
   { id: 'client_visit', label: 'Выезд', Icon: HiTruck, disabled: true },
 ];
 
+const addressSheetPanel = 'overflow-hidden rounded-[16px] bg-white p-4 sm:p-5';
+
+const FIND_YOU_VISIBILITY_HELP = [
+  'Улица и район из блока выше всегда видны в каталоге — так клиент понимает, где вы принимаете.',
+  '',
+  'Виден всем — подъезд, этаж, квартира и домофон сразу открыты всем в каталоге и на вашей карточке.',
+  '',
+  'После записи — вы заполняете детали сейчас, но клиент увидит их только после подтверждённой записи. Так можно не светить точный адрес до визита.',
+].join('\n');
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return <p className="mt-1 text-[12px] font-medium text-[#DC2626]">{message}</p>;
@@ -68,11 +81,13 @@ function FieldError({ message }: { message?: string }) {
 
 function Block({
   title,
+  titleAside,
   children,
   last,
   inset = true,
 }: {
   title?: string;
+  titleAside?: ReactNode;
   children: ReactNode;
   last?: boolean;
   inset?: boolean;
@@ -80,9 +95,12 @@ function Block({
   return (
     <div className={last ? '' : 'mb-4'}>
       {title ? (
-        <h3 className="mb-2 px-0.5 text-[14px] font-semibold text-[#111827]">{title}</h3>
+        <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+          <h3 className="min-w-0 flex-1 text-[14px] font-semibold text-[#111827]">{title}</h3>
+          {titleAside ? <div className="shrink-0">{titleAside}</div> : null}
+        </div>
       ) : null}
-      {inset ? <div className={`${cabinetInsetShell} p-4 sm:p-5`}>{children}</div> : children}
+      {inset ? <div className={addressSheetPanel}>{children}</div> : children}
     </div>
   );
 }
@@ -106,6 +124,11 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
   const [mapScriptOk, setMapScriptOk] = useState(false);
   const [addressPinnedToMap, setAddressPinnedToMap] = useState(() => hasVerifiedMapPoint(formStateFromLocation(loc)));
   const [geocodeBusy, setGeocodeBusy] = useState(false);
+  const [streetSuggestOutcome, setStreetSuggestOutcome] = useState<
+    'idle' | 'loading' | 'empty' | 'ready'
+  >('idle');
+  const [isEditing, setIsEditing] = useState(false);
+  const [findYouHelpOpen, setFindYouHelpOpen] = useState(false);
 
   const locationSyncFingerprint = useMemo(() => locationFingerprint(loc), [loc]);
 
@@ -160,12 +183,12 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
     [clearFieldError, patchForm],
   );
 
-  const handleSave = async () => {
-    if (form.visitType === 'client_visit') return;
+  const handleSave = async (): Promise<boolean> => {
+    if (form.visitType === 'client_visit') return false;
     setSubmitAttempted(true);
     const errs = validateAddressForm(form, { mapScriptOk, addressPinnedToMap });
     setFieldErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) return false;
 
     setSaveError(null);
     try {
@@ -173,10 +196,12 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
       setSavedFingerprint(formFingerprint(form));
       setSubmitAttempted(false);
       showToast('Сохранено');
+      return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Не удалось сохранить';
       setSaveError(msg);
       showErrorToast(msg);
+      return false;
     }
   };
 
@@ -188,6 +213,27 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
     setSaveError(null);
     setAddressPinnedToMap(hasVerifiedMapPoint(reset));
   };
+
+  const openEdit = () => {
+    handleDiscard();
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    handleDiscard();
+    setFindYouHelpOpen(false);
+    setIsEditing(false);
+  };
+
+  const handleSaveAndExit = async () => {
+    const ok = await handleSave();
+    if (ok) {
+      setFindYouHelpOpen(false);
+      setIsEditing(false);
+    }
+  };
+
+  const mapStatusBadge = mapStatus === 'verified' ? 'На карте' : 'Нужна метка';
 
   const findByAddress = async () => {
     const query = streetDisplayLine(form).trim();
@@ -232,52 +278,45 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
     });
   }, [form, hasMap, isHome, publicPreview]);
 
-  const yandexMapsUrl = hasMap
-    ? makeYandexMapsPointUrl(form.lat!, form.lng!)
-    : `https://yandex.by/maps/?text=${encodeURIComponent(publicPreview || streetDisplayLine(form) || MASTER_CABINET_CITY)}`;
-
   const routePreviewUrl = buildYandexMapsRouteUrl({
     addressShort: publicPreview || streetDisplayLine(form),
     location: previewLoc,
   });
 
-  const mapActions = (
-    <div className="flex w-full flex-col gap-2">
-      <LocationPickerModalField
-        value={streetDisplayLine(form)}
-        latitude={form.lat ?? null}
-        longitude={form.lng ?? null}
-        city={MASTER_CABINET_CITY}
-        onChange={(next) => {
-          const { street, building } = splitReferenceLabelToStreetBuilding(next.address);
-          patchForm({ street, building, lat: next.latitude, lng: next.longitude });
-          setAddressPinnedToMap(true);
-          clearFieldError('street');
-          clearFieldError('coords');
-        }}
-        onInputChange={onStreetLineChange}
-        onMapAvailabilityChange={setMapScriptOk}
-        inputClassName={sheetFieldClass}
-        triggerLabel="Изменить точку"
-        triggerClassName={cabinetOutlineBtn}
-        modalTitle="Точка на карте"
-        modalSubtitle="Подсказка или метка на карте."
-        coordsError={showErr('coords')}
-        summaryClassName="hidden"
-      />
-      <button
-        type="button"
-        disabled={geocodeBusy}
-        onClick={() => void findByAddress()}
-        className={cabinetOutlineBtn}
-      >
-        {geocodeBusy ? 'Поиск…' : 'Найти по адресу'}
-      </button>
-      <a href={yandexMapsUrl} target="_blank" rel="noopener noreferrer" className={cabinetOutlineBtn}>
-        <HiArrowTopRightOnSquare className="h-4 w-4" aria-hidden />
-        Открыть в Яндекс.Картах
-      </a>
-    </div>
+  const streetLine = streetDisplayLine(form);
+  const showStreetFindLink =
+    !addressPinnedToMap &&
+    streetLine.trim().length >= 3 &&
+    streetSuggestOutcome !== 'loading' &&
+    (streetSuggestOutcome === 'empty' || showErr('coords') === 'Адрес не найден');
+
+  const mapPickBtnClass =
+    'relative flex min-h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-[10px] px-4 text-[13px] font-semibold text-white shadow-[0_2px_8px_rgba(239,68,68,0.2)] transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50';
+
+  const mapPointPicker = (
+    <LocationPickerModalField
+      value={streetDisplayLine(form)}
+      latitude={form.lat ?? null}
+      longitude={form.lng ?? null}
+      city={MASTER_CABINET_CITY}
+      onChange={(next) => {
+        const { street, building } = splitReferenceLabelToStreetBuilding(next.address);
+        patchForm({ street, building, lat: next.latitude, lng: next.longitude });
+        setAddressPinnedToMap(true);
+        clearFieldError('street');
+        clearFieldError('coords');
+      }}
+      onInputChange={onStreetLineChange}
+      onMapAvailabilityChange={setMapScriptOk}
+      inputClassName={sheetFieldClass}
+      triggerLabel="Изменить точку на карте"
+      triggerClassName={mapPickBtnClass}
+      triggerBackdrop={<ServicesBrandPhotoLayers roundedClassName="rounded-[10px]" />}
+      modalTitle="Точка на карте"
+      modalSubtitle="Найдите адрес или поставьте метку."
+      coordsError={showErr('coords')}
+      summaryClassName="hidden"
+    />
   );
 
   if (cabinetLoading) {
@@ -288,30 +327,10 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
     );
   }
 
-  return (
-    <div className={`w-full min-w-0 space-y-4 ${dirty ? 'pb-28 lg:pb-20' : ''}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-[#111827]">Адрес</h1>
-          {mapStatus === 'verified' ? (
-            <SettingsStatusBadge tone="success">На карте</SettingsStatusBadge>
-          ) : (
-            <SettingsStatusBadge tone="warning">Нужна метка</SettingsStatusBadge>
-          )}
-        </div>
-        <button
-          type="button"
-          disabled={!dirty || saving || form.visitType === 'client_visit'}
-          onClick={() => void handleSave()}
-          className={`hidden min-h-9 sm:inline-flex ${settingsPinkBtn}`}
-        >
-          {saving ? '…' : 'Сохранить'}
-        </button>
-      </div>
-
-      {saveError ? <SettingsErrorState message={saveError} onRetry={() => void handleSave()} /> : null}
-
-      <div className={`${cabinetCard} ${cabinetCardPad}`}>
+  const editForm = (
+    <div className="space-y-4">
+      {saveError ? <SettingsErrorState message={saveError} onRetry={() => void handleSaveAndExit()} /> : null}
+      <div className="space-y-5">
         <Block title="Формат">
           <div
             className="grid grid-cols-1 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5 sm:grid-cols-3"
@@ -360,12 +379,18 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
                   {isHome ? (
                     <label className="block">
                       <span className={sheetLabelClass}>Район</span>
-                      <input
+                      <select
                         value={form.district}
                         onChange={(e) => patchForm({ district: e.target.value })}
                         className={sheetFieldClass}
-                        placeholder="Необязательно"
-                      />
+                      >
+                        <option value="">Выберите район</option>
+                        {MINSK_DISTRICTS.map((district) => (
+                          <option key={district} value={district}>
+                            {district}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                   ) : null}
                 </div>
@@ -388,40 +413,90 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
                   </label>
                 ) : null}
 
-                <label className="block">
+                <div className="block">
                   <span className={sheetLabelClass}>
                     Улица и дом <span className="text-[#F47C8C]">*</span>
                   </span>
-                  <input
+                  <LocationPicker
+                    label=""
                     value={streetDisplayLine(form)}
-                    onChange={(e) => onStreetLineChange(e.target.value)}
-                    className={sheetFieldClass}
+                    latitude={form.lat ?? null}
+                    longitude={form.lng ?? null}
+                    city={MASTER_CABINET_CITY}
+                    onChange={(next) => {
+                      const { street, building } = splitReferenceLabelToStreetBuilding(next.address);
+                      patchForm({
+                        street,
+                        building,
+                        lat: next.latitude,
+                        lng: next.longitude,
+                      });
+                      setAddressPinnedToMap(true);
+                      clearFieldError('street');
+                      clearFieldError('coords');
+                    }}
+                    onInputChange={onStreetLineChange}
+                    onSuggestOutcomeChange={setStreetSuggestOutcome}
                     placeholder="улица Рафиева, 45"
+                    error={showErr('street')}
+                    inputClassName={sheetFieldClass}
+                    suggestStacked
+                    portalSuggestions={false}
+                    showRouteLink={false}
+                    showMap={false}
+                    showEmptySearchHint={false}
                   />
-                  <FieldError message={showErr('street')} />
+                  {showStreetFindLink ? (
+                    <p className="mt-1.5 text-[12px] leading-snug text-[#9CA3AF]">
+                      Адрес не найден.{' '}
+                      <button
+                        type="button"
+                        disabled={geocodeBusy}
+                        onClick={() => void findByAddress()}
+                        className="font-medium text-[#6B7280] underline-offset-2 transition hover:text-[#374151] hover:underline disabled:opacity-50"
+                      >
+                        {geocodeBusy ? 'Поиск…' : 'Найти по адресу'}
+                      </button>
+                    </p>
+                  ) : null}
                   {publicPreview.trim() ? (
                     <p className="mt-1.5 text-[12px] text-[#9CA3AF]">
                       В каталоге: <span className="text-[#374151]">{publicPreview}</span>
                     </p>
                   ) : null}
-                </label>
+                </div>
               </div>
             </Block>
 
-            <Block title="Карта" inset={false}>
+            <Block title="Карта">
               {hasMap && mapWidgetSrc ? (
                 <div className="space-y-3">
-                  <div className={`${cabinetInsetShell} overflow-hidden`}>
+                  <div className="overflow-hidden rounded-[12px] bg-[#F5F5F5] p-1">
                     <iframe
                       title="Карта"
                       src={mapWidgetSrc}
-                      className="block h-[200px] w-full border-0 sm:h-[220px]"
+                      className="block h-[min(240px,52vw)] w-full rounded-[10px] border-0 sm:h-[220px]"
                       loading="lazy"
                       referrerPolicy="no-referrer-when-downgrade"
                     />
                   </div>
-                  {mapActions}
-                  <FieldError message={showErr('coords')} />
+                  <div className="flex items-center justify-between gap-3 px-0.5">
+                    <p
+                      className={`text-[12px] font-medium ${
+                        mapStatus === 'verified' ? 'text-[#16A34A]' : 'text-[#9CA3AF]'
+                      }`}
+                    >
+                      {mapStatus === 'verified'
+                        ? 'Точка на карте выбрана'
+                        : 'Уточните метку — клиенты увидят это место'}
+                    </p>
+                  </div>
+                  {mapPointPicker}
+                  <FieldError
+                    message={
+                      showErr('coords') === 'Адрес не найден' ? undefined : showErr('coords')
+                    }
+                  />
                 </div>
               ) : (
                 <AppointmentsEmptyState
@@ -429,30 +504,55 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
                   title="Метка не выбрана"
                   text="Укажите адрес и поставьте точку на карте"
                   hint="Клиент увидит примерное место после сохранения"
-                  action={mapActions}
+                  action={mapPointPicker}
                 />
               )}
             </Block>
 
-            <Block title="После записи">
+            <Block
+              title="Как найти вас"
+              titleAside={
+                isHome ? (
+                  <button
+                    type="button"
+                    onClick={() => setFindYouHelpOpen(true)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#9CA3AF] transition hover:bg-[#F5F5F5] hover:text-[#6B7280] active:scale-[0.97]"
+                    aria-label="Как работает видимость деталей адреса"
+                  >
+                    <HiQuestionMarkCircle className="h-5 w-5" aria-hidden />
+                  </button>
+                ) : null
+              }
+            >
               {isHome ? (
-                <div className="mb-3 grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5">
-                  <button
-                    type="button"
-                    onClick={() => patchForm({ showExactAddressAfterBooking: false })}
-                    className={sheetSegmentClass(!form.showExactAddressAfterBooking)}
-                  >
-                    Сразу
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => patchForm({ showExactAddressAfterBooking: true })}
-                    className={sheetSegmentClass(form.showExactAddressAfterBooking)}
-                  >
-                    После записи
-                  </button>
-                </div>
-              ) : null}
+                <>
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5">
+                    <button
+                      type="button"
+                      onClick={() => patchForm({ showExactAddressAfterBooking: false })}
+                      className={sheetSegmentClass(!form.showExactAddressAfterBooking)}
+                    >
+                      Виден всем
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => patchForm({ showExactAddressAfterBooking: true })}
+                      className={sheetSegmentClass(form.showExactAddressAfterBooking)}
+                    >
+                      После записи
+                    </button>
+                  </div>
+                  <p className="mb-3 text-[13px] leading-relaxed text-[#6B7280]">
+                    {form.showExactAddressAfterBooking
+                      ? 'Заполните поля ниже сейчас — клиент увидит их только после подтверждения записи.'
+                      : 'Подъезд, этаж и домофон будут видны всем в каталоге сразу.'}
+                  </p>
+                </>
+              ) : (
+                <p className="mb-3 text-[13px] leading-relaxed text-[#6B7280]">
+                  Подскажите клиенту, как попасть в салон или кабинет.
+                </p>
+              )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {(
@@ -520,77 +620,118 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
               </div>
             </Block>
 
-            <Block title="Для клиента" last>
-              <ClientPreview location={previewLoc} routeUrl={routePreviewUrl} />
-              {pendingChecklist.length > 0 ? (
-                <ul className="mt-4 space-y-1.5 border-t border-[#EEEEEE] pt-4">
-                  {pendingChecklist.map((item) => (
-                    <li key={item.id} className="text-[13px] leading-snug text-[#6B7280]">
-                      {item.hint ?? item.label}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-4 flex items-center gap-1.5 border-t border-[#EEEEEE] pt-4 text-[13px] font-semibold text-[#16A34A]">
-                  <HiCheck className="h-4 w-4 shrink-0" aria-hidden />
-                  Готово для клиентов
-                </p>
-              )}
+            <Block title="Для клиента" last inset={false}>
+              <ClientPreview
+                location={previewLoc}
+                routeUrl={routePreviewUrl}
+                pendingChecklist={pendingChecklist}
+              />
             </Block>
           </>
         ) : null}
       </div>
+    </div>
+  );
 
-      {dirty ? (
-        <div
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-[#EAECEF] bg-white/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-[0_-4px_16px_rgba(17,24,39,0.06)] backdrop-blur-sm max-lg:mb-[5.75rem]"
-          role="region"
-          aria-label="Несохранённые изменения"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[13px] text-[#6B7280]">Есть изменения</p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleDiscard}
-                disabled={saving}
-                className="min-h-9 rounded-[10px] px-3 text-[13px] font-semibold text-[#6B7280] hover:bg-[#F3F4F6] disabled:opacity-50"
-              >
-                Отменить
-              </button>
-              <button
-                type="button"
-                disabled={saving || form.visitType === 'client_visit'}
-                onClick={() => void handleSave()}
-                className={`min-h-9 ${settingsPinkBtn}`}
-              >
-                {saving ? '…' : 'Сохранить'}
-              </button>
-            </div>
+  return (
+    <div className="w-full min-w-0">
+      <AddressSection draft={draft} onEditAddress={openEdit} />
+
+      <PickerSheet
+        open={findYouHelpOpen}
+        onClose={() => setFindYouHelpOpen(false)}
+        title="Видимость деталей"
+        subtitle="Кто и когда увидит подъезд, этаж и домофон"
+        footer={
+          <button
+            type="button"
+            className={sheetPrimaryBtnClass}
+            onClick={() => setFindYouHelpOpen(false)}
+          >
+            Понятно
+          </button>
+        }
+      >
+        <p className="whitespace-pre-line text-[14px] font-medium leading-relaxed text-[#6B7280]">
+          {FIND_YOU_VISIBILITY_HELP}
+        </p>
+      </PickerSheet>
+
+      <AdminBottomSheet
+        open={isEditing}
+        onClose={handleCancelEdit}
+        variant="catalog"
+        borderless
+        title="Адрес"
+        subtitle="Как клиенты найдут вас в каталоге"
+        badge={mapStatusBadge}
+        footer={
+          <div className="flex w-full gap-3">
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className={sheetCancelBtnClass}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              disabled={!dirty || saving || form.visitType === 'client_visit'}
+              onClick={() => void handleSaveAndExit()}
+              className={sheetPrimaryBtnClass}
+            >
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </button>
           </div>
-        </div>
-      ) : null}
+        }
+      >
+        {editForm}
+      </AdminBottomSheet>
 
       <AdminToast toast={toast} onDismiss={clearToast} />
     </div>
   );
 }
 
-function ClientPreview({ location, routeUrl }: { location: MasterLocation; routeUrl: string }) {
+type ChecklistItem = { id: string; label: string; hint?: string };
+
+function ClientPreview({
+  location,
+  routeUrl,
+  pendingChecklist = [],
+}: {
+  location: MasterLocation;
+  routeUrl: string;
+  pendingChecklist?: ChecklistItem[];
+}) {
   const publicLine = buildPublicPreviewLine(location);
   const afterRows = afterBookingPreviewRows(location);
+  const isReady = pendingChecklist.length === 0;
 
   return (
-    <div className="w-full min-w-0 space-y-4">
-      <div className="divide-y divide-[#F0F0F0]">
+    <div className="relative w-full min-w-0 overflow-hidden rounded-[16px] bg-white">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[8.5rem] overflow-hidden sm:h-[9.5rem]"
+        aria-hidden
+      >
+        <ServicesBrandPhotoLayers roundedClassName="rounded-t-[16px]" />
+        <span className="absolute inset-0 bg-gradient-to-b from-[#EF4444]/15 via-white/55 to-white" />
+      </div>
+
+      <div className="relative z-10 px-4 py-4 sm:px-5 sm:py-5">
         <div className="pb-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">До записи</p>
-          <p className="mt-2 text-[15px] font-semibold leading-snug text-[#111827]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#9CA3AF]">До записи</p>
+          <p className="mt-1.5 text-[17px] font-bold leading-snug tracking-[-0.02em] text-[#111827]">
             {publicLine.trim() || 'Адрес не указан'}
           </p>
         </div>
-        <div className="pt-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">После записи</p>
+
+        <div className="border-t border-[#F0F0F0] pt-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+            После подтверждения записи
+          </p>
+          <p className="mt-1 text-[12px] text-[#9CA3AF]">Так увидит клиент, когда запись подтверждена</p>
           {afterRows.length ? (
             <ul className="mt-3 space-y-2.5">
               {afterRows.slice(0, 5).map((row) => (
@@ -619,15 +760,33 @@ function ClientPreview({ location, routeUrl }: { location: MasterLocation; route
             <p className="mt-2 text-[14px] text-[#9CA3AF]">Заполните поля выше</p>
           )}
         </div>
+
+        {!isReady ? (
+          <ul className="mt-4 space-y-1.5 rounded-[12px] bg-[#F5F5F5] px-3 py-3">
+            {pendingChecklist.map((item) => (
+              <li key={item.id} className="text-[13px] leading-snug text-[#6B7280]">
+                {item.hint ?? item.label}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <a
+          href={routeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#FFF1F4] px-4 text-[14px] font-semibold text-[#F47C8C] no-underline transition hover:bg-[#FFE4EA] active:scale-[0.99]"
+        >
+          <HiArrowTopRightOnSquare className="h-4 w-4 shrink-0" aria-hidden />
+          Построить маршрут
+        </a>
+        {isReady ? (
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-[#16A34A]">
+            <HiCheck className="h-4 w-4 shrink-0" aria-hidden />
+            Готово для клиентов
+          </p>
+        ) : null}
       </div>
-      <a
-        href={routeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={cabinetOutlineBtn}
-      >
-        Построить маршрут
-      </a>
     </div>
   );
 }

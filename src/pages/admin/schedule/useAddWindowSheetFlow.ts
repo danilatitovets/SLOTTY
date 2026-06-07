@@ -31,6 +31,11 @@ function serviceIsActive(service: { isActive?: boolean }): boolean {
   return service.isActive !== false;
 }
 
+function firstCatalogServiceId(services: MasterDraft['services']): string {
+  const first = services.find((s) => isUuid(s.id));
+  return first?.id ?? '';
+}
+
 export type OpenAddSheetOptions = {
   templateId?: string;
   withoutTemplate?: boolean;
@@ -75,18 +80,20 @@ export function useAddWindowSheetFlow({
   const [dateIso, setDateIso] = useState(todayIso);
   const [startTime, setStartTime] = useState('12:00');
   const [endTime, setEndTime] = useState('14:00');
-  const [serviceId, setServiceId] = useState('');
+  const [serviceId, setServiceId] = useState(() => firstCatalogServiceId(visibleServices));
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [manualMode, setManualMode] = useState(true);
   const [repeatSettings, setRepeatSettings] = useState<RepeatSettingsValue>(DEFAULT_REPEAT_SETTINGS);
 
   const serviceOptions = useMemo(
-    () => [
-      { value: '', label: 'Любая услуга' },
-      ...visibleServices.filter((s) => isUuid(s.id)).map((s) => ({ value: s.id, label: s.title })),
-    ],
+    () => visibleServices.filter((s) => isUuid(s.id)).map((s) => ({ value: s.id, label: s.title })),
     [visibleServices],
   );
+
+  useEffect(() => {
+    if (serviceId && visibleServices.some((s) => s.id === serviceId)) return;
+    setServiceId(firstCatalogServiceId(visibleServices));
+  }, [serviceId, visibleServices]);
 
   const selectedTemplate = useMemo(
     () => templates.find((t) => t.id === selectedTemplateId) ?? null,
@@ -161,17 +168,17 @@ export function useAddWindowSheetFlow({
       if (opts?.dateIso) setDateIso(opts.dateIso);
       if (opts?.templateId) {
         applyTemplate(opts.templateId);
-      } else if (opts?.withoutTemplate) {
+      } else if (opts?.withoutTemplate || opts?.dateIso) {
         setSelectedTemplateId(null);
         setManualMode(true);
-        setServiceId('');
+        setServiceId(firstCatalogServiceId(visibleServices));
       } else {
         setSelectedTemplateId(null);
         setManualMode(templates.length === 0);
       }
       setAddSheetOpen(true);
     },
-    [applyTemplate, templates.length],
+    [applyTemplate, templates.length, visibleServices],
   );
 
   const closeAddSheet = useCallback(() => {
@@ -182,9 +189,9 @@ export function useAddWindowSheetFlow({
   const useManualAddWindow = useCallback(() => {
     setSelectedTemplateId(null);
     setManualMode(true);
-    setServiceId('');
+    setServiceId(firstCatalogServiceId(visibleServices));
     setCreateError(null);
-  }, []);
+  }, [visibleServices]);
 
   const useTemplateAddWindow = useCallback(() => {
     setManualMode(false);
@@ -209,7 +216,10 @@ export function useAddWindowSheetFlow({
       }
       return 'Нельзя создать окно в прошлом.';
     }
-    if (effectiveServiceId && !visibleServices.some((s) => s.id === effectiveServiceId)) {
+    if (!effectiveServiceId) {
+      return 'Выберите услугу из каталога.';
+    }
+    if (!visibleServices.some((s) => s.id === effectiveServiceId)) {
       return 'Услуга недоступна или скрыта.';
     }
     return null;

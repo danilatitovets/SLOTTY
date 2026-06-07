@@ -1,10 +1,25 @@
+import type { PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { HiCalendarDays, HiEllipsisHorizontal, HiInformationCircle } from 'react-icons/hi2';
-import { ADMIN_SCHEDULE_PATH } from '../../../app/paths';
-import { servicesCatalogCardMobile } from './adminServicesTheme';
+import { HiBars3, HiCalendarDays, HiChevronRight, HiEllipsisHorizontal } from 'react-icons/hi2';
+import { SlottyImg } from '../../../shared/ui/SlottyImg';
+import { ADMIN_ATTENTION_EXCLAMATION_ICON_SRC } from '../shared/AdminSectionAttentionBadge';
+import { adminScheduleAddWindowUrl } from '../schedule/scheduleDeepLinks';
+import {
+  servicesCatalogBadgeHidden,
+  servicesCatalogBadgeVisible,
+  servicesCatalogCardBody,
+  servicesCatalogCardNoSlotsShell,
+  servicesCatalogCardShell,
+  servicesCatalogCardThumbCol,
+  servicesCatalogDragHandle,
+  servicesCatalogMenuBtn,
+  servicesCatalogMetaMuted,
+  servicesCatalogPriceText,
+  servicesCatalogSlotsLink,
+} from './adminServicesTheme';
 import { ServiceThumbnail, ServiceThumbnailFallback } from './ServicesServiceThumbnail';
 import type { ManagedService } from './servicesFormat';
-import { formatDurationRu, formatServicePrice } from './servicesFormat';
+import { formatServicePrice } from './servicesFormat';
 
 type Props = {
   service: ManagedService;
@@ -15,93 +30,119 @@ type Props = {
   onOpenMenu?: (service: ManagedService) => void;
   highlighted?: boolean;
   showMenu?: boolean;
+  showDragHandle?: boolean;
+  isDragSource?: boolean;
+  isDragOver?: boolean;
+  onDragHandlePointerDown?: (event: PointerEvent<HTMLButtonElement>) => void;
+  /** Клик по карточке (например, превью в профиле → каталог услуг). */
+  onCardClick?: () => void;
 };
 
-function ServiceNoSlotsNotice({ serviceId }: { serviceId: string }) {
-  const scheduleUrl = `${ADMIN_SCHEDULE_PATH}?tab=create&wizard=month&serviceId=${encodeURIComponent(serviceId)}`;
+function formatSlotsLabel(count: number): string {
+  if (count <= 0) return 'Нет слотов в расписании';
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  let word = 'окон';
+  if (mod10 === 1 && mod100 !== 11) word = 'окно';
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'окна';
+  return `${count} ${word}`;
+}
+
+function formatUpcomingLabel(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  let word = 'будущих записей';
+  if (mod10 === 1 && mod100 !== 11) word = 'будущая запись';
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'будущие записи';
+  return `${count} ${word}`;
+}
+
+function ServiceNoSlotsNotice({ serviceId, serviceTitle }: { serviceId: string; serviceTitle: string }) {
+  const scheduleUrl = adminScheduleAddWindowUrl(serviceId);
 
   return (
-    <article
-      className="mt-0 overflow-hidden rounded-[14px] border-l-[3px] border-l-[#F47C8C] bg-[#FFFBFC] ring-1 ring-[#FDE8ED] lg:mt-3"
+    <div
+      className="mx-3.5 mb-3.5 mt-3 rounded-[12px] border border-[#FDE8ED] bg-[#FFFBFC] px-3.5 py-3 sm:mx-4 sm:mb-4 sm:px-4"
       role="note"
+      aria-label={`У услуги «${serviceTitle}» нет времени для записи`}
     >
-      <div className="flex flex-col gap-2.5 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF1F4] text-[#F47C8C]"
-            aria-hidden
-          >
-            <HiInformationCircle className="h-4 w-4" />
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center" aria-hidden>
+            <SlottyImg
+              src={ADMIN_ATTENTION_EXCLAMATION_ICON_SRC}
+              alt=""
+              className="h-6 w-6 object-contain"
+              decoding="async"
+            />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold leading-snug text-[#111827]">Нет окон для записи</p>
+            <p className="text-[13px] font-bold leading-snug text-[#111827]">
+              У «{serviceTitle}» нет времени для записи
+            </p>
             <p className="mt-0.5 text-[12px] leading-relaxed text-[#6B7280]">
-              Клиенты видят услугу, но не смогут выбрать время
+              В расписании нет свободных слотов для этой услуги — клиенты увидят её в каталоге, но не
+              смогут выбрать дату и время.
             </p>
           </div>
         </div>
 
         <Link
           to={scheduleUrl}
-          className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-[#F47C8C] px-3.5 text-[12px] font-semibold leading-none text-white transition hover:opacity-95 active:scale-[0.98] sm:w-auto sm:self-start"
+          className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-[#F47C8C] px-3.5 text-[12px] font-semibold leading-none text-white transition hover:opacity-95 active:scale-[0.98] sm:w-auto"
         >
           <HiCalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Добавить окно</span>
+          <span>Добавить в расписание</span>
         </Link>
       </div>
-    </article>
+    </div>
   );
 }
 
-function ServiceMeta({
-  service,
-  categoryLabel,
-  availableSlotsCount = 0,
-  upcomingAppointmentsCount = 0,
-  hideNoSlotsNotice = false,
-}: Pick<Props, 'service' | 'categoryLabel' | 'availableSlotsCount' | 'upcomingAppointmentsCount'> & {
-  hideNoSlotsNotice?: boolean;
-}) {
-  const visible = service.isActive !== false;
-  const duration = formatDurationRu(service.durationMin ?? 60);
-  const noSlots = visible && availableSlotsCount <= 0;
+function visibilityBadgeClass(visible: boolean): string {
+  return visible ? servicesCatalogBadgeVisible : servicesCatalogBadgeHidden;
+}
 
-  return (
-    <>
-      <p className="mt-1 text-[13px] font-semibold text-[#6B7280]">
-        {[categoryLabel, duration].filter(Boolean).join(' · ')}
-      </p>
-      <p className="mt-2 text-[20px] font-black tabular-nums leading-none tracking-[-0.04em] text-[#F47C8C] lg:text-[32px]">
-        {formatServicePrice(service)}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${
-            visible ? 'bg-[#ECFDF5] text-[#16A34A]' : 'bg-[#F3F4F6] text-[#6B7280]'
-          }`}
+function ServiceScheduleMeta({
+  serviceId,
+  visible,
+  availableSlotsCount,
+  upcomingAppointmentsCount,
+}: {
+  serviceId: string;
+  visible: boolean;
+  availableSlotsCount: number;
+  upcomingAppointmentsCount: number;
+}) {
+  if (!visible) return null;
+
+  const scheduleUrl = adminScheduleAddWindowUrl(serviceId);
+  const upcomingLabel =
+    upcomingAppointmentsCount > 0 ? formatUpcomingLabel(upcomingAppointmentsCount) : null;
+
+  if (availableSlotsCount > 0) {
+    return (
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Link
+          to={scheduleUrl}
+          className={servicesCatalogSlotsLink}
+          aria-label={`${formatSlotsLabel(availableSlotsCount)} — открыть создание расписания для услуги`}
         >
-          {visible ? 'Видимая' : 'Скрытая'}
-        </span>
-        {visible ? (
-          <span className="text-[12px] font-semibold text-[#6B7280]">
-            {availableSlotsCount > 0
-              ? `${availableSlotsCount} ${availableSlotsCount === 1 ? 'окно' : availableSlotsCount < 5 ? 'окна' : 'окон'}`
-              : 'Нет окон'}
-          </span>
-        ) : null}
-        {upcomingAppointmentsCount > 0 ? (
-          <span className="text-[12px] font-semibold text-[#6B7280]">
-            {upcomingAppointmentsCount} будущих записей
-          </span>
+          <span>{formatSlotsLabel(availableSlotsCount)}</span>
+          <HiChevronRight className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+        </Link>
+        {upcomingLabel ? (
+          <span className={`text-[12px] ${servicesCatalogMetaMuted}`}>{upcomingLabel}</span>
         ) : null}
       </div>
-      {!hideNoSlotsNotice && noSlots ? <ServiceNoSlotsNotice serviceId={service.id} /> : null}
-    </>
-  );
-}
+    );
+  }
 
-function serviceHasNoSlots(service: ManagedService, availableSlotsCount = 0): boolean {
-  return service.isActive !== false && availableSlotsCount <= 0;
+  if (upcomingLabel) {
+    return <p className={`mt-1 text-[12px] ${servicesCatalogMetaMuted}`}>{upcomingLabel}</p>;
+  }
+
+  return null;
 }
 
 /** Карточка услуги в каталоге кабинета (мобилка + десктоп). */
@@ -109,94 +150,121 @@ export function CatalogServiceCard({
   service,
   imageSrc,
   categoryLabel,
-  availableSlotsCount,
-  upcomingAppointmentsCount,
+  availableSlotsCount = 0,
+  upcomingAppointmentsCount = 0,
   onOpenMenu,
   highlighted = false,
   showMenu = true,
+  showDragHandle = false,
+  isDragSource = false,
+  isDragOver = false,
+  onDragHandlePointerDown,
+  onCardClick,
 }: Props) {
-  const showNoSlotsNotice = serviceHasNoSlots(service, availableSlotsCount);
+  const visible = service.isActive !== false;
+  const subtitle = categoryLabel?.trim() || null;
+  const showNoSlotsNotice = visible && availableSlotsCount <= 0 && !onCardClick;
+  const shellClass = showNoSlotsNotice
+    ? servicesCatalogCardNoSlotsShell
+    : highlighted
+      ? `${servicesCatalogCardShell} ring-2 ring-[#F47C8C]/35 ring-offset-2 ring-offset-white`
+      : servicesCatalogCardShell;
+
+  const dragStateClass = isDragSource
+    ? 'opacity-60'
+    : isDragOver
+      ? 'ring-2 ring-[#F47C8C]/45 ring-offset-2 ring-offset-[#F5F5F5]'
+      : '';
 
   return (
     <li
-      className={`${servicesCatalogCardMobile} ${
-        highlighted ? 'ring-2 ring-[#F47C8C]/35 ring-offset-2 ring-offset-white' : ''
-      }`}
+      data-catalog-service-id={service.id}
+      className={`${shellClass} ${dragStateClass} ${onCardClick ? 'cursor-pointer transition hover:opacity-95 active:scale-[0.995]' : ''}`.trim()}
+      onClick={onCardClick}
+      onKeyDown={
+        onCardClick
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onCardClick();
+              }
+            }
+          : undefined
+      }
+      role={onCardClick ? 'button' : undefined}
+      tabIndex={onCardClick ? 0 : undefined}
+      aria-label={onCardClick ? `Открыть раздел «Услуги»: ${service.title}` : undefined}
     >
-      <div className="space-y-3 lg:hidden">
-        <div className="flex items-start gap-3.5">
+      <div className={servicesCatalogCardBody}>
+        {showDragHandle ? (
+          <button
+            type="button"
+            className={servicesCatalogDragHandle}
+            aria-label={`Переместить «${service.title}»`}
+            onPointerDown={onDragHandlePointerDown}
+          >
+            <HiBars3 className="h-5 w-5" aria-hidden />
+          </button>
+        ) : null}
+        <div className={servicesCatalogCardThumbCol}>
           {imageSrc ? (
             <ServiceThumbnail
               src={imageSrc}
               title={service.title}
-              sizeClass="h-[4.5rem] w-[4.5rem] shrink-0 rounded-[14px]"
+              edge="flush-left"
+              sizeClass="block h-full min-h-[5.5rem] w-full"
             />
           ) : (
-            <ServiceThumbnailFallback sizeClass="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-[14px]" />
+            <ServiceThumbnailFallback
+              edge="flush-left"
+              sizeClass="flex h-full min-h-[5.5rem] w-full items-center justify-center"
+            />
           )}
+        </div>
 
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-3.5 py-3 sm:gap-3 sm:px-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <h3 className="line-clamp-2 text-[17px] font-bold leading-snug tracking-[-0.03em] text-[#111827]">
-                  {service.title}
-                </h3>
-                <ServiceMeta
-                  service={service}
-                  categoryLabel={categoryLabel}
-                  availableSlotsCount={availableSlotsCount}
-                  upcomingAppointmentsCount={upcomingAppointmentsCount}
-                  hideNoSlotsNotice
-                />
-              </div>
-
-              {showMenu && onOpenMenu ? (
-                <button
-                  type="button"
-                  onClick={() => onOpenMenu(service)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F5F5F5] text-[#6B7280] transition active:scale-[0.96]"
-                  aria-label="Меню услуги"
-                >
-                  <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
-                </button>
-              ) : null}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="line-clamp-2 text-[16px] font-bold leading-snug tracking-[-0.02em] text-[#111827]">
+                {service.title}
+              </h3>
+              <span className={`shrink-0 ${visibilityBadgeClass(visible)}`}>
+                {visible ? 'Видимая' : 'Скрытая'}
+              </span>
             </div>
+
+            {subtitle ? (
+              <p className={`mt-0.5 line-clamp-1 ${servicesCatalogMetaMuted}`}>{subtitle}</p>
+            ) : null}
+
+            <p className={servicesCatalogPriceText}>{formatServicePrice(service)}</p>
+
+            {onCardClick ? null : (
+              <ServiceScheduleMeta
+                serviceId={service.id}
+                visible={visible}
+                availableSlotsCount={availableSlotsCount}
+                upcomingAppointmentsCount={upcomingAppointmentsCount}
+              />
+            )}
           </div>
-        </div>
 
-        {showNoSlotsNotice ? <ServiceNoSlotsNotice serviceId={service.id} /> : null}
+          {showMenu && onOpenMenu ? (
+            <button
+              type="button"
+              onClick={() => onOpenMenu(service)}
+              className={servicesCatalogMenuBtn}
+              aria-label={`Меню: ${service.title}`}
+            >
+              <HiEllipsisHorizontal className="h-5 w-5" aria-hidden />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="hidden min-h-[120px] items-center gap-5 px-6 py-5 lg:flex">
-        {imageSrc ? (
-          <ServiceThumbnail src={imageSrc} title={service.title} sizeClass="h-20 w-20 rounded-[20px]" />
-        ) : (
-          <ServiceThumbnailFallback sizeClass="flex h-20 w-20 items-center justify-center rounded-[20px]" />
-        )}
-
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[22px] font-black leading-tight tracking-[-0.05em] text-[#111827]">
-            {service.title}
-          </h3>
-          <ServiceMeta
-            service={service}
-            categoryLabel={categoryLabel}
-            availableSlotsCount={availableSlotsCount}
-            upcomingAppointmentsCount={upcomingAppointmentsCount}
-          />
-        </div>
-
-        {showMenu && onOpenMenu ? (
-          <button
-            type="button"
-            onClick={() => onOpenMenu(service)}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#EBEBEB] text-[#6B7280] transition hover:bg-[#E4E4E4] active:scale-[0.96]"
-            aria-label={`Меню: ${service.title}`}
-          >
-            <HiEllipsisHorizontal className="h-6 w-6" aria-hidden />
-          </button>
-        ) : null}
-      </div>
+      {showNoSlotsNotice ? (
+        <ServiceNoSlotsNotice serviceId={service.id} serviceTitle={service.title} />
+      ) : null}
     </li>
   );
 }

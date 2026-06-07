@@ -4,18 +4,23 @@ import { AdminBottomSheet } from '../shared/AdminBottomSheet';
 import {
   AdminFormSheetLayout,
   AdminFormSheetStepper,
-  AdminFormSheetMetrics,
   AdminFormSheetSection,
 } from '../shared/AdminFormSheetLayout';
 import {
   catalogSheetField,
-  catalogSheetGhostBtn,
   catalogSheetPrimaryBtn,
   catalogSheetSecondaryBtn,
 } from '../shared/adminCatalogSheetTheme';
 import { sheetChipClass, sheetLabelClass, sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
 import { EMPTY_PROMO_PRICE } from '../../../shared/lib/emptyDisplayText';
+import {
+  servicesCatalogPriceText,
+  servicesFormSegmentTrack,
+  servicesSheetFormPanel,
+} from './adminServicesTheme';
+import { ServicesFocusPhotoBackdrop } from './ServicesKpiPhotoBackdrop';
 import { PromotionBannerCard } from './PromotionBannerCard';
+import { ServicesSheetPriceHero } from './ServicesSheetPriceHero';
 import {
   PROMOTION_TEMPLATES,
   addDaysIso,
@@ -59,6 +64,55 @@ function discountedPrice(service: ManagedService, type: ServicePromotionDiscount
   if (type === 'gift') return service.priceByn;
   if (type === 'money') return Math.max(0, service.priceByn - value);
   return Math.max(0, Math.round(service.priceByn * (1 - value / 100)));
+}
+
+function promoSavings(
+  service: ManagedService | undefined,
+  type: ServicePromotionDiscountType,
+  value: number,
+): { savings: number; promoPrice: number } | null {
+  if (!service) return null;
+  const promoPrice = discountedPrice(service, type, value);
+  if (promoPrice == null) return null;
+  return { savings: Math.max(0, Math.round((service.priceByn - promoPrice) * 100) / 100), promoPrice };
+}
+
+function PromoBenefitFocus({
+  service,
+  discountType,
+  discountValue,
+  discountLabel,
+}: {
+  service: ManagedService | undefined;
+  discountType: ServicePromotionDiscountType;
+  discountValue: number;
+  discountLabel: string;
+}) {
+  const savings = promoSavings(service, discountType, discountValue);
+
+  return (
+    <div className="relative overflow-hidden rounded-[14px] px-4 py-4">
+      <ServicesFocusPhotoBackdrop />
+      <div className="relative z-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/85">
+          Выгода для клиента
+        </p>
+        <p className="mt-2 text-[30px] font-black tabular-nums leading-none tracking-[-0.05em] text-white">
+          {discountLabel}
+        </p>
+        {savings && savings.savings > 0 ? (
+          <p className="mt-2">
+            <span className={servicesCatalogPriceText}>Экономия {savings.savings} BYN</span>
+          </p>
+        ) : service ? (
+          <p className="mt-2 text-[14px] font-semibold text-white/90">
+            {service.priceType === 'from' ? 'от ' : ''}
+            {savings?.promoPrice ?? service.priceByn} BYN с акцией
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 export function ServicesPromotionFormSheet({ open, services, initial, onClose, onSave }: Props) {
@@ -236,7 +290,20 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
           </button>
         </div>
       ) : (
-        <>
+        <div className="flex w-full gap-2 sm:gap-3">
+          {step > 0 ? (
+            <button type="button" onClick={handleBack} className={catalogSheetSecondaryBtn}>
+              Назад
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => onSave(buildPromo(false), false)}
+            className={catalogSheetSecondaryBtn}
+            aria-label="Сохранить черновик"
+          >
+            Черновик
+          </button>
           <button
             type="button"
             disabled={!serviceId || startsAt > endsAt}
@@ -245,19 +312,7 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
           >
             Опубликовать
           </button>
-          <button
-            type="button"
-            onClick={() => onSave(buildPromo(false), false)}
-            className={catalogSheetSecondaryBtn}
-          >
-            Сохранить черновик
-          </button>
-          {step > 0 ? (
-            <button type="button" onClick={handleBack} className={catalogSheetGhostBtn}>
-              Назад
-            </button>
-          ) : null}
-        </>
+        </div>
       )}
     </div>
   );
@@ -330,27 +385,31 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
               />
             </label>
             {selectedService ? (
-              <div className="mt-4 space-y-4">
-                <p className="text-[15px] font-black tracking-[-0.03em] text-[#111827] lg:text-[17px]">
+              <div className="mt-4 space-y-3">
+                <ServicesSheetPriceHero
+                  label="Цена с акцией"
+                  value={
+                    discountedPrice(selectedService, discountType, discountValue) != null ? (
+                      `${selectedService.priceType === 'from' ? 'от ' : ''}${discountedPrice(selectedService, discountType, discountValue)} BYN`
+                    ) : (
+                      EMPTY_PROMO_PRICE
+                    )
+                  }
+                />
+                <div className={`${servicesSheetFormPanel} flex items-center justify-between`}>
+                  <span className="text-[13px] font-medium text-[#6B7280]">Было</span>
+                  <span className="text-[15px] font-semibold tabular-nums text-[#9CA3AF] line-through">
+                    {formatServicePrice(selectedService)}
+                  </span>
+                </div>
+                <p className="text-[15px] font-bold tracking-[-0.02em] text-[#111827]">
                   {selectedService.title}
                 </p>
-                <AdminFormSheetMetrics
-                  variant="catalog"
-                  items={[
-                    { label: 'Было', value: formatServicePrice(selectedService) },
-                    {
-                      label: 'С акцией',
-                      value:
-                        discountedPrice(selectedService, discountType, discountValue) != null ? (
-                          <>
-                            {selectedService.priceType === 'from' ? 'от ' : ''}
-                            {discountedPrice(selectedService, discountType, discountValue)} BYN
-                          </>
-                        ) : (
-                          EMPTY_PROMO_PRICE
-                        ),
-                    },
-                  ]}
+                <PromoBenefitFocus
+                  service={selectedService}
+                  discountType={discountType}
+                  discountValue={discountValue}
+                  discountLabel={discountLabel}
                 />
               </div>
             ) : services.length === 0 ? (
@@ -412,56 +471,92 @@ export function ServicesPromotionFormSheet({ open, services, initial, onClose, o
         ) : null}
 
         {step === 3 ? (
-          <AdminFormSheetSection title="Скидка">
-            <div className="grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5">
-              {(
-                [
-                  { id: 'percent' as const, label: '%' },
-                  { id: 'money' as const, label: 'BYN' },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setDiscountType(opt.id)}
-                  className={sheetSegmentClass(discountType === opt.id)}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <div className="block">
-              <span className={sheetLabelClass}>
-                {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
-              </span>
-              <div
-                className={`${catalogSheetField} mt-1.5 cursor-default bg-[#FAFAFA] text-[#111827]`}
-                aria-readonly
-              >
-                {discountType === 'percent'
-                  ? `${Math.round(discountValue)}%`
-                  : `${discountValue} BYN`}
+          <AdminFormSheetSection title="Скидка" variant="catalog">
+            <div className="space-y-3">
+              <ServicesSheetPriceHero label="Скидка" value={discountLabel} />
+
+              <div className={`${servicesSheetFormPanel} space-y-3`}>
+                <div>
+                  <span className={sheetLabelClass}>Тип скидки</span>
+                  <div className={`mt-2 ${servicesFormSegmentTrack}`}>
+                    {(
+                      [
+                        { id: 'percent' as const, label: '%' },
+                        { id: 'money' as const, label: 'BYN' },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setDiscountType(opt.id)}
+                        className={sheetSegmentClass(discountType === opt.id)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <label className="block">
+                  <span className={sheetLabelClass}>
+                    {discountType === 'percent' ? 'Размер скидки, %' : 'Скидка, BYN'}
+                  </span>
+                  <input
+                    value={String(discountValue)}
+                    onChange={(event) => {
+                      const next = Number.parseFloat(event.target.value.replace(',', '.'));
+                      setDiscountValue(Number.isFinite(next) ? Math.max(0, next) : 0);
+                    }}
+                    inputMode="decimal"
+                    className={`${catalogSheetField} mt-1.5 text-[20px] font-black tabular-nums tracking-[-0.04em] text-[#ff5f7a] ring-2 ring-[#FDE8ED] focus:bg-[#FFF1F4] focus:ring-[#F9A8B4]`}
+                  />
+                </label>
               </div>
-            </div>
-            <div className="flex justify-center py-2">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#EBEBEB] text-[18px] font-bold text-[#F47C8C] lg:h-28 lg:w-28 lg:text-[20px]">
-                {discountLabel}
-              </div>
+
+              <PromoBenefitFocus
+                service={selectedService}
+                discountType={discountType}
+                discountValue={discountValue}
+                discountLabel={discountLabel}
+              />
             </div>
           </AdminFormSheetSection>
         ) : null}
 
         {step === 4 ? (
           <AdminFormSheetSection title="Превью для клиентов" variant="catalog">
-            <PromotionBannerCard promo={previewPromo} />
-            <label className="mt-4 block">
-              <span className="text-[12px] font-semibold text-[#6B7280]">Заголовок</span>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className={`${catalogSheetField} mt-1`}
+            <div className="space-y-3">
+              <ServicesSheetPriceHero label="Скидка" value={discountLabel} />
+
+              <PromoBenefitFocus
+                service={selectedService}
+                discountType={discountType}
+                discountValue={discountValue}
+                discountLabel={discountLabel}
               />
-            </label>
+
+              <PromotionBannerCard promo={previewPromo} />
+
+              <div className={servicesSheetFormPanel}>
+                <label className="block">
+                  <span className={sheetLabelClass}>Заголовок</span>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className={`${catalogSheetField} mt-1.5`}
+                  />
+                </label>
+                <label className="mt-3 block">
+                  <span className={sheetLabelClass}>Описание</span>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className={`${catalogSheetField} mt-1.5 resize-none`}
+                  />
+                </label>
+              </div>
+            </div>
           </AdminFormSheetSection>
         ) : null}
       </AdminFormSheetLayout>

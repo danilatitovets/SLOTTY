@@ -10,14 +10,21 @@ export function isPositiveReviewRating(rating: number): boolean {
   return rating >= 4;
 }
 
-const TONE_STYLES: Record<
-  ReviewSentimentTone,
-  { bg: string; eye: string; mouth: string; ring?: string }
-> = {
-  positive: { bg: '#DCFCE7', eye: '#15803D', mouth: '#15803D', ring: '#BBF7D0' },
-  neutral: { bg: '#FEF3C7', eye: '#B45309', mouth: '#B45309', ring: '#FDE68A' },
-  negative: { bg: '#FEE2E2', eye: '#DC2626', mouth: '#DC2626', ring: '#FECACA' },
+const TONE_STYLES: Record<ReviewSentimentTone, { shell: string; icon: string }> = {
+  positive: { shell: 'bg-[#E8F9EE]', icon: 'text-[#16A34A]' },
+  neutral: { shell: 'bg-[#FFF4DE]', icon: 'text-[#D97706]' },
+  negative: { shell: 'bg-[#FEECEC]', icon: 'text-[#EF4444]' },
 };
+
+const SHELL_SIZE = {
+  sm: 'h-[26px] w-[26px]',
+  md: 'h-[32px] w-[32px]',
+} as const;
+
+const ICON_SIZE = {
+  sm: 'h-[16px] w-[16px]',
+  md: 'h-[19px] w-[19px]',
+} as const;
 
 export function ReviewSentimentIcon({
   tone,
@@ -28,37 +35,60 @@ export function ReviewSentimentIcon({
   size?: 'sm' | 'md';
   className?: string;
 }) {
-  const px = size === 'sm' ? 22 : 28;
-  const palette = TONE_STYLES[tone];
-  const mouthPath =
-    tone === 'positive'
-      ? 'M8 17c1.4 1.2 3.2 1.8 5 1.8s3.6-.6 5-1.8'
-      : tone === 'neutral'
-        ? 'M8.5 17.5h7'
-        : 'M8 19c1.4-1.2 3.2-1.8 5-1.8s3.6.6 5 1.8';
+  const { shell, icon } = TONE_STYLES[tone];
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full ${className}`}
-      style={{
-        width: px,
-        height: px,
-        backgroundColor: palette.bg,
-        boxShadow: palette.ring ? `inset 0 0 0 1px ${palette.ring}` : undefined,
-      }}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full ${shell} ${SHELL_SIZE[size]} ${className}`}
       aria-hidden
     >
-      <svg viewBox="0 0 26 26" width={px - 6} height={px - 6} fill="none">
-        <circle cx="9" cy="11" r="1.35" fill={palette.eye} />
-        <circle cx="17" cy="11" r="1.35" fill={palette.eye} />
-        <path
-          d={mouthPath}
-          stroke={palette.mouth}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          fill="none"
-        />
-      </svg>
+      {tone === 'positive' ? (
+        <PositiveFaceIcon className={`${ICON_SIZE[size]} ${icon}`} />
+      ) : tone === 'negative' ? (
+        <NegativeFaceIcon className={`${ICON_SIZE[size]} ${icon}`} />
+      ) : (
+        <NeutralFaceIcon className={`${ICON_SIZE[size]} ${icon}`} />
+      )}
     </span>
+  );
+}
+
+function PositiveFaceIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <circle cx="8.75" cy="10" r="1.65" fill="currentColor" />
+      <circle cx="15.25" cy="10" r="1.65" fill="currentColor" />
+      <path
+        d="M7.5 13.75c1.35 1.65 3.05 2.5 4.5 2.5s3.15-.85 4.5-2.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function NeutralFaceIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <circle cx="8.75" cy="10" r="1.65" fill="currentColor" />
+      <circle cx="15.25" cy="10" r="1.65" fill="currentColor" />
+      <path d="M8 14.25h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function NegativeFaceIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden>
+      <circle cx="8.75" cy="10" r="1.65" fill="currentColor" />
+      <circle cx="15.25" cy="10" r="1.65" fill="currentColor" />
+      <path
+        d="M7.5 16.25c1.35-1.65 3.05-2.5 4.5-2.5s3.15.85 4.5 2.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

@@ -12,7 +12,7 @@ type Props = {
   name: string;
   phone?: string | null;
   photoUrl?: string | null;
-  size?: 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
   /** @deprecated — все аватары в сером стиле кабинета */
   variant?: 'soft' | 'gradient';
   /** В отзывах показываем OAuth-портрет (Google/Telegram), в записях — только загруженные. */
@@ -20,11 +20,13 @@ type Props = {
 };
 
 const SIZE = {
+  sm: 'h-9 w-9 text-[11px]',
   md: 'h-12 w-12 text-[15px]',
   lg: 'h-14 w-14 text-[16px]',
 } as const;
 
 const ICON_SIZE = {
+  sm: 'h-4 w-4',
   md: 'h-5 w-5',
   lg: 'h-6 w-6',
 } as const;

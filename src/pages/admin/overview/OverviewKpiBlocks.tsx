@@ -38,6 +38,8 @@ type KpiCardProps = {
   alert?: boolean;
   /** Переопределение стиля иконки (например, синий акцент расписания). */
   iconClassName?: string;
+  /** Компактная карточка в сводке услуг. */
+  compact?: boolean;
 };
 
 export function OverviewKpiStatCard({
@@ -49,6 +51,7 @@ export function OverviewKpiStatCard({
   surface = 'tile',
   alert = false,
   iconClassName,
+  compact = false,
 }: KpiCardProps) {
   const surfaceClass = surface === 'carousel' ? overviewDesktopKpiCarouselCard : overviewDesktopKpiTile;
   const alertClass = alert
@@ -57,29 +60,45 @@ export function OverviewKpiStatCard({
 
   return (
     <article
-      className={`${surfaceClass} ${alertClass} flex min-h-[8.25rem] flex-col justify-between`}
+      className={`${surfaceClass} ${alertClass} flex ${
+        compact ? 'min-h-[5.75rem]' : 'min-h-[8.25rem]'
+      } flex-col justify-between`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 pt-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+      <div className="flex items-start justify-between gap-2">
+        <p
+          className={`min-w-0 flex-1 pt-0.5 font-bold uppercase tracking-[0.08em] text-[#9CA3AF] ${
+            compact ? 'text-[10px]' : 'text-[11px]'
+          }`}
+        >
           {label}
         </p>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
           {trailing}
-          <span className={`${iconClassName ?? overviewIconCircle} h-11 w-11 rounded-[18px]`}>{icon}</span>
+          <span
+            className={`${iconClassName ?? overviewIconCircle} ${
+              compact ? 'h-9 w-9 rounded-[14px]' : 'h-11 w-11 rounded-[18px]'
+            }`}
+          >
+            {icon}
+          </span>
         </div>
       </div>
 
       <div className="min-w-0">
         <p
-          className={`truncate text-[clamp(1.5rem,2.4vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.06em] ${
-            alert ? 'text-[#ff5f7a]' : 'text-[#111827]'
-          }`}
+          className={`truncate font-black tabular-nums leading-none tracking-[-0.06em] ${
+            compact ? 'text-[1.25rem]' : 'text-[clamp(1.5rem,2.4vw,1.75rem)]'
+          } ${alert ? 'text-[#ff5f7a]' : 'text-[#111827]'}`}
         >
           {value}
         </p>
         {hint ? (
-          <p className="mt-2 line-clamp-2 text-[12px] font-medium leading-snug text-[#6B7280]">
+          <p
+            className={`line-clamp-2 font-medium leading-snug text-[#6B7280] ${
+              compact ? 'mt-1 text-[11px]' : 'mt-2 text-[12px]'
+            }`}
+          >
             {hint}
           </p>
         ) : null}

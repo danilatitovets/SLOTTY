@@ -41,7 +41,7 @@ const TONE_TRIGGER: Record<SlottySelectTone, string> = {
   admin:
     'flex w-full min-h-[3rem] items-center justify-between rounded-[16px] border border-[#EAECEF] bg-white px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition focus:border-[#F9A8B4] focus:ring-2 focus:ring-[#FFF1F4] disabled:cursor-not-allowed disabled:opacity-50',
   catalog:
-    'inline-flex h-10 min-w-[200px] shrink-0 items-center rounded-[10px] border-0 bg-[#F5F5F5] px-3.5 text-left text-[13px] font-semibold text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] disabled:cursor-not-allowed disabled:opacity-50',
+    'flex w-full min-h-12 items-center justify-between rounded-[10px] border-0 bg-[#EBEBEB] px-4 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#E4E4E4] focus:bg-[#E4E4E4] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50',
   cabinet:
     'flex w-full min-h-12 items-center justify-between rounded-[10px] border-0 bg-[#F5F5F5] px-4 py-3 text-left text-[15px] font-medium text-[#111827] outline-none transition hover:bg-[#EBEBEB] focus:bg-[#EBEBEB] focus:ring-2 focus:ring-[#ff5f7a]/15 disabled:cursor-not-allowed disabled:opacity-50',
 };
@@ -222,13 +222,23 @@ export function SlottyDatePicker({
         onClick={openPicker}
         className={TONE_TRIGGER[tone]}
       >
-        <span className={display ? (tone === 'admin' ? 'text-[#111827]' : 'text-neutral-900') : 'font-medium text-[#9CA3AF]'}>
+        <span
+          className={`min-w-0 flex-1 truncate text-left ${
+            display
+              ? tone === 'admin' || tone === 'catalog' || tone === 'cabinet'
+                ? 'text-[#111827]'
+                : 'text-neutral-900'
+              : 'font-medium text-[#9CA3AF]'
+          }`}
+        >
           {display || placeholder}
         </span>
         <svg
-          className={`shrink-0 ${tone === 'admin' ? 'text-[#9CA3AF]' : 'text-neutral-500'}`}
-          width="20"
-          height="20"
+          className={`ml-2 shrink-0 ${
+            tone === 'admin' || tone === 'catalog' || tone === 'cabinet' ? 'text-[#9CA3AF]' : 'text-neutral-500'
+          }`}
+          width="18"
+          height="18"
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden

@@ -13,6 +13,7 @@ import type { ClientBookingDetail } from './clientBookingDetailTypes';
 import { ClientBookingDetailRow, ClientBookingSectionTitle } from './clientBookingDetailUi';
 import { clientBookingPanel } from './clientBookingDetailTheme';
 import { formatAppointmentWhen } from './clientAppointmentViewModel';
+import { isClientBookingAddressRevealed } from './clientBookingLocation';
 
 type Props = {
   detail: ClientBookingDetail;
@@ -56,14 +57,14 @@ export function ClientAppointmentInfoCard({ detail }: Props) {
           label="Формат"
           value={visitLabel}
         />
-        {detail.address?.line ? (
+        {detail.address?.line && isClientBookingAddressRevealed(detail.status) ? (
           <ClientBookingDetailRow
             icon={<HiMapPin className="h-4 w-4" aria-hidden />}
             label="Адрес"
             value={detail.address.line}
           />
         ) : null}
-        {!detail.address?.line && detail.address?.hint ? (
+        {!isClientBookingAddressRevealed(detail.status) && detail.address?.hint ? (
           <p className="py-3 pl-11 text-[13px] leading-relaxed text-[#6B7280]">{detail.address.hint}</p>
         ) : null}
         {detail.voucher_number ? (

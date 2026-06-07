@@ -1,20 +1,20 @@
-import { HiCheck, HiPhoto, HiXMark } from 'react-icons/hi2';
+import { HiCheck, HiPhoto, HiPhone, HiXMark } from 'react-icons/hi2';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import {
   apptBadgeNew,
-  apptCardActions,
-  apptCardBody,
+  apptCardActionsCompact,
   apptCardShell,
-  apptMetaMuted,
-  apptOutlineBtn,
-  apptPinkBtn,
-  apptPriceText,
+  apptCompactOutlineBtn,
+  apptCompactPinkBtn,
   apptTimeStrip,
+  apptTimeStripDate,
   apptTimeStripNew,
+  apptTimeStripTime,
 } from './adminAppointmentsTheme';
-import { AppointmentsClientSummary } from './AppointmentsClientSummary';
+import { resolveClientDisplayName } from './appointmentDetailHelpers';
+import { AppointmentsCardMetricsRow } from './AppointmentsCardMetricsRow';
+import { AppointmentsClientAvatar } from './AppointmentsClientAvatar';
 import { formatAppointmentPrice, formatCardDateTime } from './appointmentsFormat';
-import { AppointmentsCardDetailFooter } from './AppointmentsCardDetailFooter';
 import { PendingDeadlineHint, isPendingConfirmDisabled } from './PendingDeadlineHint';
 
 type Props = {
@@ -30,7 +30,11 @@ export function AppointmentsRequestCard({
   onReject,
   onOpenDetail,
 }: Props) {
+  const displayName = resolveClientDisplayName(appointment);
+  const phone = appointment.contact?.trim() || null;
+  const email = appointment.clientEmail?.trim() || null;
   const dateTime = formatCardDateTime(appointment.date, appointment.time);
+  const dateShort = dateTime.split(' · ')[0] ?? dateTime;
   const confirmDisabled = isPendingConfirmDisabled(
     appointment.dbStatus ?? appointment.status,
     appointment.pendingExpiresAt,
@@ -38,55 +42,88 @@ export function AppointmentsRequestCard({
 
   return (
     <article className={apptCardShell}>
-      <div className={apptCardBody}>
+      <div className="flex min-w-0 flex-1">
         <div className={`${apptTimeStrip} ${apptTimeStripNew}`}>
-          <span className="text-[11px] font-semibold uppercase tracking-wide opacity-90">Новая</span>
-          <span className="text-[15px] font-bold tabular-nums leading-none">{appointment.time}</span>
-          <span className="max-w-full px-1 text-[10px] font-medium leading-tight opacity-80">
-            {dateTime.split(' · ')[0] ?? dateTime}
-          </span>
+          <span className="text-[10px] font-semibold leading-none">Новая</span>
+          <span className={apptTimeStripTime}>{appointment.time}</span>
+          <span className={apptTimeStripDate}>{dateShort}</span>
         </div>
 
-        <div className="min-w-0 flex-1 p-3.5 sm:p-4">
-          <AppointmentsClientSummary appointment={appointment} compact />
-          <div className="mt-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className="line-clamp-2 text-[14px] font-medium leading-snug text-[#6B7280]">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5 p-3 sm:gap-3 sm:p-4">
+            <AppointmentsClientAvatar
+              name={displayName}
+              phone={phone}
+              photoUrl={appointment.clientAvatarUrl}
+              size="sm"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-[15px] font-bold leading-snug tracking-[-0.02em] text-[#111827] sm:line-clamp-1">
+                {displayName}
+              </p>
+              <div className="mt-1">
+                <span className={apptBadgeNew}>Новая</span>
+              </div>
+
+              {phone || email ? (
+                <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
+                  {phone ? (
+                    <a
+                      href={`tel:${phone.replace(/\s/g, '')}`}
+                      className="inline-flex min-w-0 items-center gap-1 font-semibold text-[#F47C8C]"
+                    >
+                      <HiPhone className="h-3 w-3 shrink-0" aria-hidden />
+                      <span className="truncate">{phone}</span>
+                    </a>
+                  ) : null}
+                  {email ? (
+                    <span className="min-w-0 truncate font-medium text-[#9CA3AF]">{email}</span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-[#6B7280]">
                 {appointment.serviceTitle}
               </p>
-              <span className={`shrink-0 lg:hidden ${apptBadgeNew}`}>Новая</span>
-            </div>
+
               {appointment.clientReferencePhotoUrl ? (
-                <p className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-semibold text-[#F47C8C]">
-                  <HiPhoto className="h-3.5 w-3.5" aria-hidden />
-                  Есть фото-референс
+                <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#F47C8C]">
+                  <HiPhoto className="h-3 w-3" aria-hidden />
+                  Фото-референс
                 </p>
               ) : null}
-              <p className={`mt-2 hidden text-[13px] lg:block ${apptMetaMuted}`}>{dateTime}</p>
-              <p className={`mt-2 text-[16px] ${apptPriceText}`}>
-                {formatAppointmentPrice(appointment.priceByn)}
-              </p>
-              <PendingDeadlineHint pendingExpiresAt={appointment.pendingExpiresAt} className="mt-2" />
+
+              <AppointmentsCardMetricsRow
+                price={formatAppointmentPrice(appointment.priceByn)}
+                duration=""
+                onOpen={onOpenDetail}
+              />
+
+              <PendingDeadlineHint
+                pendingExpiresAt={appointment.pendingExpiresAt}
+                compact
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+
+          <div className={`${apptCardActionsCompact} border-t border-[#F3F4F6]`}>
+            <button type="button" onClick={onReject} className={apptCompactOutlineBtn}>
+              <HiXMark className="h-3.5 w-3.5" aria-hidden />
+              Отклонить
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={confirmDisabled}
+              className={`${apptCompactPinkBtn} disabled:opacity-50`}
+            >
+              <HiCheck className="h-3.5 w-3.5" aria-hidden />
+              Подтвердить
+            </button>
           </div>
         </div>
       </div>
-
-      <div className={apptCardActions}>
-        <button type="button" onClick={onReject} className={apptOutlineBtn}>
-          <HiXMark className="h-4 w-4" aria-hidden />
-          Отклонить
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={confirmDisabled}
-          className={`${apptPinkBtn} disabled:opacity-50`}
-        >
-          <HiCheck className="h-4 w-4" aria-hidden />
-          Подтвердить
-        </button>
-      </div>
-      <AppointmentsCardDetailFooter onClick={onOpenDetail} />
     </article>
   );
 }

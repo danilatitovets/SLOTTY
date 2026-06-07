@@ -134,9 +134,12 @@ export async function loadClientBookingMasterCard(
 export function buildAddressPresentation(params: {
   status: string;
   publicAddress: string | null;
+  fullAddress: string | null;
   hasCoords: boolean;
+  hideUntilConfirmed: boolean;
 }): { line: string | null; hint: string | null; map_available: boolean } {
-  const addr = params.publicAddress?.trim() || '';
+  const publicLine = params.publicAddress?.trim() || '';
+  const fullLine = params.fullAddress?.trim() || publicLine;
   const confirmed =
     params.status === 'confirmed' ||
     params.status === 'client_arrived' ||
@@ -145,9 +148,22 @@ export function buildAddressPresentation(params: {
     params.status === 'client_confirmed_completed' ||
     params.status === 'completed';
 
-  if (addr && (confirmed || params.status === 'pending')) {
-    return { line: addr, hint: null, map_available: params.hasCoords || addr.length > 3 };
+  if (confirmed && fullLine) {
+    return { line: fullLine, hint: null, map_available: params.hasCoords || fullLine.length > 3 };
   }
+
+  if (params.status === 'pending' && params.hideUntilConfirmed) {
+    return {
+      line: publicLine || null,
+      hint: 'Подъезд, этаж и домофон откроются после подтверждения записи мастером',
+      map_available: false,
+    };
+  }
+
+  if (publicLine) {
+    return { line: publicLine, hint: null, map_available: params.hasCoords || publicLine.length > 3 };
+  }
+
   if (params.status === 'pending') {
     return {
       line: null,
@@ -155,12 +171,38 @@ export function buildAddressPresentation(params: {
       map_available: false,
     };
   }
+
   return {
     line: null,
     hint: 'Адрес не указан — свяжитесь с мастером',
     map_available: false,
   };
 }
+
+function formatRevealedClientAddress(loc: {
+  street: string;
+  building: string;
+  buildingDetail: string | null;
+  entrance: string | null;
+  floor: string | null;
+  room: string | null;
+  intercom: string | null;
+  directions: string | null;
+  publicAddress: string;
+}): string {
+  const parts: string[] = [];
+  const main = [loc.street?.trim(), loc.building?.trim()].filter(Boolean).join(', ');
+  if (main) parts.push(main);
+  if (loc.buildingDetail?.trim()) parts.push(loc.buildingDetail.trim());
+  if (loc.entrance?.trim()) parts.push(`подъезд ${loc.entrance.trim()}`);
+  if (loc.floor?.trim()) parts.push(`этаж ${loc.floor.trim()}`);
+  if (loc.room?.trim()) parts.push(`кв. ${loc.room.trim()}`);
+  if (loc.intercom?.trim()) parts.push(`домофон ${loc.intercom.trim()}`);
+  if (loc.directions?.trim()) parts.push(loc.directions.trim());
+  return parts.join(', ') || loc.publicAddress?.trim() || '';
+}
+
+export { formatRevealedClientAddress };
 
 export function enrichClientAppointmentDetail(params: {
   status: string;
@@ -173,6 +215,8 @@ export function enrichClientAppointmentDetail(params: {
   can_leave_review: boolean;
   has_open_dispute: boolean;
   public_address: string | null;
+  full_address: string | null;
+  hide_until_confirmed: boolean;
   has_coords: boolean;
   events: BookingEventRow[];
   master: ClientBookingMasterCard;
@@ -186,6 +230,8 @@ export function enrichClientAppointmentDetail(params: {
   const address = buildAddressPresentation({
     status: params.status,
     publicAddress: params.public_address,
+    fullAddress: params.full_address,
+    hideUntilConfirmed: params.hide_until_confirmed,
     hasCoords: params.has_coords,
   });
   const available_actions = buildClientAvailableActions({

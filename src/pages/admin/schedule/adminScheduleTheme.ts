@@ -1,4 +1,5 @@
-import { APPOINTMENTS_HERO_BG } from '../appointments/adminAppointmentsTheme';
+import { APPOINTMENTS_HERO_BG, apptHistoryKpiTileOverlay } from '../appointments/adminAppointmentsTheme';
+import { SCHEDULE_QUICK_SETUP_IMAGES } from './scheduleQuickSetupAssets';
 import {
   profileDashboardCard,
   profileDashboardCardPad,
@@ -65,6 +66,15 @@ export const scheduleKpiIconCircle =
 /** Точки карусели KPI на странице расписания. */
 export const scheduleKpiCarouselDot = 'bg-[#3B4CCA]';
 
+/** Фон KPI-плиток на вкладке «Создать» (`public/photos/Быстрая настройка/задний фон.webp`). */
+export const SCHEDULE_KPI_TILE_BG = SCHEDULE_QUICK_SETUP_IMAGES.tabCreateActiveBg;
+
+/** Пустой день в календаре (`public/photos/история/окон нет.png`). */
+export const SCHEDULE_NO_WINDOWS_DAY_ILLUSTRATION_SRC =
+  `/photos/${encodeURIComponent('история')}/${encodeURIComponent('окон нет.png')}`;
+
+export const scheduleKpiTileOverlay = apptHistoryKpiTileOverlay;
+
 /** Высота нижней панели раздела «Расписание». */
 export const SCHEDULE_TAB_BAR_HEIGHT = '5.75rem';
 
@@ -125,9 +135,20 @@ export const scheduleTemplateAddBtn =
 
 /** Ошибки в шитах расписания. */
 export const scheduleSheetErrorBox =
-  'rounded-[10px] bg-[#FFF4E8] px-4 py-3 text-[13px] font-medium leading-snug text-[#B45309] break-words [overflow-wrap:anywhere]';
+  'rounded-[12px] bg-[#FFF1F4] px-3.5 py-2.5 text-[13px] font-semibold leading-snug text-[#EF4444] break-words [overflow-wrap:anywhere]';
 
+/** Белая панель полей в каталожных шитах расписания. */
+export const scheduleSheetFormPanel = 'overflow-hidden rounded-[16px] bg-white p-4';
+
+export const scheduleSheetSummaryShell = 'overflow-hidden rounded-[10px] bg-[#EBEBEB]';
+
+/** @deprecated Используйте scheduleSheetSummaryShell + шапку с фото. */
 export const scheduleSheetSummaryBox = 'rounded-[10px] bg-[#EBEBEB] px-4 py-4';
+
+export const scheduleSheetSummaryHeader =
+  'relative overflow-hidden px-4 pb-4 pt-4 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-3 after:bg-gradient-to-b after:from-transparent after:to-[#EBEBEB]';
+
+export const scheduleSheetSummaryBody = 'px-4 pb-4';
 
 /** Мобилка: серый лоток; desktop — прежние панели. */
 export const scheduleMobileTray =
@@ -172,19 +193,27 @@ export function scheduleWindowStatusPill(status: 'free' | 'booked' | 'blocked'):
   return 'bg-[#EBEBEB] text-[#111827]';
 }
 
+/** Цвета статусов в календаре — контрастные, легко различимые. */
+export const SCHEDULE_CAL_BOOKED = '#3B4CCA';
+export const SCHEDULE_CAL_FREE = '#16A34A';
+export const SCHEDULE_CAL_BLOCKED = '#9CA3AF';
+
 export const scheduleCalendarCard =
-  'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:rounded-[18px] lg:bg-[#F6F7FB] lg:p-5 lg:ring-0';
+  'w-full rounded-[16px] bg-white p-4 ring-1 ring-[#EEEEEE] max-lg:shadow-none lg:rounded-[20px] lg:bg-[#F6F7FB] lg:p-6 lg:ring-0';
 
 /** Панель выбранного дня (календарь). */
 export const scheduleCalendarDayPanel = `${scheduleCalendarCard} max-lg:px-4 max-lg:pb-4 max-lg:pt-5`;
 
 /** Кнопки навигации месяца / экспорт в календаре. */
 export const scheduleCalendarIconBtn =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#F6F7FB] text-[#6B7280] transition hover:bg-[#EEF0FC] hover:text-[#3B4CCA] active:scale-[0.97] disabled:cursor-wait disabled:opacity-60';
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#EBEBEB] text-[#6B7280] transition hover:bg-[#E4E4E4] hover:text-[#3B4CCA] active:scale-[0.97] disabled:cursor-wait disabled:opacity-60';
 
-/** Горизонтальная лента «Дни с окнами» на мобиле (без роста вниз). */
+/** Горизонтальная лента дней — py даёт место рамкам чипов внутри overflow-x. */
 export const scheduleBusyDaysStrip =
-  'mt-2 flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'flex w-full min-w-0 gap-2 overflow-x-auto overflow-y-visible overscroll-x-contain scroll-px-4 py-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
+/** Белая панель полей без overflow-hidden — для блоков со горизонтальным скроллом. */
+export const scheduleSheetFormPanelScrollable = 'min-w-0 overflow-visible rounded-[16px] bg-white p-4';
 
 export function scheduleBusyDayChipClass(selected: boolean): string {
   return `flex min-w-[4.75rem] shrink-0 flex-col items-center justify-center rounded-[12px] px-2.5 py-2.5 transition active:scale-[0.98] ${

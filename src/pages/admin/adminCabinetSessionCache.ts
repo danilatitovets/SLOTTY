@@ -3,12 +3,18 @@ import type { MasterPublicationStatus } from '../../features/admin/lib/profileCo
 import type { DemoMasterAppointment } from '../../features/master/model/demoMasterAppointments';
 import type { MasterDraft } from '../../features/profile/lib/demoMasterStorage';
 
+export type CabinetProfileMeta = {
+  rating: number;
+  reviewsCount: number;
+  completedBookingsCount: number;
+};
+
 export type AdminCabinetSessionCache = {
   masterId: string;
   draft: MasterDraft;
   appointments: DemoMasterAppointment[];
   publicationStatus: MasterPublicationStatus | null;
-  cabinetProfileMeta: { rating: number; reviewsCount: number } | null;
+  cabinetProfileMeta: CabinetProfileMeta | null;
   subscription: MasterSubscriptionDto | null;
 };
 

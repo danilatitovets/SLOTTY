@@ -6,9 +6,9 @@ export const profileCabinetPanel = 'overflow-hidden rounded-[16px] bg-white';
 
 export const profileDashboardCard = profileCabinetPanel;
 
-/** Липкие табы под AdminDesktopTopBar: без скругления сверху, чтобы стыковаться с хедером. */
+/** Липкие табы профиля: после hero, при скролле — к верху main (уже под fixed-хедером). */
 export const profileDesktopTabsSticky =
-  'sticky z-20 overflow-hidden bg-white rounded-t-none top-[var(--slotty-admin-desktop-topbar-h,4.75rem)]';
+  'sticky z-20 top-0 overflow-hidden rounded-t-none bg-white';
 
 export const profileDashboardCardPad = 'p-5 sm:p-6';
 

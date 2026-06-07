@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { HiExclamationTriangle, HiInformationCircle } from 'react-icons/hi2';
+import { HiInformationCircle } from 'react-icons/hi2';
+import { SlottyImg } from '../../../shared/ui/SlottyImg';
+import { ADMIN_ATTENTION_EXCLAMATION_ICON_SRC } from '../shared/AdminSectionAttentionBadge';
 
 type Props = {
   variant?: 'info' | 'warning';
@@ -9,36 +11,39 @@ type Props = {
 
 const VARIANTS = {
   info: {
-    shell: 'border-l-[#3B4CCA] bg-[#F4F5FD] ring-[#D8DCF5]',
-    iconWrap: 'bg-[#EEF0FC] text-[#3B4CCA]',
-    Icon: HiInformationCircle,
+    shell: 'bg-[#EBEBEB]',
+    iconWrap: 'bg-white text-[#3B4CCA]',
   },
   warning: {
-    shell: 'border-l-[#F59E0B] bg-[#FFFBEB] ring-[#FDE68A]',
-    iconWrap: 'bg-[#FEF3C7] text-[#B45309]',
-    Icon: HiExclamationTriangle,
+    shell: 'bg-[#EEF0FC]',
+    iconWrap: 'bg-white',
   },
 } as const;
 
 export function ScheduleSheetNotice({ variant = 'info', children, action }: Props) {
   const styles = VARIANTS[variant];
-  const Icon = styles.Icon;
 
   return (
-    <div
-      className={`rounded-[14px] border-l-[3px] p-3 ring-1 sm:p-3.5 ${styles.shell}`}
-      role="note"
-    >
-      <div className="flex items-start gap-2.5">
+    <div className={`rounded-[12px] px-4 py-3.5 ${styles.shell}`} role="note">
+      <div className="flex items-start gap-3">
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${styles.iconWrap}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${styles.iconWrap}`}
           aria-hidden
         >
-          <Icon className="h-4 w-4" />
+          {variant === 'warning' ? (
+            <SlottyImg
+              src={ADMIN_ATTENTION_EXCLAMATION_ICON_SRC}
+              alt=""
+              className="h-7 w-7 object-contain"
+              decoding="async"
+            />
+          ) : (
+            <HiInformationCircle className="h-5 w-5 text-[#3B4CCA]" strokeWidth={2} />
+          )}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-medium leading-snug text-[#374151] sm:text-[14px]">{children}</p>
-          {action ? <div className="mt-2">{action}</div> : null}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="text-[14px] font-semibold leading-snug text-[#111827]">{children}</p>
+          {action ? <div className="mt-2.5">{action}</div> : null}
         </div>
       </div>
     </div>

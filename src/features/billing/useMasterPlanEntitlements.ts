@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { MasterSubscriptionDto } from '../admin/api/adminBillingApi';
 import { useAdminMasterCabinet } from '../../pages/admin/AdminMasterCabinetContext';
 import { isDevDemoAllowed } from '../../shared/lib/appMode';
 import { getMyMasterEntitlements, type MasterEntitlementsDto } from './api/masterEntitlementsApi';
@@ -18,6 +19,20 @@ function limitsFromEntitlements(ent: MasterEntitlementsDto): PlanLimits {
     maxMonthlyAppointments: ent.limits.maxMonthlyAppointments,
     scheduleHorizonDays: ent.limits.scheduleHorizonDays,
   };
+}
+
+function limitsFromSubscription(sub: MasterSubscriptionDto): PlanLimits {
+  return {
+    maxServices: sub.plan.maxServices,
+    maxMonthlyAppointments: sub.plan.maxMonthlyAppointments,
+    scheduleHorizonDays: sub.plan.maxScheduleDaysAhead,
+  };
+}
+
+function isProFromSubscription(sub: MasterSubscriptionDto | null): boolean {
+  if (!sub) return false;
+  if (sub.plan.maxServices == null) return true;
+  return sub.plan.code === 'pro';
 }
 
 /** Entitlements с API — единственный источник прав в live mode. */
@@ -65,18 +80,32 @@ export function useMasterPlanEntitlements() {
         ? getCurrentMasterPlan()
         : { plan: 'free' as PlanId, billingPeriod: 'month' as const, updatedAt: '' };
 
-    const subscriptionPending =
-      useCabinetApi && (cabinetLoading || entitlementsLoading) && entitlements == null;
+    const planStatePending =
+      useCabinetApi &&
+      entitlements == null &&
+      subscription == null &&
+      (cabinetLoading || entitlementsLoading);
 
-    const planId: PlanId =
-      useCabinetApi && entitlements
-        ? entitlements.isProEntitled
-          ? 'pro'
-          : 'free'
-        : localPlan.plan;
+    const isProEntitled = Boolean(
+      entitlements?.isProEntitled ?? (useCabinetApi ? isProFromSubscription(subscription) : false),
+    );
+
+    const planId: PlanId = isProEntitled
+      ? 'pro'
+      : useCabinetApi && entitlements
+        ? 'free'
+        : useCabinetApi && subscription
+          ? subscription.plan.code === 'pro'
+            ? 'pro'
+            : 'free'
+          : localPlan.plan;
 
     const limits: PlanLimits =
-      useCabinetApi && entitlements ? limitsFromEntitlements(entitlements) : getPlanLimits(planId);
+      useCabinetApi && entitlements
+        ? limitsFromEntitlements(entitlements)
+        : useCabinetApi && subscription
+          ? limitsFromSubscription(subscription)
+          : getPlanLimits(planId);
 
     const servicesCount =
       useCabinetApi && subscription ? subscription.usage.activeServices : draft.services.length;
@@ -86,16 +115,20 @@ export function useMasterPlanEntitlements() {
         : countAppointmentsInCurrentMonth(appointments);
 
     const freeServiceLimitReached =
-      planId === 'free' &&
+      !planStatePending &&
+      !isProEntitled &&
       typeof limits.maxServices === 'number' &&
       servicesCount >= limits.maxServices;
 
     const freeAppointmentLimitReached =
-      planId === 'free' && !canCreateMoreAppointments('free', monthlyAppointments);
+      !planStatePending &&
+      !isProEntitled &&
+      !canCreateMoreAppointments('free', monthlyAppointments);
 
     const freeApptCap = limits.maxMonthlyAppointments;
     const freeAppointmentLimitAlmostReached =
-      planId === 'free' &&
+      !planStatePending &&
+      !isProEntitled &&
       typeof freeApptCap === 'number' &&
       monthlyAppointments >= freeApptCap - 2 &&
       monthlyAppointments < freeApptCap;
@@ -103,10 +136,10 @@ export function useMasterPlanEntitlements() {
     return {
       planId,
       effectivePlan: entitlements?.effectivePlan ?? (planId === 'pro' ? 'pro' : 'free'),
-      isProEntitled: entitlements?.isProEntitled ?? planId === 'pro',
+      isProEntitled,
       entitlements,
       entitlementsLoading,
-      subscriptionPending,
+      subscriptionPending: planStatePending,
       billingPeriod:
         useCabinetApi && subscription
           ? subscription.billingPeriod === 'year'
@@ -123,10 +156,15 @@ export function useMasterPlanEntitlements() {
       freeAppointmentLimitReached,
       freeAppointmentLimitAlmostReached,
       isFreeServiceLimitReached: (count: number) =>
-        useCabinetApi && entitlements ? freeServiceLimitReached : isFreeServiceLimitReachedLocal(count),
+        useCabinetApi
+          ? !planStatePending &&
+            !isProEntitled &&
+            typeof limits.maxServices === 'number' &&
+            count >= limits.maxServices
+          : isFreeServiceLimitReachedLocal(count),
       isFreeAppointmentLimitReached: (count: number) =>
-        useCabinetApi && entitlements
-          ? planId === 'free' && !canCreateMoreAppointments('free', count)
+        useCabinetApi
+          ? !planStatePending && !isProEntitled && !canCreateMoreAppointments('free', count)
           : isFreeAppointmentLimitReachedLocal(count),
     };
   }, [

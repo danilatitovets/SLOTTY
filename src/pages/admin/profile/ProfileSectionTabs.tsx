@@ -1,4 +1,10 @@
 import { CabinetIcon, type CabinetIconName } from './cabinetIcons';
+import {
+  adminSectionTabIndicatorClass,
+  adminSectionTabLabelClass,
+  adminSectionTabsNavClass,
+  adminSectionTabTextClass,
+} from '../shared/adminSectionTabsTheme';
 
 export type ProfileSectionId = 'main' | 'address' | 'portfolio' | 'rules';
 
@@ -15,11 +21,10 @@ type Props = {
   className?: string;
 };
 
-/** Вкладки профиля: иконка + текст, на всю ширину, розовая линия у активной (как в макете кабинета). */
 export function ProfileSectionTabs({ active, onChange, className = '' }: Props) {
   return (
     <nav
-      className={`hidden w-full border-t border-[#eef0f5] lg:flex ${className}`.trim()}
+      className={`${adminSectionTabsNavClass} hidden lg:flex ${className}`.trim()}
       aria-label="Разделы профиля"
     >
       {TABS.map((tab) => {
@@ -29,22 +34,15 @@ export function ProfileSectionTabs({ active, onChange, className = '' }: Props) 
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-3.5 transition active:scale-[0.98] ${
-              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
-            }`}
+            className={adminSectionTabTextClass(selected)}
           >
             <CabinetIcon
               name={tab.icon}
-              size={18}
+              size={20}
               className={selected ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}
             />
-            <span className="truncate text-[13px] font-semibold sm:text-[14px]">{tab.label}</span>
-            {selected ? (
-              <span
-                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
-                aria-hidden
-              />
-            ) : null}
+            <span className={adminSectionTabLabelClass}>{tab.label}</span>
+            {selected ? <span className={adminSectionTabIndicatorClass()} aria-hidden /> : null}
           </button>
         );
       })}

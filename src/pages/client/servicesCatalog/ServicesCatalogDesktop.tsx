@@ -154,7 +154,8 @@ export function ServicesCatalogDesktop({
           </div>
 
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-            <div className="shrink-0 pb-3">
+            <div className="scrollbar-hidden relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-10">
+            <div className="sticky top-0 z-20 mb-3">
               <ServicesCatalogDesktopHero
                 search={search}
                 onSearchChange={onSearchChange}
@@ -163,8 +164,6 @@ export function ServicesCatalogDesktop({
                 loading={loading}
               />
             </div>
-
-            <div className="scrollbar-hidden relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-10">
 
             <ServicesCatalogResults
 

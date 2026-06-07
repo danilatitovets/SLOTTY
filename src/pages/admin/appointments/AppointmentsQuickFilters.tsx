@@ -1,11 +1,13 @@
 import { HiFunnel } from 'react-icons/hi2';
-import { apptFilterBtn, apptFilterBtnActive } from './adminAppointmentsTheme';
+import { apptFilterBtn, apptFilterBtnActive, apptTrayLabel } from './adminAppointmentsTheme';
 
 type Props = {
   sheetActive: boolean;
   sheetOpen: boolean;
   onOpenSheet: () => void;
   sheetAriaLabel: string;
+  /** Подпись слева в панели фильтра (название раздела). */
+  label?: string;
   /** Только кнопка фильтра (без отступа под toolbar). */
   compact?: boolean;
 };
@@ -15,6 +17,7 @@ export function AppointmentsQuickFilters({
   sheetOpen,
   onOpenSheet,
   sheetAriaLabel,
+  label,
   compact = false,
 }: Props) {
   const filterButton = (
@@ -35,8 +38,12 @@ export function AppointmentsQuickFilters({
   if (compact) return filterButton;
 
   return (
-    <div className="flex w-full items-center justify-between">
-      <span className="h-12 w-12 shrink-0" aria-hidden />
+    <div className="flex w-full items-center justify-between gap-3">
+      {label ? (
+        <p className={`min-w-0 flex-1 ${apptTrayLabel}`}>{label}</p>
+      ) : (
+        <span className="min-h-12 min-w-0 flex-1" aria-hidden />
+      )}
       {filterButton}
     </div>
   );

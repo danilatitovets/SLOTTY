@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { HiMapPin } from 'react-icons/hi2';
 
 import { PickerSheet, pickerSheetPrimaryBtn } from '../PickerSheet';
@@ -19,6 +19,7 @@ export type LocationPickerModalFieldProps = Omit<
   modalSubtitle?: string;
   summaryClassName?: string;
   triggerClassName?: string;
+  triggerBackdrop?: ReactNode;
 };
 
 function formatAddressSummary(address: string, hasCoords: boolean): string {
@@ -49,6 +50,7 @@ export function LocationPickerModalField({
   modalSubtitle = 'Найдите адрес или поставьте метку. Клиенты увидят это в профиле.',
   summaryClassName = 'rounded-[12px] border border-[#EAECEF] bg-white px-3.5 py-3',
   triggerClassName = 'mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-[#FFF1F4] px-4 text-[14px] font-semibold text-[#E29595] transition hover:bg-[#FFE8EC] active:scale-[0.98]',
+  triggerBackdrop,
 }: LocationPickerModalFieldProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Draft>({ address: '', latitude: null, longitude: null });
@@ -129,8 +131,11 @@ export function LocationPickerModalField({
       </div>
 
       <button type="button" className={triggerClassName} onClick={openModal}>
-        <HiMapPin className="h-4 w-4 shrink-0" aria-hidden />
-        {triggerLabel}
+        {triggerBackdrop}
+        <span className={`flex items-center justify-center gap-2 ${triggerBackdrop ? 'relative z-10 drop-shadow-sm' : ''}`}>
+          <HiMapPin className="h-4 w-4 shrink-0" aria-hidden />
+          {triggerLabel}
+        </span>
       </button>
 
       {error ? (

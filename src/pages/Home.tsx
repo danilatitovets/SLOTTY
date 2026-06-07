@@ -8,13 +8,11 @@ import {
   getServiceCategoryPath,
   MASTERS_PATH,
 } from '../app/paths';
-import { useMastersFeed } from '../features/booking/api/useMastersFeed';
 import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
 import { setProfileRole } from '../features/profile/lib/setProfileRole';
 import { useTelegram } from '../shared/hooks/useTelegram';
 import { readTelegramWebAppStartParam } from '../shared/lib/telegramWebApp';
 import { HomeStructuredData } from '../shared/seo/HomeStructuredData';
-import { HomeForMasters } from './home/HomeForMasters';
 import { HomeHeroStack } from './home/HomeHeroStack';
 import { homeShell } from './home/homeLayout';
 import { HomeCategories } from './HomeCategories';
@@ -22,14 +20,13 @@ import { HomeFaq } from './HomeFaq';
 import { HomeFooter } from './HomeFooter';
 import { HomeHeader } from './HomeHeader';
 import { HomeTariffs } from './HomeTariffs';
-import { HomeTopMasters } from './HomeTopMasters';
 import { HomeTrust } from './HomeTrust';
+import { WhySlottyBetterSection } from './home/WhySlottyBetterSection';
 
 export function Home() {
   const navigate = useNavigate();
   const { isReady, masterId, isTelegramWebApp } = useTelegram();
   const nativeStart = useMemo(() => readTelegramWebAppStartParam(), []);
-  const { data: masters = [], isLoading } = useMastersFeed();
   const isMasterUser = useIsMasterUser();
 
   const masterNavPath = isMasterUser ? ADMIN_PATH : BECOME_MASTER_PATH;
@@ -86,13 +83,7 @@ export function Home() {
         >
           <HomeCategories onCategory={onCategory} />
 
-          <HomeTopMasters masters={masters} isLoading={isLoading} />
-
-          <HomeForMasters
-            masterCtaPath={masterNavPath}
-            masterCtaLabel={isMasterUser ? 'Открыть кабинет' : 'Стать мастером'}
-            isMasterUser={isMasterUser}
-          />
+          <WhySlottyBetterSection />
 
           <HomeTariffs />
 

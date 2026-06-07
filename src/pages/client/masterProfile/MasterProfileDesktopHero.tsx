@@ -1,4 +1,5 @@
 import type { ExtendedMasterProfile, NearestSlotInfo } from './types';
+import { MasterPublicHeroCover } from './MasterPublicHeroCover';
 import { MasterPublicHeroSection } from './MasterPublicHeroSection';
 
 type Props = {
@@ -10,5 +11,10 @@ type Props = {
 };
 
 export function MasterProfileDesktopHero(props: Props) {
-  return <MasterPublicHeroSection {...props} layout="desktop" className="mb-4" />;
+  return (
+    <>
+      <MasterPublicHeroCover master={props.master} layout="desktop" />
+      <MasterPublicHeroSection {...props} layout="desktop" profileCardOnly className="mb-4" />
+    </>
+  );
 }

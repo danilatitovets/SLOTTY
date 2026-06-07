@@ -6,6 +6,8 @@ import {
 import { dbStatusToUi, isUpcomingTabStatus } from '../../../features/appointments/appointmentStatus';
 import { profileDisplayInitials } from '../../../features/profile/lib/profileDisplayAvatar';
 import { formatBynRu } from '../overview/overviewFormat';
+import { formatPendingDeadline } from './formatPendingDeadline';
+import type { RequestsFeatureFilter, RequestsPeriodFilter } from './appointmentsTypes';
 
 export function formatAppointmentPrice(value: number): string {
   return formatBynRu(value);
@@ -227,6 +229,46 @@ export function filterHistoryByPeriod(
   const days = period === 'month' ? 30 : 90;
   const startIso = isoDateLocal(addDays(today, -(days - 1)));
   return rows.filter((r) => r.date >= startIso);
+}
+
+export function isRequestExpiringSoon(
+  row: DemoMasterAppointment,
+  now = Date.now(),
+): boolean {
+  const deadline = formatPendingDeadline(row.pendingExpiresAt, now);
+  return deadline?.tone === 'warning' || deadline?.tone === 'critical';
+}
+
+export function filterRequestsByPeriod(
+  rows: DemoMasterAppointment[],
+  period: RequestsPeriodFilter,
+  today = new Date(),
+): DemoMasterAppointment[] {
+  if (period === 'all') return rows;
+
+  const todayIso = isoDateLocal(today);
+  if (period === 'today') {
+    return rows.filter((r) => r.date === todayIso);
+  }
+
+  const endIso =
+    period === 'week'
+      ? isoDateLocal(addDays(today, 6))
+      : isoDateLocal(addDays(today, 29));
+
+  return rows.filter((r) => r.date >= todayIso && r.date <= endIso);
+}
+
+export function filterRequestsByFeature(
+  rows: DemoMasterAppointment[],
+  feature: RequestsFeatureFilter,
+  now = Date.now(),
+): DemoMasterAppointment[] {
+  if (feature === 'all') return rows;
+  if (feature === 'expiring') {
+    return rows.filter((row) => isRequestExpiringSoon(row, now));
+  }
+  return rows.filter((row) => Boolean(row.clientReferencePhotoUrl?.trim()));
 }
 
 export function historyStatusLabel(status: DemoMasterAppointment['status']): string {

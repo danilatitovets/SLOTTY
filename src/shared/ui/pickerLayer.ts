@@ -7,6 +7,6 @@ export function resolvePickerLayer(
 ): 'popover' | 'sheet' {
   if (layer === 'sheet') return 'sheet';
   if (layer === 'popover') return 'popover';
-  if (anchor?.closest('[data-admin-sheet]')) return 'sheet';
+  if (anchor?.closest('[data-admin-sheet], [data-admin-picker-sheet]')) return 'sheet';
   return 'popover';
 }

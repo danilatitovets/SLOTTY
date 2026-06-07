@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { SlottyHeader } from '../../shared/layout/SlottyHeader/SlottyHeader';
+import { ClientNotificationsProvider } from '../profile/notifications/ClientNotificationsContext';
 import { ClientBottomNav } from './components/ClientBottomNav';
 import { ClientHeader } from './components/ClientHeader';
 import { ClientErrorModalProvider } from './ClientErrorModalContext';
@@ -31,8 +32,12 @@ function isClientProfilePath(pathname: string): boolean {
 
 export function ClientLayout() {
   const { pathname } = useLocation();
+  const profileDesktopCabinet = isClientProfilePath(pathname);
   const hideBottomNav =
-    isMasterPublicPath(pathname) || isBookingPath(pathname) || isClientAppointmentDetailPath(pathname);
+    isMasterPublicPath(pathname) ||
+    isBookingPath(pathname) ||
+    isClientAppointmentDetailPath(pathname) ||
+    profileDesktopCabinet;
   const { cityLabel, hasGeo, requestGeo, userLat, userLng } = useClientGeo();
 
   const outletContext: ClientOutletContext = {
@@ -45,24 +50,34 @@ export function ClientLayout() {
   };
 
   const hideMobileClientHeader =
-    isBookingPath(pathname) || isCatalogPath(pathname) || isMasterPublicPath(pathname);
-  const profileMobileHeader = isClientProfilePath(pathname);
+    isBookingPath(pathname) ||
+    isCatalogPath(pathname) ||
+    isMasterPublicPath(pathname) ||
+    profileDesktopCabinet;
+  const masterPublicDesktop = isMasterPublicPath(pathname);
+  const hideSlottyHeader = profileDesktopCabinet || masterPublicDesktop;
 
   return (
     <ClientErrorModalProvider>
-      <div className="min-h-dvh w-full min-w-0 bg-white text-neutral-900">
+      <div
+        className={`min-h-dvh w-full min-w-0 text-neutral-900 ${
+          profileDesktopCabinet ? 'max-lg:bg-[#F5F5F5] lg:bg-white' : 'bg-white'
+        }`}
+      >
         {hideMobileClientHeader ? null : (
           <div className="lg:hidden">
-            <ClientHeader
-              cityLabel={cityLabel}
-              onCityClick={hasGeo ? undefined : requestGeo}
-              logoLeading={profileMobileHeader}
-            />
+            <ClientHeader cityLabel={cityLabel} onCityClick={hasGeo ? undefined : requestGeo} />
           </div>
         )}
-        <SlottyHeader variant="bar" />
+        {hideSlottyHeader ? null : <SlottyHeader variant="bar" />}
         <div className="w-full min-w-0">
-          <Outlet context={outletContext} />
+          {profileDesktopCabinet ? (
+            <ClientNotificationsProvider>
+              <Outlet context={outletContext} />
+            </ClientNotificationsProvider>
+          ) : (
+            <Outlet context={outletContext} />
+          )}
         </div>
         {hideBottomNav ? null : <ClientBottomNav />}
       </div>

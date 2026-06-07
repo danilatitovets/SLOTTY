@@ -1,12 +1,10 @@
 import type { IconType } from 'react-icons';
-import { HiCheck, HiPencilSquare, HiTrash } from 'react-icons/hi2';
+import { HiCheck, HiChevronRight, HiPencilSquare, HiTrash } from 'react-icons/hi2';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import {
-  catalogSheetPrimaryBtn,
-  catalogSheetSecondaryBtn,
-  catalogSheetTitle,
-} from '../shared/adminCatalogSheetTheme';
-import { sheetSectionClass, sheetSectionTitleClass } from '../profile/adminProfileCabinetTheme';
+import { AdminFormSheetLayout } from '../shared/AdminFormSheetLayout';
+import { catalogSheetSecondaryBtn, catalogSheetTitle } from '../shared/adminCatalogSheetTheme';
+import { servicesSheetFormPanel, servicesSheetMenuList, servicesSheetMenuRow } from './adminServicesTheme';
+import { ServicesBrandPhotoLayers } from './ServicesBrandPhotoLayers';
 import { bundleHasDiscount, bundleStatusLabel } from './bundleUtils';
 import { formatDurationRu } from './servicesFormat';
 import type { ServiceBundle } from './servicesTypes';
@@ -20,12 +18,6 @@ type Props = {
   onDelete: () => void;
 };
 
-type MenuTone = 'brand' | 'danger';
-
-function iconWrapClass(tone: MenuTone): string {
-  return tone === 'danger' ? 'bg-[#FEF2F2] text-[#EF4444]' : 'bg-[#FFF1F4] text-[#F47C8C]';
-}
-
 function statusBadgeClass(status: ServiceBundle['status']): string {
   switch (status) {
     case 'visible':
@@ -37,44 +29,86 @@ function statusBadgeClass(status: ServiceBundle['status']): string {
   }
 }
 
-function ActionTile({
+function ActionRow({
   label,
   hint,
   icon: Icon,
   onClick,
-  tone = 'brand',
 }: {
   label: string;
   hint?: string;
   icon: IconType;
   onClick: () => void;
-  tone?: MenuTone;
 }) {
+  return (
+    <button type="button" onClick={onClick} className={servicesSheetMenuRow}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-[#374151]">
+        <Icon className="h-[18px] w-[18px]" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold text-[#111827]">{label}</span>
+        {hint ? (
+          <span className="mt-0.5 block text-[12px] font-medium text-[#6B7280]">{hint}</span>
+        ) : null}
+      </span>
+      <HiChevronRight className="h-4 w-4 shrink-0 text-[#C4C9D1]" aria-hidden />
+    </button>
+  );
+}
+
+function BundlePriceHero({
+  bundle,
+  showDeal,
+  servicesCount,
+  onEdit,
+}: {
+  bundle: ServiceBundle;
+  showDeal: boolean;
+  servicesCount: number;
+  onEdit: () => void;
+}) {
+  const servicesWord =
+    servicesCount === 1 ? 'услуга' : servicesCount < 5 ? 'услуги' : 'услуг';
+
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="flex min-h-[72px] w-full items-center gap-3 rounded-[10px] bg-[#F5F5F5] px-3 py-3 text-left transition hover:bg-[#EBEBEB] active:scale-[0.99] lg:min-h-[80px] lg:flex-col lg:items-start lg:justify-center lg:gap-2 lg:px-4 lg:py-4"
+      onClick={onEdit}
+      className="relative w-full overflow-hidden rounded-[14px] bg-[#EF4444] px-4 py-4 text-left transition hover:opacity-95 active:scale-[0.99] sm:px-5"
     >
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] lg:h-11 lg:w-11 ${iconWrapClass(tone)}`}
-      >
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1 lg:flex-none">
-        <span
-          className={`block text-[14px] font-semibold leading-snug lg:text-[15px] ${
-            tone === 'danger' ? 'text-[#EF4444]' : 'text-[#111827]'
-          }`}
-        >
-          {label}
-        </span>
-        {hint ? (
-          <span className="mt-0.5 block text-[11px] font-medium leading-snug text-[#6B7280] lg:text-[12px]">
-            {hint}
+      <ServicesBrandPhotoLayers roundedClassName="rounded-[14px]" />
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#111827]/75">
+              Цена набора
+            </span>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <p className="text-[28px] font-black tabular-nums leading-none tracking-[-0.05em] text-[#111827] sm:text-[32px]">
+                {bundle.bundlePrice} BYN
+              </p>
+              {showDeal ? (
+                <>
+                  <span className="text-[14px] font-semibold text-[#111827]/55 line-through">
+                    {bundle.originalPrice} BYN
+                  </span>
+                  <span className="text-[13px] font-bold text-[#111827]">
+                    −{bundle.discountPercent}%
+                  </span>
+                </>
+              ) : null}
+            </div>
+            <p className="mt-2 text-[12px] font-medium text-[#111827]/70">
+              {servicesCount} {servicesWord} · {formatDurationRu(bundle.durationMinutes)}
+              {showDeal ? ` · экономия ${bundle.discountAmount} BYN` : ''}
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 pt-5 text-[12px] font-semibold text-[#111827]">
+            Изменить
+            <HiChevronRight className="h-4 w-4" aria-hidden />
           </span>
-        ) : null}
-      </span>
+        </div>
+      </div>
     </button>
   );
 }
@@ -117,80 +151,56 @@ export function ServicesBundleMenuSheet({
         </button>
       }
     >
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex w-full flex-col rounded-[10px] bg-[#FFF1F4] px-5 py-4 text-left transition hover:bg-[#FFE4EA] active:scale-[0.99] lg:px-6 lg:py-5"
-        >
-          <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#F47C8C]">
-            Цена набора
-          </span>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-[34px] font-black tabular-nums leading-none tracking-[-0.05em] text-[#F47C8C] lg:text-[42px]">
-              {bundle.bundlePrice} BYN
-            </span>
-            {showDeal ? (
-              <>
-                <span className="text-[16px] font-semibold text-[#9CA3AF] line-through lg:text-[18px]">
-                  {bundle.originalPrice} BYN
-                </span>
-                <span className="text-[14px] font-bold text-[#F47C8C]">−{bundle.discountPercent}%</span>
-              </>
-            ) : null}
-          </div>
-          <p className="mt-2 text-[13px] font-medium text-[#6B7280]">
-            {servicesCount}{' '}
-            {servicesCount === 1 ? 'услуга' : servicesCount < 5 ? 'услуги' : 'услуг'}
-            {' · '}
-            {formatDurationRu(bundle.durationMinutes)}
-            {showDeal ? ` · экономия ${bundle.discountAmount} BYN` : ''}
-          </p>
-          <span className="mt-2 text-[12px] font-semibold text-[#F47C8C]">
-            Нажмите, чтобы изменить набор
-          </span>
-        </button>
+      <AdminFormSheetLayout>
+        <div className="space-y-3">
+          <BundlePriceHero
+            bundle={bundle}
+            showDeal={showDeal}
+            servicesCount={servicesCount}
+            onEdit={onEdit}
+          />
 
-        {serviceLabels.length > 0 ? (
-          <section className={sheetSectionClass}>
-            <p className={sheetSectionTitleClass}>Состав набора</p>
-            <ul className="mt-3 space-y-2">
-              {serviceLabels.map((label) => (
-                <li
-                  key={label}
-                  className="flex items-start gap-2 text-[14px] font-medium leading-snug text-[#374151]"
-                >
-                  <HiCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" aria-hidden />
-                  <span className="min-w-0 break-words">{label}</span>
-                </li>
-              ))}
-            </ul>
+          {serviceLabels.length > 0 ? (
+            <section className={servicesSheetFormPanel}>
+              <p className="text-[14px] font-bold tracking-[-0.02em] text-[#111827]">Состав набора</p>
+              <ul className="mt-3 space-y-2">
+                {serviceLabels.map((label) => (
+                  <li
+                    key={label}
+                    className="flex items-start gap-2 text-[14px] font-medium leading-snug text-[#374151]"
+                  >
+                    <HiCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#F47C8C]" aria-hidden />
+                    <span className="min-w-0 break-words">{label}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section>
+            <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">
+              Управление
+            </p>
+            <div className={`${servicesSheetMenuList} divide-y divide-[#EBEBEB]`}>
+              <ActionRow
+                label="Редактировать"
+                hint="Цена, услуги, описание"
+                icon={HiPencilSquare}
+                onClick={onEdit}
+              />
+            </div>
           </section>
-        ) : null}
 
-        <section className={sheetSectionClass}>
-          <p className={sheetSectionTitleClass}>Управление</p>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <ActionTile
-              label="Редактировать"
-              hint="Цена, услуги, описание"
-              icon={HiPencilSquare}
-              onClick={onEdit}
-            />
-          </div>
-        </section>
-
-        <button
-          type="button"
-          onClick={onDelete}
-          className={`${catalogSheetPrimaryBtn} w-full !bg-[#FEF2F2] !text-[#EF4444] hover:!opacity-95`}
-        >
-          <span className="inline-flex items-center justify-center gap-2">
-            <HiTrash className="h-5 w-5" aria-hidden />
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-[#FEE2E2] px-4 text-[14px] font-semibold text-[#DC2626] transition hover:bg-[#FECACA] active:scale-[0.98]"
+          >
+            <HiTrash className="h-4 w-4" aria-hidden />
             Удалить набор
-          </span>
-        </button>
-      </div>
+          </button>
+        </div>
+      </AdminFormSheetLayout>
     </AdminBottomSheet>
   );
 }

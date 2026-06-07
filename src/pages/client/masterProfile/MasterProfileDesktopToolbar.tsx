@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-import { CLIENT_STICKY_BELOW_HEADER } from '../clientNavConstants';
-import { catalogDesktopPanel, catalogStickyToolbarClass } from './masterProfileTheme';
+import { useLayoutEffect, useRef } from 'react';
 import { MasterProfileToolbarInner } from './MasterProfileToolbarInner';
 
 type Props = {
@@ -20,29 +18,43 @@ export function MasterProfileDesktopToolbar({
   onReport,
   favoriteDisabled = false,
 }: Props) {
-  const [compact, setCompact] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    const onScroll = () => setCompact(window.scrollY > 120);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const syncToolbarHeight = () => {
+      document.documentElement.style.setProperty(
+        '--master-profile-toolbar-h',
+        `${el.offsetHeight}px`,
+      );
+    };
+
+    syncToolbarHeight();
+    const ro = new ResizeObserver(syncToolbarHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [masterName]);
 
   return (
-    <div className={`${catalogStickyToolbarClass} ${CLIENT_STICKY_BELOW_HEADER} z-30 pb-2 pt-1`}>
-      <div className={`${catalogDesktopPanel} px-4 py-2.5 xl:px-6`}>
+    <header
+      ref={headerRef}
+      data-master-profile-toolbar="desktop"
+      className="fixed inset-x-0 top-0 z-[50] w-full border-b border-[#EEEEEE] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+    >
+      <div className="w-full px-6 py-2.5 xl:px-10">
         <MasterProfileToolbarInner
           masterName={masterName}
-          compact={compact}
           isFavorite={isFavorite}
           onFavoriteToggle={onFavoriteToggle}
           onShare={onShare}
           onReport={onReport}
           favoriteDisabled={favoriteDisabled}
           actionSize="md"
+          heroCollapsed
         />
       </div>
-    </div>
+    </header>
   );
 }

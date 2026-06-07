@@ -285,11 +285,14 @@ export function getMasterPath(masterId: string): string {
   return `/master/${encodeURIComponent(masterId)}`;
 }
 
-/** Ссылка на профиль; `tab`: appointments | favorites | settings. */
-export function getProfilePath(tab?: 'appointments' | 'favorites' | 'settings'): string {
+/** Ссылка на профиль; `tab`: appointments | favorites | notifications | profile | settings. */
+export function getProfilePath(
+  tab?: 'appointments' | 'favorites' | 'notifications' | 'profile' | 'settings',
+): string {
   if (tab === 'settings') return PROFILE_SETTINGS_PATH;
-  if (!tab) return PROFILE_PATH;
-  return `${PROFILE_PATH}?${new URLSearchParams({ tab }).toString()}`;
+  if (tab === 'notifications') return PROFILE_NOTIFICATIONS_PATH;
+  const resolved = tab ?? 'appointments';
+  return `${PROFILE_PATH}?${new URLSearchParams({ tab: resolved }).toString()}`;
 }
 
 /** Клиентский профиль: «Мои записи» с фокусом на карточке (sheet). */

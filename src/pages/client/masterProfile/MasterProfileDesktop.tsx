@@ -1,20 +1,20 @@
 import type { DemoMasterService } from '../../../features/services/model/demoMasters';
 import { CLIENT_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
-import type { ExtendedMasterProfile, NearestSlotInfo } from './types';
-import type { MasterPortfolioItem } from './types';
-import { MasterExtraSections } from './MasterExtraSections';
-import { MasterPortfolioRail } from './MasterPortfolioRail';
+import type { MasterTopAchievement } from '../lib/resolveMasterTopRankStatus';
+import type { ExtendedMasterProfile, NearestSlotInfo, MasterPortfolioItem } from './types';
 import { MasterProfileDesktopToolbar } from './MasterProfileDesktopToolbar';
-import { MasterProfileDesktopHero } from './MasterProfileDesktopHero';
-import { MasterProfileDesktopSidebar } from './MasterProfileDesktopSidebar';
-import { MasterReviewsSection } from './MasterReviewsSection';
-import { MasterServicesList } from './MasterServicesList';
-import { MasterTrustStats } from './MasterTrustStats';
+import { MasterProfileHeroCoverStack } from './MasterProfileHeroCoverStack';
+import { MasterPublicHeroSection } from './MasterPublicHeroSection';
+import { MasterProfileStatsRow } from './MasterProfileStatsRow';
+import { MasterProfileMainContent } from './MasterProfileMainContent';
+import { MasterProfileBookingCard } from './MasterProfileBookingCard';
+import { MasterProfileInfoSidebar } from './MasterProfileInfoSidebar';
 import {
-  catalogCanvasClass,
+  masterProfileCanvasClass,
   masterProfileDesktopLayout,
   masterProfileDesktopMainCol,
   masterProfileDesktopSidebarCol,
+  masterProfileHeroContentOverlapClass,
 } from './masterProfileTheme';
 
 type Props = {
@@ -23,6 +23,8 @@ type Props = {
   userLng: number | null;
   nearest?: NearestSlotInfo | null;
   nearestLoading?: boolean;
+  topAchievements?: MasterTopAchievement[];
+  topAchievementsReady?: boolean;
   isFavorite: boolean;
   favoriteDisabled: boolean;
   onFavoriteToggle: () => void;
@@ -42,6 +44,8 @@ export function MasterProfileDesktop({
   userLng,
   nearest,
   nearestLoading,
+  topAchievements = [],
+  topAchievementsReady = true,
   isFavorite,
   favoriteDisabled,
   onFavoriteToggle,
@@ -55,60 +59,73 @@ export function MasterProfileDesktop({
   portfolioItems,
 }: Props) {
   return (
-    <div className={`hidden min-h-dvh lg:block ${catalogCanvasClass}`}>
-      <div className={`${CLIENT_DESKTOP_SHELL_CLASS} pb-12 pt-2`}>
-        <MasterProfileDesktopToolbar
-          masterName={master.masterName}
-          isFavorite={isFavorite}
-          favoriteDisabled={favoriteDisabled}
-          onFavoriteToggle={onFavoriteToggle}
-          onShare={onShare}
-          onReport={onReport}
-        />
+    <div className={`hidden min-h-dvh lg:block ${masterProfileCanvasClass}`}>
+      <MasterProfileDesktopToolbar
+        masterName={master.masterName}
+        isFavorite={isFavorite}
+        favoriteDisabled={favoriteDisabled}
+        onFavoriteToggle={onFavoriteToggle}
+        onShare={onShare}
+        onReport={onReport}
+      />
 
-        <MasterProfileDesktopHero
+      <div className="pt-[var(--master-profile-toolbar-h,3.5rem)]">
+        <MasterProfileHeroCoverStack master={master} layout="desktop" />
+
+        <div className={`${CLIENT_DESKTOP_SHELL_CLASS} mx-auto max-w-[1240px] pb-12 ${masterProfileHeroContentOverlapClass}`}>
+        <MasterPublicHeroSection
           master={master}
           userLat={userLat}
           userLng={userLng}
           nearest={nearest}
           nearestLoading={nearestLoading}
+          layout="desktop"
+          profileCardOnly
+          className="mb-4"
         />
 
-        <div className={masterProfileDesktopLayout}>
-          <div className={`space-y-4 ${masterProfileDesktopMainCol}`}>
-            <MasterServicesList
-              services={master.services}
-              categoryCode={master.categoryCode}
-              categoryLabel={master.category}
+        <div className="mt-4">
+          <MasterProfileStatsRow
+            master={master}
+            nearest={nearest}
+            nearestLoading={nearestLoading}
+            layout="desktop"
+            onChooseTime={onChooseTime}
+          />
+        </div>
+
+        <div className={`mt-6 ${masterProfileDesktopLayout}`}>
+          <div className={`space-y-5 ${masterProfileDesktopMainCol}`}>
+            <MasterProfileMainContent
+              master={master}
+              topAchievements={topAchievements}
+              topAchievementsReady={topAchievementsReady}
               highlightServiceId={highlightServiceId}
-              onSelect={onSelectService}
-              onViewAll={() => onChooseTime()}
+              portfolioItems={portfolioItems}
+              onSelectService={onSelectService}
+              onChooseTime={onChooseTime}
+              onOpenGallery={onOpenGallery}
+              onBookFromReviews={() => onChooseTime(nearest?.serviceId)}
               layout="desktop"
+              showMobileExtra={false}
             />
-
-            {portfolioItems.length > 0 ? (
-              <MasterPortfolioRail
-                items={portfolioItems}
-                onOpenGallery={onOpenGallery}
-                onViewAll={() => onOpenGallery(0)}
-                layout="desktop"
-              />
-            ) : null}
-
-            <MasterTrustStats master={master} layout="desktop" />
-            <MasterReviewsSection reviews={master.reviews} layout="desktop" />
-            <MasterExtraSections master={master} layout="desktop" />
           </div>
 
           <div className={masterProfileDesktopSidebarCol}>
-            <MasterProfileDesktopSidebar
+            <MasterProfileBookingCard
               master={master}
               nearest={nearest}
               nearestLoading={nearestLoading}
-              onChooseTime={() => onChooseTime(nearest?.serviceId)}
+              topAchievements={topAchievements}
+              isFavorite={isFavorite}
+              favoriteDisabled={favoriteDisabled}
+              onChooseTime={onChooseTime}
+              onFavoriteToggle={onFavoriteToggle}
               onPhoneUnavailable={onPhoneUnavailable}
             />
+            <MasterProfileInfoSidebar master={master} />
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -45,6 +45,11 @@ import {
   UPCOMING_TAB_SQL,
 } from '../../lib/appointmentStatus.js';
 import { buildMasterAppointmentActions } from '../../lib/masterAppointmentLifecycle.js';
+import {
+  clientOwnsAppointment,
+  requireAppointmentForClient,
+  resolveClientAppointmentOwnerIds,
+} from './appointments.access.js';
 
 type SlotRow = {
   id: string;
@@ -431,10 +436,11 @@ export async function listClientAppointments(
 ) {
   const limit = Math.min(Math.max(params?.limit ?? 30, 1), 100);
   const offset = Math.max(params?.offset ?? 0, 0);
+  const ownerIds = await resolveClientAppointmentOwnerIds(clientId);
 
   const countR = await query<{ total: string }>(
-    `select count(*)::text as total from public.appointments a where a.client_id = $1`,
-    [clientId],
+    `select count(*)::text as total from public.appointments a where a.client_id = any($1::uuid[])`,
+    [ownerIds],
   );
   const total = Number(countR.rows[0]?.total ?? 0);
 
@@ -472,10 +478,10 @@ export async function listClientAppointments(
        bv.voucher_number,
        exists (select 1 from public.reviews rv where rv.appointment_id = a.id) as has_review
      ${CLIENT_APPOINTMENTS_FROM}
-    where a.client_id = $1
+    where a.client_id = any($1::uuid[])
     order by a.starts_at desc
     limit $2 offset $3`,
-    [clientId, limit, offset],
+    [ownerIds, limit, offset],
   );
 
   const items = r.rows.map((row) => mapClientAppointmentRow(row, clientId));
@@ -674,9 +680,10 @@ export async function cancelClientAppointment(
   reason?: string | null,
   reasonCategory?: string | null,
 ): Promise<{ masterId: string }> {
+  await requireAppointmentForClient(clientId, appointmentId);
   const r = await query<{ status: string; master_id: string; starts_at: Date | string }>(
-    `select status::text, master_id, starts_at from public.appointments where id = $1 and client_id = $2`,
-    [appointmentId, clientId],
+    `select status::text, master_id, starts_at from public.appointments where id = $1`,
+    [appointmentId],
   );
   const row = r.rows[0];
   if (!row) {
@@ -822,12 +829,15 @@ async function findAppointmentMetaByVoucher(voucherNumber: string): Promise<Appo
   return r.rows[0] ?? null;
 }
 
-function assertBookingAccess(
+async function assertBookingAccess(
   meta: AppointmentVoucherMeta,
   viewerId: string,
   role: 'client' | 'master',
-): void {
-  const allowed = role === 'client' ? meta.client_id === viewerId : meta.master_id === viewerId;
+): Promise<void> {
+  const allowed =
+    role === 'client'
+      ? await clientOwnsAppointment(meta.client_id, viewerId)
+      : meta.master_id === viewerId;
   if (!allowed) {
     throw ApiError.forbidden(
       'У вас нет доступа к этой записи. Войдите в нужный аккаунт.',
@@ -843,7 +853,7 @@ export async function getClientAppointmentByVoucher(clientId: string, voucherRaw
   if (!meta) {
     throw ApiError.notFound('Запись не найдена', 'BOOKING_NOT_FOUND');
   }
-  assertBookingAccess(meta, clientId, 'client');
+  await assertBookingAccess(meta, clientId, 'client');
 
   const r = await query<ClientAppointmentRow>(
     `select
@@ -1005,7 +1015,7 @@ export async function getMasterAppointmentByVoucher(masterId: string, voucherRaw
   if (!meta) {
     throw ApiError.notFound('Запись не найдена', 'BOOKING_NOT_FOUND');
   }
-  assertBookingAccess(meta, masterId, 'master');
+  await assertBookingAccess(meta, masterId, 'master');
   return loadMasterAppointmentDetail(masterId, meta.id);
 }
 

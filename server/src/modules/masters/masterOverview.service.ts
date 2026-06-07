@@ -230,29 +230,26 @@ export type MasterReviewNotificationDetail = {
   visitAt: string;
 };
 
-export async function getMasterReviewNotificationDetail(
-  masterId: string,
-  reviewId: string,
-): Promise<MasterReviewNotificationDetail> {
-  const r = await query<{
-    id: string;
-    rating: number;
-    body: string;
-    created_at: Date | string;
-    appointment_id: string;
-    voucher_number: string | null;
-    client_name_snapshot: string | null;
-    client_phone_snapshot: string | null;
-    full_name: string;
-    phone: string | null;
-    telegram_username: string | null;
-    avatar_url: string | null;
-    master_display_name: string | null;
-    master_photo_url: string | null;
-    service_title_snapshot: string;
-    starts_at: Date | string;
-  }>(
-    `select r.id, r.rating, r.body, r.created_at, r.appointment_id,
+type MasterReviewDetailRow = {
+  id: string;
+  rating: number;
+  body: string;
+  created_at: Date | string;
+  appointment_id: string;
+  voucher_number: string | null;
+  client_name_snapshot: string | null;
+  client_phone_snapshot: string | null;
+  full_name: string;
+  phone: string | null;
+  telegram_username: string | null;
+  avatar_url: string | null;
+  master_display_name: string | null;
+  master_photo_url: string | null;
+  service_title_snapshot: string;
+  starts_at: Date | string;
+};
+
+const MASTER_REVIEW_DETAIL_SQL = `select r.id, r.rating, r.body, r.created_at, r.appointment_id,
             bv.voucher_number,
             a.client_name_snapshot, a.client_phone_snapshot,
             coalesce(p.full_name, '') as full_name, p.phone, p.telegram_username, p.avatar_url,
@@ -262,16 +259,9 @@ export async function getMasterReviewNotificationDetail(
        join public.appointments a on a.id = r.appointment_id
        left join public.profiles p on p.id = r.client_id
        left join public.master_profiles mp on mp.master_id = r.client_id
-       left join public.booking_vouchers bv on bv.appointment_id = a.id
-      where r.id = $1 and r.master_id = $2 and r.status = 'published'`,
-    [reviewId, masterId],
-  );
+       left join public.booking_vouchers bv on bv.appointment_id = a.id`;
 
-  const row = r.rows[0];
-  if (!row) {
-    throw ApiError.notFound('Отзыв не найден');
-  }
-
+function mapMasterReviewDetailRow(row: MasterReviewDetailRow): MasterReviewNotificationDetail {
   const clientIdentity = resolveClientDisplayIdentity({
     masterDisplayName: row.master_display_name,
     masterPhotoUrl: row.master_photo_url,
@@ -282,7 +272,6 @@ export async function getMasterReviewNotificationDetail(
     phoneSnapshot: row.client_phone_snapshot,
     telegramUsername: row.telegram_username,
   });
-  const clientName = clientIdentity.displayName;
 
   const visitDate = new Date(row.starts_at);
   const visitAt = Number.isNaN(visitDate.getTime())
@@ -304,12 +293,48 @@ export async function getMasterReviewNotificationDetail(
     createdAt: Number.isNaN(created.getTime()) ? new Date().toISOString() : created.toISOString(),
     appointmentId: row.appointment_id,
     bookingCode: row.voucher_number?.trim() || null,
-    clientName,
+    clientName: clientIdentity.displayName,
     clientPhone: clientIdentity.phone,
     clientAvatarUrl: clientIdentity.avatarUrl,
     serviceName: row.service_title_snapshot?.trim() || 'Услуга',
     visitAt,
   };
+}
+
+export async function getMasterReviewNotificationDetail(
+  masterId: string,
+  reviewId: string,
+): Promise<MasterReviewNotificationDetail> {
+  const r = await query<MasterReviewDetailRow>(
+    `${MASTER_REVIEW_DETAIL_SQL}
+      where r.id = $1 and r.master_id = $2 and r.status = 'published'`,
+    [reviewId, masterId],
+  );
+
+  const row = r.rows[0];
+  if (!row) {
+    throw ApiError.notFound('Отзыв не найден');
+  }
+
+  return mapMasterReviewDetailRow(row);
+}
+
+export async function getMasterReviewDetailByAppointmentId(
+  masterId: string,
+  appointmentId: string,
+): Promise<MasterReviewNotificationDetail> {
+  const r = await query<MasterReviewDetailRow>(
+    `${MASTER_REVIEW_DETAIL_SQL}
+      where r.appointment_id = $1 and r.master_id = $2 and r.status = 'published'`,
+    [appointmentId, masterId],
+  );
+
+  const row = r.rows[0];
+  if (!row) {
+    throw ApiError.notFound('Отзыв не найден');
+  }
+
+  return mapMasterReviewDetailRow(row);
 }
 
 export async function postMasterReviewReply(masterId: string, reviewId: string, text: string) {

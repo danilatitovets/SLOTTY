@@ -1,4 +1,5 @@
 import { sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
+import { scheduleSegmentClass } from './adminScheduleTheme';
 
 type Mode = 'template' | 'manual';
 
@@ -6,12 +7,29 @@ type Props = {
   mode: Mode;
   onTemplate: () => void;
   onManual: () => void;
+  accent?: 'brand' | 'schedule';
 };
 
-export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
+function modeBtnClass(active: boolean, accent: 'brand' | 'schedule'): string {
+  const base =
+    'flex min-h-10 items-center justify-center rounded-[10px] px-3 text-[13px] font-semibold transition active:scale-[0.98]';
+
+  if (accent === 'schedule') {
+    return `${base} ${active ? 'bg-[#3B4CCA] text-white' : 'text-[#6B7280] hover:text-[#374151]'}`;
+  }
+
+  return `${base} ${sheetSegmentClass(active)}`;
+}
+
+export function AddWindowModeSwitch({
+  mode,
+  onTemplate,
+  onManual,
+  accent = 'brand',
+}: Props) {
   return (
     <div
-      className="grid grid-cols-2 gap-1.5 rounded-[10px] bg-[#F5F5F5] p-1.5"
+      className="grid grid-cols-2 gap-1.5 rounded-[12px] bg-[#EBEBEB] p-1.5"
       role="tablist"
       aria-label="Способ создания окна"
     >
@@ -20,7 +38,7 @@ export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
         role="tab"
         aria-selected={mode === 'template'}
         onClick={onTemplate}
-        className={`flex min-h-11 items-center justify-center ${sheetSegmentClass(mode === 'template')}`}
+        className={modeBtnClass(mode === 'template', accent)}
       >
         По шаблону
       </button>
@@ -29,7 +47,7 @@ export function AddWindowModeSwitch({ mode, onTemplate, onManual }: Props) {
         role="tab"
         aria-selected={mode === 'manual'}
         onClick={onManual}
-        className={`flex min-h-11 items-center justify-center ${sheetSegmentClass(mode === 'manual')}`}
+        className={modeBtnClass(mode === 'manual', accent)}
       >
         Вручную
       </button>

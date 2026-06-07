@@ -151,10 +151,12 @@ function CardOverflowMenu({
   items,
   ariaLabel,
   sheetTitle = 'Действия',
+  compact = false,
 }: {
   items: OverflowMenuItem[];
   ariaLabel: string;
   sheetTitle?: string;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -167,9 +169,11 @@ function CardOverflowMenu({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F5F5F5] text-[#111827] transition hover:bg-[#EBEBEB] active:scale-[0.95]"
+        className={`flex items-center justify-center rounded-full bg-[#F5F5F5] text-[#111827] transition hover:bg-[#EBEBEB] active:scale-[0.95] ${
+          compact ? 'h-7 w-7' : 'h-9 w-9'
+        }`}
       >
-        <CabinetIcon name="more" size={20} />
+        <CabinetIcon name="more" size={compact ? 16 : 20} />
       </button>
       <AdminBottomSheet open={open} onClose={close} variant="catalog" title={sheetTitle}>
         <div className="flex flex-col gap-2 pb-1" role="menu" aria-label={sheetTitle}>
@@ -412,8 +416,8 @@ function PortfolioWorkCard({
   const title = item.title?.trim() || 'Без названия';
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[16px] bg-[#F5F5F5]">
-      <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden rounded-t-[20px] bg-[#F3F4F6]">
+    <article className="flex h-full flex-col overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-t-[12px] bg-[#F3F4F6]">
         <button
           type="button"
           onClick={onOpenDetail}
@@ -435,12 +439,13 @@ function PortfolioWorkCard({
           )}
         </button>
         {isCover ? (
-          <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-[#111827]/80 px-2.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+          <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded-full bg-[#111827]/80 px-2 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
             Обложка
           </span>
         ) : null}
-        <div className="absolute right-2 top-2 z-20" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute right-1.5 top-1.5 z-20" onClick={(e) => e.stopPropagation()}>
           <CardOverflowMenu
+            compact
             ariaLabel="Действия с работой"
             sheetTitle="Работа"
             items={[
@@ -479,15 +484,15 @@ function PortfolioWorkCard({
         type="button"
         onClick={onOpenDetail}
         aria-label={`Подробнее: ${title}`}
-        className="flex min-h-[5.5rem] flex-1 flex-col px-3 pb-3 pt-2.5 text-left"
+        className="flex flex-1 flex-col px-2 pb-2 pt-1.5 text-left"
       >
         <p
-          className={`line-clamp-2 min-h-[2.75rem] text-[14px] font-semibold leading-[1.375rem] text-[#111827] ${portfolioTextBreak}`}
+          className={`line-clamp-1 text-[12px] font-semibold leading-tight text-[#111827] ${portfolioTextBreak}`}
         >
           {title}
         </p>
         <p
-          className={`mt-1 line-clamp-2 min-h-[2.5rem] text-[12px] leading-[1.25rem] text-[#6B7280] ${portfolioTextBreak} ${categoryLabel ? '' : 'invisible'}`}
+          className={`mt-0.5 line-clamp-1 text-[11px] leading-tight text-[#6B7280] ${portfolioTextBreak} ${categoryLabel ? '' : 'invisible'}`}
         >
           {categoryLabel || '\u00a0'}
         </p>
@@ -550,7 +555,7 @@ export function TrustSection({
 
         {portfolio.length > 0 ? (
           <>
-            <div className="mt-4 grid grid-cols-1 items-stretch gap-3 min-[380px]:grid-cols-2">
+            <div className="mt-4 grid grid-cols-3 items-stretch gap-2 sm:gap-2.5">
               {portfolio.map((item, i) => {
                 const isCover = Boolean(portfolioCoverId && item.id === portfolioCoverId);
                 const categoryLabel = item.description?.trim() || categoryHint || '';

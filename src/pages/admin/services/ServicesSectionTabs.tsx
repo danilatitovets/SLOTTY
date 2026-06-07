@@ -5,6 +5,15 @@ import {
   HiReceiptPercent,
   HiSquares2X2,
 } from 'react-icons/hi2';
+import {
+  adminSectionTabIconClass,
+  adminSectionTabIconToneClass,
+  adminSectionTabIndicatorClass,
+  adminSectionTabLabelClass,
+  adminSectionTabsNavClass,
+  adminSectionTabTextClass,
+} from '../shared/adminSectionTabsTheme';
+import { AdminSectionAttentionBadge } from '../shared/AdminSectionAttentionBadge';
 import type { ServicesTabId } from './servicesTypes';
 
 const TABS: Array<{
@@ -21,13 +30,19 @@ const TABS: Array<{
 type Props = {
   active: ServicesTabId;
   onChange: (tab: ServicesTabId) => void;
+  catalogAttention?: boolean;
   className?: string;
 };
 
-export function ServicesSectionTabs({ active, onChange, className = '' }: Props) {
+export function ServicesSectionTabs({
+  active,
+  onChange,
+  catalogAttention = false,
+  className = '',
+}: Props) {
   return (
     <nav
-      className={`flex w-full border-b border-[#eef0f5] ${className}`.trim()}
+      className={`${adminSectionTabsNavClass} ${className}`.trim()}
       aria-label="Разделы услуг"
     >
       {TABS.map((tab) => {
@@ -39,21 +54,15 @@ export function ServicesSectionTabs({ active, onChange, className = '' }: Props)
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-3.5 transition active:scale-[0.98] ${
-              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
-            }`}
+            className={adminSectionTabTextClass(selected)}
           >
             <Icon
-              className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}`}
+              className={`${adminSectionTabIconClass} ${adminSectionTabIconToneClass(selected)}`}
               aria-hidden
             />
-            <span className="truncate text-[13px] font-semibold sm:text-[14px]">{tab.label}</span>
-            {selected ? (
-              <span
-                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
-                aria-hidden
-              />
-            ) : null}
+            <span className={adminSectionTabLabelClass}>{tab.label}</span>
+            {tab.id === 'catalog' && catalogAttention ? <AdminSectionAttentionBadge /> : null}
+            {selected ? <span className={adminSectionTabIndicatorClass()} aria-hidden /> : null}
           </button>
         );
       })}

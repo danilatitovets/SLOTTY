@@ -15,7 +15,6 @@ import {
   scheduleKpiIconCircle,
   SCHEDULE_HERO_BG,
 } from './adminScheduleTheme';
-import { SCHEDULE_QUICK_SETUP_IMAGES } from './scheduleQuickSetupAssets';
 import type { ScheduleTabMetrics } from './scheduleTabMetrics';
 import type { SchedulePageTab } from './scheduleTypes';
 
@@ -195,7 +194,7 @@ function ListHero({ metrics }: { metrics: ScheduleTabMetrics['list'] }) {
           value={String(m.total)}
           subtitle={m.total === 1 ? '1 окно в списке' : `${m.total} окон в списке`}
           description="Фильтруйте по статусу и дате — редактируйте или удаляйте слоты."
-          backgroundSrc={SCHEDULE_QUICK_SETUP_IMAGES.listHeroBg}
+          backgroundSrc={SCHEDULE_HERO_BG}
         />
       }
     >

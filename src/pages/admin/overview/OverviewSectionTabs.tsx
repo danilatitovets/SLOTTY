@@ -5,6 +5,14 @@ import {
   HiUsers,
   HiWallet,
 } from 'react-icons/hi2';
+import {
+  adminSectionTabIconClass,
+  adminSectionTabIconToneClass,
+  adminSectionTabIndicatorClass,
+  adminSectionTabLabelClass,
+  adminSectionTabsNavClass,
+  adminSectionTabTextClass,
+} from '../shared/adminSectionTabsTheme';
 import type { OverviewAnalyticsTab } from './overviewAnalytics';
 
 const TABS: Array<{
@@ -33,7 +41,7 @@ export function OverviewSectionTabs({
 }: Props) {
   return (
     <nav
-      className={`flex w-full border-b border-[#eef0f5] ${className}`.trim()}
+      className={`${adminSectionTabsNavClass} ${className}`.trim()}
       aria-label="Разделы сводки"
     >
       {TABS.map((tab) => {
@@ -44,15 +52,13 @@ export function OverviewSectionTabs({
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-w-0 flex-1 items-center justify-center gap-2 px-1 pb-3.5 pt-3.5 transition active:scale-[0.98] ${
-              selected ? 'text-[#ff5f7a]' : 'text-[#6B7280] hover:text-[#374151]'
-            }`}
+            className={adminSectionTabTextClass(selected)}
           >
             <Icon
-              className={`h-[18px] w-[18px] shrink-0 ${selected ? 'text-[#ff5f7a]' : 'text-[#9CA3AF]'}`}
+              className={`${adminSectionTabIconClass} ${adminSectionTabIconToneClass(selected)}`}
               aria-hidden
             />
-            <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold sm:text-[14px]">
+            <span className={`flex min-w-0 items-center gap-1.5 ${adminSectionTabLabelClass}`}>
               {tab.label}
               {tab.id === 'reputation' && reputationAlertCount > 0 ? (
                 <span className="flex h-[18px] min-w-[18px] shrink-0 animate-pulse items-center justify-center rounded-full bg-[#ff5f7a] px-1 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(255,95,122,0.45)]">
@@ -60,12 +66,7 @@ export function OverviewSectionTabs({
                 </span>
               ) : null}
             </span>
-            {selected ? (
-              <span
-                className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-[#ff6f88] to-[#ff5f7a]"
-                aria-hidden
-              />
-            ) : null}
+            {selected ? <span className={adminSectionTabIndicatorClass()} aria-hidden /> : null}
           </button>
         );
       })}

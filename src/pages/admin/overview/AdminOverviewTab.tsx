@@ -4,12 +4,8 @@ import { useAdminSectionTab } from '../useAdminSectionTab';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { postOverviewReviewReply } from '../../../features/admin/api/masterOverviewApi';
-import {
-  OVERVIEW_TAB_BAR_HEIGHT,
-  overviewDesktopCard,
-  overviewDesktopTabsSticky,
-  overviewShellCard,
-} from './adminOverviewTheme';
+import { AdminDesktopSectionTabsShell } from '../shared/AdminDesktopSectionTabsShell';
+import { OVERVIEW_TAB_BAR_HEIGHT, overviewShellCard } from './adminOverviewTheme';
 import { OverviewAnalyticsTabBar } from './OverviewAnalyticsTabBar';
 import { OverviewPeriodFilter } from './OverviewPeriodFilter';
 import { OVERVIEW_TAB_INTRO_IMAGES } from './OverviewTabIntro';
@@ -350,14 +346,14 @@ export function AdminOverviewTab({
 
       {/* Desktop: как кабинет мастера — серое полотно, белые/серые блоки без ring */}
       <div className={`${overviewShellCard} space-y-6`}>
-        <div className={`${overviewDesktopCard} ${overviewDesktopTabsSticky}`}>
+        <AdminDesktopSectionTabsShell>
           <OverviewAnalyticsTabBar
             variant="desktop"
             active={activeTab}
             onChange={setActiveTab}
             reputationAlertCount={reputationAlertCount}
           />
-        </div>
+        </AdminDesktopSectionTabsShell>
         <OverviewPeriodFilter value={periodPreset} onChange={setPeriodPreset} />
         <AdminTabContentTransition activeKey={transitionKey} className="min-w-0 space-y-6">
           {panel}

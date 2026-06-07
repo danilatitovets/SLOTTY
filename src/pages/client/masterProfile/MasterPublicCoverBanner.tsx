@@ -6,6 +6,7 @@ import type { ExtendedMasterProfile } from './types';
 type Props = {
   master: ExtendedMasterProfile;
   heightClass?: string;
+  className?: string;
   children?: ReactNode;
 };
 
@@ -13,17 +14,20 @@ type Props = {
 export function MasterPublicCoverBanner({
   master,
   heightClass = 'h-[180px] sm:h-[220px] lg:h-[240px]',
+  className = '',
   children,
 }: Props) {
   return (
-    <MasterCabinetCoverBanner
-      name={master.masterName}
-      dedicatedCoverUrl={master.coverUrl}
-      photoUrl={master.photoUrl}
-      heightClass={heightClass}
-    >
-      {children}
-    </MasterCabinetCoverBanner>
+    <div className={className}>
+      <MasterCabinetCoverBanner
+        name={master.masterName}
+        dedicatedCoverUrl={master.coverUrl}
+        photoUrl={master.photoUrl}
+        heightClass={heightClass}
+      >
+        {children}
+      </MasterCabinetCoverBanner>
+    </div>
   );
 }
 
@@ -37,13 +41,18 @@ export function MasterPublicPortraitOverlap({
   badge?: ReactNode;
 }) {
   return (
-    <MasterCardPortrait
-      masterName={master.masterName}
-      photoUrl={master.photoUrl}
-      className={`relative shrink-0 ${className}`}
-      imageClassName="h-full w-full rounded-[12px] object-cover ring-[3px] ring-white lg:ring-4"
-      loading="eager"
-      badge={badge}
-    />
+    <div
+      className={`relative box-border shrink-0 rounded-[18px] bg-white p-1.5 lg:rounded-[20px] lg:p-2 ${className}`}
+    >
+      <MasterCardPortrait
+        masterName={master.masterName}
+        photoUrl={master.photoUrl}
+        className="relative h-full w-full overflow-hidden rounded-[12px] bg-[#F6F6F7] lg:rounded-[14px]"
+        imageClassName="h-full w-full rounded-[12px] object-cover object-center lg:rounded-[14px]"
+        photoMaxEdge={512}
+        loading="eager"
+        badge={badge}
+      />
+    </div>
   );
 }

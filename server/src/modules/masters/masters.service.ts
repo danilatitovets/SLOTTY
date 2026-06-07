@@ -1,4 +1,4 @@
-import { query } from '../../config/db.js';
+import { query, withPoolClient } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { syncUserProfileFromMasterCabinet } from '../profiles/profiles.service.js';
 import { listMyServices } from '../services/services.service.js';
@@ -338,7 +338,7 @@ export async function getMasterDetail(masterId: string) {
     throw ApiError.notFound('Master not found');
   }
 
-  const [
+  const {
     category,
     services,
     locations,
@@ -347,21 +347,22 @@ export async function getMasterDetail(masterId: string) {
     portfolio,
     career,
     reviews,
-  ] = await Promise.all([
-    master.primary_category_id
-      ? query<{ code: string; name: string }>(
+    statsRow,
+  } = await withPoolClient(async (client) => {
+    const category = master.primary_category_id
+      ? await client.query<{ code: string; name: string }>(
           `select code, name from public.service_categories where id = $1`,
           [master.primary_category_id],
         )
-      : Promise.resolve({ rows: [] as { code: string; name: string }[] }),
-    query(
+      : { rows: [] as { code: string; name: string }[] };
+    const services = await client.query(
       `select id, title, description, duration_minutes, price_amount::text, price_type::text, is_active, sort_order
          from public.master_services
         where master_id = $1 and is_active = true and admin_hidden_at is null
         order by sort_order asc, title asc`,
       [masterId],
-    ),
-    query(
+    );
+    const locations = await client.query(
       `select id, visit_type::text, city, street, building, building_detail, salon_name, entrance, floor, room,
               intercom, landmark, directions, client_note, public_address, is_primary, lat, lng,
               show_exact_address_after_booking
@@ -369,35 +370,35 @@ export async function getMasterDetail(masterId: string) {
         where master_id = $1
         order by is_primary desc, created_at asc`,
       [masterId],
-    ),
-    query(
+    );
+    const bookingRules = await client.query(
       `select booking_rules, cancellation_policy, payment_note
          from public.master_booking_rules
         where master_id = $1`,
       [masterId],
-    ),
-    query(
+    );
+    const certificates = await client.query(
       `select id, title, issuer, year, image_url, description, sort_order
          from public.master_certificates
         where master_id = $1
         order by sort_order asc, created_at asc`,
       [masterId],
-    ),
-    query(
+    );
+    const portfolio = await client.query(
       `select id, image_url, title, description, sort_order
          from public.master_portfolio_items
         where master_id = $1
         order by sort_order asc, created_at asc`,
       [masterId],
-    ),
-    query(
+    );
+    const career = await client.query(
       `select id, type::text, title, place, start_year, end_year, description, sort_order
          from public.master_career_items
         where master_id = $1
         order by sort_order asc, created_at asc`,
       [masterId],
-    ),
-    query(
+    );
+    const reviews = await client.query(
       `select r.id, r.rating, r.body, r.created_at, r.client_id,
               r.master_reply, r.master_reply_at,
               p.full_name as client_name, p.phone as client_phone, p.telegram_username as client_telegram_username,
@@ -412,8 +413,15 @@ export async function getMasterDetail(masterId: string) {
         order by r.created_at desc
         limit 50`,
       [masterId],
-    ),
-  ]);
+    );
+    const statsRow = await client.query<{ completed_bookings_count: number }>(
+      `select count(*)::int as completed_bookings_count
+         from public.appointments a
+        where a.master_id = $1 and a.status = 'completed'`,
+      [masterId],
+    );
+    return { category, services, locations, bookingRules, certificates, portfolio, career, reviews, statsRow };
+  });
 
   const cat = category.rows[0];
 
@@ -434,6 +442,15 @@ export async function getMasterDetail(masterId: string) {
   const locRows = locations.rows as PublicMasterLocationRow[];
   const coverUrl = await resolveMasterPublicCoverUrl(master.master_id, master.portfolio_cover_item_id);
   const coverId = master.portfolio_cover_item_id?.trim() || null;
+  const completedBookingsCount = Number(statsRow.rows[0]?.completed_bookings_count ?? 0);
+  let isProEntitled = false;
+  try {
+    const { getMasterEntitlements } = await import('../billing/entitlements.service.js');
+    const ent = await getMasterEntitlements(masterId);
+    isProEntitled = ent.isProEntitled;
+  } catch {
+    isProEntitled = false;
+  }
 
   return {
     master: {
@@ -449,6 +466,8 @@ export async function getMasterDetail(masterId: string) {
       rating: num(master.rating_avg) ?? 0,
       reviewsCount: master.reviews_count,
       isVerified: Boolean(master.is_verified),
+      isProEntitled,
+      completedBookingsCount,
       category: cat ? { code: cat.code, name: cat.name } : null,
     },
     services: (services.rows as ServiceRow[]).map(mapService),

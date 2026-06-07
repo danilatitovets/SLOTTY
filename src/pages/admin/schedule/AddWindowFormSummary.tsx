@@ -8,7 +8,12 @@ import {
 } from './scheduleUtils';
 import type { WindowTemplate } from './scheduleTypes';
 import { adminFormSheetMetricCatalog } from '../shared/adminFormSheetTheme';
-import { scheduleSheetSummaryBox } from './adminScheduleTheme';
+import {
+  scheduleSheetSummaryBody,
+  scheduleSheetSummaryHeader,
+  scheduleSheetSummaryShell,
+} from './adminScheduleTheme';
+import { ScheduleKpiPhotoBackdrop } from './ScheduleKpiPhotoBackdrop';
 import { formatRepeatSummaryRows, type RepeatSettingsValue } from './repeatSettingsConfig';
 import { countRepeatDates } from './scheduleUtils';
 
@@ -60,13 +65,21 @@ export function AddWindowFormSummary({
       : `Создастся ${windowsCountRu(creatableCount)} из ${totalPlanned}`;
 
   return (
-    <div className={scheduleSheetSummaryBox}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Итог</p>
-      <p className="mt-2 text-[18px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
-        {serviceLabel}
-      </p>
+    <div className={scheduleSheetSummaryShell}>
+      <div className={scheduleSheetSummaryHeader}>
+        <ScheduleKpiPhotoBackdrop />
+        <div className="relative z-10">
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#6B7280] drop-shadow-sm">
+            Итог
+          </p>
+          <p className="mt-2 text-[18px] font-bold leading-tight tracking-[-0.03em] text-[#111827] drop-shadow-sm">
+            {serviceLabel}
+          </p>
+        </div>
+      </div>
 
-      <div className={`mt-4 divide-y divide-[#D8D8D8] px-4 py-1 ${adminFormSheetMetricCatalog}`}>
+      <div className={scheduleSheetSummaryBody}>
+      <div className={`divide-y divide-[#D8D8D8] px-4 py-1 ${adminFormSheetMetricCatalog}`}>
         <SummaryRow label="Дата" value={dateLine} />
         <SummaryRow label="Время" value={timeLine} />
         <SummaryRow label="Длительность" value={formatDurationRu(duration)} />
@@ -90,6 +103,7 @@ export function AddWindowFormSummary({
       <p className="mt-4 rounded-[10px] bg-white px-4 py-3 text-center text-[15px] font-semibold text-[#111827] ring-1 ring-[#EEEEEE]">
         {createLabel}
       </p>
+      </div>
     </div>
   );
 }

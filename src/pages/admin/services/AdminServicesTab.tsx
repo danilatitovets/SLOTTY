@@ -8,7 +8,8 @@ import type {
   MasterOnboardingService,
 } from '../../../features/profile/lib/demoMasterStorage';
 import { useMasterPlanEntitlements } from '../../../features/billing/useMasterPlanEntitlements';
-import { ADMIN_BILLING_PATH, ADMIN_SCHEDULE_PATH } from '../../../app/paths';
+import { ADMIN_BILLING_PATH } from '../../../app/paths';
+import { adminScheduleAddWindowUrl } from '../schedule/scheduleDeepLinks';
 import {
   deleteMasterService,
   patchMasterService,
@@ -22,27 +23,17 @@ import {
   serviceHasUpcomingAppointments,
 } from './serviceDeleteGuard';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { AdminSheetFieldLabel } from '../shared/AdminFormFieldLabel';
 import { AdminFormSheetSection } from '../shared/AdminFormSheetLayout';
 import {
   catalogSheetPrimaryBtn,
   catalogSheetSecondaryBtn,
 } from '../shared/adminCatalogSheetTheme';
-import {
-  sheetFieldClass,
-  sheetLabelClass,
-  sheetSegmentClass,
-} from '../profile/adminProfileCabinetTheme';
+import { AdminDesktopSectionTabsShell } from '../shared/AdminDesktopSectionTabsShell';
 import { AdminTabContentTransition } from '../shared/AdminTabContentTransition';
 import { LoadingVideo } from '../../../shared/ui/LoadingVideo';
 import { managedServiceToClientPreview } from '../../../features/admin/lib/managedServiceToClientPreview';
 import { MasterServiceClientPreview } from '../../../features/profile/components/MasterServiceClientPreview';
-import {
-  SERVICES_MOBILE_CANVAS,
-  servicesDesktopCard,
-  servicesDesktopTabsSticky,
-  servicesShellCard,
-} from './adminServicesTheme';
+import { SERVICES_MOBILE_CANVAS, servicesShellCard } from './adminServicesTheme';
 import { ServicesSectionTabs } from './ServicesSectionTabs';
 import { computeServicesTabMetrics } from './servicesTabMetrics';
 import { ServicesBundleFormSheet } from './ServicesBundleFormSheet';
@@ -50,6 +41,8 @@ import { ServicesBundleMenuSheet } from './ServicesBundleMenuSheet';
 import { ServicesBundlesTab } from './ServicesBundlesTab';
 import { getMySlots, type MySlotDto } from '../../../features/admin/api/adminSlotsApi';
 import { subscribeMasterSlotsChanged } from '../shared/masterSlotsInvalidation';
+import { hasVisibleServicesWithoutSlots } from './servicesCatalogAttention';
+import { reorderManagedServiceList } from './servicesCatalogReorder';
 import { useServiceBookingStats } from './useServiceBookingStats';
 import { ServicesCatalogTab } from './ServicesCatalogTab';
 import { ServicesPageHeader } from './ServicesPageHeader';
@@ -74,7 +67,8 @@ import {
   templatePriceTypeToApp,
   type ServiceTemplate,
 } from '../../../constants/serviceTemplates';
-import { PopularServiceTemplatesChips } from '../../../features/catalog/PopularServiceTemplatesChips';
+import { ServicesServiceFormFields } from './ServicesServiceFormFields';
+import { ServicesServiceSheet } from './ServicesServiceSheet';
 import { loadServiceBundles, loadServicePromotions, saveServiceBundles, saveServicePromotions } from './servicesStorage';
 import {
   cabinetServiceDtoToManaged,
@@ -110,12 +104,6 @@ function newServiceId(): string {
 
   return `svc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
-
-function fieldClass(): string {
-  return sheetFieldClass;
-}
-
-const sheetSegmentWrap = 'grid grid-cols-2 gap-2 rounded-[10px] bg-[#F5F5F5] p-1.5';
 
 function normalizeService(service: MasterOnboardingService, index: number): ManagedService {
   const item = service as ManagedService;
@@ -237,6 +225,10 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
   );
 
   const serviceStats = useServiceBookingStats(services, catalogSlotsError ? null : catalogSlots, appointments);
+  const catalogAttention = useMemo(
+    () => hasVisibleServicesWithoutSlots(services, serviceStats),
+    [serviceStats, services],
+  );
   const hasAnyBookableSlots = useMemo(() => {
     if (catalogSlotsError || catalogSlots === null) return false;
     return catalogSlots.some(
@@ -291,9 +283,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
   const openServiceScheduleWizard = useCallback(
     (serviceId: string) => {
-      navigate(
-        `${ADMIN_SCHEDULE_PATH}?tab=create&wizard=month&serviceId=${encodeURIComponent(serviceId)}`,
-      );
+      navigate(adminScheduleAddWindowUrl(serviceId));
     },
     [navigate],
   );
@@ -331,7 +321,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     resetForm();
     setSheetMode('create');
     setSheetOpen(true);
-  }, [resetForm, services.length]);
+  }, [freeServiceLimitReached, resetForm]);
 
   const openEdit = useCallback(
     (service: ManagedService, mode: ServiceSheetMode = 'full') => {
@@ -484,7 +474,9 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     closeSheet,
     desc,
     draft.primaryCategoryId,
+    durationMin,
     editingId,
+    freeServiceLimitReached,
     isActive,
     commitServices,
     persistServices,
@@ -584,26 +576,21 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         setListError(e instanceof Error ? e.message : 'Не удалось сохранить');
       }
     },
-    [commitServices, draft.primaryCategoryId, persistServices, services, showSuccessToast, useCabinetApi],
+    [
+      commitServices,
+      draft.primaryCategoryId,
+      freeServiceLimitReached,
+      persistServices,
+      services,
+      showSuccessToast,
+      useCabinetApi,
+    ],
   );
 
-  const moveService = useCallback(
-    async (serviceId: string, direction: -1 | 1) => {
-      const index = services.findIndex((service) => service.id === serviceId);
-      const targetIndex = index + direction;
-
-      if (index < 0 || targetIndex < 0 || targetIndex >= services.length) return;
-
-      const nextServices = [...services];
-      const current = nextServices[index];
-      const target = nextServices[targetIndex];
-
-      if (!current || !target) return;
-
-      nextServices[index] = target;
-      nextServices[targetIndex] = current;
-
-      const reindexed = reindexManagedServices(nextServices);
+  const reorderServices = useCallback(
+    async (activeId: string, overId: string) => {
+      const reindexed = reorderManagedServiceList(services, activeId, overId);
+      if (!reindexed) return;
 
       if (!useCabinetApi) {
         persistServices(reindexed, 'Порядок обновлен');
@@ -947,7 +934,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
     [extrasLocked, persistPromotionsLocal, removePromotion, showSuccessToast, useCabinetApi],
   );
 
-  const menuIndex = menuTarget ? services.findIndex((s) => s.id === menuTarget.id) : -1;
 
   const tabMetrics = useMemo(
     () => computeServicesTabMetrics(services, bundles, promotions),
@@ -1014,6 +1000,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             services={services}
             onAdd={openCreate}
             onOpenMenu={setMenuTarget}
+            onReorder={(activeId, overId) => void reorderServices(activeId, overId)}
             serviceStats={serviceStats}
             categoryLabel={draft.category}
             masterId={draft.masterId}
@@ -1024,6 +1011,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         <ServicesPriceTab
             draft={draft}
             services={services}
+            categoryLabel={draft.category}
             onEditPrice={openEditPrice}
           />
       ) : null}
@@ -1062,27 +1050,40 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
 
   return (
     <>
-      <ServicesTabBar active={activeTab} onChange={setActiveTab} variant="mobile" />
+      <ServicesTabBar
+        active={activeTab}
+        onChange={setActiveTab}
+        variant="mobile"
+        catalogAttention={catalogAttention}
+      />
 
       <section
         className={`-mx-4 min-w-0 space-y-4 px-4 pb-[calc(5.75rem+1.25rem)] lg:hidden ${SERVICES_MOBILE_CANVAS}`}
       >
-        {activeTab !== 'catalog' ? (
-          <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} extrasLocked={extrasLocked} />
-        ) : null}
+        <ServicesPageHeader
+          activeTab={activeTab}
+          metrics={tabMetrics}
+          extrasLocked={extrasLocked}
+        />
         {statusAlerts}
         <AdminTabContentTransition activeKey={activeTab}>{tabPanels}</AdminTabContentTransition>
       </section>
 
       <div className={`${servicesShellCard} space-y-6`}>
-        <div className={`${servicesDesktopCard} ${servicesDesktopTabsSticky}`}>
-          <ServicesSectionTabs active={activeTab} onChange={setActiveTab} />
-        </div>
+        <AdminDesktopSectionTabsShell>
+          <ServicesSectionTabs
+            active={activeTab}
+            onChange={setActiveTab}
+            catalogAttention={catalogAttention}
+          />
+        </AdminDesktopSectionTabsShell>
 
         <div className="min-w-0 space-y-6">
-          {activeTab !== 'catalog' ? (
-            <ServicesPageHeader activeTab={activeTab} metrics={tabMetrics} extrasLocked={extrasLocked} />
-          ) : null}
+          <ServicesPageHeader
+            activeTab={activeTab}
+            metrics={tabMetrics}
+            extrasLocked={extrasLocked}
+          />
           {statusAlerts}
           <AdminTabContentTransition activeKey={activeTab} className="min-w-0 space-y-6">
             {tabPanels}
@@ -1094,8 +1095,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         open={Boolean(menuTarget)}
         service={menuTarget}
         deleteBlocked={menuTarget ? isServiceDeleteBlocked(menuTarget) : false}
-        canMoveUp={menuIndex > 0}
-        canMoveDown={menuIndex >= 0 && menuIndex < services.length - 1}
         onClose={() => setMenuTarget(null)}
         onEdit={() => {
           if (menuTarget) openEdit(menuTarget);
@@ -1115,14 +1114,6 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         }}
         onAddWindow={() => {
           if (menuTarget) openServiceScheduleWizard(menuTarget.id);
-          setMenuTarget(null);
-        }}
-        onMoveUp={() => {
-          if (menuTarget) void moveService(menuTarget.id, -1);
-          setMenuTarget(null);
-        }}
-        onMoveDown={() => {
-          if (menuTarget) void moveService(menuTarget.id, 1);
           setMenuTarget(null);
         }}
         onDelete={() => {
@@ -1177,8 +1168,7 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
         }}
       />
 
-      <AdminBottomSheet
-        variant="catalog"
+      <ServicesServiceSheet
         open={sheetOpen}
         onClose={closeSheet}
         title={
@@ -1195,172 +1185,42 @@ export function AdminServicesTab({ draft, onPersist }: Props) {
             ? undefined
             : 'Изменения сразу отобразятся в каталоге'
         }
-        footer={
-          <div className="flex w-full gap-3">
-            <button
-              type="button"
-              onClick={closeSheet}
-              disabled={serviceActionBusy}
-              className={catalogSheetSecondaryBtn}
-            >
-              Отмена
-            </button>
-            <button
-              type="button"
-              disabled={serviceActionBusy}
-              onClick={() => void saveService()}
-              className={catalogSheetPrimaryBtn}
-            >
-              {serviceActionBusy
-                ? 'Сохранение…'
-                : sheetMode === 'price'
-                  ? 'Сохранить цену'
-                  : 'Сохранить'}
-            </button>
-          </div>
-        }
+        mode={sheetMode}
+        busy={serviceActionBusy}
+        saveLabel={sheetMode === 'price' ? 'Сохранить цену' : 'Сохранить'}
+        onSave={() => void saveService()}
+        titleValue={title}
+        price={price}
+        durationMin={durationMin}
       >
-        <div className="space-y-4">
-          {sheetMode === 'price' ? (
-            <AdminFormSheetSection title="Услуга">
-              <p className="text-[20px] font-black tracking-[-0.05em] text-[#111827] lg:text-[24px]">
-                {title}
-              </p>
-            </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'full' || sheetMode === 'create' ? (
-          <AdminFormSheetSection title="Основное" description="Название и цена для каталога">
-          <PopularServiceTemplatesChips
-            collapsible
-            collapsibleCompact
-            variant="cabinet"
-            categoryCode={serviceCategoryCode}
+        {({ step, stepError }) => (
+          <ServicesServiceFormFields
+            mode={sheetMode}
+            open={sheetOpen}
+            step={sheetMode === 'price' ? undefined : step}
+            stepError={stepError}
+            title={title}
+            onTitleChange={setTitle}
+            price={price}
+            onPriceChange={setPrice}
+            priceType={priceType}
+            onPriceTypeChange={setPriceType}
+            isActive={isActive}
+            onIsActiveChange={setIsActive}
+            desc={desc}
+            onDescChange={setDesc}
+            durationMin={durationMin}
+            onDurationMinChange={setDurationMin}
+            formError={formError}
+            serviceCategoryCode={serviceCategoryCode}
             categoryLabel={draft.category}
-            selectedId={templateHighlightId}
-            onSelect={applyServiceTemplate}
-            className="mb-4"
+            templateHighlightId={templateHighlightId}
+            onApplyTemplate={applyServiceTemplate}
+            onClearTemplateHighlight={() => setTemplateHighlightId(null)}
+            serviceTitlePlaceholder={serviceTitlePlaceholder}
           />
-          <label className="block">
-            <AdminSheetFieldLabel required className={sheetLabelClass}>
-              Название услуги
-            </AdminSheetFieldLabel>
-
-            <input
-              value={title}
-              onChange={(event) => {
-                setTitle(event.target.value);
-                setTemplateHighlightId(null);
-              }}
-              className={fieldClass()}
-              placeholder={serviceTitlePlaceholder}
-            />
-          </label>
-
-          <label className="mt-4 block">
-            <AdminSheetFieldLabel required className={sheetLabelClass}>
-              Цена, BYN
-            </AdminSheetFieldLabel>
-
-            <input
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              inputMode="decimal"
-              className={fieldClass()}
-              placeholder="45"
-            />
-          </label>
-          </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'price' ? (
-            <AdminFormSheetSection title="Цена">
-            <label className="block">
-              <AdminSheetFieldLabel required className={sheetLabelClass}>
-                Цена, BYN
-              </AdminSheetFieldLabel>
-              <input
-                value={price}
-                onChange={(event) => setPrice(event.target.value)}
-                inputMode="decimal"
-                className={fieldClass()}
-                placeholder="45"
-                autoFocus
-              />
-            </label>
-            </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'full' || sheetMode === 'create' || sheetMode === 'price' ? (
-          <AdminFormSheetSection
-            title="Тип цены"
-            description={sheetMode === 'price' ? 'Как показывать цену в каталоге' : undefined}
-          >
-            <div className={sheetSegmentWrap}>
-              {(
-                [
-                  { id: 'fixed' as const, label: 'Точная цена' },
-                  { id: 'from' as const, label: 'Цена от' },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setPriceType(item.id)}
-                  className={sheetSegmentClass(priceType === item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'full' || sheetMode === 'create' ? (
-          <AdminFormSheetSection title="Видимость" description="Скрытые услуги не попадают в запись">
-            <div className={sheetSegmentWrap}>
-              <button
-                type="button"
-                onClick={() => setIsActive(true)}
-                className={sheetSegmentClass(isActive)}
-              >
-                Видна
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsActive(false)}
-                className={sheetSegmentClass(!isActive)}
-              >
-                Скрыта
-              </button>
-            </div>
-          </AdminFormSheetSection>
-          ) : null}
-
-          {sheetMode === 'full' || sheetMode === 'create' ? (
-          <AdminFormSheetSection title="Описание">
-          <label className="block">
-            <span className="sr-only">Описание</span>
-
-            <textarea
-              value={desc}
-              onChange={(event) => setDesc(event.target.value)}
-              rows={3}
-              className={fieldClass()}
-              placeholder="Что входит в услугу"
-            />
-          </label>
-          </AdminFormSheetSection>
-          ) : null}
-
-          {formError ? (
-            <p className="rounded-[22px] bg-[#FFF4E8] px-4 py-3 text-[14px] font-semibold text-[#B66A24]">
-              {formError}
-            </p>
-          ) : null}
-        </div>
-      </AdminBottomSheet>
+        )}
+      </ServicesServiceSheet>
 
       <AdminBottomSheet
         variant="catalog"

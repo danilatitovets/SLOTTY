@@ -1,7 +1,7 @@
 import type { IconType } from 'react-icons';
 import {
   HiAcademicCap,
-  HiArrowLeftOnRectangle,
+  HiArrowRightEndOnRectangle,
   HiArrowTrendingUp,
   HiBriefcase,
   HiBuildingOffice2,
@@ -24,13 +24,13 @@ import {
   HiPhone,
   HiPhoto,
   HiPlus,
-  HiSquares2X2,
+  HiRectangleStack,
+  HiSpeakerWave,
   HiStar,
   HiTag,
   HiTrash,
   HiUser,
   HiKey,
-  HiDevicePhoneMobile,
 } from 'react-icons/hi2';
 import type { MasterVisitType } from '../../../features/profile/model/masterLocation';
 
@@ -72,10 +72,10 @@ const ICONS: Record<CabinetIconName, IconType> = {
   'map-pin': HiMapPin,
   building: HiBuildingOffice2,
   home: HiHome,
-  entrance: HiArrowLeftOnRectangle,
-  floor: HiSquares2X2,
+  entrance: HiArrowRightEndOnRectangle,
+  floor: HiRectangleStack,
   apartment: HiKey,
-  intercom: HiDevicePhoneMobile,
+  intercom: HiSpeakerWave,
   landmark: HiMap,
   directions: HiArrowTrendingUp,
   comment: HiChatBubbleLeftEllipsis,
@@ -127,7 +127,8 @@ export function addressDetailIconName(label: string, visitType: MasterVisitType)
   if (lower.includes('ориентир') || lower.includes('метро') || lower.includes('район')) return 'landmark';
   if (lower.includes('как пройти')) return 'directions';
   if (lower.includes('комментар')) return 'comment';
-  if (lower.includes('дом') || lower.includes('корпус')) return 'home';
+  if (lower.includes('корпус') || lower.includes('строение')) return 'building';
+  if (lower.includes('дом')) return 'home';
   if (lower.includes('адрес')) return 'map-pin';
 
   return visitType === 'at_home' ? 'home' : 'building';

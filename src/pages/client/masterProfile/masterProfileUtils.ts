@@ -120,13 +120,33 @@ export function visitChipLabel(visitType: 'studio' | 'at_home'): string {
   return visitType === 'at_home' ? 'На дому' : 'В студии';
 }
 
+/** Убирает повтор города в начале строки («Минск, Минск, ул. …» → «Минск, ул. …»). */
+function stripDuplicateCityPrefix(city: string, part: string): string {
+  const trimmed = part.trim();
+  if (!trimmed) return city;
+  const escaped = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const withoutCity = trimmed.replace(new RegExp(`^${escaped}\\s*,\\s*`, 'i'), '').trim();
+  if (!withoutCity || withoutCity.toLowerCase() === city.toLowerCase()) return city;
+  return `${city}, ${withoutCity}`;
+}
+
 /** Короткая строка локации для карточки / шапки профиля (без «Выбранная точка на карте»). */
 export function formatMasterProfileLocationChip(location: MasterLocation): string {
   const city = location.city?.trim() || 'Минск';
   const district = location.district?.trim();
   if (district && district !== LOCATION_EMPTY_SENTINEL && !/выбранн/i.test(district)) {
+    const districtNorm = district.toLowerCase();
+    const cityNorm = city.toLowerCase();
+    if (districtNorm === cityNorm) {
+      return city;
+    }
+    if (districtNorm.startsWith(`${cityNorm},`)) {
+      const tail = district.slice(city.length + 1).trim();
+      const short = tail.length > 22 ? `${tail.slice(0, 21)}…` : tail;
+      return short ? `${city}, ${short}` : city;
+    }
     const short = district.length > 22 ? `${district.slice(0, 21)}…` : district;
-    return `${city}, ${short}`;
+    return stripDuplicateCityPrefix(city, short);
   }
   const landmark = location.landmark?.trim();
   if (landmark && !/выбранн/i.test(landmark)) {
@@ -143,8 +163,10 @@ export function formatMasterProfileLocationChip(location: MasterLocation): strin
       .replace(/^ул\.?\s*/i, '')
       .replace(/^улица\s*/i, '')
       .replace(/^пр-т\s*/i, '');
-    const short = cleaned.length > 20 ? `${cleaned.slice(0, 19)}…` : cleaned;
-    return `${city}, ${short}`;
+    const withoutDup = cleaned.replace(new RegExp(`^${city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,\\s*`, 'i'), '').trim();
+    const base = withoutDup || cleaned;
+    const short = base.length > 20 ? `${base.slice(0, 19)}…` : base;
+    return stripDuplicateCityPrefix(city, short);
   }
   return city;
 }

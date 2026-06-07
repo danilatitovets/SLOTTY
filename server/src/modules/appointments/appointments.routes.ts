@@ -33,6 +33,7 @@ import { uploadBookingReferencePhoto } from './appointments.storage.js';
 import { notifyAppointmentCreated, notifyMasterClientCancelledBooking } from './appointments.telegram.js';
 import { bookingCreateLimiter } from '../../middlewares/rateLimit.js';
 import { requireSignupConsents } from '../../middlewares/requireSignupConsents.js';
+import { getMasterReviewDetailByAppointmentId } from '../masters/masterOverview.service.js';
 
 export const appointmentCreateRouter = Router();
 appointmentCreateRouter.use(authMiddleware);
@@ -339,6 +340,15 @@ masterAppointmentsRouter.get(
     const appointmentId = z.string().uuid().parse(req.params.appointmentId);
     const appointment = await getMasterAppointmentById(req.user!.id, appointmentId);
     res.json({ appointment });
+  }),
+);
+
+masterAppointmentsRouter.get(
+  '/:appointmentId/review',
+  asyncHandler(async (req, res) => {
+    const appointmentId = z.string().uuid().parse(req.params.appointmentId);
+    const review = await getMasterReviewDetailByAppointmentId(req.user!.id, appointmentId);
+    res.json({ review });
   }),
 );
 

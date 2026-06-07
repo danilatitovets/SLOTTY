@@ -49,11 +49,27 @@ describe('resolveClientNotificationAction', () => {
     assert.equal(action?.to, getClientAppointmentPath('SL-ABCD12345678'));
   });
 
-  it('appointment_confirmed → open booking', () => {
+  it('appointment_confirmed (client) → open booking', () => {
     const action = resolveClientNotificationAction(
-      row({ type: 'appointment_confirmed', booking_code: 'SL-ABCD12345678' }),
+      row({
+        type: 'appointment_confirmed',
+        title: 'Запись подтверждена',
+        booking_code: 'SL-ABCD12345678',
+      }),
     );
     assert.equal(action?.label, 'Открыть запись');
     assert.equal(action?.to, getClientAppointmentPath('SL-ABCD12345678'));
+  });
+
+  it('appointment_confirmed (master completed) → no client action', () => {
+    const action = resolveClientNotificationAction(
+      row({
+        type: 'appointment_confirmed',
+        title: 'Запись завершена',
+        body: 'Клиент: Анна\nТелефон: +375…',
+        booking_code: 'SL-ABCD12345678',
+      }),
+    );
+    assert.equal(action, null);
   });
 });

@@ -4,8 +4,31 @@ export const ADMIN_SIDEBAR_WIDTH = 'w-[260px]';
 /** Ширина sidebar в px (для порталов модалок на desktop). */
 export const ADMIN_SIDEBAR_PX = 260;
 
+/** Фиксированная высота desktop-хедера кабинета (как зона логотипа в сайдбаре). */
+export const ADMIN_DESKTOP_TOPBAR_HEIGHT = '5rem';
+
+/** Shell: хедер поверх сайдбара, скролл только у main. */
+export const adminDesktopCabinetShell = 'relative h-dvh overflow-hidden';
+
+export const adminDesktopCabinetBody =
+  'flex h-full min-h-0 lg:pt-[var(--slotty-admin-desktop-topbar-h,5rem)]';
+
+export const adminDesktopSidebarShell = `${ADMIN_SIDEBAR_WIDTH} hidden h-full shrink-0 flex-col overflow-hidden border-r border-[#eef0f5] bg-white lg:flex`;
+
+export const adminDesktopMainScroll =
+  'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain';
+
 /** Сдвиг fixed-overlay под sidebar (Tailwind, не интерполировать). */
 export const ADMIN_SIDEBAR_OVERLAY_INSET = 'lg:left-[260px]';
+
+/** Высота второго хедера (табы раздела на desktop). */
+export const ADMIN_DESKTOP_SECTION_TABS_HEIGHT = '3.5rem';
+
+/** Второй хедер: фиксируется сразу под AdminDesktopTopBar. */
+export const adminDesktopSectionTabsFixed = `fixed inset-x-0 z-30 hidden bg-white lg:block ${ADMIN_SIDEBAR_OVERLAY_INSET} top-[var(--slotty-admin-desktop-topbar-h,5rem)]`;
+
+/** Заглушка в потоке под fixed-табы (чтобы контент не уезжал вверх). */
+export const adminDesktopSectionTabsSpacer = 'hidden h-[3.5rem] shrink-0 lg:block';
 
 /** Ширина правой панели редактирования на desktop (AdminBottomSheet). */
 export const ADMIN_DESKTOP_DRAWER_PANEL =

@@ -1,6 +1,10 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { normalizeBookingCode } from '../../lib/buildBookingLink.js';
+import {
+  collectLinkedProfileCandidates,
+  resolveCanonicalProfileId,
+} from '../auth/authIdentities.service.js';
 
 export type AppointmentAccessRow = {
   id: string;
@@ -37,13 +41,40 @@ export async function loadAppointmentByVoucher(voucherRaw: string): Promise<Appo
   return r.rows[0] ?? null;
 }
 
-export function assertClientAccess(row: AppointmentAccessRow, clientId: string): void {
-  if (row.client_id !== clientId) {
-    throw ApiError.forbidden(
-      'У вас нет доступа к этой записи. Войдите в нужный аккаунт.',
-      'BOOKING_FORBIDDEN',
-    );
-  }
+const BOOKING_FORBIDDEN_MESSAGE =
+  'У вас нет доступа к этой записи. Войдите в нужный аккаунт.';
+
+/**
+ * Связанные profile.id без merge canonical — только для GET-листингов (уведомления и т.п.).
+ * resolveCanonicalProfileId пишет в БД и может подвешивать быстрые read-запросы.
+ */
+export async function resolveLinkedProfileIdsReadOnly(profileId: string): Promise<string[]> {
+  const linked = await collectLinkedProfileCandidates(profileId);
+  return [...new Set([profileId, ...linked])];
+}
+
+/** Все profile.id, от имени которых клиент может видеть свои записи (canonical + связанные). */
+export async function resolveClientAppointmentOwnerIds(clientId: string): Promise<string[]> {
+  const canonicalId = await resolveCanonicalProfileId(clientId);
+  const linked = [
+    ...(await collectLinkedProfileCandidates(clientId)),
+    ...(await collectLinkedProfileCandidates(canonicalId)),
+  ];
+  return [...new Set([clientId, canonicalId, ...linked])];
+}
+
+export async function clientOwnsAppointment(
+  appointmentClientId: string,
+  viewerClientId: string,
+): Promise<boolean> {
+  if (appointmentClientId === viewerClientId) return true;
+  const ownerIds = await resolveClientAppointmentOwnerIds(viewerClientId);
+  return ownerIds.includes(appointmentClientId);
+}
+
+export async function assertClientAccess(row: AppointmentAccessRow, clientId: string): Promise<void> {
+  if (await clientOwnsAppointment(row.client_id, clientId)) return;
+  throw ApiError.forbidden(BOOKING_FORBIDDEN_MESSAGE, 'BOOKING_FORBIDDEN');
 }
 
 export function assertMasterAccess(row: AppointmentAccessRow, masterId: string): void {
@@ -61,7 +92,7 @@ export async function requireAppointmentForClient(
 ): Promise<AppointmentAccessRow> {
   const row = await loadAppointmentById(appointmentId);
   if (!row) throw ApiError.notFound('Запись не найдена', 'BOOKING_NOT_FOUND');
-  assertClientAccess(row, clientId);
+  await assertClientAccess(row, clientId);
   return row;
 }
 
@@ -81,7 +112,7 @@ export async function requireAppointmentForClientByVoucher(
 ): Promise<AppointmentAccessRow> {
   const row = await loadAppointmentByVoucher(voucherRaw);
   if (!row) throw ApiError.notFound('Запись не найдена', 'BOOKING_NOT_FOUND');
-  assertClientAccess(row, clientId);
+  await assertClientAccess(row, clientId);
   return row;
 }
 

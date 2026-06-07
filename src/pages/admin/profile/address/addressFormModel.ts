@@ -17,6 +17,39 @@ import { isEmptyDisplayValue } from '../../../../shared/lib/emptyDisplayText';
 
 export const MASTER_CABINET_CITY = 'Минск';
 
+/** Административные районы города Минска. */
+export const MINSK_DISTRICTS = [
+  'Центральный',
+  'Советский',
+  'Первомайский',
+  'Партизанский',
+  'Заводской',
+  'Ленинский',
+  'Октябрьский',
+  'Московский',
+  'Фрунзенский',
+] as const;
+
+export type MinskDistrict = (typeof MINSK_DISTRICTS)[number];
+
+const MINSK_DISTRICT_LOOKUP = new Map<string, MinskDistrict>(
+  MINSK_DISTRICTS.flatMap((name) => [
+    [name.toLowerCase(), name],
+    [`${name.toLowerCase()} район`, name],
+    [`${name.toLowerCase()} р-н`, name],
+  ]),
+);
+
+/** Приводит сохранённое значение к одному из районов Минска или к пустой строке. */
+export function normalizeMinskDistrict(value: string | undefined | null): string {
+  const raw = value?.trim() ?? '';
+  if (!raw) return '';
+  const exact = MINSK_DISTRICT_LOOKUP.get(raw.toLowerCase());
+  if (exact) return exact;
+  const partial = MINSK_DISTRICTS.find((name) => raw.toLowerCase().includes(name.toLowerCase()));
+  return partial ?? '';
+}
+
 /** UI-формат: «выезд» пока не поддерживается бэкендом. */
 export type AddressVisitFormat = MasterVisitType | 'client_visit';
 
@@ -65,7 +98,7 @@ export function locationFingerprint(loc: MasterLocation): string {
     loc.clientNote ?? '',
     loc.lat ?? '',
     loc.lng ?? '',
-    loc.showExactAddressAfterBooking === true ? '1' : '0',
+    loc.showExactAddressAfterBooking !== false ? '1' : '0',
   ].join('\x1e');
 }
 
@@ -76,8 +109,8 @@ export function formStateFromLocation(loc: MasterLocation): AddressFormState {
     building: loc.building ?? 'б/н',
     salonName: loc.salonName?.trim() ?? '',
     buildingDetail: loc.buildingDetail?.trim() ?? '',
-    district: loc.district?.trim() ?? '',
-    showExactAddressAfterBooking: loc.showExactAddressAfterBooking === true,
+    district: normalizeMinskDistrict(loc.district),
+    showExactAddressAfterBooking: loc.showExactAddressAfterBooking !== false,
     entrance: loc.entrance ?? '',
     floor: loc.floor ?? '',
     room: loc.room ?? '',

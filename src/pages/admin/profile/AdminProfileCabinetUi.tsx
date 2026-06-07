@@ -29,14 +29,18 @@ import {
   cabinetCardPad,
   cabinetIconCircle,
   cabinetInsetTile,
-  cabinetPinkBtn,
 } from './adminProfileCabinetTheme';
+import { servicesCatalogAddBtn } from '../services/adminServicesTheme';
+import { ServicesBrandPhotoLayers } from '../services/ServicesBrandPhotoLayers';
 
-/** Иконка секции: мягкий квадрат, единый набор SVG. */
+/** Иконка секции на красном фоне бренда. */
 function CabinetSectionIcon({ name, size = 18 }: { name: CabinetIconName; size?: number }) {
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FFF1F4] text-[#F47C8C]">
-      <CabinetIcon name={name} size={size} />
+    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#EF4444] text-white">
+      <ServicesBrandPhotoLayers roundedClassName="rounded-xl" />
+      <span className="relative z-10">
+        <CabinetIcon name={name} size={size} />
+      </span>
     </span>
   );
 }
@@ -64,6 +68,7 @@ export type ProfileStats = {
 export type ProfileStatsRatingMeta = {
   rating?: number | null;
   reviewsCount?: number | null;
+  completedBookingsCount?: number | null;
 };
 
 function buildRatingStat(meta?: ProfileStatsRatingMeta): StatMiniDisplay {
@@ -240,25 +245,51 @@ function InfoGridCell({
   label,
   value,
   icon,
+  onValueClick,
+  valueClickDisabled = false,
 }: {
   label: string;
   value: string;
   icon: ReactNode;
+  onValueClick?: () => void;
+  valueClickDisabled?: boolean;
 }) {
   return (
     <div className={`flex items-center gap-3 p-3 ${cabinetInsetTile}`}>
       <span className={`${cabinetIconCircle} h-9 w-9`}>{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-[12px] font-medium leading-tight text-[#6B7280]">{label}</p>
-        <p className="mt-0.5 truncate text-[15px] font-semibold leading-snug text-[#111827]" title={value}>
-          {value}
-        </p>
+        {onValueClick ? (
+          <button
+            type="button"
+            onClick={onValueClick}
+            disabled={valueClickDisabled}
+            title={value}
+            className="mt-0.5 block max-w-full truncate text-left text-[15px] font-semibold leading-snug text-[#F47C8C] underline-offset-2 transition hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+          >
+            {value}
+          </button>
+        ) : (
+          <p className="mt-0.5 truncate text-[15px] font-semibold leading-snug text-[#111827]" title={value}>
+            {value}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: () => void }) {
+export function MainInfoCard({
+  draft,
+  onEdit,
+  onOpenCategoryChange,
+  categoryChangeDisabled = false,
+}: {
+  draft: MasterDraft;
+  onEdit: () => void;
+  onOpenCategoryChange?: () => void;
+  categoryChangeDisabled?: boolean;
+}) {
   const clientContacts = resolveFilledContacts(draft);
 
   return (
@@ -287,6 +318,13 @@ export function MainInfoCard({ draft, onEdit }: { draft: MasterDraft; onEdit: ()
           icon={
             <BY title="Беларусь" className="h-[18px] w-[18px] rounded-full object-cover" />
           }
+        />
+        <InfoGridCell
+          label="Категория"
+          value={valueOrEmptyField(draft.category)}
+          icon={<CabinetIcon name="briefcase" size={18} />}
+          onValueClick={onOpenCategoryChange}
+          valueClickDisabled={categoryChangeDisabled}
         />
       </div>
 
@@ -351,7 +389,7 @@ export function ScheduleWorkCard({
       </div>
 
       <div
-        className={`mt-3 grid grid-cols-7 gap-1 p-1 ${cabinetInsetTile}`}
+        className={`mt-4 grid grid-cols-7 gap-1.5 p-1.5 ${cabinetInsetTile}`}
         role="list"
         aria-label="Рабочие дни недели"
       >
@@ -361,9 +399,9 @@ export function ScheduleWorkCard({
             <div
               key={label}
               role="listitem"
-              className={`flex h-8 items-center justify-center rounded-lg text-[11px] font-semibold ${
+              className={`flex h-9 items-center justify-center rounded-[10px] text-[11px] font-bold ${
                 active
-                  ? 'bg-white text-[#111827] ring-1 ring-[#EEEEEE]'
+                  ? 'bg-white text-[#F47C8C] shadow-[0_1px_3px_rgba(17,24,39,0.06)] ring-1 ring-[#FDE8ED]'
                   : 'text-[#9CA3AF]'
               }`}
             >
@@ -376,9 +414,10 @@ export function ScheduleWorkCard({
       <button
         type="button"
         onClick={onEditSchedule}
-        className={`mt-4 flex min-h-11 w-full items-center justify-center text-[15px] font-semibold transition ${cabinetPinkBtn}`}
+        className={`${servicesCatalogAddBtn} mt-4 text-[15px] font-semibold`}
       >
-        Изменить график работы
+        <ServicesBrandPhotoLayers roundedClassName="rounded-[12px]" />
+        <span className="relative z-10 drop-shadow-sm">Изменить график работы</span>
       </button>
     </section>
   );

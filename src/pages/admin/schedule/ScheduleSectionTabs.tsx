@@ -1,5 +1,13 @@
-﻿import type { ComponentType } from 'react';
+import type { ComponentType } from 'react';
 import { HiCalendarDays, HiPlusCircle, HiRectangleStack } from 'react-icons/hi2';
+import {
+  adminSectionTabIconClass,
+  adminSectionTabIconToneClass,
+  adminSectionTabIndicatorClass,
+  adminSectionTabLabelClass,
+  adminSectionTabsNavClass,
+  adminSectionTabTextClass,
+} from '../shared/adminSectionTabsTheme';
 import type { SchedulePageTab } from './scheduleTypes';
 
 const TABS: Array<{
@@ -21,7 +29,7 @@ type Props = {
 export function ScheduleSectionTabs({ active, onChange, className = '' }: Props) {
   return (
     <nav
-      className={`flex w-full border-b border-[#eef0f5] ${className}`.trim()}
+      className={`${adminSectionTabsNavClass} ${className}`.trim()}
       aria-label="Разделы расписания"
     >
       {TABS.map((tab) => {
@@ -33,18 +41,14 @@ export function ScheduleSectionTabs({ active, onChange, className = '' }: Props)
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
-            className={`relative flex min-h-[3.25rem] min-w-0 flex-1 items-center justify-center gap-2 px-3 text-[14px] font-bold transition lg:min-h-[3.5rem] lg:px-5 lg:text-[15px] ${
-              selected ? 'text-[#3B4CCA]' : 'text-[#6B7280] hover:text-[#374151]'
-            }`}
+            className={adminSectionTabTextClass(selected, 'schedule')}
           >
-            <Icon className="h-5 w-5 shrink-0" aria-hidden />
-            <span className="truncate">{tab.label}</span>
-            {selected ? (
-              <span
-                className="absolute inset-x-3 bottom-0 h-[3px] rounded-t-full bg-[#3B4CCA] lg:inset-x-5"
-                aria-hidden
-              />
-            ) : null}
+            <Icon
+              className={`${adminSectionTabIconClass} ${adminSectionTabIconToneClass(selected, 'schedule')}`}
+              aria-hidden
+            />
+            <span className={adminSectionTabLabelClass}>{tab.label}</span>
+            {selected ? <span className={adminSectionTabIndicatorClass('schedule')} aria-hidden /> : null}
           </button>
         );
       })}

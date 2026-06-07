@@ -1,4 +1,4 @@
-import { HiHomeModern, HiMapPin } from 'react-icons/hi2';
+import { HiHomeModern, HiLockClosed, HiMapPin } from 'react-icons/hi2';
 import {
   buildLocationDisplayParts,
   catalogLineWithoutVisitPrefix,
@@ -23,22 +23,27 @@ function DetailList({ rows }: { rows: DetailRow[] }) {
       {visible.map((row) => (
         <li key={`${row.label}-${row.value}`} className="flex gap-3 text-[14px] leading-snug">
           <span className="w-[5.5rem] shrink-0 font-medium text-[#9CA3AF]">{row.label}</span>
-          <span className="min-w-0 flex-1 text-[#374151]">{row.value}</span>
+          <span className="min-w-0 flex-1 font-medium text-[#374151]">{row.value}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-type Props = { location: MasterLocation };
+type Props = {
+  location: MasterLocation;
+  /** Клиент уже записался и мастер подтвердил — показываем подъезд, этаж, домофон. */
+  revealed?: boolean;
+  showRoute?: boolean;
+};
 
-export function MasterAddressBlock({ location }: Props) {
+export function MasterAddressBlock({ location, revealed = false, showRoute = true }: Props) {
   const parts = buildLocationDisplayParts(location);
   const visitLabel = parts?.visitLabel ?? masterVisitTypeLabel(location.visitType);
-  const hiddenUntilBooking = isHomeAddressHiddenUntilBooking(location);
+  const hideDetails = isHomeAddressHiddenUntilBooking(location) && !revealed;
 
   const mainLine = (() => {
-    if (hiddenUntilBooking) {
+    if (hideDetails) {
       const publicLine = formatHomePublicBeforeBooking(location);
       if (publicLine?.trim()) return publicLine.trim();
       const district = location.district?.trim();
@@ -56,11 +61,12 @@ export function MasterAddressBlock({ location }: Props) {
   })();
 
   const detailRows: DetailRow[] = filterAtHomeSensitiveAccessRows(
-    hiddenUntilBooking ? [] : [...(parts?.access ?? []), ...(parts?.wayfinding ?? [])],
+    hideDetails ? [] : [...(parts?.access ?? []), ...(parts?.wayfinding ?? [])],
     location,
   );
 
   const VisitIcon = location.visitType === 'at_home' ? HiHomeModern : HiMapPin;
+  const canBuildRoute = showRoute && !hideDetails && Boolean(mainLine);
 
   return (
     <div className="space-y-3">
@@ -75,15 +81,20 @@ export function MasterAddressBlock({ location }: Props) {
         <p className="text-[14px] text-[#6B7280]">Адрес уточняется у мастера</p>
       )}
 
-      {hiddenUntilBooking ? (
-        <p className="rounded-[14px] bg-[#FAFAFA] px-3 py-2.5 text-[13px] leading-relaxed text-[#6B7280]">
-          Подъезд, этаж и точный адрес будут доступны после подтверждения записи
-        </p>
+      {hideDetails ? (
+        <div className="flex gap-3 rounded-[14px] bg-[#FAFAFA] px-3.5 py-3 ring-1 ring-[#F3F4F6]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-[#9CA3AF] ring-1 ring-[#EEEEEE]">
+            <HiLockClosed className="h-4 w-4" aria-hidden />
+          </span>
+          <p className="text-[13px] leading-relaxed text-[#6B7280]">
+            Подъезд, этаж, квартира и домофон откроются после подтверждения записи мастером.
+          </p>
+        </div>
       ) : (
         <DetailList rows={detailRows} />
       )}
 
-      {!hiddenUntilBooking ? (
+      {canBuildRoute ? (
         <a
           href={makeYandexMapsRouteUrl({
             lat: location.lat ?? location.distanceLat,

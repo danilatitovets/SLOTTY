@@ -18,7 +18,7 @@ type Props = {
   onClose: () => void;
   title?: string;
   subtitle?: string;
-  /** Небольшая плашка над заголовком (без gradient-блока). */
+  /** Небольшая плашка слева от кнопки закрытия. */
   badge?: string;
   /** Заменяет badge / title / subtitle (например, степпер в шапке). */
   headerContent?: ReactNode;
@@ -26,8 +26,12 @@ type Props = {
   headerAfter?: ReactNode;
   /** `catalog` — плоский стиль как в каталоге (#F5F5F5, без теней у футера). */
   variant?: 'default' | 'catalog';
+  /** Без разделителей header/footer (серое полотно каталога). */
+  borderless?: boolean;
   /** `schedule` — синий акцент бейджа (страница расписания). */
   accent?: 'brand' | 'schedule';
+  /** Переопределяет стиль кнопки закрытия. */
+  closeButtonClassName?: string;
   children: ReactNode;
   footer?: ReactNode;
 };
@@ -43,11 +47,14 @@ export function AdminBottomSheet({
   headerContent,
   headerAfter,
   variant = 'default',
+  borderless = false,
   accent = 'brand',
+  closeButtonClassName,
   children,
   footer,
 }: Props) {
   const isCatalog = variant === 'catalog';
+  const isBorderlessCatalog = isCatalog && borderless;
   const badgeClass =
     accent === 'schedule'
       ? 'inline-flex max-w-full items-center rounded-full bg-[#EEF0FC] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[#3B4CCA]'
@@ -84,15 +91,30 @@ export function AdminBottomSheet({
         aria-modal="true"
         data-admin-sheet
         aria-labelledby={title ? 'admin-sheet-title' : undefined}
-        className={`fixed inset-x-0 bottom-0 z-10 flex max-h-[min(92dvh,720px)] w-full flex-col overflow-hidden rounded-t-[16px] bg-white ${
+        className={`fixed inset-x-0 bottom-0 z-10 flex max-h-[min(92dvh,720px)] w-full flex-col overflow-hidden rounded-t-[16px] ${
+          isBorderlessCatalog ? 'bg-[#F5F5F5]' : 'bg-white'
+        } ${
           isCatalog
             ? 'shadow-[0_-8px_32px_rgba(17,24,39,0.08)] lg:shadow-[-12px_0_40px_rgba(17,24,39,0.08)]'
             : 'shadow-[0_-16px_48px_rgba(17,24,39,0.14)] lg:shadow-[-24px_0_64px_rgba(17,24,39,0.14)]'
         } lg:inset-x-auto lg:bottom-0 lg:right-0 lg:top-0 lg:h-dvh lg:max-h-none lg:rounded-none lg:rounded-l-[16px] ${ADMIN_DESKTOP_DRAWER_PANEL}`}
       >
-        <div className="mx-auto mb-3 mt-3 h-1 w-10 shrink-0 rounded-full bg-[#EAECEF] lg:hidden" aria-hidden />
+        <div
+          className={`mx-auto mb-3 mt-3 h-1 w-10 shrink-0 rounded-full lg:hidden ${
+            isBorderlessCatalog ? 'bg-[#D1D5DB]' : 'bg-[#EAECEF]'
+          }`}
+          aria-hidden
+        />
 
-        <header className={isCatalog ? catalogSheetHeader : 'shrink-0 border-b border-[#eef0f5] bg-white px-[18px] py-4 lg:px-8 lg:py-5'}>
+        <header
+          className={
+            isBorderlessCatalog
+              ? 'shrink-0 bg-[#F5F5F5] px-[18px] pb-3 pt-4 lg:px-8 lg:pb-4 lg:pt-6'
+              : isCatalog
+                ? catalogSheetHeader
+                : 'shrink-0 border-b border-[#eef0f5] bg-white px-[18px] py-4 lg:px-8 lg:py-5'
+          }
+        >
           <div
             className={`flex justify-between gap-4 ${isCatalog ? 'items-center' : 'items-start'}`}
           >
@@ -101,19 +123,13 @@ export function AdminBottomSheet({
                 headerContent
               ) : (
                 <>
-                  {badge ? (
-                    <p className={badgeClass}>
-                      {badge}
-                    </p>
-                  ) : null}
-
                   {title ? (
                     <h2
                       id="admin-sheet-title"
                       className={
                         isCatalog
-                          ? `${catalogSheetTitle} m-0 ${badge ? 'mt-2' : ''} leading-snug`
-                          : `font-black tracking-[-0.04em] text-[#111827] ${badge ? 'mt-2.5' : ''} text-[20px] leading-tight lg:text-[22px]`
+                          ? `${catalogSheetTitle} m-0 leading-snug`
+                          : 'text-[20px] font-black leading-tight tracking-[-0.04em] text-[#111827] lg:text-[22px]'
                       }
                     >
                       {title}
@@ -129,18 +145,22 @@ export function AdminBottomSheet({
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className={
-                isCatalog
-                  ? catalogSheetCloseBtn
-                  : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#f6f7fb] text-[20px] font-semibold leading-none text-[#6B7280] transition hover:bg-[#FFF1F4] hover:text-[#ff5f7a] active:scale-[0.97] lg:h-11 lg:w-11'
-              }
-              aria-label="Закрыть"
-            >
-              ×
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {badge ? <span className={badgeClass}>{badge}</span> : null}
+              <button
+                type="button"
+                onClick={onClose}
+                className={
+                  closeButtonClassName ??
+                  (isCatalog
+                    ? catalogSheetCloseBtn
+                    : 'flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#f6f7fb] text-[20px] font-semibold leading-none text-[#6B7280] transition hover:bg-[#FFF1F4] hover:text-[#ff5f7a] active:scale-[0.97] lg:h-11 lg:w-11')
+                }
+                aria-label="Закрыть"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {headerAfter ? (
@@ -148,7 +168,7 @@ export function AdminBottomSheet({
           ) : null}
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col bg-white">
+        <div className={`flex min-h-0 flex-1 flex-col ${isBorderlessCatalog ? 'bg-[#F5F5F5]' : 'bg-white'}`}>
           <div
             data-admin-sheet-scroll
             className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch] ${
@@ -163,9 +183,11 @@ export function AdminBottomSheet({
           {footer ? (
             <div
               className={
-                isCatalog
-                  ? catalogSheetFooter
-                  : 'shrink-0 border-t border-[#eef0f5] bg-white px-[18px] py-4 shadow-[0_-8px_32px_rgba(17,24,39,0.06)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] lg:px-8 lg:py-5'
+                isBorderlessCatalog
+                  ? 'shrink-0 bg-[#F5F5F5] px-[18px] py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] lg:px-8 lg:py-5'
+                  : isCatalog
+                    ? catalogSheetFooter
+                    : 'shrink-0 border-t border-[#eef0f5] bg-white px-[18px] py-4 shadow-[0_-8px_32px_rgba(17,24,39,0.06)] pb-[max(1rem,env(safe-area-inset-bottom,0px))] lg:px-8 lg:py-5'
               }
             >
               {footer}

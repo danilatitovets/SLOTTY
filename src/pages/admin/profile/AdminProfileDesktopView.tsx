@@ -1,16 +1,13 @@
-import { type ChangeEvent, type ReactNode, type RefObject } from 'react';
+import { type ChangeEvent, type ReactNode, type RefObject, useRef } from 'react';
 import { HiCamera } from 'react-icons/hi2';
 import type { ProfileCompletionHandlers } from './ProfileCompletionBlock';
 import { ProfileCompletionBlock } from './ProfileCompletionBlock';
-import { Link } from 'react-router-dom';
-import { HiArrowRight, HiBriefcase, HiEnvelope } from 'react-icons/hi2';
+import { HiEnvelope } from 'react-icons/hi2';
 import { BY } from 'country-flag-icons/react/1x1';
-import { ADMIN_SERVICES_PATH } from '../../../app/paths';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
-import type { MasterDraft, MasterOnboardingService } from '../../../features/profile/lib/demoMasterStorage';
+import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { MasterLocation } from '../../../features/profile/model/masterLocation';
 import { MasterCabinetAvatar, MasterCabinetCoverBanner } from './adminProfilePortrait';
-import { formatDurationRu, formatServicePrice, type ManagedService } from '../services/servicesFormat';
 import { useAccountVerificationStatus } from '../../../features/auth/hooks/useAccountVerificationStatus';
 import { useAuth } from '../../../features/auth/AuthProvider';
 import { valueOrEmptyField, EMPTY_FIELD } from '../../../shared/lib/emptyDisplayText';
@@ -19,11 +16,13 @@ import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 import { CabinetIcon } from './cabinetIcons';
 import { ScheduleWorkCard, type ProfileStatsRatingMeta } from './AdminProfileCabinetUi';
 import { ScheduleBookingWindowsHintContainer } from './ScheduleBookingWindowsHintContainer';
-import { MasterCategorySection } from './MasterCategorySection';
+import { MasterCategorySection, type MasterCategorySectionHandle } from './MasterCategorySection';
 import { MasterProfileActiveToggle } from './MasterProfileActiveToggle';
 import { ProfileInformationPanel, ProfileSectionHeading } from './ProfileInformationPanel';
 import { AboutDescriptionText } from './AboutDescriptionText';
 import { ProfileSectionTabs } from './ProfileSectionTabs';
+import { ProfileServicesPreviewSection } from './ProfileServicesPreviewSection';
+import { ProfileAchievementsSection } from './ProfileAchievementsSection';
 import { useProfileTabs } from './profileTabContext';
 import { resolveCoverUrl, useMasterCoverUpload } from './masterProfileCover';
 import {
@@ -200,50 +199,22 @@ function HeroInfoBlock({
   );
 }
 
-function sortServicesForProfilePreview(services: MasterOnboardingService[]): MasterOnboardingService[] {
-  return [...services].sort((a, b) => {
-    const aVisible = a.isActive !== false ? 0 : 1;
-    const bVisible = b.isActive !== false ? 0 : 1;
-    if (aVisible !== bVisible) return aVisible - bVisible;
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-  });
-}
-
-function ServicePreviewRow({ service }: { service: ManagedService }) {
-  const visible = service.isActive !== false;
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-[10px] bg-[#F5F5F5] px-4 py-3.5">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="truncate text-[14px] font-semibold text-[#111827]">{service.title}</p>
-          {!visible ? (
-            <span className="shrink-0 rounded-full bg-[#EBEBEB] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#6B7280]">
-              Скрыта
-            </span>
-          ) : null}
-        </div>
-        <p className="mt-0.5 text-[12px] text-[#6B7280]">{formatDurationRu(service.durationMin)}</p>
-      </div>
-      <p className="shrink-0 text-[14px] font-bold text-[#ff5f7a]">{formatServicePrice(service)}</p>
-    </div>
-  );
-}
-
 export function AdminProfileDesktopMainGrid({
   draft,
   appointments,
   ratingMeta,
   onEditSchedule,
+  onOpenCategoryChange,
+  categoryChangeDisabled = false,
 }: {
   draft: MasterDraft;
   appointments: DemoMasterAppointment[];
   ratingMeta?: ProfileStatsRatingMeta;
   onEditSchedule: () => void;
+  onOpenCategoryChange?: () => void;
+  categoryChangeDisabled?: boolean;
 }) {
   const { publicationStatus, useCabinetApi } = useAdminMasterCabinet();
-  const allServices = draft.services ?? [];
-  const previewServices = sortServicesForProfilePreview(allServices).slice(0, 4);
-  const visibleServicesCount = allServices.filter((s) => s.isActive !== false).length;
   const description = draft.description?.trim() ?? '';
 
   return (
@@ -274,46 +245,15 @@ export function AdminProfileDesktopMainGrid({
           appointments={appointments}
           ratingMeta={ratingMeta}
           publicationStatus={publicationStatus}
+          onOpenCategoryChange={onOpenCategoryChange}
+          categoryChangeDisabled={categoryChangeDisabled}
         />
       </div>
 
       <ScheduleWorkCard draft={draft} onEditSchedule={onEditSchedule} />
       <ScheduleBookingWindowsHintContainer />
-
-      <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <HiBriefcase className="h-5 w-5 text-[#ff5f7a]" aria-hidden />
-            <h3 className="text-[17px] font-bold tracking-[-0.03em] text-[#111827]">Мои услуги</h3>
-          </div>
-          <Link
-            to={ADMIN_SERVICES_PATH}
-            className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#ff5f7a] no-underline transition hover:text-[#ff6f88]"
-          >
-            Смотреть все
-            <HiArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-        <div className="mt-4 space-y-2.5">
-          {previewServices.length > 0 ? (
-            <>
-              {visibleServicesCount === 0 ? (
-                <p className="rounded-[10px] bg-[#FFF7ED] px-4 py-3 text-[13px] leading-relaxed text-[#B45309]">
-                  Услуги есть, но скрыты в каталоге. Откройте раздел «Услуги» и нажмите «Показать» у
-                  нужной позиции.
-                </p>
-              ) : null}
-              {previewServices.map((s) => (
-                <ServicePreviewRow key={s.id} service={s as ManagedService} />
-              ))}
-            </>
-          ) : (
-            <p className="rounded-[10px] bg-[#F5F5F5] px-4 py-6 text-center text-[14px] text-[#6B7280]">
-              Услуги пока не добавлены
-            </p>
-          )}
-        </div>
-      </section>
+      <ProfileServicesPreviewSection variant="dashboard" />
+      <ProfileAchievementsSection variant="dashboard" />
     </div>
   );
 }
@@ -345,6 +285,8 @@ export function AdminProfileDesktopShell({
     refreshDraft,
     useCabinetApi,
   } = useAdminMasterCabinet();
+  const categorySectionRef = useRef<MasterCategorySectionHandle>(null);
+  const categoryChangeDisabled = Boolean(categoryChangePolicy?.hasActiveRequest);
 
   return (
     <div className="hidden space-y-6 lg:block">
@@ -356,6 +298,8 @@ export function AdminProfileDesktopShell({
             appointments={appointments}
             ratingMeta={ratingMeta}
             onEditSchedule={onEditSchedule}
+            onOpenCategoryChange={() => categorySectionRef.current?.open()}
+            categoryChangeDisabled={categoryChangeDisabled}
           />
           <ProfileCompletionBlock
             draft={draft}
@@ -363,6 +307,7 @@ export function AdminProfileDesktopShell({
             surfaceClassName={`${profileDashboardCard} ${profileDashboardCardPad}`}
           />
           <MasterCategorySection
+            ref={categorySectionRef}
             draft={draft}
             publicationStatus={publicationStatus}
             policy={categoryChangePolicy}

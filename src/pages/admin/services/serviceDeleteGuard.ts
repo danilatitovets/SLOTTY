@@ -3,8 +3,15 @@ import type { ManagedService } from './servicesFormat';
 
 const UPCOMING_STATUSES = new Set<DemoMasterAppointment['status']>(['pending', 'confirmed']);
 
-export const SERVICE_DELETE_BLOCKED_MESSAGE =
-  'Нельзя удалить: на услугу есть будущие записи. Отмените их в разделе «Записи» или скройте услугу в каталоге.';
+export const SERVICE_DELETE_BLOCKED_TITLE = 'Нельзя удалить';
+
+export const SERVICE_DELETE_BLOCKED_BODY =
+  'На услугу есть будущие записи. Отмените их в разделе «Записи» или скройте услугу в каталоге.';
+
+export const SERVICE_DELETE_BLOCKED_HINT =
+  'Вместо удаления можно скрыть услугу — кнопка выше.';
+
+export const SERVICE_DELETE_BLOCKED_MESSAGE = `${SERVICE_DELETE_BLOCKED_TITLE}: ${SERVICE_DELETE_BLOCKED_BODY}`;
 
 function appointmentEndMs(a: DemoMasterAppointment): number {
   if (a.endsAt) return new Date(a.endsAt).getTime();

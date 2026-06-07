@@ -51,6 +51,7 @@ import {
   clearAdminCabinetSessionCache,
   readAdminCabinetSessionCache,
   writeAdminCabinetSessionCache,
+  type CabinetProfileMeta,
 } from './adminCabinetSessionCache';
 import { clearOverviewBundleCache } from './overview/adminOverviewSessionCache';
 
@@ -125,8 +126,8 @@ type Ctx = {
   applySubscription: (sub: MasterSubscriptionDto) => void;
   publicationStatus: MasterPublicationStatus | null;
   setPublicationStatus: (status: MasterPublicationStatus) => void;
-  /** Рейтинг и отзывы из API кабинета (без отдельного запроса). */
-  cabinetProfileMeta: { rating: number; reviewsCount: number } | null;
+  /** Рейтинг, отзывы и выполненные заказы из API кабинета. */
+  cabinetProfileMeta: CabinetProfileMeta | null;
   categoryChangePolicy: CategoryChangePolicyDto | null;
 };
 
@@ -184,10 +185,9 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
   const [publicationStatus, setPublicationStatus] = useState<MasterPublicationStatus | null>(
     () => sessionCache?.publicationStatus ?? null,
   );
-  const [cabinetProfileMeta, setCabinetProfileMeta] = useState<{
-    rating: number;
-    reviewsCount: number;
-  } | null>(() => sessionCache?.cabinetProfileMeta ?? null);
+  const [cabinetProfileMeta, setCabinetProfileMeta] = useState<CabinetProfileMeta | null>(
+    () => sessionCache?.cabinetProfileMeta ?? null,
+  );
   const [categoryChangePolicy, setCategoryChangePolicy] = useState<CategoryChangePolicyDto | null>(null);
 
   const appointmentsRef = useRef(appointments);
@@ -208,7 +208,7 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       mapped: MasterDraft,
       rows: DemoMasterAppointment[],
       pub: MasterPublicationStatus | null,
-      meta: { rating: number; reviewsCount: number } | null,
+      meta: CabinetProfileMeta | null,
       sub: MasterSubscriptionDto | null,
     ) => {
       writeAdminCabinetSessionCache({
@@ -237,9 +237,10 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         ]);
         const mapped = cabinetDtoToMasterDraft(cabinet);
         const pub = (cabinet.profile.publicationStatus as MasterPublicationStatus) || 'draft';
-        const meta = {
+        const meta: CabinetProfileMeta = {
           rating: cabinet.profile.rating,
           reviewsCount: cabinet.profile.reviewsCount,
+          completedBookingsCount: cabinet.categoryChangePolicy?.activity.completedBookingsCount ?? 0,
         };
         const appts = apptPage.appointments.map(mapMasterAppointmentRowToDemo);
         let sub: MasterSubscriptionDto | null = null;
@@ -296,9 +297,10 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         /* keep previous subscription */
       }
       const pub = (cabinet.profile.publicationStatus as MasterPublicationStatus) || 'draft';
-      const meta = {
+      const meta: CabinetProfileMeta = {
         rating: cabinet.profile.rating,
         reviewsCount: cabinet.profile.reviewsCount,
+        completedBookingsCount: cabinet.categoryChangePolicy?.activity.completedBookingsCount ?? 0,
       };
       const appts = apptPage.appointments.map(mapMasterAppointmentRowToDemo);
       setPublicationStatus(pub);

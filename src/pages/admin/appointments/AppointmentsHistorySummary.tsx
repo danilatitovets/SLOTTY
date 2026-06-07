@@ -1,7 +1,34 @@
 import type { ReactNode } from 'react';
 import { HiArrowTrendingUp } from 'react-icons/hi2';
-import { apptHistoryKpiTile } from './adminAppointmentsTheme';
+import {
+  APPOINTMENTS_HISTORY_KPI_BG,
+  apptHistoryKpiTile,
+  apptHistoryKpiTileOverlay,
+} from './adminAppointmentsTheme';
 import type { HistoryEarnedTrend } from './historyEarnedTrend';
+
+function historyKpiBackground(label: string): string | null {
+  if (label === 'Завершено') return APPOINTMENTS_HISTORY_KPI_BG.completed;
+  if (label === 'Заработано') return APPOINTMENTS_HISTORY_KPI_BG.earned;
+  if (label === 'Отменено') return APPOINTMENTS_HISTORY_KPI_BG.cancelled;
+  return null;
+}
+
+function HistoryKpiPhotoBackdrop({ label }: { label: string }) {
+  const src = historyKpiBackground(label);
+  if (!src) return null;
+
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute inset-0 scale-105 bg-cover bg-center"
+        style={{ backgroundImage: `url(${src})` }}
+        aria-hidden
+      />
+      <div className={apptHistoryKpiTileOverlay} aria-hidden />
+    </>
+  );
+}
 
 type Props = {
   completedCount: number;
@@ -47,6 +74,59 @@ function EarnedTrendBadge({
   );
 }
 
+const historyKpiLabelClass =
+  'shrink-0 text-[10px] font-semibold leading-tight text-[#6B7280] drop-shadow-sm sm:text-[11px]';
+
+const historyKpiValueClass =
+  'text-[1.125rem] font-black tabular-nums leading-none tracking-[-0.04em] text-[#111827] drop-shadow-sm sm:text-[1.35rem] lg:text-[1.65rem]';
+
+function HistoryKpiContent({
+  label,
+  value,
+  trend,
+  trendPercent,
+  loading = false,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  trend?: HistoryEarnedTrend | null;
+  trendPercent?: number | null;
+  loading?: boolean;
+  compact?: boolean;
+}) {
+  const trendBadge =
+    !loading && trend && trend !== 'flat' ? (
+      <EarnedTrendBadge trend={trend} percent={trendPercent} />
+    ) : null;
+
+  return (
+    <div className={`relative z-10 flex w-full flex-col ${compact ? 'min-h-[4.75rem]' : 'min-h-[8.25rem]'}`}>
+      <p className={historyKpiLabelClass}>{label}</p>
+      <div className="mt-auto">
+        {loading ? (
+          <div
+            className={`animate-pulse rounded-md bg-[#EBEBEB] ${
+              compact ? 'h-[22px] w-[2.75rem] sm:h-6 sm:w-[3rem]' : 'h-8 w-[4.5rem]'
+            }`}
+          />
+        ) : (
+          <p
+            className={
+              compact
+                ? 'text-[0.9375rem] font-black tabular-nums leading-none tracking-[-0.03em] text-[#111827] drop-shadow-sm sm:text-[1.125rem]'
+                : historyKpiValueClass
+            }
+          >
+            {value}
+          </p>
+        )}
+        <div className="mt-1.5 flex min-h-[1.25rem] items-center">{trendBadge}</div>
+      </div>
+    </div>
+  );
+}
+
 function MobileStat({
   label,
   value,
@@ -60,21 +140,23 @@ function MobileStat({
   trendPercent?: number | null;
   loading?: boolean;
 }) {
-  const showTrend = !loading && trend && trend !== 'flat';
+  const backgroundSrc = historyKpiBackground(label);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      {loading ? (
-        <div className="h-[22px] w-[2.75rem] animate-pulse rounded-md bg-[#EBEBEB] sm:h-6 sm:w-[3rem]" />
-      ) : (
-        <p className="text-[clamp(1rem,4.2vw,1.375rem)] font-black tabular-nums leading-none tracking-[-0.04em] text-[#111827]">
-          {value}
-        </p>
-      )}
-      <div className="mt-1.5 flex min-h-[1.125rem] items-center">
-        {showTrend ? <EarnedTrendBadge trend={trend} percent={trendPercent} /> : null}
-      </div>
-      <p className="mt-1 text-[11px] font-medium leading-snug text-[#9CA3AF] sm:text-[12px]">{label}</p>
+    <div
+      className={`relative flex min-w-0 flex-1 overflow-hidden rounded-[12px] p-2.5 sm:rounded-[14px] sm:p-3.5 ${
+        backgroundSrc ? '' : 'bg-[#F5F5F5]'
+      }`}
+    >
+      {backgroundSrc ? <HistoryKpiPhotoBackdrop label={label} /> : null}
+      <HistoryKpiContent
+        label={label}
+        value={value}
+        trend={trend}
+        trendPercent={trendPercent}
+        loading={loading}
+        compact
+      />
     </div>
   );
 }
@@ -92,27 +174,16 @@ function DesktopStatBlock({
   earnedTrendPercent?: number | null;
   loading?: boolean;
 }) {
-  const trendBadge =
-    !loading && earnedTrend && earnedTrend !== 'flat' ? (
-      <EarnedTrendBadge trend={earnedTrend} percent={earnedTrendPercent} />
-    ) : null;
-
   return (
-    <article className={`${apptHistoryKpiTile} flex min-h-[7.5rem] flex-col justify-between`}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">{label}</p>
-      <div>
-        {loading ? (
-          <div className="h-8 w-[4.5rem] animate-pulse rounded-md bg-[#EBEBEB]" />
-        ) : (
-          <div className="flex flex-wrap items-end gap-x-2.5 gap-y-2">
-            <p className="text-[clamp(1.35rem,2vw,1.75rem)] font-black tabular-nums leading-none tracking-[-0.05em] text-[#111827]">
-              {value}
-            </p>
-            {label === 'Заработано' ? trendBadge : null}
-          </div>
-        )}
-        {label === 'Заработано' ? <div className="mt-1.5 min-h-[1.125rem]" /> : null}
-      </div>
+    <article className={`${apptHistoryKpiTile} h-full min-h-[8.25rem]`}>
+      <HistoryKpiPhotoBackdrop label={label} />
+      <HistoryKpiContent
+        label={label}
+        value={value}
+        trend={earnedTrend}
+        trendPercent={earnedTrendPercent}
+        loading={loading}
+      />
     </article>
   );
 }
@@ -141,7 +212,7 @@ export function AppointmentsHistorySummary({
               ) : (
                 <>
                   <p className="text-[15px] font-bold tracking-[-0.02em] text-[#111827]">{mobileHeader.title}</p>
-                  <p className="mt-0.5 min-h-[2.5rem] text-[13px] font-medium leading-snug text-[#6B7280]">
+                  <p className="mt-0.5 text-[12px] font-medium leading-snug text-[#9CA3AF] sm:text-[13px] sm:text-[#6B7280]">
                     {mobileHeader.subtitle}
                   </p>
                 </>
@@ -150,9 +221,8 @@ export function AppointmentsHistorySummary({
             {mobileFilter ? <div className="shrink-0 self-start">{mobileFilter}</div> : null}
           </div>
 
-          <div className="px-4 py-4">
-            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[#9CA3AF]">Итоги за всё время</p>
-            <div className="mt-3 grid grid-cols-3 gap-3 sm:gap-4">
+          <div className="px-4 py-3.5 sm:py-4">
+            <div className="grid grid-cols-3 items-stretch gap-2 sm:gap-3">
               <MobileStat label="Завершено" value={String(completedCount)} loading={loading} />
               <MobileStat
                 label="Заработано"
@@ -167,7 +237,7 @@ export function AppointmentsHistorySummary({
         </section>
       ) : null}
 
-      <div className="hidden min-w-0 flex-1 lg:grid lg:grid-cols-3 lg:gap-4">
+      <div className="hidden min-w-0 flex-1 lg:grid lg:grid-cols-3 lg:items-stretch lg:gap-4">
         <DesktopStatBlock label="Завершено" value={String(completedCount)} loading={loading} />
         <DesktopStatBlock
           label="Заработано"

@@ -1,10 +1,16 @@
 import { query } from '../../config/db.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { resolveLinkedProfileIdsReadOnly } from '../appointments/appointments.access.js';
 import {
   filterNotificationsForAudience,
   type NotificationAudience,
 } from './notificationAudience.js';
 import { parseBookingNotificationMetadata, type BookingNotificationMetadata } from './bookingNotificationMetadata.js';
+
+/** Связанные profile.id без merge — быстрый read для ленты уведомлений. */
+async function resolveNotificationOwnerIds(viewerUserId: string): Promise<string[]> {
+  return resolveLinkedProfileIdsReadOnly(viewerUserId);
+}
 
 function toIso(v: Date | string | null | undefined): string | null {
   if (v == null) return null;
@@ -29,6 +35,7 @@ export async function listNotifications(
   userId: string,
   audience?: NotificationAudience,
 ): Promise<NotificationRow[]> {
+  const ownerIds = await resolveNotificationOwnerIds(userId);
   const r = await query<{
     id: string;
     type: string;
@@ -50,10 +57,10 @@ export async function listNotifications(
          on n.related_entity_type = 'appointment' and bv.appointment_id = n.related_entity_id
        left join public.reviews rev
          on n.related_entity_type = 'review' and rev.id = n.related_entity_id
-      where n.user_id = $1
+      where n.user_id = any($1::uuid[])
       order by n.created_at desc
       limit 200`,
-    [userId],
+    [ownerIds],
   );
   const mapped = r.rows.map((row) => {
     let metadata = parseBookingNotificationMetadata(row.metadata);
@@ -105,11 +112,12 @@ export async function markReviewNotificationsReplied(masterId: string, reviewId:
 }
 
 export async function markNotificationRead(userId: string, notificationId: string) {
+  const ownerIds = await resolveNotificationOwnerIds(userId);
   const u = await query(
     `update public.notifications set read_at = now(), updated_at = now()
-      where id = $1 and user_id = $2
+      where id = $1 and user_id = any($2::uuid[])
       returning id`,
-    [notificationId, userId],
+    [notificationId, ownerIds],
   );
   if (!u.rowCount) {
     throw ApiError.notFound('Notification not found');

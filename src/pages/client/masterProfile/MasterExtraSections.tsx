@@ -9,6 +9,35 @@ import { catalogDesktopPanel } from './masterProfileTheme';
 
 type Props = { master: ExtendedMasterProfile; layout?: 'stack' | 'desktop' };
 
+function parseRulePreviewLine(line: string): { label: string; value: string } {
+  const idx = line.indexOf(':');
+  if (idx === -1) return { label: line.trim(), value: '' };
+  return {
+    label: line.slice(0, idx).trim(),
+    value: line.slice(idx + 1).trim(),
+  };
+}
+
+function MasterRulePreviewLine({ line }: { line: string }) {
+  const { label, value } = parseRulePreviewLine(line);
+
+  return (
+    <li className="text-[14px] leading-relaxed text-[#4B5563]">
+      <span className="font-bold text-[#111827]">{label}</span>
+      {value ? (
+        <>
+          {': '}
+          <span>{value}</span>
+        </>
+      ) : null}
+    </li>
+  );
+}
+
+function RulesSectionTitle({ children }: { children: ReactNode }) {
+  return <p className="text-[13px] font-bold text-[#111827]">{children}</p>;
+}
+
 function Accordion({
   title,
   children,
@@ -105,20 +134,18 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
         <Accordion title="Правила мастера" desktop={isDesktop}>
           <div className="space-y-3">
             {master.clientPreview?.length ? (
-              <ul className="space-y-2">
-                {master.clientPreview.map((line) => (
-                  <li key={line} className="text-[14px] leading-relaxed text-[#4B5563]">
-                    {line}
-                  </li>
-                ))}
+              <ul className="space-y-2.5">
+                {master.clientPreview
+                  .filter((line) => line.trim() && !/^оплата:/i.test(line.trim()))
+                  .map((line) => (
+                    <MasterRulePreviewLine key={line} line={line} />
+                  ))}
               </ul>
             ) : (
               <>
                 {master.bookingRules?.trim() ? (
                   <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                      Запись
-                    </p>
+                    <RulesSectionTitle>Запись</RulesSectionTitle>
                     <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
                       {master.bookingRules.trim()}
                     </p>
@@ -126,9 +153,7 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
                 ) : null}
                 {master.cancellationPolicy?.trim() ? (
                   <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                      Отмена и перенос
-                    </p>
+                    <RulesSectionTitle>Отмена и перенос</RulesSectionTitle>
                     <p className="mt-1 whitespace-pre-wrap text-[14px] leading-relaxed text-[#4B5563]">
                       {master.cancellationPolicy.trim()}
                     </p>
@@ -138,16 +163,16 @@ export function MasterExtraSections({ master, layout = 'stack' }: Props) {
             )}
             {paymentMethods.length > 0 || master.paymentNote?.trim() || master.payment?.methods?.length ? (
               <div>
-                <p className="text-[12px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                  Оплата
-                </p>
-                <MasterPaymentMethodsBlock
+                <RulesSectionTitle>Оплата</RulesSectionTitle>
+                <div className="mt-2">
+                  <MasterPaymentMethodsBlock
                   methods={paymentMethods}
                   payment={master.payment}
                   note={master.paymentNote}
                   preferredBankIds={master.preferredBankIds}
                   compact
                 />
+                </div>
               </div>
             ) : null}
           </div>

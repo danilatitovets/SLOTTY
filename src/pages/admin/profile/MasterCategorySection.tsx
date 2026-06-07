@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import {
   fetchServiceCategories,
   type ServiceCategoryDto,
@@ -13,7 +13,6 @@ import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorag
 import type { MasterPublicationStatus } from '../../../features/admin/lib/profileCompletion';
 import type { MasterProfilePatch } from '../AdminMasterCabinetContext';
 import { AdminBottomSheet } from '../shared/AdminBottomSheet';
-import { profileDashboardCard, profileDashboardCardPad } from './adminProfileDashboardTheme';
 
 const CATEGORY_IMAGES: Record<string, string> = {
   manicure: '/photos/work/manicure.webp',
@@ -33,8 +32,9 @@ function SoftWarning({ title, text }: { title: string; text: string }) {
   );
 }
 
-const categoryActionBtn =
-  'inline-flex min-h-10 shrink-0 items-center justify-center rounded-full bg-[#FFF1F4] px-4 text-[13px] font-semibold text-[#F47C8C] transition hover:bg-[#FFE4EA] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-[14px]';
+export type MasterCategorySectionHandle = {
+  open: () => void;
+};
 
 type Props = {
   draft: MasterDraft;
@@ -45,14 +45,17 @@ type Props = {
   onRefresh: () => Promise<void>;
 };
 
-export function MasterCategorySection({
-  draft,
-  publicationStatus,
-  policy: policyProp,
-  useCabinetApi,
-  onPatchCategory,
-  onRefresh,
-}: Props) {
+export const MasterCategorySection = forwardRef<MasterCategorySectionHandle, Props>(function MasterCategorySection(
+  {
+    draft,
+    publicationStatus,
+    policy: policyProp,
+    useCabinetApi,
+    onPatchCategory,
+    onRefresh,
+  },
+  ref,
+) {
   const [categories, setCategories] = useState<ServiceCategoryDto[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
@@ -191,7 +194,7 @@ export function MasterCategorySection({
     }
   };
 
-  const openPrimaryAction = () => {
+  const openPrimaryAction = useCallback(() => {
     if (policy.hasActiveRequest) return;
     if (policy.needsRequest) {
       setPickedCategoryId('');
@@ -202,34 +205,18 @@ export function MasterCategorySection({
     }
     setFieldErrors({});
     setPickerOpen(true);
-  };
+  }, [policy.hasActiveRequest, policy.needsRequest]);
 
-  const primaryBtnLabel = policy.hasActiveRequest
-    ? 'На проверке'
-    : policy.needsRequest
-      ? 'Запросить смену'
-      : 'Изменить';
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: openPrimaryAction,
+    }),
+    [openPrimaryAction],
+  );
 
   return (
     <>
-      <section className={`${profileDashboardCard} ${profileDashboardCardPad}`}>
-        <div className="flex items-center justify-between gap-4">
-          <p className="min-w-0 text-[15px] font-semibold text-[#111827] sm:text-[16px]">Смена категории</p>
-          <button
-            type="button"
-            onClick={openPrimaryAction}
-            disabled={policy.hasActiveRequest || submitting}
-            className={categoryActionBtn}
-          >
-            {primaryBtnLabel}
-          </button>
-        </div>
-
-        {fieldErrors.submit ? (
-          <p className="mt-3 text-[13px] font-medium text-[#DC2626]">{fieldErrors.submit}</p>
-        ) : null}
-      </section>
-
       <AdminBottomSheet
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -486,4 +473,4 @@ export function MasterCategorySection({
       </AdminBottomSheet>
     </>
   );
-}
+});

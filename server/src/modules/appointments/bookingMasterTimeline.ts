@@ -8,6 +8,7 @@ export type MasterTimelineItem = {
   reason: string | null;
   comment: string | null;
   lateMinutes: number | null;
+  reviewId?: string | null;
 };
 
 const REMINDER_JOB_LABELS: Record<string, string> = {
@@ -26,6 +27,12 @@ function reminderJobType(metadata: Record<string, unknown> | null): string | nul
   return typeof jobType === 'string' && jobType.trim() ? jobType.trim() : null;
 }
 
+function reviewIdFromMetadata(metadata: Record<string, unknown> | null): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const reviewId = metadata.reviewId;
+  return typeof reviewId === 'string' && reviewId.trim() ? reviewId.trim() : null;
+}
+
 function mapRow(ev: BookingEventRow, label: string): MasterTimelineItem {
   return {
     eventType: ev.event_type,
@@ -37,6 +44,8 @@ function mapRow(ev: BookingEventRow, label: string): MasterTimelineItem {
       ev.event_type === 'booking.client_running_late' && ev.metadata && typeof ev.metadata === 'object'
         ? ((ev.metadata as { lateMinutes?: number }).lateMinutes ?? null)
         : null,
+    reviewId:
+      ev.event_type === 'booking.review_left' ? reviewIdFromMetadata(ev.metadata) : null,
   };
 }
 

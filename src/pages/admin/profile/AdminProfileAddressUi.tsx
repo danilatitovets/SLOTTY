@@ -12,6 +12,7 @@ import {
   type MasterVisitType,
 } from '../../../features/profile/model/masterLocation';
 import { FormRequiredMark } from '../shared/AdminFormFieldLabel';
+import { ServicesBrandPhotoLayers } from '../services/ServicesBrandPhotoLayers';
 import { cabinetCard, cabinetCardPad, cabinetIconCircle } from './adminProfileCabinetTheme';
 import {
   addressDetailIconName,
@@ -189,10 +190,13 @@ export function AddressSection({
           <button
             type="button"
             onClick={onEditAddress}
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-[#FFF1F4] px-3 text-[12px] font-semibold leading-none text-[#F47C8C] transition hover:bg-[#FFE4EA] active:scale-[0.98]"
+            className="relative inline-flex h-8 shrink-0 items-center gap-1 overflow-hidden rounded-full px-3 text-[12px] font-semibold leading-none text-white shadow-[0_2px_8px_rgba(239,68,68,0.22)] transition hover:opacity-95 active:scale-[0.98]"
           >
-            <CabinetIcon name="pencil" size={14} />
-            Изменить
+            <ServicesBrandPhotoLayers roundedClassName="rounded-full" />
+            <span className="relative z-10 flex items-center gap-1 drop-shadow-sm">
+              <CabinetIcon name="pencil" size={14} />
+              Редактировать
+            </span>
           </button>
         </div>
 
@@ -203,7 +207,7 @@ export function AddressSection({
             <AddressBlockTitle>На карточке в каталоге</AddressBlockTitle>
             {isEmptyDisplayValue(catalogMain) ? (
               <p className="rounded-[16px] bg-[#F7F7F8] px-3 py-2.5 text-center text-[13px] leading-snug text-[#9CA3AF]">
-                Адрес не указан — нажмите «Изменить»
+                Адрес не указан — нажмите «Редактировать»
               </p>
             ) : (
               <>

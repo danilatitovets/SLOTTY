@@ -1,13 +1,13 @@
 import { CLIENT_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
-import { catalogDesktopPanel, catalogPrimaryBtn, catalogSecondaryBtn } from '../clientProfile/clientProfileTheme';
+import { clientCabinetMobilePanel, catalogPrimaryBtn, catalogSecondaryBtn } from '../clientProfile/clientProfileTheme';
 
 export const clientNotificationsCanvasClass = 'bg-[#F5F5F5]';
 
 export const clientNotificationsDesktopShellClass = `${CLIENT_DESKTOP_SHELL_CLASS} pb-10 pt-6`;
 
-export const clientNotificationsHeroPanel = `${catalogDesktopPanel} p-4 sm:p-5 lg:p-6`;
+export const clientNotificationsHeroPanel = `${clientCabinetMobilePanel} p-4 sm:p-5 lg:p-6`;
 
-export const clientNotificationsToolbar = `${catalogDesktopPanel} p-4 lg:p-5`;
+export const clientNotificationsToolbar = `${clientCabinetMobilePanel} p-4 lg:p-5`;
 
 export const clientNotificationsTrayLabel = 'text-[14px] font-bold text-[#111827]';
 

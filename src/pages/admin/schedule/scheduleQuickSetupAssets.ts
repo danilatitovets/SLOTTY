@@ -9,4 +9,6 @@ export const SCHEDULE_QUICK_SETUP_IMAGES = {
   templatesBg: `${BASE}/templates-bg.webp`,
   /** Фон hero вкладки «Список» (`public/photos/Быстрая настройка/задний фон.webp`). */
   listHeroBg: `${QUICK_SETUP_ORIGINAL_DIR}/${encodeURIComponent('задний фон.webp')}`,
+  /** Фон кнопки «+» и активного таба «Создать» на мобилке. */
+  tabCreateActiveBg: `${QUICK_SETUP_ORIGINAL_DIR}/${encodeURIComponent('задний фон.webp')}`,
 } as const;

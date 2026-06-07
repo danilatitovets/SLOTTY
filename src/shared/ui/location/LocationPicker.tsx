@@ -47,6 +47,8 @@ export type LocationPickerProps = {
   coordsError?: string;
   inputClassName?: string;
   showRouteLink?: boolean;
+  /** Скрыть блок карты (только поле и подсказки). */
+  showMap?: boolean;
   viewportDropdown?: boolean;
   /** Подсказки в portal (поверх Leaflet). По умолчанию true. */
   portalSuggestions?: boolean;
@@ -59,6 +61,10 @@ export type LocationPickerProps = {
   inputMaxLength?: number;
   onMapAvailabilityChange?: (available: boolean) => void;
   mapClassName?: string;
+  /** Статус подсказок: для показа fallback-действий снаружи. */
+  onSuggestOutcomeChange?: (outcome: 'idle' | 'loading' | 'empty' | 'ready') => void;
+  /** Текст «ничего не найдено» под полем. По умолчанию true. */
+  showEmptySearchHint?: boolean;
 };
 
 const SEARCH_MIN_CHARS = 3;
@@ -83,6 +89,7 @@ export function LocationPicker({
   coordsError,
   inputClassName = DEFAULT_INPUT_CLASS,
   showRouteLink = true,
+  showMap = true,
   viewportDropdown = false,
   portalSuggestions = true,
   suggestStacked = false,
@@ -93,6 +100,8 @@ export function LocationPicker({
   inputMaxLength = 200,
   onMapAvailabilityChange,
   mapClassName,
+  onSuggestOutcomeChange,
+  showEmptySearchHint = true,
 }: LocationPickerProps) {
   const helpId = useId();
   const mapProvider = resolveMapProvider();
@@ -114,6 +123,7 @@ export function LocationPicker({
   const onInputChangeRef = useRef(onInputChange);
   const onAddressResolvedRef = useRef(onAddressResolved);
   const onMapAvailabilityChangeRef = useRef(onMapAvailabilityChange);
+  const onSuggestOutcomeChangeRef = useRef(onSuggestOutcomeChange);
   const lineRef = useRef('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortSearchRef = useRef<AbortController | null>(null);
@@ -126,6 +136,14 @@ export function LocationPicker({
   onInputChangeRef.current = onInputChange;
   onAddressResolvedRef.current = onAddressResolved;
   onMapAvailabilityChangeRef.current = onMapAvailabilityChange;
+  onSuggestOutcomeChangeRef.current = onSuggestOutcomeChange;
+
+  const emitSuggestOutcome = useCallback(
+    (outcome: 'idle' | 'loading' | 'empty' | 'ready') => {
+      onSuggestOutcomeChangeRef.current?.(outcome);
+    },
+    [],
+  );
 
   const hasCoords =
     latitude != null &&
@@ -145,7 +163,8 @@ export function LocationPicker({
     setOpen(false);
     setHint(null);
     setLoading(false);
-  }, []);
+    emitSuggestOutcome('idle');
+  }, [emitSuggestOutcome]);
 
   useEffect(() => {
     suggestPausedRef.current = addressCommitted;
@@ -209,6 +228,7 @@ export function LocationPicker({
         setOpen(false);
         setHint(null);
         setLoading(false);
+        emitSuggestOutcome('idle');
         return;
       }
 
@@ -222,6 +242,7 @@ export function LocationPicker({
           list.length === 0 ? 'Ничего не найдено, попробуйте уточнить адрес' : null,
         );
         setLoading(false);
+        emitSuggestOutcome(list.length > 0 ? 'ready' : 'empty');
         return;
       }
 
@@ -231,6 +252,7 @@ export function LocationPicker({
 
       setLoading(true);
       setHint(null);
+      emitSuggestOutcome('loading');
 
       try {
         const list = dedupeNormalizedSuggestions(await searchAddress(q, { city, signal: ac.signal }));
@@ -242,16 +264,18 @@ export function LocationPicker({
         setHint(
           list.length === 0 ? 'Ничего не найдено, попробуйте уточнить адрес' : null,
         );
+        emitSuggestOutcome(list.length > 0 ? 'ready' : 'empty');
       } catch (err: unknown) {
         if ((err as { name?: string }).name === 'AbortError') return;
         setItems([]);
         setOpen(false);
         setHint(null);
+        emitSuggestOutcome('empty');
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
     },
-    [city],
+    [city, emitSuggestOutcome],
   );
 
   const scheduleSearch = useCallback(
@@ -265,11 +289,12 @@ export function LocationPicker({
         setOpen(false);
         setHint(null);
         setLoading(false);
+        emitSuggestOutcome('idle');
         return;
       }
       debounceRef.current = setTimeout(() => void runSearch(q), SEARCH_DEBOUNCE_MS);
     },
-    [runSearch],
+    [emitSuggestOutcome, runSearch],
   );
 
   useEffect(() => {
@@ -394,7 +419,7 @@ export function LocationPicker({
           }
       : null;
 
-  const showMap = mapProvider !== 'none';
+  const showMapBlock = showMap && mapProvider !== 'none';
 
   const rootGap = suggestStacked ? 'space-y-2' : 'space-y-3';
 
@@ -498,7 +523,7 @@ export function LocationPicker({
       {loading && value.trim().length >= SEARCH_MIN_CHARS ? (
         <p className="text-[12px] font-medium text-neutral-500">Ищем адрес…</p>
       ) : null}
-      {!loading && hint && value.trim().length >= SEARCH_MIN_CHARS ? (
+      {showEmptySearchHint && !loading && hint && value.trim().length >= SEARCH_MIN_CHARS ? (
         <p className="text-[12px] leading-snug text-[#B66A24]">{hint}</p>
       ) : null}
 
@@ -506,7 +531,7 @@ export function LocationPicker({
         <p className="text-[12px] leading-snug text-[#B66A24]">{coordsError}</p>
       ) : null}
 
-      {showMap ? (
+      {showMapBlock ? (
         <div className="relative z-0 isolate overflow-hidden rounded-[18px] border border-[#ECEAEA] bg-white shadow-[0_1px_2px_rgba(17,17,17,0.04)]">
           {mapProvider === 'osm' || mapProvider === 'yandex' ? (
             <OsmLeafletMap
@@ -537,15 +562,17 @@ export function LocationPicker({
             </p>
           ) : null}
         </div>
-      ) : (
+      ) : showMap ? (
         <p className="rounded-[18px] border border-[#ECEAEA] bg-[#FAFAFA] px-4 py-3 text-[13px] font-medium leading-snug text-neutral-600">
           Карта временно не загрузилась. Адрес можно указать вручную.
         </p>
-      )}
+      ) : null}
 
-      <p className="text-[12px] font-medium leading-snug text-neutral-500">
-        Если точка определилась неточно, передвиньте метку вручную.
-      </p>
+      {showMapBlock ? (
+        <p className="text-[12px] font-medium leading-snug text-neutral-500">
+          Если точка определилась неточно, передвиньте метку вручную.
+        </p>
+      ) : null}
 
       {showRouteLink && hasCoords ? (
         <a

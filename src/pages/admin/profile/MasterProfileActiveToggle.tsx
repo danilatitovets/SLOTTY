@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { HiCheck, HiExclamationTriangle } from 'react-icons/hi2';
+import { HiCheck } from 'react-icons/hi2';
+import { SlottyImg } from '../../../shared/ui/SlottyImg';
+import { ADMIN_ATTENTION_EXCLAMATION_ICON_SRC } from '../shared/AdminSectionAttentionBadge';
 import { updateMyMasterProfile } from '../../../features/admin/api/adminProfileApi';
 import type { MasterPublicationStatus } from '../../../features/admin/lib/profileCompletion';
 import { isMasterProfileActive } from '../../../features/admin/lib/masterProfileActive';
@@ -12,6 +14,7 @@ import { useProfileCompletionSlots } from './useProfileCompletionSlots';
 import { profileDashboardCard, profileDashboardCardPad } from './adminProfileDashboardTheme';
 import { extractMasterLastName, lastNameMatchesInput } from './masterProfileLastName';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
+import { ServicesBrandPhotoLayers } from '../services/ServicesBrandPhotoLayers';
 
 type Props = {
   publicationStatus: MasterPublicationStatus | null;
@@ -120,13 +123,14 @@ export function MasterProfileActiveToggle({
             disabled={disabled || adminPaused}
             title={toggleTitle}
             onClick={onToggleClick}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition active:scale-[0.96] ${
+            className={`relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition active:scale-[0.96] ${
               active
-                ? 'border-[#ff5f7a] bg-[#ff5f7a] text-white'
+                ? 'border-transparent bg-[#EF4444] text-white'
                 : 'border-[#D1D5DB] bg-white text-transparent'
             } ${disabled || adminPaused ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:border-[#ff5f7a]/60'}`}
           >
-            <HiCheck className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+            {active ? <ServicesBrandPhotoLayers roundedClassName="rounded-full" /> : null}
+            <HiCheck className="relative z-10 h-5 w-5" strokeWidth={2.5} aria-hidden />
           </button>
         </div>
 
@@ -144,8 +148,13 @@ export function MasterProfileActiveToggle({
         confirmDisabled={!lastNameOk}
         banner={
           <div className="border-b border-[#FFE4EA] bg-gradient-to-b from-[#FFF1F4] to-white px-6 py-5 text-center">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF1F4] text-[#F47C8C] ring-4 ring-white">
-              <HiExclamationTriangle className="h-7 w-7" aria-hidden />
+            <span className="mx-auto flex h-14 w-14 items-center justify-center ring-4 ring-white" aria-hidden>
+              <SlottyImg
+                src={ADMIN_ATTENTION_EXCLAMATION_ICON_SRC}
+                alt=""
+                className="h-14 w-14 object-contain"
+                decoding="async"
+              />
             </span>
             <p className="mt-3 text-[13px] font-semibold uppercase tracking-wide text-[#F47C8C]">
               Внимание

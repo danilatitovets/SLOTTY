@@ -1,23 +1,61 @@
 import type { ChangeEvent, RefObject } from 'react';
-import { Link } from 'react-router-dom';
-import { HiBell, HiCog6Tooth, HiSparkles } from 'react-icons/hi2';
-import { HEADER_LOGO_SRC } from '../../../app/headerLogo';
-import { ADMIN_PATH, BECOME_MASTER_PATH, PROFILE_NOTIFICATIONS_PATH, PROFILE_SETTINGS_PATH } from '../../../app/paths';
-import { optimizeAvatarUrl } from '../../../shared/lib/optimizeAvatarUrl';
-import { ImageReveal } from '../../../shared/ui/ImageReveal';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  catalogDesktopPanel,
-  catalogSectionTabActive,
-  catalogSectionTabIdle,
-} from './clientProfileTheme';
+  HiBell,
+  HiCalendarDays,
+  HiCog6Tooth,
+  HiHeart,
+  HiSparkles,
+  HiUser,
+} from 'react-icons/hi2';
+import {
+  ADMIN_BILLING_PATH,
+  BECOME_MASTER_PATH,
+  getProfilePath,
+  PROFILE_NOTIFICATIONS_PATH,
+  PROFILE_PATH,
+  PROFILE_SETTINGS_PATH,
+} from '../../../app/paths';
+import { planBadgeLabel } from '../../../features/billing/model/masterPlans';
+import { MasterProBadge } from '../../../shared/ui/MasterProBadge';
+import { ClientProfileAvatar } from './ClientProfileAvatar';
+import {
+  ADMIN_SIDEBAR_TARIFF_BG,
+  adminDesktopNavItemClass,
+  adminDesktopSidebarShell,
+  adminSidebarFooterCard,
+  adminSidebarFooterCardAccent,
+} from '../../admin/adminCabinetLayout';
+import { useClientMasterProStatus } from './useClientMasterProStatus';
+import type { ClientProfileMainTab } from './clientCabinetMobileTabs';
 
-export type ClientProfileMainTab = 'appointments' | 'favorites' | 'profile';
+export type { ClientProfileMainTab } from './clientCabinetMobileTabs';
 
-const MAIN_TABS: { id: ClientProfileMainTab; label: string }[] = [
-  { id: 'appointments', label: 'Мои записи' },
-  { id: 'favorites', label: 'Избранное' },
-  { id: 'profile', label: 'Профиль' },
+const MAIN_TABS: {
+  id: ClientProfileMainTab;
+  label: string;
+  icon: typeof HiCalendarDays;
+}[] = [
+  { id: 'appointments', label: 'Мои записи', icon: HiCalendarDays },
+  { id: 'favorites', label: 'Избранное', icon: HiHeart },
+  { id: 'profile', label: 'Профиль', icon: HiUser },
 ];
+
+function resolveClientProfileTabFromLocation(pathname: string, search: string): ClientProfileMainTab | null {
+  if (pathname !== PROFILE_PATH) return null;
+  const tab = new URLSearchParams(search).get('tab');
+  if (tab === 'favorites') return 'favorites';
+  if (tab === 'profile') return 'profile';
+  return 'appointments';
+}
+
+function SidebarUnreadBadge({ count }: { count: number }) {
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff5f7a] px-1.5 text-[10px] font-bold text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+}
 
 type Props = {
   displayName: string;
@@ -35,7 +73,7 @@ type Props = {
   telegramUserPhotoUrl: string | null;
   onApplyTelegramAvatar: () => void;
   hasNewNotifications: boolean;
-  mainTab: ClientProfileMainTab;
+  mainTab: ClientProfileMainTab | null;
   onSelectTab: (tab: ClientProfileMainTab) => void;
   isMasterCabinet: boolean;
   clientShell: boolean;
@@ -45,7 +83,6 @@ type Props = {
 
 export function ClientProfileDesktopSidebar({
   displayName,
-  roleSubtitle,
   profileInitials,
   authLoading,
   isAuthenticated,
@@ -60,175 +97,131 @@ export function ClientProfileDesktopSidebar({
   onApplyTelegramAvatar,
   hasNewNotifications,
   mainTab,
-  onSelectTab,
+  onSelectTab: _onSelectTab,
   isMasterCabinet,
-  clientShell,
   upcomingCount,
   favoritesCount,
 }: Props) {
+  const { pathname, search } = useLocation();
+  const { planId, showProBadge } = useClientMasterProStatus(isMasterCabinet);
+  const isNotifications = pathname === PROFILE_NOTIFICATIONS_PATH;
+  const isSettings = pathname.startsWith(PROFILE_SETTINGS_PATH);
+  const activeTab = resolveClientProfileTabFromLocation(pathname, search) ?? mainTab;
+
   return (
-    <aside className="flex min-h-0 flex-col gap-4">
-      <div className={`${catalogDesktopPanel} p-5`}>
-        {authLoading ? (
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 shrink-0 animate-pulse rounded-[14px] bg-[#EBEBEB]" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-5 max-w-[10rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-              <div className="h-4 max-w-[7rem] animate-pulse rounded-full bg-[#EBEBEB]" />
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-start gap-4">
-              <div className="relative shrink-0">
-                <input
-                  ref={avatarFileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  onChange={onAvatarFileChange}
-                />
-                <button
-                  type="button"
-                  disabled={!isAuthenticated || avatarBusy}
-                  onClick={() => avatarFileInputRef.current?.click()}
-                  className="group relative flex h-16 w-16 overflow-hidden rounded-[14px] bg-[#F47C8C] text-xl font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Загрузить фото профиля"
-                >
-                  {avatarPreviewUrl ? (
-                    <ImageReveal src={avatarPreviewUrl} alt="" className="h-full w-full object-cover" loading="eager" />
-                  ) : profileAvatarUrl ? (
-                    <ImageReveal src={profileAvatarUrl} alt="" className="h-full w-full object-cover" loading="eager" />
-                  ) : telegramPhotoUrl ? (
-                    <ImageReveal
-                      src={optimizeAvatarUrl(telegramPhotoUrl, 128)}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="eager"
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[15px] tracking-tight">
-                      {profileInitials}
-                    </span>
-                  )}
-                </button>
-              </div>
-              <div className="min-w-0 flex-1 pt-0.5">
-                <p className="truncate text-[18px] font-bold tracking-[-0.03em] text-[#111827]">{displayName}</p>
-                <p className="mt-0.5 text-[14px] text-[#6B7280]">{roleSubtitle}</p>
-              </div>
-            </div>
+    <aside className={adminDesktopSidebarShell}>
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden px-3 py-4" aria-label="Кабинет клиента">
+        <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">Меню</p>
 
-            {avatarErr ? (
-              <p className="mt-3 text-[13px] font-medium text-red-600">{avatarErr}</p>
-            ) : null}
-
-            {isAuthenticated && telegramUserPhotoUrl ? (
-              <button
-                type="button"
-                disabled={avatarBusy}
-                onClick={onApplyTelegramAvatar}
-                className="mt-3 w-full rounded-[10px] bg-[#F5F5F5] px-3 py-2 text-[12px] font-semibold text-[#374151] transition hover:bg-[#EBEBEB] disabled:opacity-50"
-              >
-                Обновить фото из Telegram
-              </button>
-            ) : null}
-
-            <div className="mt-4 flex gap-2">
-              <Link
-                to={PROFILE_NOTIFICATIONS_PATH}
-                className="relative flex flex-1 min-h-10 items-center justify-center gap-2 rounded-[10px] bg-[#F5F5F5] text-[14px] font-semibold text-[#374151] transition hover:bg-[#EBEBEB]"
-              >
-                <HiBell className="h-4 w-4" />
-                Уведомления
-                {hasNewNotifications ? (
-                  <span className="absolute right-3 top-2 h-2 w-2 rounded-full bg-[#F47C8C]" aria-hidden />
-                ) : null}
-              </Link>
-              <Link
-                to={PROFILE_SETTINGS_PATH}
-                className="relative flex flex-1 min-h-10 items-center justify-center gap-2 rounded-[10px] bg-[#F5F5F5] text-[14px] font-semibold text-[#374151] transition hover:bg-[#EBEBEB]"
-              >
-                <HiCog6Tooth className="h-4 w-4" />
-                Настройки
-              </Link>
-            </div>
-          </>
-        )}
-      </div>
-
-      <nav className={`${catalogDesktopPanel} flex flex-col gap-2 p-2`} aria-label="Разделы профиля">
         {MAIN_TABS.map((tab) => {
-          const active = mainTab === tab.id;
+          const active = activeTab === tab.id;
           const count =
             tab.id === 'appointments' ? upcomingCount : tab.id === 'favorites' ? favoritesCount : null;
+          const Icon = tab.icon;
+
           return (
-            <button
+            <Link
               key={tab.id}
-              type="button"
-              onClick={() => onSelectTab(tab.id)}
-              className={`flex w-full min-h-11 items-center justify-between rounded-[10px] px-4 py-2.5 text-left text-[14px] transition ${
-                active ? catalogSectionTabActive : catalogSectionTabIdle
-              }`}
+              to={getProfilePath(tab.id)}
+              className={adminDesktopNavItemClass(active)}
             >
-              <span>{tab.label}</span>
-              {count != null ? (
+              <Icon className={`h-5 w-5 shrink-0 ${active ? 'text-[#ff5f7a]' : ''}`} aria-hidden />
+              <span className="truncate">{tab.label}</span>
+              {count != null && count > 0 ? (
                 <span
-                  className={`min-w-[1.375rem] rounded-full px-2 py-0.5 text-center text-[12px] font-bold tabular-nums ${
-                    count > 0
-                      ? active
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[#EBEBEB] text-[#374151]'
-                      : 'invisible'
+                  className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
+                    active ? 'bg-[#ff5f7a]/15 text-[#ff5f7a]' : 'bg-[#FFF1F4] text-[#ff5f7a]'
                   }`}
-                  aria-hidden={count <= 0}
                 >
-                  {count > 0 ? count : 0}
+                  {count}
                 </span>
               ) : null}
-            </button>
+            </Link>
           );
         })}
+
+        <NavLink to={PROFILE_NOTIFICATIONS_PATH} className={adminDesktopNavItemClass(isNotifications)}>
+          <HiBell className={`h-5 w-5 shrink-0 ${isNotifications ? 'text-[#ff5f7a]' : ''}`} aria-hidden />
+          <span className="truncate">Уведомления</span>
+          {hasNewNotifications ? <SidebarUnreadBadge count={1} /> : null}
+        </NavLink>
+
+        <NavLink to={PROFILE_SETTINGS_PATH} className={adminDesktopNavItemClass(isSettings)}>
+          <HiCog6Tooth className={`h-5 w-5 shrink-0 ${isSettings ? 'text-[#ff5f7a]' : ''}`} aria-hidden />
+          <span className="truncate">Настройки</span>
+        </NavLink>
       </nav>
 
-      {clientShell && isMasterCabinet ? (
-        <Link
-          to={ADMIN_PATH}
-          className={`${catalogDesktopPanel} flex items-center gap-3 p-4 transition hover:bg-[#FAFAFA]`}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#FFF1F4] text-[#F47C8C]">
-            <img
-              src={HEADER_LOGO_SRC}
-              alt=""
-              width={28}
-              height={28}
-              decoding="async"
-              className="h-7 w-auto origin-center object-contain [transform:scale(1.65)]"
+      <div className="shrink-0 space-y-2 border-t border-[#EEEEEE] p-3">
+        {isMasterCabinet ? (
+          <Link to={ADMIN_BILLING_PATH} className={`${adminSidebarFooterCardAccent} mb-0`}>
+            <div
+              className="pointer-events-none absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${ADMIN_SIDEBAR_TARIFF_BG})` }}
+              aria-hidden
             />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[14px] font-bold text-[#111827]">Кабинет мастера</p>
-            <p className="mt-0.5 text-[12px] text-[#6B7280]">Управление записями и услугами</p>
+            <div className="pointer-events-none absolute inset-0 bg-black/45" aria-hidden />
+            <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/95 text-[#ff5f7a] shadow-sm">
+              <HiSparkles className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="relative z-10 min-w-0 flex-1 text-left">
+              <p className="flex items-center gap-1.5 text-[14px] font-semibold tracking-[-0.02em] text-white">
+                <span>Тариф {planBadgeLabel(planId)}</span>
+                {showProBadge ? <MasterProBadge className="h-4 w-4" /> : null}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-white/80">
+                Управление подпиской и лимитами
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <Link to={BECOME_MASTER_PATH} className={adminSidebarFooterCard}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[#ff5f7a]">
+              <HiSparkles className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1 text-left">
+              <p className="text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">Стать мастером</p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">Принимайте клиентов в SLOTTY</p>
+            </div>
+          </Link>
+        )}
+
+        <Link to={getProfilePath('profile')} className={adminSidebarFooterCard}>
+          <ClientProfileAvatar
+            authLoading={authLoading}
+            isAuthenticated={isAuthenticated}
+            avatarPreviewUrl={avatarPreviewUrl}
+            profileAvatarUrl={profileAvatarUrl}
+            telegramPhotoUrl={telegramPhotoUrl}
+            profileInitials={profileInitials}
+            avatarBusy={avatarBusy}
+            avatarFileInputRef={avatarFileInputRef}
+            onAvatarFileChange={onAvatarFileChange}
+            size="sm"
+          />
+          <div className="min-w-0 flex-1 text-left">
+            <p className="truncate text-[14px] font-semibold tracking-[-0.02em] text-[#111827]">
+              {authLoading ? 'Загрузка…' : displayName}
+            </p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#6B7280]">Клиент</p>
           </div>
         </Link>
-      ) : !(clientShell && isMasterCabinet) ? (
-        <Link
-          to={isMasterCabinet ? ADMIN_PATH : BECOME_MASTER_PATH}
-          className={`${catalogDesktopPanel} flex items-center gap-3 p-4 transition hover:bg-[#FAFAFA]`}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#FFF1F4] text-[#F47C8C]">
-            <HiSparkles className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[14px] font-bold text-[#111827]">
-              {isMasterCabinet ? 'Кабинет мастера' : 'Стать мастером'}
-            </p>
-            <p className="mt-0.5 text-[12px] text-[#6B7280]">
-              {isMasterCabinet ? 'Управление записями и услугами' : 'Принимайте клиентов в SLOTTY'}
-            </p>
-          </div>
-        </Link>
-      ) : null}
+
+        {avatarErr ? (
+          <p className="px-1 text-[12px] font-medium text-red-600">{avatarErr}</p>
+        ) : null}
+
+        {isAuthenticated && telegramUserPhotoUrl ? (
+          <button
+            type="button"
+            disabled={avatarBusy}
+            onClick={onApplyTelegramAvatar}
+            className="w-full rounded-[10px] bg-[#F6F7FB] px-3 py-2 text-[12px] font-semibold text-[#374151] transition hover:bg-[#F1EFEF] disabled:opacity-50"
+          >
+            Обновить фото из Telegram
+          </button>
+        ) : null}
+      </div>
     </aside>
   );
 }
