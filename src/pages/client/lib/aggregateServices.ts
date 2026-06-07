@@ -2,25 +2,23 @@ import type { ServiceCategoryDto } from '../../../features/master-onboarding/api
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
 import { isSlotToday } from './catalogFormat';
 
-const CATEGORY_SUBTITLE: Record<string, string> = {
-  manicure: 'Классический, аппаратный, комбинированный',
-  barbers: 'Стрижка, борода, камуфляж',
-  'brows-lashes': 'Архитектура бровей, ламинирование, наращивание',
-  brows_lashes: 'Архитектура бровей, ламинирование, наращивание',
-  massage: 'Классический, расслабляющий, лечебный',
-  fitness: 'Персональные и групповые тренировки',
-  tattoo: 'Эскиз, мини-тату, перекрытие',
-};
-
 export type AggregatedServiceCard = {
   id: string;
   categoryCode: string;
   categoryName: string;
-  /** Типичное название услуги в категории */
+  /** Название услуги мастера */
   title: string;
+  /** Имя мастера */
   subtitle: string;
+  masterId: string;
+  masterName: string;
+  primaryServiceId?: string;
+  nextSlotId?: string | null;
+  photoUrl?: string;
+  serviceCoverUrl?: string;
   minPrice: number;
   durationMinutes: number;
+  /** Всегда 1 для карточки конкретной услуги */
   masterCount: number;
   nearestSlotIso: string | null;
   hasToday: boolean;
@@ -31,25 +29,37 @@ export type AggregatedServiceCard = {
   totalReviews: number;
   tags: string[];
   isNew: boolean;
-  /** Оценка просмотров категории за 7 дней (клиентский скоринг до API). */
+  /** Оценка просмотров за 7 дней (клиентский скоринг до API). */
   weeklyViews: number;
 };
 
-function medianDuration(values: number[]): number {
-  if (!values.length) return 90;
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)] ?? 90;
+function resolveCategoryCode(
+  row: ServiceListingRecord,
+  categories: ServiceCategoryDto[],
+): string {
+  if (row.categoryCode?.trim()) return row.categoryCode.trim();
+  const match =
+    categories.find((c) => c.name === row.category) ??
+    categories.find((c) => row.category.toLowerCase().includes(c.name.toLowerCase()));
+  return match?.code ?? row.category.toLowerCase().replace(/\s+/g, '-');
+}
+
+function parseDurationMinutes(serviceName: string): number {
+  const m = serviceName.match(/(\d+)\s*мин/);
+  if (m) return Number(m[1]);
+  const h = serviceName.match(/(\d+)\s*ч/);
+  if (h) return Number(h[1]) * 60;
+  return 90;
 }
 
 function estimateWeeklyViews(input: {
-  masterCount: number;
   totalReviews: number;
   hasToday: boolean;
   badge: AggregatedServiceCard['badge'];
   avgRating: number;
 }): number {
   const base =
-    input.masterCount * 140 +
+    140 +
     input.totalReviews * 22 +
     Math.round(input.avgRating * 45) +
     (input.hasToday ? 120 : 0) +
@@ -58,98 +68,87 @@ function estimateWeeklyViews(input: {
   return Math.max(48, base);
 }
 
+function listingBadge(row: ServiceListingRecord, hasToday: boolean): {
+  badge: AggregatedServiceCard['badge'];
+  promoText: string | null;
+  promotionOnly: boolean;
+} {
+  let badge: AggregatedServiceCard['badge'] = null;
+  let promoText: string | null = null;
+
+  if (row.reviewsCount > 50 && row.rating >= 4.8) {
+    badge = 'popular';
+  } else if (hasToday && row.rating >= 4.5) {
+    badge = 'hit';
+  }
+
+  if (!badge && hasToday && row.priceFrom > 0 && row.priceFrom <= 55) {
+    badge = 'sale';
+    promoText = '-10% на первое посещение';
+  }
+
+  return { badge, promoText, promotionOnly: badge === 'sale' };
+}
+
+/** Одна карточка каталога = одна услуга конкретного мастера. */
+export function mapListingsToServiceCards(
+  listings: ServiceListingRecord[],
+  categories: ServiceCategoryDto[],
+): AggregatedServiceCard[] {
+  return listings
+    .map((row) => {
+      const categoryCode = resolveCategoryCode(row, categories);
+      const categoryName =
+        categories.find((c) => c.code === categoryCode)?.name ?? row.category;
+      const hasToday = row.nextSlotStartsAt ? isSlotToday(row.nextSlotStartsAt) : false;
+      const { badge, promoText, promotionOnly } = listingBadge(row, hasToday);
+      const avgRating = Math.round(row.rating * 10) / 10;
+
+      return {
+        id: row.id,
+        categoryCode,
+        categoryName,
+        title: row.serviceName,
+        subtitle: row.masterName,
+        masterId: row.masterId,
+        masterName: row.masterName,
+        primaryServiceId: row.primaryServiceId,
+        nextSlotId: row.nextSlotId,
+        photoUrl: row.photoUrl,
+        serviceCoverUrl: row.serviceCoverUrl,
+        minPrice: row.priceFrom,
+        durationMinutes: parseDurationMinutes(row.serviceName),
+        masterCount: 1,
+        nearestSlotIso: row.nextSlotStartsAt ?? null,
+        hasToday,
+        promotionOnly,
+        badge,
+        promoText,
+        avgRating,
+        totalReviews: row.reviewsCount,
+        tags: categoryName ? [categoryName] : [],
+        isNew: row.reviewsCount < 10,
+        weeklyViews: estimateWeeklyViews({
+          totalReviews: row.reviewsCount,
+          hasToday,
+          badge,
+          avgRating: row.rating,
+        }),
+      };
+    })
+    .sort((a, b) => {
+      const slotA = a.nearestSlotIso ? new Date(a.nearestSlotIso).getTime() : Number.POSITIVE_INFINITY;
+      const slotB = b.nearestSlotIso ? new Date(b.nearestSlotIso).getTime() : Number.POSITIVE_INFINITY;
+      if (slotA !== slotB) return slotA - slotB;
+      if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
+      return b.totalReviews - a.totalReviews;
+    });
+}
+
+/** @deprecated Используйте mapListingsToServiceCards */
 export function aggregateServicesByCategory(
   listings: ServiceListingRecord[],
   categories: ServiceCategoryDto[],
 ): AggregatedServiceCard[] {
-  const byCode = new Map<string, ServiceListingRecord[]>();
-
-  for (const row of listings) {
-    const match =
-      categories.find((c) => c.name === row.category) ??
-      categories.find((c) => row.category.toLowerCase().includes(c.name.toLowerCase()));
-    const code = match?.code ?? row.category.toLowerCase().replace(/\s+/g, '-');
-    const list = byCode.get(code) ?? [];
-    list.push(row);
-    byCode.set(code, list);
-  }
-
-  const cards: AggregatedServiceCard[] = [];
-
-  for (const cat of categories) {
-    const rows = byCode.get(cat.code) ?? [];
-    if (!rows.length) continue;
-
-    const masterIds = new Set(rows.map((r) => r.masterId));
-    const prices = rows.map((r) => r.priceFrom).filter((p) => p > 0);
-    const minPrice = prices.length ? Math.min(...prices) : 0;
-
-    const durations = rows.map((r) => {
-      const m = r.serviceName.match(/(\d+)\s*мин/);
-      return m ? Number(m[1]) : 90;
-    });
-
-    let nearest: string | null = null;
-    let nearestMs = Number.POSITIVE_INFINITY;
-    let hasToday = false;
-    for (const r of rows) {
-      if (r.nextSlotStartsAt) {
-        const t = new Date(r.nextSlotStartsAt).getTime();
-        if (!Number.isNaN(t) && t < nearestMs) {
-          nearestMs = t;
-          nearest = r.nextSlotStartsAt;
-        }
-        if (isSlotToday(r.nextSlotStartsAt)) hasToday = true;
-      }
-    }
-
-    const topRating = Math.max(...rows.map((r) => r.rating));
-    const totalReviews = rows.reduce((s, r) => s + r.reviewsCount, 0);
-
-    let badge: AggregatedServiceCard['badge'] = null;
-    if (totalReviews > 80 || topRating >= 4.9) badge = 'popular';
-    else if (hasToday && masterIds.size >= 5) badge = 'hit';
-
-    let promoText: string | null = null;
-    if (!badge && hasToday && minPrice > 0 && minPrice <= 55) {
-      badge = 'sale';
-      promoText = '-10% на первое посещение';
-    }
-
-    const primaryName =
-      rows.sort((a, b) => b.reviewsCount - a.reviewsCount)[0]?.serviceName ?? cat.name;
-    const subtitle =
-      CATEGORY_SUBTITLE[cat.code] ??
-      CATEGORY_SUBTITLE[cat.code.replace(/-/g, '_')] ??
-      'Выберите мастера и удобное время';
-
-    cards.push({
-      id: cat.code,
-      categoryCode: cat.code,
-      categoryName: cat.name,
-      title: cat.name || primaryName,
-      subtitle,
-      minPrice,
-      durationMinutes: medianDuration(durations),
-      masterCount: masterIds.size,
-      nearestSlotIso: nearest,
-      hasToday,
-      promotionOnly: badge === 'sale',
-      badge,
-      promoText,
-      avgRating: Math.round(topRating * 10) / 10,
-      totalReviews,
-      tags: subtitle.split(/,\s*/).filter(Boolean).slice(0, 4),
-      isNew: totalReviews < 40 && masterIds.size >= 2,
-      weeklyViews: estimateWeeklyViews({
-        masterCount: masterIds.size,
-        totalReviews,
-        hasToday,
-        badge,
-        avgRating: topRating,
-      }),
-    });
-  }
-
-  return cards.sort((a, b) => b.masterCount - a.masterCount);
+  return mapListingsToServiceCards(listings, categories);
 }

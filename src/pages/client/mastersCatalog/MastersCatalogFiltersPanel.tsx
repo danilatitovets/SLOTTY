@@ -1,110 +1,164 @@
-import type { CategoryMasterFilters } from '../lib/categoryMasterFilters';
+import type { ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
+import { categoryCodesMatch } from '../../../features/catalog/serviceCategoryLabels';
+import {
+  MASTER_SORT_OPTIONS,
+  type CategoryMasterFilters,
+} from '../lib/categoryMasterFilters';
 import {
   DATE_FILTER_OPTIONS,
   DURATION_FILTER_OPTIONS,
   FilterChip,
+  FilterPromoBar,
   FilterSection,
   FilterSwitch,
   TIME_FILTER_OPTIONS,
   VISIT_FILTER_OPTIONS,
 } from '../servicesCatalog/catalogFilterUi';
 import {
+  MASTER_PRICE_OPTIONS,
+  MASTER_RATING_OPTIONS,
+  MASTER_REVIEWS_OPTIONS,
+} from './mastersCatalogFilterHints';
+import {
   HiAdjustmentsHorizontal,
-  HiBanknotes,
   HiBuildingStorefront,
   HiCalendarDays,
-  HiChatBubbleLeftRight,
   HiClock,
+  HiSquares2X2,
   HiStar,
 } from 'react-icons/hi2';
-import { mastersCatalogFilterHints } from './mastersCatalogFilterHints';
 
 type Props = {
   filters: CategoryMasterFilters;
   onChange: (next: CategoryMasterFilters) => void;
+  layout?: 'sheet';
+  categories?: ServiceCategoryDto[];
 };
 
-const RATING_OPTIONS = [
-  { value: null as CategoryMasterFilters['minRating'], label: 'Все' },
-  { value: '45' as const, label: '4.5+' },
-  { value: '48' as const, label: '4.8+' },
-  { value: '49' as const, label: '4.9+' },
-];
-
-const REVIEWS_OPTIONS = [
-  { value: null as CategoryMasterFilters['minReviews'], label: 'Все' },
-  { value: '5' as const, label: '5+' },
-  { value: '20' as const, label: '20+' },
-  { value: '50' as const, label: '50+' },
-];
-
-const PRICE_OPTIONS = [
-  { value: null as CategoryMasterFilters['priceTier'], label: 'Все' },
-  { value: 'under30' as const, label: '≤30' },
-  { value: '30_50' as const, label: '30–50' },
-  { value: '50_100' as const, label: '50–100' },
-  { value: 'over100' as const, label: '100+' },
-];
-
-export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
+export function MastersCatalogFiltersPanel({
+  filters,
+  onChange,
+  layout = 'sheet',
+  categories = [],
+}: Props) {
+  const sheet = layout === 'sheet';
+  const uiVariant = sheet ? 'sheet' : 'default';
+  const chipsClass = 'flex flex-wrap gap-2';
   const set = (patch: Partial<CategoryMasterFilters>) => onChange({ ...filters, ...patch });
-  const hints = mastersCatalogFilterHints(filters);
+
+  const categoryHint =
+    filters.categoryCode != null
+      ? categories.find((c) => categoryCodesMatch(filters.categoryCode, c.code))?.name ?? null
+      : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <FilterSection icon={HiCalendarDays} title="Когда" activeHint={hints.when}>
-        <div className="flex flex-wrap gap-2">
-          {DATE_FILTER_OPTIONS.map(({ value, label, icon }) => (
+    <div className="flex flex-col gap-5">
+      <FilterPromoBar
+        active={filters.promotionOnly}
+        label="Акции"
+        onChange={(promotionOnly) => set({ promotionOnly })}
+      />
+
+      <FilterSection icon={HiCalendarDays} title="Цена, BYN" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {MASTER_PRICE_OPTIONS.map(({ value, label }) => (
             <FilterChip
-              key={value}
-              active={filters.dateRange === value}
-              icon={icon}
+              key={String(value)}
+              active={filters.priceTier === value}
               label={label}
-              onClick={() => set({ dateRange: value === 'any' ? 'any' : value })}
+              variant={uiVariant}
+              onClick={() => set({ priceTier: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiClock} title="Время" activeHint={hints.time}>
-        <div className="flex flex-wrap gap-2">
-          {TIME_FILTER_OPTIONS.map(({ value, label, icon }) => (
+      <FilterSection icon={HiCalendarDays} title="Срок записи" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {DATE_FILTER_OPTIONS.map(({ value, label }) => (
+            <FilterChip
+              key={value}
+              active={filters.dateRange === value}
+              label={label}
+              variant={uiVariant}
+              onClick={() => set({ dateRange: value })}
+            />
+          ))}
+        </div>
+      </FilterSection>
+
+      {categories.length > 0 ? (
+        <FilterSection
+          title="Категория"
+          activeHint={categoryHint}
+          variant={uiVariant}
+          collapsible={false}
+        >
+          <div className={chipsClass}>
+            <FilterChip
+              active={filters.categoryCode == null}
+              label="Все"
+              variant={uiVariant}
+              onClick={() => set({ categoryCode: null })}
+            />
+            {categories.map((cat) => (
+              <FilterChip
+                key={cat.code}
+                active={categoryCodesMatch(filters.categoryCode, cat.code)}
+                label={cat.name}
+                variant={uiVariant}
+                onClick={() => set({ categoryCode: cat.code })}
+              />
+            ))}
+          </div>
+        </FilterSection>
+      ) : null}
+
+      <FilterSection icon={HiClock} title="Время дня" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {TIME_FILTER_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={value}
               active={filters.timeOfDay === value}
-              icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ timeOfDay: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBuildingStorefront} title="Где" activeHint={hints.visit}>
-        <div className="flex flex-wrap gap-2">
-          {VISIT_FILTER_OPTIONS.map(({ value, label, icon }) => (
+      <FilterSection icon={HiBuildingStorefront} title="Формат" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {VISIT_FILTER_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={value}
               active={filters.visitType === value}
-              icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ visitType: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiStar} title="Рейтинг мастера" activeHint={hints.rating}>
-        <div className="flex flex-wrap gap-2">
-          {RATING_OPTIONS.map(({ value, label }) => (
+      <FilterSection icon={HiStar} title="Рейтинг" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {MASTER_RATING_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={String(value)}
               active={filters.minRating === value}
               label={label}
+              variant={uiVariant}
               onClick={() =>
                 set({
                   minRating: value,
-                  sortBy: value ? 'rating' : filters.sortBy === 'rating' ? 'recommended' : filters.sortBy,
+                  sortBy:
+                    value != null
+                      ? 'rating'
+                      : filters.sortBy === 'rating'
+                        ? 'recommended'
+                        : filters.sortBy,
                 })
               }
             />
@@ -112,65 +166,60 @@ export function MastersCatalogFiltersPanel({ filters, onChange }: Props) {
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiChatBubbleLeftRight} title="Отзывы" activeHint={hints.reviews}>
-        <div className="flex flex-wrap gap-2">
-          {REVIEWS_OPTIONS.map(({ value, label }) => (
+      <FilterSection icon={HiStar} title="Отзывы" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {MASTER_REVIEWS_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={String(value)}
               active={filters.minReviews === value}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ minReviews: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiBanknotes} title="Цена, BYN" activeHint={hints.price}>
-        <div className="flex flex-wrap gap-2">
-          {PRICE_OPTIONS.map(({ value, label }) => (
-            <FilterChip
-              key={String(value)}
-              active={filters.priceTier === value}
-              label={label}
-              onClick={() => set({ priceTier: value })}
-            />
-          ))}
-        </div>
-      </FilterSection>
-
-      <FilterSection icon={HiClock} title="Длительность" activeHint={hints.duration}>
-        <div className="flex flex-wrap gap-2">
-          {DURATION_FILTER_OPTIONS.map(({ value, label, icon }) => (
+      <FilterSection icon={HiClock} title="Длительность" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {DURATION_FILTER_OPTIONS.map(({ value, label }) => (
             <FilterChip
               key={value}
               active={filters.duration === value}
-              icon={icon}
               label={label}
+              variant={uiVariant}
               onClick={() => set({ duration: value })}
             />
           ))}
         </div>
       </FilterSection>
 
-      <FilterSection icon={HiAdjustmentsHorizontal} title="Дополнительно" activeHint={hints.extra}>
-        <div className="flex flex-col gap-2.5">
-          <FilterSwitch
-            active={filters.onlyWithSlots}
-            label="Только с онлайн-записью"
-            onChange={(onlyWithSlots) => set({ onlyWithSlots })}
-          />
-          <FilterSwitch
-            active={filters.promotionOnly}
-            label="Только с акциями"
-            onChange={(promotionOnly) => set({ promotionOnly })}
-          />
-          <FilterSwitch
-            active={filters.verifiedOnly}
-            label="Проверенные мастера"
-            onChange={(verifiedOnly) => set({ verifiedOnly })}
-          />
+      <FilterSection icon={HiAdjustmentsHorizontal} title="Сортировка" variant={uiVariant} collapsible={false}>
+        <div className={chipsClass}>
+          {MASTER_SORT_OPTIONS.map(({ value, label }) => (
+            <FilterChip
+              key={value}
+              active={filters.sortBy === value}
+              label={label}
+              variant={uiVariant}
+              onClick={() => set({ sortBy: value })}
+            />
+          ))}
         </div>
       </FilterSection>
+
+      <FilterSwitch
+        active={filters.onlyWithSlots}
+        label="Только со свободными окнами"
+        variant={uiVariant}
+        onChange={(onlyWithSlots) => set({ onlyWithSlots })}
+      />
+      <FilterSwitch
+        active={filters.verifiedOnly}
+        label="Проверенные мастера"
+        variant={uiVariant}
+        onChange={(verifiedOnly) => set({ verifiedOnly })}
+      />
     </div>
   );
 }

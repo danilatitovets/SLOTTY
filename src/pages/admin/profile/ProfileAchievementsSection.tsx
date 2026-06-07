@@ -37,8 +37,6 @@ export function ProfileAchievementsSection({ variant = 'cabinet' }: Props) {
       ? `${profileDashboardCard} ${profileDashboardCardPad}`
       : `${cabinetCard} ${cabinetCardPad}`;
 
-  const previewItems = achievements.slice(0, 3);
-
   return (
     <>
       <section className={surfaceClass}>
@@ -81,12 +79,12 @@ export function ProfileAchievementsSection({ variant = 'cabinet' }: Props) {
               </p>
             ) : achievements.length > 0 ? (
               <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {previewItems.map((achievement) => {
+                {achievements.map((achievement) => {
                   const visual = MASTER_ACHIEVEMENT_VISUALS[achievement.id];
                   return (
                     <div
                       key={achievement.id}
-                      className="flex min-w-[9.5rem] max-w-[10.5rem] flex-1 flex-col overflow-hidden rounded-[12px] bg-white"
+                      className="flex w-[9.5rem] shrink-0 flex-col overflow-hidden rounded-[12px] bg-white"
                     >
                       <div className="relative h-16 overflow-hidden">
                         <img

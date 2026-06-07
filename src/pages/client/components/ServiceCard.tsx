@@ -10,12 +10,12 @@ import {
   HiUserGroup,
   HiWallet,
 } from 'react-icons/hi2';
-import { getServiceCategoryPath } from '../../../app/paths';
+import { getBookingPath, getMasterPath } from '../../../app/paths';
 import type { AggregatedServiceCard } from '../lib/aggregateServices';
 import {
   formatDurationMinutes,
-  formatMastersNearbyLabel,
   formatPriceFrom,
+  formatReviewsCountLabel,
   formatSlotCardSubline,
   formatWeeklyViewsLabel,
 } from '../lib/catalogFormat';
@@ -25,7 +25,6 @@ import { ImageReveal } from '../../../shared/ui/ImageReveal';
 import {
   catalogInnerDivider,
   catalogListCardClass,
-  catalogMetaChipClass,
   catalogPanelRowClass,
   catalogPanelRowPad,
   catalogPrimaryBtn,
@@ -64,23 +63,44 @@ function StatRow({
   );
 }
 
-type FolderTabTone = 'popular' | 'hit' | 'promo';
+type BadgeTone = 'popular' | 'hit' | 'promo';
 
-function ServiceCardFolderTab({ label, tone }: { label: string; tone: FolderTabTone }) {
-  const tabBg =
-    tone === 'hit' ? 'bg-[#7C3AED]' : tone === 'promo' ? 'bg-[#F47C8C]' : 'bg-[#F47C8C]';
-  const foldBg =
-    tone === 'hit' ? 'bg-[#6D28D9]' : tone === 'promo' ? 'bg-[#E85A72]' : 'bg-[#E85A72]';
+function ServiceCardBadge({ label, tone }: { label: string; tone: BadgeTone }) {
+  const toneClass =
+    tone === 'hit'
+      ? 'bg-[#7C3AED]'
+      : tone === 'popular'
+        ? 'bg-[#111827]/85'
+        : 'bg-[#F47C8C]';
 
   return (
-    <div className="pointer-events-none absolute right-4 top-0 z-20 flex items-start lg:right-5">
-      <span className={`mt-0 h-2 w-2 shrink-0 rounded-tr-[3px] ${foldBg}`} aria-hidden />
-      <span
-        className={`${tabBg} rounded-b-[10px] px-3 py-1.5 text-[11px] font-semibold leading-none text-white`}
-      >
-        {label}
-      </span>
-    </div>
+    <span
+      className={`inline-flex items-center rounded-[8px] px-2.5 py-1 text-[11px] font-semibold leading-none text-white shadow-[0_2px_8px_rgba(17,24,39,0.14)] ${toneClass}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function serviceCardHref(service: AggregatedServiceCard): string {
+  if (service.masterId && service.primaryServiceId) {
+    return getBookingPath(
+      service.masterId,
+      service.primaryServiceId,
+      service.nextSlotId,
+      { from: 'services' },
+    );
+  }
+  if (service.masterId) {
+    return getMasterPath(service.masterId);
+  }
+  return getMasterPath(service.id);
+}
+
+function serviceCardPhoto(service: AggregatedServiceCard): string {
+  if (service.serviceCoverUrl?.trim()) return service.serviceCoverUrl.trim();
+  return getCatalogServicePhotoUrl(
+    service.categoryCode || service.categoryName || service.title,
   );
 }
 
@@ -98,9 +118,8 @@ function serviceBadgeMeta(service: AggregatedServiceCard, showPromo: boolean) {
 }
 
 export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Props) {
-  const photo = getCatalogServicePhotoUrl(
-    service.categoryCode || service.categoryName || service.title,
-  );
+  const href = serviceCardHref(service);
+  const photo = serviceCardPhoto(service);
   const slotLine = formatSlotCardSubline(service.nearestSlotIso);
   const hasSlot = Boolean(slotLine);
   const showPromo = Boolean(service.promoText);
@@ -111,7 +130,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
   if (isWide && surface === 'row') {
     return (
       <Link
-        to={getServiceCategoryPath(service.categoryCode)}
+        to={href}
         className={`group ${catalogPanelRowClass} ${catalogPanelRowPad}`}
       >
         <div className="flex items-center gap-4 lg:gap-5">
@@ -124,7 +143,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             <h3 className="mt-0.5 text-[16px] font-bold leading-snug text-[#111827] lg:text-[17px]">
               {service.title}
             </h3>
-            <p className="mt-0.5 line-clamp-1 text-[13px] text-[#8E8E93] lg:hidden">{service.subtitle}</p>
+            <p className="mt-0.5 line-clamp-1 text-[13px] text-[#8E8E93] lg:hidden">{service.masterName}</p>
           </div>
 
           <div className="hidden shrink-0 items-center gap-0 lg:flex">
@@ -162,11 +181,9 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
 
     return (
       <Link
-        to={getServiceCategoryPath(service.categoryCode)}
+        to={href}
         className={`group relative flex w-full ${catalogListCardClass} lg:min-h-[148px] lg:flex-row`}
       >
-        {badgeMeta ? <ServiceCardFolderTab label={badgeMeta.label} tone={badgeMeta.tone} /> : null}
-
         <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#EBEBEB] lg:h-auto lg:w-[168px] lg:min-h-[148px]">
           <ImageReveal
             src={photo}
@@ -174,6 +191,11 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             className="h-full min-h-[176px] w-full object-cover transition duration-300 group-hover:scale-[1.01] lg:min-h-[148px]"
             loading="lazy"
           />
+          {badgeMeta ? (
+            <span className="pointer-events-none absolute left-2 top-2 z-10">
+              <ServiceCardBadge label={badgeMeta.label} tone={badgeMeta.tone} />
+            </span>
+          ) : null}
         </div>
 
         <div className="relative flex min-w-0 flex-1 flex-col p-5 lg:min-h-[148px] lg:p-4 lg:pr-[184px]">
@@ -182,7 +204,9 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
             <h3 className="mt-1 text-[18px] font-bold leading-snug tracking-[-0.02em] text-[#111827]">
               {service.title}
             </h3>
-            <p className="mt-1.5 max-w-xl text-[14px] leading-relaxed text-[#8E8E93] lg:hidden">{service.subtitle}</p>
+            <p className="mt-1.5 max-w-xl text-[14px] leading-relaxed text-[#8E8E93] lg:hidden">
+              {service.masterName}
+            </p>
             {service.tags.length > 0 ? (
               <div className="mt-2 hidden flex-wrap gap-1.5 lg:flex">
                 {service.tags.map((tag) => (
@@ -202,10 +226,10 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
                   {service.avgRating.toFixed(1)}
                 </span>
               ) : null}
-              {service.masterCount > 0 ? (
+              {service.masterName ? (
                 <span className="inline-flex items-center gap-1">
                   <HiUserGroup className="h-4 w-4 text-[#9CA3AF]" aria-hidden />
-                  {formatMastersNearbyLabel(service.masterCount)}
+                  {service.masterName}
                 </span>
               ) : null}
               <span className="inline-flex items-center gap-1">
@@ -244,7 +268,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
               </p>
             </div>
             <span className={`${hasSlot ? catalogPrimaryBtn : catalogSecondaryBtn} w-full !min-h-9 !text-[13px]`}>
-              {hasSlot ? 'Смотреть мастеров' : 'Открыть категорию'}
+              {hasSlot ? 'Записаться' : 'К мастеру'}
             </span>
           </div>
         </div>
@@ -254,63 +278,89 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
 
   if (isGrid) {
     const badgeMeta = serviceBadgeMeta(service, showPromo);
+    const priceLabel =
+      service.minPrice > 0 ? formatPriceFrom(service.minPrice) : EMPTY_PRICE;
+    const slotCta = service.hasToday
+      ? 'Сегодня'
+      : hasSlot && slotLine?.toLowerCase().startsWith('завтра')
+        ? 'Завтра'
+        : hasSlot
+          ? 'Есть окно'
+          : 'Выбрать мастера';
+    const masterLabel = service.masterName || null;
+    const durationLabel = formatDurationMinutes(service.durationMinutes);
 
     return (
       <Link
-        to={getServiceCategoryPath(service.categoryCode)}
-        className={`group relative flex h-full flex-col ${catalogListCardClass} hover:-translate-y-0.5`}
+        to={href}
+        className={`group relative flex flex-col overflow-hidden ${catalogListCardClass} active:scale-[0.98]`}
       >
-        {badgeMeta ? <ServiceCardFolderTab label={badgeMeta.label} tone={badgeMeta.tone} /> : null}
-
-        <div className="relative h-36 w-full shrink-0 overflow-hidden bg-[#FAFAFA]">
+        <div className="relative aspect-[5/6] w-full shrink-0 overflow-hidden bg-[#EBEBEB]">
           <ImageReveal
             src={photo}
             alt=""
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
+          {badgeMeta ? (
+            <span className="pointer-events-none absolute left-2 top-2 z-10">
+              <ServiceCardBadge label={badgeMeta.label} tone={badgeMeta.tone} />
+            </span>
+          ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="text-[18px] font-bold leading-snug tracking-[-0.03em] text-[#111827]">
-            {service.title}
-          </h3>
-          <p className="mt-1.5 line-clamp-2 min-h-[2.5rem] text-[14px] leading-snug text-[#6B7280]">
-            {service.subtitle}
+        <div className="flex flex-col gap-1.5 p-2.5 pt-2">
+          <p className="shrink-0 text-[17px] font-bold leading-none tracking-[-0.02em] text-[#F47C8C] tabular-nums">
+            {priceLabel}
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2 text-[13px] font-semibold">
-            <span className={catalogMetaChipClass}>
-              {service.minPrice > 0 ? formatPriceFrom(service.minPrice) : 'Цена по запросу'}
-            </span>
-            <span className={catalogMetaChipClass}>
-              {formatDurationMinutes(service.durationMinutes)}
-            </span>
-          </div>
-
-          <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#6B7280]">
-            <HiEye className="h-3.5 w-3.5 shrink-0 text-[#9CA3AF]" aria-hidden />
-            {formatWeeklyViewsLabel(service.weeklyViews)}
-          </p>
-
-          <div className={`mt-4 rounded-[14px] px-3 py-2.5 ${hasSlot ? 'bg-[#F6F7FB]' : 'bg-[#F6F7FB]'}`}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#9CA3AF]">Ближайшее окно</p>
-            <p
-              className={`mt-1 text-[14px] font-semibold ${hasSlot ? 'text-[#F47C8C]' : 'text-[#6B7280]'}`}
-            >
-              {hasSlot ? slotLine : 'Уточните у мастера'}
+          <div className="min-w-0 shrink-0 space-y-0.5">
+            <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-[#111827]">
+              {service.title}
+            </h3>
+            <p className="line-clamp-1 text-[12px] font-medium leading-[1.4] text-[#8E8E93]">
+              {masterLabel ?? service.categoryName}
             </p>
           </div>
 
-          {service.masterCount > 0 ? (
-            <p className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6B7280]">
-              <HiUserGroup className="h-4 w-4 shrink-0" aria-hidden />
-              {formatMastersNearbyLabel(service.masterCount)}
-            </p>
-          ) : null}
+          <div className="flex shrink-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] font-medium">
+            {service.avgRating > 0 ? (
+              <span className="inline-flex items-center gap-0.5 text-[#111827]">
+                <HiStar className="h-3 w-3 shrink-0 text-[#F59E0B]" aria-hidden />
+                {service.avgRating.toFixed(1).replace('.', ',')}
+                {service.totalReviews > 0 ? (
+                  <span className="text-[#8E8E93]">
+                    · {formatReviewsCountLabel(service.totalReviews)}
+                  </span>
+                ) : null}
+              </span>
+            ) : service.isNew ? (
+              <span className="text-[#F47C8C]">Новинка</span>
+            ) : (
+              <span className="text-[#8E8E93]">Пока без отзывов</span>
+            )}
+          </div>
 
-          <span className={hasSlot ? catalogPrimaryBtn : catalogSecondaryBtn}>
-            {hasSlot ? 'Смотреть мастеров' : 'Открыть категорию'}
+          <p className="flex shrink-0 flex-wrap items-center gap-1 text-[10px] font-medium leading-none text-[#8E8E93]">
+            <span className="inline-flex items-center gap-0.5">
+              <HiClock className="h-3 w-3 shrink-0" aria-hidden />
+              {durationLabel}
+            </span>
+            {masterLabel ? (
+              <>
+                <span aria-hidden>·</span>
+                <span className="line-clamp-1 text-[#8E8E93]">{masterLabel}</span>
+              </>
+            ) : null}
+          </p>
+
+          <span
+            className={`${hasSlot ? catalogPrimaryBtn : catalogSecondaryBtn} mt-0.5 shrink-0 !min-h-8 w-full !rounded-full !px-2 !py-1.5 !text-[11px] !font-semibold`}
+          >
+            <span className="inline-flex items-center justify-center gap-1">
+              <HiCalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {slotCta}
+            </span>
           </span>
         </div>
       </Link>
@@ -319,7 +369,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
 
   return (
     <Link
-      to={getServiceCategoryPath(service.categoryCode)}
+      to={href}
       className={`block w-full ${catalogListCardClass} active:scale-[0.99]`}
     >
       <div className="p-4">
@@ -343,13 +393,10 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
               {service.title}
             </h3>
             <p className="mt-1 line-clamp-2 text-[14px] leading-snug text-[#6B7280]">
-              {service.subtitle}
+              {service.masterName}
             </p>
-            {service.masterCount > 0 ? (
-              <p className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#6B7280]">
-                <HiUserGroup className="h-4 w-4 shrink-0 text-[#9CA3AF]" aria-hidden />
-                {formatMastersNearbyLabel(service.masterCount)}
-              </p>
+            {service.categoryName ? (
+              <p className="mt-2 text-[13px] font-medium text-[#9CA3AF]">{service.categoryName}</p>
             ) : null}
           </div>
 
@@ -397,7 +444,7 @@ export function ServiceCard({ service, layout = 'stack', surface = 'card' }: Pro
               )}
             </div>
             <span className={hasSlot ? catalogPrimaryBtn : catalogSecondaryBtn}>
-              {hasSlot ? 'Смотреть окно' : 'Открыть категорию'}
+              {hasSlot ? 'Записаться' : 'К мастеру'}
             </span>
           </div>
         </div>

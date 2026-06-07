@@ -7,7 +7,6 @@ import {
   catalogSearchFieldClass,
   catalogStickyToolbarClass,
 } from './servicesCatalogTheme';
-import { CatalogSectionTabs } from './CatalogSectionTabs';
 import {
   CLIENT_STICKY_BELOW_CATALOG_PAGE_HEADER,
   CLIENT_STICKY_BELOW_MOBILE_HEADER,
@@ -33,6 +32,7 @@ type Props = {
   compact?: boolean;
   showResultCount?: boolean;
   showSearchButton?: boolean;
+  panelClassName?: string;
 };
 
 export function CatalogStickyToolbar({
@@ -51,6 +51,7 @@ export function CatalogStickyToolbar({
   compact = false,
   showResultCount = true,
   showSearchButton = false,
+  panelClassName,
 }: Props) {
   /** С belowPageToolbar поиск/чипы не липнут — только шапка страницы sticky. */
   const effectiveSticky = sticky && !belowPageToolbar;
@@ -73,12 +74,12 @@ export function CatalogStickyToolbar({
   return (
     <div className={`${belowPageToolbar ? 'mt-2' : ''} ${className}`.trim()}>
       <div className={stickyClass}>
-        <header className={`${catalogDesktopPanel} ${panelPad}`}>
-          <CatalogSectionTabs compact={compact} />
-
-          {children ? <div className={compact ? 'mt-1.5 lg:mt-2' : 'mt-0 lg:mt-3'}>{children}</div> : null}
-
-          <div className={`flex w-full items-center gap-2 ${compact ? 'mt-2' : 'mt-3'}`}>
+        <header
+          className={
+            panelClassName ?? `${catalogDesktopPanel} ${panelPad}`
+          }
+        >
+          <div className={`flex w-full items-center gap-2 ${children ? 'mt-2' : ''}`}>
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Поиск</span>
             <HiMagnifyingGlass
@@ -136,6 +137,8 @@ export function CatalogStickyToolbar({
             </button>
           ) : null}
           </div>
+
+          {children ? <div className="mt-2">{children}</div> : null}
         </header>
       </div>
 

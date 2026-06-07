@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { HiChevronDown, HiSquares2X2 } from 'react-icons/hi2';
+import { HiChevronDown } from 'react-icons/hi2';
 import type { ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
 import { getCategoryWorkPhotoUrl } from '../../../features/catalog/categoryWorkPhotos';
 import {
@@ -17,6 +17,7 @@ type Props = {
   categoryCode: string | null;
   onSelect: (code: string | null) => void;
   fullWidth?: boolean;
+  compact?: boolean;
 };
 
 export function ServicesCatalogCategoryMenu({
@@ -24,6 +25,7 @@ export function ServicesCatalogCategoryMenu({
   categoryCode,
   onSelect,
   fullWidth = false,
+  compact = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -59,16 +61,15 @@ export function ServicesCatalogCategoryMenu({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className={`inline-flex min-h-11 w-full items-center justify-between gap-2 px-3.5 text-[14px] font-semibold text-[#111827] transition ${catalogFieldClass} ${
+        className={`inline-flex w-full items-center justify-between gap-2 font-semibold text-[#111827] transition ${catalogFieldClass} ${
+          compact ? 'min-h-8 px-2.5 text-[13px]' : 'min-h-11 px-3.5 text-[14px]'
+        } ${
           categoryCode ? 'ring-1 ring-[#111827]/10' : ''
         }`}
       >
         <span className="flex min-w-0 items-center gap-2.5">
           {!fullWidth ? (
-            <>
-              <HiSquares2X2 className="h-4 w-4 shrink-0 text-[#6B7280]" aria-hidden />
-              <span className="truncate text-[#6B7280] font-medium">Категория</span>
-            </>
+            <span className="truncate font-medium text-[#6B7280]">Категория</span>
           ) : null}
           <span className="truncate">{label}</span>
         </span>

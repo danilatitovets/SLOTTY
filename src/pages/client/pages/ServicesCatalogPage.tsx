@@ -1,30 +1,29 @@
-import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getMasterPath } from '../../../app/paths';
 import { useCatalogErrorModal } from '../hooks/useCatalogErrorModal';
 import { ServiceCategoryRail } from '../components/ServiceCategoryRail';
-import { SectionHeading } from '../components/SectionHeading';
 import { useCatalogData } from '../hooks/useCatalogData';
-import { aggregateServicesByCategory } from '../lib/aggregateServices';
+import { mapListingsToServiceCards } from '../lib/aggregateServices';
 import { filterServicesForCatalog } from '../lib/filterServices';
 import {
   catalogFiltersToApiParams,
   countActiveCatalogFilters,
-  getCatalogViewTab,
   parseCatalogFiltersFromSearch,
   resetCatalogFilters,
-  setCatalogViewTab,
   type CatalogFiltersState,
 } from '../servicesCatalog/catalogFiltersState';
 import { ServicesCatalogDesktop } from '../servicesCatalog/ServicesCatalogDesktop';
 import { ServicesCatalogFiltersSheet } from '../servicesCatalog/ServicesCatalogFiltersSheet';
 import { ServicesCatalogResults } from '../servicesCatalog/ServicesCatalogResults';
-import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
-import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
-import { ServicesCatalogViewTabs } from '../servicesCatalog/ServicesCatalogViewTabs';
-import { catalogCanvasClass, catalogDesktopPanel } from '../servicesCatalog/servicesCatalogTheme';
+import { CatalogMobileServicesHeader } from '../servicesCatalog/CatalogMobileServicesHeader';
+import { catalogMobileContentBelowHeaderClass } from '../servicesCatalog/catalogMobileFixedLayout';
+import { catalogCanvasClass, catalogMobilePadX } from '../servicesCatalog/servicesCatalogTheme';
+import type { CatalogSearchSuggestSelection } from '../servicesCatalog/catalogSearchSuggestTypes';
 import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
 
 export function ServicesCatalogPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialQ = searchParams.get('q')?.trim() ?? '';
   const [search, setSearch] = useState(initialQ);
@@ -47,7 +46,7 @@ export function ServicesCatalogPage() {
   useCatalogErrorModal(error, reload, 'Услуги');
 
   const services = useMemo(
-    () => aggregateServicesByCategory(listings, categories),
+    () => mapListingsToServiceCards(listings, categories),
     [listings, categories],
   );
 
@@ -57,8 +56,9 @@ export function ServicesCatalogPage() {
         search,
         chips: filters.chips,
         onlineBookingOnly: filters.onlineBookingOnly,
+        categoryCode: filters.categoryCode,
       }),
-    [services, search, filters.chips, filters.onlineBookingOnly],
+    [services, search, filters.chips, filters.onlineBookingOnly, filters.categoryCode],
   );
 
   const popular = useMemo(
@@ -75,12 +75,29 @@ export function ServicesCatalogPage() {
   const showSections =
     filters.chips.size === 0 && !search.trim() && filters.categoryCode == null;
 
-  const activeTab = getCatalogViewTab(filters);
+  const showCategoryRail =
+    filters.chips.size === 0 && !search.trim() && services.length > 0;
 
   const openFilters = () => {
     setFilterDraft({ ...filters, chips: new Set(filters.chips) });
     setFilterOpen(true);
   };
+
+  const handleSearchSelect = useCallback(
+    (selection: CatalogSearchSuggestSelection) => {
+      if (selection.kind === 'master') {
+        navigate(getMasterPath(selection.masterId));
+        return;
+      }
+      if (selection.kind === 'category') {
+        setSearch('');
+        setFilters((prev) => ({ ...prev, categoryCode: selection.code }));
+        return;
+      }
+      setSearch(selection.text);
+    },
+    [navigate],
+  );
 
   const resultsProps = {
     loading,
@@ -108,43 +125,45 @@ export function ServicesCatalogPage() {
         onSearchChange={setSearch}
         filters={filters}
         onFiltersChange={setFilters}
-        onResetFilters={() => setFilters(resetCatalogFilters())}
         categories={categories}
+        onOpenFilters={openFilters}
+        onSearchSelect={handleSearchSelect}
         {...resultsProps}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
-        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
-          <CatalogMobilePageToolbar title="Услуги" />
-          <CatalogStickyToolbar
-            compact
-            belowPageToolbar
-            sticky={false}
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Маникюр, стрижка, брови, массаж…"
-            resultCount={loading || error ? null : filtered.length}
-            loading={loading}
-            onFilterClick={openFilters}
-            activeFilterCount={activeFilterCount}
-          >
-            <ServicesCatalogViewTabs
-              activeTab={activeTab}
-              onTabChange={(tab) => setFilters((prev) => setCatalogViewTab(prev, tab))}
-              compact
-            />
-          </CatalogStickyToolbar>
+      <div className={`relative z-0 min-h-dvh w-full lg:hidden ${catalogCanvasClass}`}>
+        <CatalogMobileServicesHeader
+          title="Услуги"
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Маникюр, стрижка, брови…"
+          filters={filters}
+          onFiltersChange={setFilters}
+          onOpenFilters={openFilters}
+          onSearchSelect={handleSearchSelect}
+          activeFilterCount={activeFilterCount}
+        />
 
-          <div className={`flex flex-col gap-4 ${CLIENT_CONTENT_PAD_BOTTOM} pb-6`}>
-            {!loading && !error && services.length > 0 ? (
-              <section className={`${catalogDesktopPanel} p-5`}>
-                <SectionHeading title="Категории" />
-                <ServiceCategoryRail categories={categories} showAllLink />
-              </section>
-            ) : null}
+        <div
+          className={`mx-auto w-full pt-2 ${catalogMobileContentBelowHeaderClass} ${catalogMobilePadX} ${CLIENT_CONTENT_PAD_BOTTOM}`}
+        >
+          {!loading && !error && showCategoryRail ? (
+            <div className="scrollbar-hidden -mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5">
+              <ServiceCategoryRail
+                categories={categories}
+                activeCode={filters.categoryCode}
+                showAllLink
+                onSelectCategory={(code) => setFilters({ ...filters, categoryCode: code })}
+              />
+            </div>
+          ) : null}
 
-            <ServicesCatalogResults layout="mobile" {...resultsSearchProps} />
-          </div>
+          <ServicesCatalogResults
+            layout="mobile"
+            {...resultsSearchProps}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
         </div>
       </div>
 
@@ -152,6 +171,7 @@ export function ServicesCatalogPage() {
         open={filterOpen}
         draft={filterDraft}
         resultCount={filtered.length}
+        categories={categories}
         onChange={setFilterDraft}
         onClose={() => setFilterOpen(false)}
         onApply={() => {

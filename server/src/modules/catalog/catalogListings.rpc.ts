@@ -3,6 +3,8 @@ import type {
   CatalogListingsQuery,
   CatalogListingsResult,
   CatalogListingItem,
+  CatalogSearchSuggestion,
+  CatalogSearchSuggestionsResult,
   LocationSuggestion,
 } from './catalogSearch.types.js';
 
@@ -92,6 +94,30 @@ export async function suggestMasterLocationsRpc(
   );
   const rows = r.rows[0]?.suggestions;
   return Array.isArray(rows) ? rows : [];
+}
+
+type RpcSuggestSearchPayload = {
+  popular?: CatalogSearchSuggestion[];
+  items?: CatalogSearchSuggestion[];
+};
+
+export async function suggestCatalogSearchRpc(
+  rawQuery: string,
+  limit: number,
+): Promise<CatalogSearchSuggestionsResult> {
+  const r = await query<{ payload: RpcSuggestSearchPayload }>(
+    `select public.catalog_suggest_search($1::text, $2::int) as payload`,
+    [rawQuery, limit],
+  );
+  const payload = r.rows[0]?.payload ?? {};
+  return {
+    popular: Array.isArray(payload.popular) ? payload.popular : [],
+    items: Array.isArray(payload.items) ? payload.items : [],
+  };
+}
+
+export async function recordCatalogSearchQueryRpc(rawQuery: string): Promise<void> {
+  await query(`select public.catalog_record_search_query($1::text)`, [rawQuery]);
 }
 
 export { isMissingRpcError };

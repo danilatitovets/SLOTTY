@@ -19,21 +19,21 @@ import {
 } from 'react-icons/hi2';
 import type { CatalogSortBy } from './catalogFiltersState';
 import {
+  catalogFilterPromoBg,
   catalogFilterSheetChipClass,
-  catalogFilterSheetSectionLabel,
+  catalogFilterSheetPromoBarClass,
+  catalogFilterSheetSectionTitleClass,
   catalogFilterSheetToggleRow,
 } from './catalogFilterSheetTheme';
 import {
   catalogFilterChipActive,
   catalogFilterChipIdle,
-  catalogFilterSectionIconClass,
   catalogFilterSectionTitleClass,
 } from './servicesCatalogTheme';
 
 export type CatalogFilterUiVariant = 'default' | 'sheet';
 
 export function FilterSection({
-  icon: Icon,
   title,
   children,
   defaultOpen = false,
@@ -41,7 +41,10 @@ export function FilterSection({
   variant = 'default',
   activeHint,
 }: {
-  icon: IconType;
+  /** @deprecated Иконки секций отключены — prop оставлен для совместимости вызовов. */
+  icon?: IconType;
+  /** @deprecated */
+  leading?: ReactNode;
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
@@ -52,24 +55,13 @@ export function FilterSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
-  if (variant === 'sheet') {
-    return (
-      <section className="min-w-0">
-        <p className={`mb-2.5 ${catalogFilterSheetSectionLabel}`}>{title}</p>
-        <div className="min-w-0">{children}</div>
-      </section>
-    );
-  }
-
   if (!collapsible) {
+    const titleClass =
+      variant === 'sheet' ? catalogFilterSheetSectionTitleClass : `${catalogFilterSectionTitleClass} mb-2.5`;
+
     return (
       <section className="min-w-0">
-        <div className="mb-2.5 flex items-center gap-2.5">
-          <span className={catalogFilterSectionIconClass}>
-            <Icon className="h-4 w-4" aria-hidden />
-          </span>
-          <h3 className={catalogFilterSectionTitleClass}>{title}</h3>
-        </div>
+        <h3 className={titleClass}>{title}</h3>
         <div className="min-w-0">{children}</div>
       </section>
     );
@@ -84,9 +76,6 @@ export function FilterSection({
         className="mb-2.5 flex w-full items-center justify-between gap-2 text-left"
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span className={catalogFilterSectionIconClass}>
-            <Icon className="h-4 w-4" aria-hidden />
-          </span>
           <h3 className={`${catalogFilterSectionTitleClass} shrink-0`}>{title}</h3>
           {!open && activeHint ? (
             <span className="min-w-0 truncate text-[12px] font-medium text-[#F47C8C]">{activeHint}</span>
@@ -104,7 +93,7 @@ export function FilterSection({
 
 export function FilterChip({
   active,
-  icon: Icon,
+  icon: _Icon,
   label,
   onClick,
   className = '',
@@ -135,18 +124,79 @@ export function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-[13px] transition ${className} ${
+      className={`rounded-[10px] px-3 py-2 text-[13px] transition ${className} ${
         active ? catalogFilterChipActive : catalogFilterChipIdle
-      }`}
+      } ${active ? 'font-semibold' : 'font-medium'}`}
     >
-      {Icon ? (
-        <Icon
-          className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-[#F47C8C]' : 'text-[#6B7280]'}`}
-          aria-hidden
-        />
-      ) : null}
-      <span className={active ? 'font-semibold' : 'font-medium'}>{label}</span>
+      {label}
     </button>
+  );
+}
+
+function FilterToggle({
+  active,
+  onChange,
+  accent = 'brand',
+}: {
+  active: boolean;
+  onChange: (next: boolean) => void;
+  accent?: 'brand' | 'white';
+}) {
+  const trackClass =
+    accent === 'white'
+      ? active
+        ? 'bg-white'
+        : 'bg-white/40'
+      : active
+        ? 'bg-[#F47C8C]'
+        : 'bg-[#D1D5DB]';
+
+  const knobClass =
+    accent === 'white' && active
+      ? 'bg-[#F47C8C] shadow-[0_1px_4px_rgba(17,24,39,0.18)]'
+      : 'bg-white shadow-[0_1px_4px_rgba(17,24,39,0.12)]';
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      onClick={() => onChange(!active)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition ${trackClass}`}
+    >
+      <span
+        className={`absolute top-0.5 h-6 w-6 rounded-full transition ${knobClass} ${
+          active ? 'left-[22px]' : 'left-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
+export function FilterPromoBar({
+  active,
+  label,
+  onChange,
+}: {
+  active: boolean;
+  label: string;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className={catalogFilterSheetPromoBarClass}>
+      <div
+        className="pointer-events-none absolute inset-0 scale-105 bg-cover bg-center"
+        style={{ backgroundImage: `url(${catalogFilterPromoBg})` }}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute inset-0 bg-[#111827]/20" aria-hidden />
+      <span className="relative z-10 text-[13px] font-bold uppercase tracking-wide text-white">
+        {label}
+      </span>
+      <span className="relative z-10">
+        <FilterToggle active={active} onChange={onChange} accent="white" />
+      </span>
+    </label>
   );
 }
 
@@ -177,21 +227,7 @@ export function FilterSwitch({
       >
         {label}
       </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={active}
-        onClick={() => onChange(!active)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-          active ? 'bg-[#F47C8C]' : 'bg-[#D1D5DB]'
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition ${
-            active ? 'left-[22px]' : 'left-0.5'
-          }`}
-        />
-      </button>
+      <FilterToggle active={active} onChange={onChange} />
     </label>
   );
 }
@@ -217,6 +253,23 @@ export const PRICE_FILTER_OPTIONS = [
   { value: '30_50', label: '30–50' },
   { value: '50_100', label: '50–100' },
   { value: 'over100', label: '100+' },
+] as const;
+
+/** Подписи цены в мобильном sheet — как у каталога мастеров. */
+export const SHEET_PRICE_FILTER_OPTIONS = [
+  { value: 'any', label: 'Любая' },
+  { value: 'under30', label: 'до 30 BYN' },
+  { value: '30_50', label: '30–50 BYN' },
+  { value: '50_100', label: '50–100 BYN' },
+  { value: 'over100', label: 'от 100 BYN' },
+] as const;
+
+/** Подписи рейтинга в мобильном sheet — как у каталога мастеров. */
+export const SHEET_RATING_FILTER_OPTIONS = [
+  { value: null, label: 'Любой' },
+  { value: 4.5, label: 'от 4.5' },
+  { value: 4.7, label: 'от 4.7' },
+  { value: 4.9, label: 'от 4.9' },
 ] as const;
 
 export const VISIT_FILTER_OPTIONS = [

@@ -4,6 +4,8 @@ import type {
   CatalogListingsQuery,
   CatalogListingsResult,
   CatalogListingItem,
+  CatalogSearchSuggestion,
+  CatalogSearchSuggestionsResult,
   LocationSuggestion,
 } from './catalogSearch.types.js';
 
@@ -128,7 +130,9 @@ function orderBySql(sortBy: CatalogListingsQuery['sortBy']): string {
 
 import {
   isMissingRpcError,
+  recordCatalogSearchQueryRpc,
   searchCatalogListingsRpc,
+  suggestCatalogSearchRpc,
   suggestMasterLocationsRpc,
 } from './catalogListings.rpc.js';
 
@@ -150,6 +154,166 @@ export async function suggestMasterLocations(rawQuery: string, limit: number): P
     console.warn('[catalog] RPC catalog_suggest_locations missing — apply migration 038; using legacy SQL');
     return suggestMasterLocationsLegacy(rawQuery, limit);
   }
+}
+
+export async function suggestCatalogSearch(
+  rawQuery: string,
+  limit: number,
+): Promise<CatalogSearchSuggestionsResult> {
+  try {
+    return await suggestCatalogSearchRpc(rawQuery, limit);
+  } catch (err) {
+    if (!isMissingRpcError(err)) throw err;
+    console.warn('[catalog] RPC catalog_suggest_search missing — apply migration 077; using legacy SQL');
+    return suggestCatalogSearchLegacy(rawQuery, limit);
+  }
+}
+
+export async function recordCatalogSearchQuery(rawQuery: string): Promise<void> {
+  const frag = safeIlikeFragment(rawQuery);
+  if (!frag) return;
+  try {
+    await recordCatalogSearchQueryRpc(frag);
+  } catch (err) {
+    if (!isMissingRpcError(err)) throw err;
+  }
+}
+
+async function suggestCatalogSearchLegacy(
+  rawQuery: string,
+  limit: number,
+): Promise<CatalogSearchSuggestionsResult> {
+  const frag = safeIlikeFragment(rawQuery);
+  const lim = clampInt(limit, 1, 20);
+
+  if (!frag) {
+    const popular = await query<{ title: string }>(
+      `
+      select distinct trim(ms.title) as title
+      from public.master_services ms
+      join public.master_profiles mp on mp.master_id = ms.master_id
+      where ms.is_active = true
+        and ms.admin_hidden_at is null
+        and mp.publication_status = 'published'
+        and ${CATALOG_MASTER_ACCOUNT_SQL}
+        and trim(coalesce(ms.title, '')) <> ''
+      order by trim(ms.title) asc
+      limit $1
+      `,
+      [Math.min(lim, 8)],
+    );
+    return {
+      popular: popular.rows.map((row, i) => ({
+        id: `svc:${i}`,
+        type: 'query' as const,
+        title: row.title,
+        subtitle: 'Часто ищут',
+        group: 'popular' as const,
+      })),
+      items: [],
+    };
+  }
+
+  const pattern = `%${frag}%`;
+  const items: CatalogSearchSuggestion[] = [];
+
+  const cats = await query<{ code: string; name: string; master_count: number }>(
+    `
+    select sc.code, sc.name, count(distinct mp.master_id)::int as master_count
+    from public.service_categories sc
+    join public.master_profiles mp on mp.primary_category_id = sc.id
+    where sc.is_active = true
+      and mp.publication_status = 'published'
+      and ${CATALOG_MASTER_ACCOUNT_SQL}
+      and (sc.name ilike $1 or sc.code ilike $1)
+    group by sc.code, sc.name
+    order by count(distinct mp.master_id) desc
+    limit 3
+    `,
+    [pattern],
+  );
+  for (const row of cats.rows) {
+    items.push({
+      id: `cat:${row.code}`,
+      type: 'category',
+      title: row.name,
+      subtitle: row.master_count === 1 ? '1 мастер' : `${row.master_count} мастеров`,
+      categoryCode: row.code,
+      group: 'match',
+    });
+  }
+
+  const services = await query<{
+    service_id: string;
+    title: string;
+    master_id: string;
+    category_code: string | null;
+    price_amount: string | null;
+  }>(
+    `
+    select ms.id as service_id, ms.title, ms.master_id, sc.code as category_code, ms.price_amount::text
+    from public.master_services ms
+    join public.master_profiles mp on mp.master_id = ms.master_id
+    left join public.service_categories sc on sc.id = ms.category_id
+    where ms.is_active = true
+      and ms.admin_hidden_at is null
+      and mp.publication_status = 'published'
+      and ${CATALOG_MASTER_ACCOUNT_SQL}
+      and ms.title ilike $1
+    order by mp.reviews_count desc nulls last, ms.title asc
+    limit 5
+    `,
+    [pattern],
+  );
+  for (const row of services.rows) {
+    const price = row.price_amount ? ` · от ${row.price_amount} BYN` : '';
+    items.push({
+      id: `svc:${row.service_id}`,
+      type: 'service',
+      title: row.title,
+      subtitle: `${row.category_code ?? 'Услуга'}${price}`,
+      masterId: row.master_id,
+      serviceId: row.service_id,
+      categoryCode: row.category_code ?? undefined,
+      group: 'match',
+    });
+  }
+
+  const masters = await query<{
+    master_id: string;
+    display_name: string;
+    slug: string | null;
+    category_code: string | null;
+    category_name: string | null;
+    rating_avg: string | null;
+  }>(
+    `
+    select mp.master_id, mp.display_name, mp.slug, sc.code as category_code, sc.name as category_name, mp.rating_avg::text
+    from public.master_profiles mp
+    left join public.service_categories sc on sc.id = mp.primary_category_id
+    where mp.publication_status = 'published'
+      and ${CATALOG_MASTER_ACCOUNT_SQL}
+      and mp.display_name ilike $1
+    order by mp.reviews_count desc nulls last, mp.display_name asc
+    limit 4
+    `,
+    [pattern],
+  );
+  for (const row of masters.rows) {
+    const rating = row.rating_avg && Number(row.rating_avg) > 0 ? ` · ${Number(row.rating_avg).toFixed(1)}` : '';
+    items.push({
+      id: `m:${row.master_id}`,
+      type: 'master',
+      title: row.display_name,
+      subtitle: `${row.category_name ?? 'Мастер'}${rating}`,
+      masterId: row.master_id,
+      slug: row.slug,
+      categoryCode: row.category_code ?? undefined,
+      group: 'match',
+    });
+  }
+
+  return { popular: [], items: items.slice(0, lim) };
 }
 
 async function suggestMasterLocationsLegacy(rawQuery: string, limit: number): Promise<LocationSuggestion[]> {

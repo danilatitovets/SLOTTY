@@ -2,7 +2,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { listActiveServiceCategories } from './catalog.service.js';
-import { searchCatalogListings, suggestMasterLocations } from './catalogListings.service.js';
+import {
+  recordCatalogSearchQuery,
+  searchCatalogListings,
+  suggestCatalogSearch,
+  suggestMasterLocations,
+} from './catalogListings.service.js';
 import type { CatalogListingsQuery } from './catalogSearch.types.js';
 import { publicCatalogRateLimit } from '../../middlewares/rateLimit.js';
 
@@ -85,5 +90,30 @@ catalogRouter.get(
       .parse(req.query);
     const suggestions = await suggestMasterLocations(q.query, q.limit);
     res.json({ suggestions });
+  }),
+);
+
+catalogRouter.get(
+  '/search-suggestions',
+  publicCatalogRateLimit,
+  asyncHandler(async (req, res) => {
+    const q = z
+      .object({
+        query: z.string().max(160).optional().default(''),
+        limit: z.coerce.number().int().min(1).max(20).optional().default(12),
+      })
+      .parse(req.query);
+    const out = await suggestCatalogSearch(q.query, q.limit);
+    res.json(out);
+  }),
+);
+
+catalogRouter.post(
+  '/search-log',
+  publicCatalogRateLimit,
+  asyncHandler(async (req, res) => {
+    const body = z.object({ query: z.string().max(160) }).parse(req.body);
+    await recordCatalogSearchQuery(body.query);
+    res.status(204).end();
   }),
 );

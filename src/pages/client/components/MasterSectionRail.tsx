@@ -22,20 +22,36 @@ export function MasterSectionRail({
 }: Props) {
   if (!items.length) return null;
 
+  const insetPad = inset ? 'px-3' : '';
+  const insetBleed = inset ? '-mx-3' : '';
+
   return (
-    <section className={inset ? '-mx-4 sm:-mx-5' : ''}>
-      <div className={inset ? 'px-4 sm:px-5' : ''}>
+    <section className={insetBleed}>
+      <div className={insetPad}>
         <SectionHeading title={title} subtitle={subtitle} />
       </div>
+
+      <div className={`flex flex-col gap-2.5 ${insetPad} lg:hidden`}>
+        {items.map((listing) => (
+          <MasterCard
+            key={listing.masterId}
+            listing={listing}
+            userLat={userLat}
+            userLng={userLng}
+            layout="list"
+          />
+        ))}
+      </div>
+
       <div
-        className={`flex items-stretch gap-3 overflow-x-auto py-1.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
-          inset ? 'px-4 sm:px-5' : ''
+        className={`hidden items-stretch gap-3 overflow-x-auto py-1.5 pb-1 snap-x snap-mandatory [scrollbar-width:none] lg:flex [&::-webkit-scrollbar]:hidden ${
+          inset ? 'px-2.5' : ''
         }`}
       >
         {items.map((listing) => (
           <div
             key={listing.masterId}
-            className="h-[25rem] w-[min(88vw,340px)] shrink-0 snap-start"
+            className="h-[25rem] w-[min(22rem,calc(100vw-2.5rem))] shrink-0 snap-start"
           >
             <MasterCard
               listing={listing}

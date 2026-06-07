@@ -155,6 +155,54 @@ export type LocationSuggestionDto = {
   subtitle: string;
 };
 
+export type CatalogSearchSuggestionDto = {
+  id: string;
+  type: 'query' | 'category' | 'service' | 'master';
+  title: string;
+  subtitle: string;
+  group?: 'popular' | 'match' | 'recent';
+  categoryCode?: string;
+  masterId?: string;
+  serviceId?: string;
+  slug?: string | null;
+};
+
+export type CatalogSearchSuggestionsResponseDto = {
+  popular: CatalogSearchSuggestionDto[];
+  items: CatalogSearchSuggestionDto[];
+};
+
+export async function fetchSearchSuggestions(
+  query: string,
+  limit = 12,
+): Promise<CatalogSearchSuggestionsResponseDto> {
+  const qs = new URLSearchParams();
+  qs.set('query', query.trim());
+  qs.set('limit', String(limit));
+  const url = `/api/catalog/search-suggestions?${qs.toString()}`;
+  const res = await apiFetch(url, { skipAuth: true });
+  if (!res.ok) throw new Error(await readApiError(res));
+  const j = (await res.json()) as CatalogSearchSuggestionsResponseDto;
+  return {
+    popular: j.popular ?? [],
+    items: j.items ?? [],
+  };
+}
+
+export async function recordSearchQuery(query: string): Promise<void> {
+  const q = query.trim();
+  if (!q) return;
+  const res = await apiFetch('/api/catalog/search-log', {
+    method: 'POST',
+    skipAuth: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: q }),
+  });
+  if (!res.ok && res.status !== 204) {
+    /* не блокируем UI из-за статистики */
+  }
+}
+
 export async function fetchLocationSuggestions(query: string, limit = 12): Promise<LocationSuggestionDto[]> {
   const qs = new URLSearchParams();
   qs.set('query', query.trim());

@@ -3,9 +3,8 @@ import { useCatalogErrorModal } from '../hooks/useCatalogErrorModal';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import type { ClientOutletContext } from '../clientOutletContext';
 import { MasterCard } from '../components/MasterCard';
-import { QuickChips } from '../components/QuickChips';
 import { GeoPromptCard } from '../components/GeoPromptCard';
-import { CategoryMasterFilterSheet } from '../components/CategoryMasterFilterSheet';
+import { ServiceCategoryRail } from '../components/ServiceCategoryRail';
 import { SkeletonMasterCard } from '../components/SkeletonCards';
 import { EmptyState } from '../components/EmptyState';
 import { CatalogError } from '../components/CatalogError';
@@ -16,7 +15,6 @@ import {
   normalizeCategoryCode,
 } from '../../../features/catalog/serviceCategoryLabels';
 import { groupListingsByMaster, sortMastersByDistance } from '../lib/groupMasters';
-import { formatDurationMinutes, formatMastersCountLabel, formatPriceFrom } from '../lib/catalogFormat';
 import {
   categoryFiltersToApiParams,
   countActiveCategoryFilters,
@@ -25,22 +23,17 @@ import {
   toggleQuickChip,
   type CategoryMasterFilters,
 } from '../lib/categoryMasterFilters';
+import { CatalogMobileCategoryHeader } from '../serviceCategory/CatalogMobileCategoryHeader';
 import { ServiceCategoryDesktop } from '../serviceCategory/ServiceCategoryDesktop';
-import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
-import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
-import { catalogCanvasClass, catalogMetaChipClass } from '../servicesCatalog/servicesCatalogTheme';
+import { MastersCatalogFiltersSheet } from '../mastersCatalog/MastersCatalogFiltersSheet';
+import { catalogMobileContentBelowHeaderClass } from '../servicesCatalog/catalogMobileFixedLayout';
+import {
+  catalogCanvasClass,
+  catalogMetaChipClass,
+  catalogMobilePadX,
+} from '../servicesCatalog/servicesCatalogTheme';
+import { formatDurationMinutes, formatMastersCountLabel, formatPriceFrom } from '../lib/catalogFormat';
 import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
-
-const FILTER_CHIPS = [
-  { id: 'today', label: 'Сегодня' },
-  { id: 'tomorrow', label: 'Завтра' },
-  { id: 'near', label: 'Рядом' },
-  { id: 'rating', label: 'Рейтинг' },
-  { id: 'price', label: 'Дешевле' },
-  { id: 'home', label: 'На дому' },
-  { id: 'studio', label: 'В студии' },
-  { id: 'promo', label: 'С акциями' },
-] as const;
 
 export function ServiceCategoryPage() {
   const { categoryCode } = useParams<{ categoryCode: string }>();
@@ -201,51 +194,61 @@ export function ServiceCategoryPage() {
         showGeoPrompt={quickChipIds.has('near')}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
-        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
-          <h1 className="sr-only lg:hidden">{categoryName}</h1>
-          <CatalogMobilePageToolbar title={categoryName} backTo={SERVICES_PATH} backLabel="К услугам" />
-          <CatalogStickyToolbar
-            compact
-            belowPageToolbar
-            sticky={false}
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Имя мастера, услуга, район…"
-            loading={loading}
-            showResultCount={false}
-            onFilterClick={openFilters}
-            activeFilterCount={activeFilterCount}
-            afterSticky={geoPromptMobile}
-          >
-            <div className="min-w-0">
-              <div className="flex flex-wrap gap-1.5">
-                {stats.minPrice != null ? (
-                  <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                    {formatPriceFrom(stats.minPrice)}
-                  </span>
-                ) : null}
-                <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                  {formatDurationMinutes(stats.duration)}
-                </span>
-                <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
-                  {formatMastersCountLabel(stats.masterCount)}
-                </span>
-              </div>
-              <div className="mt-1.5">
-                <QuickChips chips={[...FILTER_CHIPS]} activeIds={quickChipIds} onToggle={toggleChip} />
-              </div>
-            </div>
-          </CatalogStickyToolbar>
+      <div className={`relative z-0 min-h-dvh w-full lg:hidden ${catalogCanvasClass}`}>
+        <h1 className="sr-only">{categoryName}</h1>
+        <CatalogMobileCategoryHeader
+          title={categoryName}
+          closeTo={SERVICES_PATH}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Имя мастера, услуга, район…"
+          filters={filters}
+          onToggleChip={toggleChip}
+          onOpenFilters={openFilters}
+          activeFilterCount={activeFilterCount}
+        />
 
-          <div className={`${CLIENT_CONTENT_PAD_BOTTOM} pb-6 pt-4`}>{mobileResults}</div>
+        <div
+          className={`mx-auto w-full pt-2 ${catalogMobileContentBelowHeaderClass} ${catalogMobilePadX} ${CLIENT_CONTENT_PAD_BOTTOM}`}
+        >
+          {geoPromptMobile}
+
+          {!loading && !error && categories.length > 0 ? (
+            <div className="scrollbar-hidden -mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5">
+              <ServiceCategoryRail
+                categories={categories}
+                activeCode={normalizedCategoryCode ?? null}
+                showAllLink
+                onSelectCategory={handleCategorySelect}
+              />
+            </div>
+          ) : null}
+
+          {!loading && !error ? (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {stats.minPrice != null ? (
+                <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
+                  {formatPriceFrom(stats.minPrice)}
+                </span>
+              ) : null}
+              <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
+                {formatDurationMinutes(stats.duration)}
+              </span>
+              <span className={`${catalogMetaChipClass} !py-1 !text-[12px]`}>
+                {formatMastersCountLabel(stats.masterCount)}
+              </span>
+            </div>
+          ) : null}
+
+          <div className="pb-6">{mobileResults}</div>
         </div>
       </div>
 
-      <CategoryMasterFilterSheet
+      <MastersCatalogFiltersSheet
         open={filterOpen}
-        title={`Фильтры · ${categoryName}`}
         draft={filterDraft}
+        resultCount={filteredMasters.length}
+        categories={categories}
         onChange={setFilterDraft}
         onClose={() => setFilterOpen(false)}
         onApply={() => {

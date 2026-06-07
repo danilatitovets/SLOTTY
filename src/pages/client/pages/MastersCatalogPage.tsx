@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useCatalogErrorModal } from '../hooks/useCatalogErrorModal';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import type { ClientOutletContext } from '../clientOutletContext';
-import { QuickChips } from '../components/QuickChips';
 import { MasterCard } from '../components/MasterCard';
 import { MasterSectionRail } from '../components/MasterSectionRail';
 import { GeoPromptCard } from '../components/GeoPromptCard';
-import { CategoryMasterFilterSheet } from '../components/CategoryMasterFilterSheet';
+import { ServiceCategoryRail } from '../components/ServiceCategoryRail';
 import { SkeletonMasterCard } from '../components/SkeletonCards';
 import { EmptyState } from '../components/EmptyState';
 import { CatalogError } from '../components/CatalogError';
@@ -26,20 +25,13 @@ import {
   toggleMastersQuickChip,
   type CategoryMasterFilters,
 } from '../lib/categoryMasterFilters';
+import { CatalogMobileMastersHeader } from '../mastersCatalog/CatalogMobileMastersHeader';
 import { MastersCatalogDesktop } from '../mastersCatalog/MastersCatalogDesktop';
+import { MastersCatalogFiltersSheet } from '../mastersCatalog/MastersCatalogFiltersSheet';
 import { MastersCatalogTopRankView } from '../mastersCatalog/MastersCatalogTopRankView';
-import { CatalogMobilePageToolbar } from '../servicesCatalog/CatalogMobilePageToolbar';
-import { CatalogStickyToolbar } from '../servicesCatalog/CatalogStickyToolbar';
-import { catalogCanvasClass } from '../servicesCatalog/servicesCatalogTheme';
+import { catalogMobileContentBelowHeaderClass } from '../servicesCatalog/catalogMobileFixedLayout';
+import { catalogCanvasClass, catalogMobilePadX } from '../servicesCatalog/servicesCatalogTheme';
 import { CLIENT_CONTENT_PAD_BOTTOM } from '../clientNavConstants';
-
-const QUICK_CHIPS = [
-  { id: 'near', label: 'Рядом' },
-  { id: 'today', label: 'Сегодня' },
-  { id: 'top', label: 'Топ рейтинг' },
-  { id: 'home', label: 'На дому' },
-  { id: 'studio', label: 'В студии' },
-] as const;
 
 export function MastersCatalogPage() {
   const { hasGeo, requestGeo, userLat, userLng } = useOutletContext<ClientOutletContext>();
@@ -107,16 +99,10 @@ export function MastersCatalogPage() {
     setFilterOpen(true);
   };
 
-  const categoryOptions = useMemo(
-    () => categories.map((c) => ({ code: c.code, name: c.name })),
-    [categories],
-  );
+  const filterResultCount = feed.total ?? masters.length;
 
-  const resultCount = loading || error || isTopRankView ? null : feed.total;
-
-  const quickChipsRow = (
-    <QuickChips chips={[...QUICK_CHIPS]} activeIds={quickChipIds} onToggle={toggleChip} />
-  );
+  const showCategoryRail =
+    !search.trim() && !isTopRankView && categories.length > 0;
 
   const showGeoPromptMobile = !hasGeo && (quickChipIds.has('near') || !flatMode);
 
@@ -210,26 +196,35 @@ export function MastersCatalogPage() {
         showGeoPrompt={quickChipIds.has('near')}
       />
 
-      <div className={`relative z-0 lg:hidden min-h-dvh ${catalogCanvasClass}`}>
-        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
-          <CatalogMobilePageToolbar title="Мастера" />
-          <CatalogStickyToolbar
-            compact
-            belowPageToolbar
-            sticky={false}
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Имя мастера, услуга, район…"
-            resultCount={resultCount}
-            loading={loading}
-            onFilterClick={openFilters}
-            activeFilterCount={activeFilterCount}
-            afterSticky={geoPromptMobile}
-          >
-            {quickChipsRow}
-          </CatalogStickyToolbar>
+      <div className={`relative z-0 min-h-dvh w-full lg:hidden ${catalogCanvasClass}`}>
+        <CatalogMobileMastersHeader
+          title="Мастера"
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Имя мастера, услуга, район…"
+          filters={filters}
+          onToggleChip={toggleChip}
+          onOpenFilters={openFilters}
+          activeFilterCount={activeFilterCount}
+        />
 
-          <div className={`flex flex-col gap-6 ${CLIENT_CONTENT_PAD_BOTTOM} pb-6`}>
+        <div
+          className={`mx-auto w-full pt-2 ${catalogMobileContentBelowHeaderClass} ${catalogMobilePadX} ${CLIENT_CONTENT_PAD_BOTTOM}`}
+        >
+          {geoPromptMobile}
+
+          {!loading && !error && showCategoryRail ? (
+            <div className="scrollbar-hidden -mx-0.5 mb-3 flex gap-2 overflow-x-auto px-0.5">
+              <ServiceCategoryRail
+                categories={categories}
+                activeCode={filters.categoryCode}
+                showAllLink
+                onSelectCategory={(code) => setFilters({ ...filters, categoryCode: code })}
+              />
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-6 pb-6">
             {isTopRankView ? (
               <MastersCatalogTopRankView
                 masters={masters}
@@ -247,13 +242,13 @@ export function MastersCatalogPage() {
         </div>
       </div>
 
-      <CategoryMasterFilterSheet
+      <MastersCatalogFiltersSheet
         open={filterOpen}
-        title="Фильтры мастеров"
         draft={filterDraft}
+        resultCount={filterResultCount}
+        categories={categories}
         onChange={setFilterDraft}
         onClose={() => setFilterOpen(false)}
-        serviceCategories={categoryOptions}
         onApply={() => {
           setFilters(filterDraft);
           setFilterOpen(false);

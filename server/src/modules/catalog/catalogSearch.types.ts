@@ -72,3 +72,22 @@ export type LocationSuggestion = {
   title: string;
   subtitle: string;
 };
+
+export type CatalogSearchSuggestionType = 'query' | 'category' | 'service' | 'master';
+
+export type CatalogSearchSuggestion = {
+  id: string;
+  type: CatalogSearchSuggestionType;
+  title: string;
+  subtitle: string;
+  group?: 'popular' | 'match' | 'recent';
+  categoryCode?: string;
+  masterId?: string;
+  serviceId?: string;
+  slug?: string | null;
+};
+
+export type CatalogSearchSuggestionsResult = {
+  popular: CatalogSearchSuggestion[];
+  items: CatalogSearchSuggestion[];
+};

@@ -58,9 +58,28 @@ export const catalogDesktopToolbarStickyClass = 'shrink-0 bg-[#F5F5F5]';
 /** Мобильный sticky: липнет только белая карточка внутри, без серой подложки. */
 export const catalogStickyToolbarClass = 'sticky z-40';
 
-/** Только шапка каталога — липнет на мобиле; фон только у белой карточки, без серой подложки. */
+/** @deprecated Используйте CatalogMobileServicesHeader — единый sticky-блок без зазора сверху. */
 export const catalogMobilePageToolbarSticky =
-  'sticky z-50 top-[max(0.25rem,env(safe-area-inset-top,0px))] bg-transparent pb-2 pt-1 max-lg:block lg:static lg:z-auto lg:pb-0 lg:pt-0';
+  'sticky top-0 z-50 max-lg:block lg:static lg:z-auto';
+
+/** Горизонтальные отступы мобильного каталога — единые для шапки, контента и sheet. */
+export const catalogMobilePadX = 'px-3';
+
+/** Розовая шапка каталога на мобилке */
+export const catalogMobileHeaderBarClass =
+  'w-full shrink-0 bg-[#F47C8C] pt-[env(safe-area-inset-top,0px)]';
+
+/** Симметричная строка: колонки 2.25rem слева/справа — заголовок строго по центру */
+export const catalogMobileHeaderRowGridClass =
+  'grid min-h-11 grid-cols-[2.25rem_1fr_2.25rem] items-center pb-3 pt-1';
+
+/** Круглая кнопка в розовой шапке */
+export const catalogMobileHeaderIconBtnClass =
+  'flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white transition active:scale-95 active:bg-white/30';
+
+/** Заголовок по центру при кнопках слева/справа (flex-строка) */
+export const catalogMobileHeaderTitleClass =
+  'pointer-events-none absolute inset-x-0 truncate px-14 text-center text-[16px] font-bold text-white';
 
 /** Сайдбар фильтров (lg): sticky под toolbar, скролл только внутри body */
 export const catalogSidebarStickyClass = 'sticky z-40 self-start';

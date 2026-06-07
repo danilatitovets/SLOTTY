@@ -1,3 +1,4 @@
+import { categoryCodesMatch } from '../../../features/catalog/serviceCategoryLabels';
 import type { AggregatedServiceCard } from './aggregateServices';
 
 export type ServiceCatalogChip = 'popular' | 'promo' | 'today' | 'new';
@@ -8,15 +9,22 @@ export function filterServicesForCatalog(
     search: string;
     chips: Set<ServiceCatalogChip>;
     onlineBookingOnly?: boolean;
+    categoryCode?: string | null;
   },
 ): AggregatedServiceCard[] {
   let list = services;
+
+  if (opts.categoryCode) {
+    list = list.filter((s) => categoryCodesMatch(opts.categoryCode, s.categoryCode));
+  }
 
   if (opts.search.trim()) {
     const q = opts.search.trim().toLowerCase();
     list = list.filter(
       (s) =>
         s.title.toLowerCase().includes(q) ||
+        s.subtitle.toLowerCase().includes(q) ||
+        s.masterName.toLowerCase().includes(q) ||
         s.categoryName.toLowerCase().includes(q) ||
         s.categoryCode.toLowerCase().includes(q),
     );

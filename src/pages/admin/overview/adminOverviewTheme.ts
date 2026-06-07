@@ -99,4 +99,12 @@ export const OVERVIEW_WELCOME_IMAGE_SRC = '/photos/fon.webp';
 /** @deprecated use MINI_PICTURE.clientsEmpty */
 export const OVERVIEW_CLIENTS_FOOTER_SRC = MINI_PICTURE.clientsEmpty;
 
+const overviewHistoryPhotosDir = `/photos/${encodeURIComponent('история')}/`;
+
+/** Фон KPI-блоков «Сегодня» (`public/photos/история/красно-синий.png`). */
+export const OVERVIEW_OPS_KPI_BG = `${overviewHistoryPhotosDir}${encodeURIComponent('красно-синий.png')}`;
+
+export const overviewOpsKpiTileOverlay =
+  'pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/45';
+
 export { MINI_PICTURE } from '../../../shared/ui/miniPictureSrc';

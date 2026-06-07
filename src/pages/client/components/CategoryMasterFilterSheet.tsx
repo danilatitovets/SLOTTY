@@ -1,4 +1,5 @@
 import { FilterChipGroup, FilterSheet, FilterSwitch } from './FilterSheet';
+import { ServiceCategoryRail } from './ServiceCategoryRail';
 import type { CategoryMasterFilters } from '../lib/categoryMasterFilters';
 import { DEFAULT_CATEGORY_MASTER_FILTERS } from '../lib/categoryMasterFilters';
 
@@ -35,19 +36,15 @@ export function CategoryMasterFilterSheet({
       onApply={onApply}
     >
       {serviceCategories && serviceCategories.length > 0 ? (
-        <FilterChipGroup
-          label="Категория"
-          options={[
-            { id: 'any', label: 'Все услуги' },
-            ...serviceCategories.map((c) => ({ id: c.code, label: c.name })),
-          ]}
-          value={draft.categoryCode ?? 'any'}
-          onChange={(id) =>
-            patch({
-              categoryCode: !id || id === 'any' ? null : id,
-            })
-          }
-        />
+        <div className="mb-5">
+          <p className="mb-2.5 text-[13px] font-medium text-[#8E8E93]">Категория</p>
+          <ServiceCategoryRail
+            categories={serviceCategories}
+            activeCode={draft.categoryCode}
+            showAllLink
+            onSelectCategory={(code) => patch({ categoryCode: code })}
+          />
+        </div>
       ) : null}
 
       <FilterChipGroup

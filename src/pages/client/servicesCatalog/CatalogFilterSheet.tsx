@@ -1,12 +1,17 @@
 import type { ReactNode } from 'react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { HiXMark } from 'react-icons/hi2';
 import {
-  catalogFilterSheetCanvas,
+  catalogFilterSheetCardClass,
+  catalogFilterSheetCloseBtnClass,
+  catalogFilterSheetHeaderBarClass,
+  catalogFilterSheetHeaderRowClass,
   catalogFilterSheetPrimaryBtn,
   catalogFilterSheetSecondaryBtn,
+  catalogFilterSheetTitleClass,
 } from './catalogFilterSheetTheme';
+import { catalogDesktopPanel, catalogMobilePadX } from './servicesCatalogTheme';
 
 type Props = {
   open: boolean;
@@ -18,8 +23,6 @@ type Props = {
   onApply: () => void;
   children: ReactNode;
 };
-
-const BACKDROP_CLOSE_DELAY_MS = 320;
 
 function formatResultCount(n: number): string {
   return new Intl.NumberFormat('ru-RU').format(n);
@@ -35,66 +38,86 @@ export function CatalogFilterSheet({
   onApply,
   children,
 }: Props) {
-  const suppressBackdropCloseRef = useRef(false);
-  const [entered, setEntered] = useState(false);
-
   useLayoutEffect(() => {
-    if (!open) {
-      setEntered(false);
-      return undefined;
-    }
+    if (!open) return undefined;
 
-    suppressBackdropCloseRef.current = true;
-    const suppressId = window.setTimeout(() => {
-      suppressBackdropCloseRef.current = false;
-    }, BACKDROP_CLOSE_DELAY_MS);
-
-    const enterId = window.requestAnimationFrame(() => setEntered(true));
-
-    const prevOverflow = document.documentElement.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
     document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.overflowX = 'hidden';
 
     return () => {
-      window.clearTimeout(suppressId);
-      window.cancelAnimationFrame(enterId);
-      document.documentElement.style.overflow = prevOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.documentElement.style.overflowX = '';
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.overflowX = '';
     };
   }, [open]);
-
-  const handleBackdropClose = () => {
-    if (suppressBackdropCloseRef.current) return;
-    onClose();
-  };
 
   if (!open || typeof document === 'undefined') return null;
 
   const applyLabel = `Показать ${formatResultCount(resultCount)} ${resultNoun}`;
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] lg:hidden">
+    <div className="fixed inset-0 z-[200] overflow-hidden overscroll-none">
       <button
         type="button"
-        className={`absolute inset-0 min-h-dvh w-full bg-black/35 backdrop-blur-[2px] transition-opacity duration-300 ${
-          entered ? 'opacity-100' : 'opacity-0'
-        }`}
+        className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
         aria-label="Закрыть"
-        onClick={handleBackdropClose}
+        onClick={onClose}
       />
 
+      {/* Мобилка — полноэкранный sheet */}
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="catalog-filter-sheet-title"
-        className={`fixed inset-x-0 bottom-0 z-10 flex max-h-[min(92dvh,100dvh)] w-full min-h-0 flex-col overflow-hidden rounded-t-[20px] bg-white shadow-[0_-12px_40px_rgba(17,24,39,0.12)] transition-transform duration-300 ease-out ${
-          entered ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        aria-labelledby="catalog-filter-sheet-title-mobile"
+        className="fixed inset-0 flex w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-[#F5F5F5] lg:hidden"
+        style={{ height: '100dvh', maxHeight: '100dvh' }}
       >
-        <div className="mx-auto mb-2 mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#D1D5DB]" aria-hidden />
+        <header className={catalogFilterSheetHeaderBarClass}>
+          <div className={`${catalogFilterSheetHeaderRowClass} ${catalogMobilePadX}`}>
+            <h2 id="catalog-filter-sheet-title-mobile" className={catalogFilterSheetTitleClass}>
+              {title}
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Закрыть"
+              className={catalogFilterSheetCloseBtnClass}
+            >
+              <HiXMark className="h-6 w-6" aria-hidden />
+            </button>
+          </div>
+        </header>
 
-        <header className="relative shrink-0 px-5 pb-3 pt-1">
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 scrollbar-hidden ${catalogMobilePadX}`}
+        >
+          <div className={catalogFilterSheetCardClass}>{children}</div>
+        </div>
+
+        <FilterSheetFooter
+          applyLabel={applyLabel}
+          onApply={onApply}
+          onReset={onReset}
+          className={catalogMobilePadX}
+        />
+      </div>
+
+      {/* Десктоп — drawer справа (как WB) */}
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="catalog-filter-sheet-title-desktop"
+        className={`${catalogDesktopPanel} fixed inset-y-0 right-0 z-10 hidden w-full max-w-[400px] flex-col overflow-hidden shadow-[-16px_0_48px_rgba(17,24,39,0.14)] lg:flex`}
+      >
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#EEEEEE] px-5 py-4">
           <h2
-            id="catalog-filter-sheet-title"
-            className="text-center text-[18px] font-bold tracking-[-0.02em] text-[#111827]"
+            id="catalog-filter-sheet-title-desktop"
+            className="text-[18px] font-bold tracking-[-0.03em] text-[#111827]"
           >
             {title}
           </h2>
@@ -102,30 +125,57 @@ export function CatalogFilterSheet({
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="absolute right-4 top-0 flex h-10 w-10 items-center justify-center rounded-full text-[#9CA3AF] transition hover:bg-[#F5F5F5] hover:text-[#111827] active:scale-95"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-[#6B7280] transition hover:bg-[#EBEBEB] hover:text-[#111827]"
           >
-            <HiXMark className="h-6 w-6" aria-hidden />
+            <HiXMark className="h-5 w-5" aria-hidden />
           </button>
         </header>
 
-        <div
-          className={`min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-2 ${catalogFilterSheetCanvas}`}
-        >
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-4 scrollbar-hidden">
           {children}
         </div>
 
-        <div className="shrink-0 border-t border-[#F3F4F6] bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="flex flex-col gap-2">
-            <button type="button" className={catalogFilterSheetPrimaryBtn} onClick={onApply}>
-              {applyLabel}
-            </button>
-            <button type="button" className={catalogFilterSheetSecondaryBtn} onClick={onReset}>
-              Сбросить
-            </button>
-          </div>
-        </div>
-      </div>
+        <FilterSheetFooter
+          applyLabel={applyLabel}
+          onApply={onApply}
+          onReset={onReset}
+          className="border-t border-[#EEEEEE] bg-white px-5 py-4"
+          compact
+        />
+      </aside>
     </div>,
     document.body,
+  );
+}
+
+function FilterSheetFooter({
+  applyLabel,
+  onApply,
+  onReset,
+  className,
+  compact = false,
+}: {
+  applyLabel: string;
+  onApply: () => void;
+  onReset: () => void;
+  className: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={className}
+      style={compact ? undefined : { paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+    >
+      <button type="button" className={catalogFilterSheetPrimaryBtn} onClick={onApply}>
+        {applyLabel}
+      </button>
+      <button
+        type="button"
+        className={`${catalogFilterSheetSecondaryBtn} ${compact ? 'mt-2' : 'mt-2'}`}
+        onClick={onReset}
+      >
+        Сбросить
+      </button>
+    </div>
   );
 }

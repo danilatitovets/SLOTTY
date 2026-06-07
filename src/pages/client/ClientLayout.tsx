@@ -56,12 +56,15 @@ export function ClientLayout() {
     profileDesktopCabinet;
   const masterPublicDesktop = isMasterPublicPath(pathname);
   const hideSlottyHeader = profileDesktopCabinet || masterPublicDesktop;
+  const catalogMobileCanvas = isCatalogPath(pathname);
 
   return (
     <ClientErrorModalProvider>
       <div
         className={`min-h-dvh w-full min-w-0 text-neutral-900 ${
-          profileDesktopCabinet ? 'max-lg:bg-[#F5F5F5] lg:bg-white' : 'bg-white'
+          profileDesktopCabinet || catalogMobileCanvas
+            ? 'max-lg:bg-[#F5F5F5] lg:bg-white'
+            : 'bg-white'
         }`}
       >
         {hideMobileClientHeader ? null : (

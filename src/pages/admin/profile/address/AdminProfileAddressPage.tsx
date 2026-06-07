@@ -12,6 +12,7 @@ import { sanitizeAtHomeRoomInput } from '../../../../features/profile/lib/master
 import type { MasterLocation } from '../../../../features/profile/model/masterLocation';
 import { searchAddress } from '../../../../shared/lib/location/nominatimGeocode';
 import { PickerSheet } from '../../../../shared/ui/PickerSheet';
+import { SlottySelect } from '../../../../shared/ui/SlottySelect';
 import { AdminBottomSheet } from '../../shared/AdminBottomSheet';
 import { AdminToast } from '../../shared/AdminToast';
 import { useAdminToast } from '../../shared/useAdminToast';
@@ -52,6 +53,11 @@ import {
   type AddressFormState,
   type AddressVisitFormat,
 } from './addressFormModel';
+
+const MINSK_DISTRICT_OPTIONS = [
+  { value: '', label: 'Выберите район' },
+  ...MINSK_DISTRICTS.map((district) => ({ value: district, label: district })),
+];
 
 const VISIT_FORMATS: Array<{
   id: AddressVisitFormat;
@@ -377,21 +383,20 @@ export function AdminProfileAddressPage({ draft, cabinetLoading, saving = false,
                     </p>
                   </div>
                   {isHome ? (
-                    <label className="block">
+                    <div>
                       <span className={sheetLabelClass}>Район</span>
-                      <select
+                      <SlottySelect
+                        className="mt-1.5 w-full"
+                        tone="catalog"
                         value={form.district}
-                        onChange={(e) => patchForm({ district: e.target.value })}
-                        className={sheetFieldClass}
-                      >
-                        <option value="">Выберите район</option>
-                        {MINSK_DISTRICTS.map((district) => (
-                          <option key={district} value={district}>
-                            {district}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={(value) => patchForm({ district: value })}
+                        options={MINSK_DISTRICT_OPTIONS}
+                        placeholder="Выберите район"
+                        sheetTitle="Район"
+                        sheetSubtitle="В каком районе Минска вы принимаете"
+                        aria-label="Район"
+                      />
+                    </div>
                   ) : null}
                 </div>
 

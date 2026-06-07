@@ -1,22 +1,22 @@
 import type { ServiceCategoryDto } from '../../../features/master-onboarding/api/becomeMasterApi';
-import { CatalogFilterSheet } from './CatalogFilterSheet';
 import {
-  resetCatalogFilters,
-  type CatalogFiltersState,
-} from './catalogFiltersState';
-import { ServicesCatalogFiltersPanel } from './ServicesCatalogFiltersPanel';
+  DEFAULT_CATEGORY_MASTER_FILTERS,
+  type CategoryMasterFilters,
+} from '../lib/categoryMasterFilters';
+import { CatalogFilterSheet } from '../servicesCatalog/CatalogFilterSheet';
+import { MastersCatalogFiltersPanel } from './MastersCatalogFiltersPanel';
 
 type Props = {
   open: boolean;
-  draft: CatalogFiltersState;
+  draft: CategoryMasterFilters;
   resultCount: number;
   categories: ServiceCategoryDto[];
-  onChange: (next: CatalogFiltersState) => void;
+  onChange: (next: CategoryMasterFilters) => void;
   onClose: () => void;
   onApply: () => void;
 };
 
-export function ServicesCatalogFiltersSheet({
+export function MastersCatalogFiltersSheet({
   open,
   draft,
   resultCount,
@@ -30,15 +30,14 @@ export function ServicesCatalogFiltersSheet({
       open={open}
       title="Фильтры"
       resultCount={resultCount}
-      resultNoun="услуг"
+      resultNoun="мастеров"
       onClose={onClose}
-      onReset={() => onChange(resetCatalogFilters())}
+      onReset={() => onChange({ ...DEFAULT_CATEGORY_MASTER_FILTERS })}
       onApply={onApply}
     >
-      <ServicesCatalogFiltersPanel
+      <MastersCatalogFiltersPanel
         filters={draft}
         onChange={onChange}
-        layout="sheet"
         categories={categories}
       />
     </CatalogFilterSheet>

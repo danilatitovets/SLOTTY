@@ -326,10 +326,6 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
 
   const locationChip = masterLocationChipLine(listing);
   const visitChip = visitFormatChipLabel(listing);
-  const serviceShort =
-    listing.serviceName.length > 18
-      ? `${listing.serviceName.slice(0, 17)}…`
-      : listing.serviceName;
 
   if (layout === 'catalog') {
     return (
@@ -419,8 +415,10 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
               >
                 {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
               </p>
-              {hasSlot && priceLabel ? (
-                <p className="mt-0.5 text-[11px] text-[#8E8E93]">{serviceShort}</p>
+              {hasSlot && listing.serviceName ? (
+                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#8E8E93]">
+                  {listing.serviceName}
+                </p>
               ) : null}
             </div>
             <button
@@ -521,45 +519,53 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
           </div>
         </div>
 
-        <div className="mt-3.5 flex h-[4.5rem] shrink-0 items-center gap-2 rounded-[12px] bg-[#F5F5F5] px-3 py-2">
-          <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
-              hasSlot ? 'bg-white text-[#F47C8C]' : 'bg-[#EBEBEB] text-[#9CA3AF]'
-            }`}
-          >
-            <HiClock className="h-[18px] w-[18px]" aria-hidden />
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col justify-center overflow-hidden">
-            <p className="text-[11px] font-medium leading-none text-[#6B7280]">Ближайшее окно</p>
-            <p
-              className={`mt-1 h-[2.5rem] overflow-hidden text-[13px] leading-snug line-clamp-2 ${
-                hasSlot && slotSubline ? 'font-semibold text-[#C02658]' : 'font-medium text-[#374151]'
+        <div className="mt-3.5 shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+                hasSlot ? 'bg-white text-[#F47C8C]' : 'bg-[#EBEBEB] text-[#9CA3AF]'
               }`}
             >
-              {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
-            </p>
+              <HiClock className="h-[18px] w-[18px]" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium leading-none text-[#6B7280]">Ближайшее окно</p>
+              <p
+                className={`mt-1 text-[13px] leading-snug ${
+                  hasSlot && slotSubline ? 'font-semibold text-[#C02658]' : 'font-medium text-[#374151]'
+                }`}
+              >
+                {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
+              </p>
+            </div>
+            {hasSlot ? (
+              <button
+                type="button"
+                onClick={openBooking}
+                aria-label="Выбрать время"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F47C8C] text-white active:scale-95"
+              >
+                <HiCalendarDays className="h-[18px] w-[18px]" aria-hidden />
+              </button>
+            ) : (
+              <span className="h-9 w-9 shrink-0" aria-hidden />
+            )}
           </div>
-          <div className="h-8 w-px shrink-0 bg-[#E5E7EB]" aria-hidden />
-          <div className="flex w-[5.25rem] shrink-0 flex-col justify-center overflow-hidden text-right">
-            <p className="truncate text-[13px] font-semibold leading-snug text-[#111827]">
-              {priceLabel ?? '\u00a0'}
-            </p>
-            <p className="mt-0.5 h-[2rem] overflow-hidden text-[11px] font-medium leading-snug text-[#4B5563] line-clamp-2">
-              {serviceShort}
-            </p>
-          </div>
-          {hasSlot ? (
-            <button
-              type="button"
-              onClick={openBooking}
-              aria-label="Выбрать время"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F47C8C] text-white active:scale-95"
-            >
-              <HiCalendarDays className="h-[18px] w-[18px]" aria-hidden />
-            </button>
-          ) : (
-            <span className="h-9 w-9 shrink-0" aria-hidden />
-          )}
+          {hasSlot && (listing.serviceName || priceLabel) ? (
+            <div className="flex items-start justify-between gap-3 border-t border-[#E5E7EB] px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-medium leading-none text-[#9CA3AF]">Услуга</p>
+                <p className="mt-0.5 text-[12px] font-medium leading-snug text-[#374151] line-clamp-2">
+                  {listing.serviceName}
+                </p>
+              </div>
+              {priceLabel ? (
+                <p className="shrink-0 pt-3 text-[13px] font-semibold leading-snug text-[#111827]">
+                  {priceLabel}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-3.5 h-[3.75rem] shrink-0 overflow-hidden rounded-[14px] bg-[#FAFAFA]">
@@ -687,60 +693,30 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
         </div>
       </div>
 
-      <div
-        className={`flex shrink-0 items-center gap-2.5 ${
-          plainHome
-            ? 'mt-3.5 h-[4.5rem] rounded-[12px] bg-[#F5F5F5] px-3 py-2.5'
-            : 'mt-3.5 min-h-[3.75rem] rounded-[12px] bg-[#F5F5F5] px-3 py-2.5'
-        }`}
-      >
-        <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center ${
-            plainHome
-              ? 'text-[#F47C8C]'
-              : `rounded-[10px] ${hasSlot ? 'bg-white text-[#F47C8C]' : 'bg-[#EBEBEB] text-[#9CA3AF]'}`
-          }`}
-        >
-          <HiClock className="h-[18px] w-[18px]" aria-hidden />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p className="text-[11px] font-medium leading-none text-[#9CA3AF]">Ближайшее окно</p>
-          <p
-            className={`mt-1 min-h-[2.5rem] text-[14px] leading-snug ${
-              hasSlot && slotSubline
-                ? 'font-semibold text-[#F47C8C]'
-                : 'font-medium text-[#6B7280]'
+      <div className="mt-3.5 shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+        <div className="flex items-center gap-2.5 px-3 py-2.5">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center ${
+              plainHome
+                ? 'text-[#F47C8C]'
+                : `rounded-[10px] ${hasSlot ? 'bg-white text-[#F47C8C]' : 'bg-[#EBEBEB] text-[#9CA3AF]'}`
             }`}
           >
-            {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
-          </p>
-        </div>
-        {plainHome || (hasSlot && priceLabel) ? (
-          <>
-            {plainHome ? null : <div className="h-8 w-px shrink-0 bg-[#F47C8C]/12" aria-hidden />}
-            <div className="flex w-[5.5rem] shrink-0 flex-col justify-center text-right">
-              {hasSlot && priceLabel ? (
-                <>
-                  <p className="text-[13px] font-semibold leading-snug text-[#111827]">{priceLabel}</p>
-                  <p className="mt-0.5 line-clamp-2 min-h-[2rem] text-[11px] font-medium leading-snug text-[#9CA3AF]">
-                    {serviceShort}
-                  </p>
-                </>
-              ) : plainHome ? (
-                <>
-                  <p className="invisible text-[13px] font-semibold leading-snug" aria-hidden>
-                    —
-                  </p>
-                  <p className="invisible mt-0.5 min-h-[2rem] text-[11px]" aria-hidden>
-                    —
-                  </p>
-                </>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-        {plainHome ? (
-          hasSlot ? (
+            <HiClock className="h-[18px] w-[18px]" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium leading-none text-[#9CA3AF]">Ближайшее окно</p>
+            <p
+              className={`mt-1 text-[14px] leading-snug ${
+                hasSlot && slotSubline
+                  ? 'font-semibold text-[#F47C8C]'
+                  : 'font-medium text-[#6B7280]'
+              }`}
+            >
+              {hasSlot && slotSubline ? slotSubline : 'Свободных окон пока нет'}
+            </p>
+          </div>
+          {hasSlot ? (
             <button
               type="button"
               onClick={openBooking}
@@ -751,16 +727,22 @@ export function MasterCard({ listing, userLat, userLng, layout = 'list' }: Props
             </button>
           ) : (
             <span className="h-9 w-9 shrink-0" aria-hidden />
-          )
-        ) : hasSlot ? (
-          <button
-            type="button"
-            onClick={openBooking}
-            aria-label="Выбрать время"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#F47C8C] text-white active:scale-95"
-          >
-            <HiCalendarDays className="h-[18px] w-[18px]" aria-hidden />
-          </button>
+          )}
+        </div>
+        {hasSlot && (listing.serviceName || priceLabel) ? (
+          <div className="flex items-start justify-between gap-3 border-t border-[#EBEBEB] px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-medium leading-none text-[#9CA3AF]">Услуга</p>
+              <p className="mt-0.5 text-[12px] font-medium leading-snug text-[#374151] line-clamp-2">
+                {listing.serviceName}
+              </p>
+            </div>
+            {priceLabel ? (
+              <p className="shrink-0 pt-3 text-[13px] font-semibold leading-snug text-[#111827]">
+                {priceLabel}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

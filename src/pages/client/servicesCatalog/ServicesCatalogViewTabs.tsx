@@ -12,12 +12,21 @@ type Props = {
   onTabChange: (tab: CatalogViewTab) => void;
   className?: string;
   compact?: boolean;
+  dense?: boolean;
 };
 
-export function ServicesCatalogViewTabs({ activeTab, onTabChange, className = '', compact = false }: Props) {
-  const tabClass = compact
-    ? 'rounded-[8px] px-3 py-1.5 text-[13px] font-semibold transition'
-    : 'rounded-[10px] px-4 py-2 text-[14px] font-semibold transition';
+export function ServicesCatalogViewTabs({
+  activeTab,
+  onTabChange,
+  className = '',
+  compact = false,
+  dense = false,
+}: Props) {
+  const tabClass = dense
+    ? 'rounded-[8px] px-2.5 py-1 text-[12px] font-semibold transition'
+    : compact
+      ? 'rounded-[8px] px-3 py-1.5 text-[13px] font-semibold transition'
+      : 'rounded-[10px] px-4 py-2 text-[14px] font-semibold transition';
 
   return (
     <nav

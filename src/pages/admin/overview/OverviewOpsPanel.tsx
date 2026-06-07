@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   HiArrowRight,
@@ -12,6 +12,7 @@ import {
   ADMIN_PROFILE_COMPLETION_PATH,
   ADMIN_SCHEDULE_PATH,
   getMasterAdminAppointmentsPath,
+  type MasterAppointmentsTabParam,
 } from '../../../app/paths';
 import type { MasterDraft } from '../../../features/profile/lib/demoMasterStorage';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
@@ -32,6 +33,24 @@ import {
   useOverviewQuickActions,
   type OverviewQuickActionHandlers,
 } from './useOverviewQuickActions';
+import { OverviewOpsKpiPhotoBackdrop } from './OverviewOpsKpiPhotoBackdrop';
+import { AppointmentsUpcomingRow } from '../appointments/AppointmentsUpcomingRow';
+
+function appointmentsTabForRow(row: DemoMasterAppointment): MasterAppointmentsTabParam | undefined {
+  const status = row.dbStatus ?? row.status;
+  if (status === 'pending') return undefined;
+  if (status === 'confirmed' || status === 'client_arrived' || status === 'in_progress') {
+    return 'upcoming';
+  }
+  return 'history';
+}
+
+function appointmentDetailPath(row: DemoMasterAppointment): string {
+  return getMasterAdminAppointmentsPath({
+    tab: appointmentsTabForRow(row),
+    focus: row.id,
+  });
+}
 
 type Props = {
   ops: OverviewOpsSnapshot;
@@ -129,21 +148,26 @@ function OpsMetricTile({
 }) {
   const body = (
     <div
-      className={`min-w-0 flex-1 rounded-[16px] p-4 lg:rounded-[20px] lg:p-5 ${
-        urgent ? 'bg-[#FFF7ED] ring-1 ring-[#FED7AA]' : 'bg-[#f6f7fb]'
+      className={`relative min-w-0 flex-1 overflow-hidden rounded-[16px] p-4 lg:rounded-[20px] lg:p-5 ${
+        urgent ? 'ring-1 ring-[#FED7AA]' : ''
       }`}
     >
-      <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#9CA3AF]">{label}</p>
-      <p className="mt-2 text-[26px] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827] lg:text-[28px]">
-        {value}
-      </p>
-      <p className="mt-2 text-[12px] font-semibold leading-snug text-[#6B7280]">{hint}</p>
-      {to ? (
-        <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-[#ff5f7a]">
-          Открыть
-          <HiArrowRight className="h-4 w-4" aria-hidden />
-        </span>
-      ) : null}
+      <OverviewOpsKpiPhotoBackdrop />
+      <div className="relative z-10">
+        <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6B7280] drop-shadow-sm">
+          {label}
+        </p>
+        <p className="mt-2 text-[26px] font-black tabular-nums leading-none tracking-[-0.06em] text-[#111827] drop-shadow-sm lg:text-[28px]">
+          {value}
+        </p>
+        <p className="mt-2 text-[12px] font-semibold leading-snug text-[#374151] drop-shadow-sm">{hint}</p>
+        {to ? (
+          <span className="mt-3 inline-flex items-center gap-1 text-[13px] font-bold text-[#ff5f7a] drop-shadow-sm">
+            Открыть
+            <HiArrowRight className="h-4 w-4" aria-hidden />
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -171,6 +195,7 @@ function OpsPanelBody({
   profileReady = false,
   quickActions,
 }: Props & { surface: 'mobile' | 'desktop'; quickActions: OverviewQuickActionHandlers }) {
+  const navigate = useNavigate();
   const activeSlotCount = ops.activeFutureSlotCount;
   const requestsPath = getMasterAdminAppointmentsPath({ tab: 'requests' });
   const todayPath = getMasterAdminAppointmentsPath({ tab: 'upcoming' });
@@ -257,26 +282,11 @@ function OpsPanelBody({
       </div>
 
       {ops.nearestAppointment ? (
-        <div className="rounded-[16px] bg-[#f6f7fb] p-4 lg:rounded-[20px] lg:p-5">
-          <p className="text-[13px] font-bold text-[#111827]">Ближайшая запись</p>
-          <button
-            type="button"
-            onClick={() => onOpenAppointment?.(ops.nearestAppointment!.id)}
-            className="mt-3 flex w-full items-center gap-3 rounded-[12px] bg-white px-3 py-3 text-left ring-1 ring-[#EEEEEE] transition hover:bg-[#FAFAFA] active:scale-[0.99]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#FFF1F4] text-[13px] font-black tabular-nums text-[#ff5f7a]">
-              {ops.nearestAppointment.time}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[14px] font-bold text-[#111827]">
-                {ops.nearestAppointment.clientName}
-              </span>
-              <span className="block truncate text-[12px] font-medium text-[#6B7280]">
-                {ops.nearestAppointment.serviceTitle}
-              </span>
-            </span>
-          </button>
-        </div>
+        <AppointmentsUpcomingRow
+          appointment={ops.nearestAppointment}
+          nearest
+          onOpen={() => navigate(appointmentDetailPath(ops.nearestAppointment!))}
+        />
       ) : null}
 
       {ops.todayPreview.length > 0 ? (

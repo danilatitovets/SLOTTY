@@ -1,6 +1,20 @@
 import { catalogInnerDivider, catalogListCardClass } from '../servicesCatalog/servicesCatalogTheme';
 
-export function SkeletonServiceCard() {
+export function SkeletonServiceCard({ variant = 'stack' }: { variant?: 'stack' | 'grid' }) {
+  if (variant === 'grid') {
+    return (
+      <div className="flex h-full flex-col overflow-hidden rounded-[12px] bg-white">
+        <div className="aspect-[4/5] w-full animate-pulse bg-[#EBEBEB]" />
+        <div className="space-y-2 p-2 pt-1.5">
+          <div className="h-4 w-16 animate-pulse rounded bg-[#EBEBEB]" />
+          <div className="h-3 w-full animate-pulse rounded bg-[#EBEBEB]/80" />
+          <div className="h-8 w-full animate-pulse rounded bg-[#EBEBEB]/70" />
+          <div className="h-9 w-full animate-pulse rounded-[10px] bg-[#EBEBEB]" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full ${catalogListCardClass}`}>
       <div className="space-y-4 p-4">
