@@ -49,30 +49,38 @@ export function issueSessionContextFromRequest(req: Request): IssueSessionContex
   };
 }
 
-function sessionFingerprint(
+/** Ключ списка: устройство + IP (UA может слегка меняться между запросами). */
+export function sessionListFingerprint(
   deviceLabel: string,
-  userAgent: string | null | undefined,
   clientIp: string | null | undefined,
 ): string {
-  return [
-    deviceLabel.trim(),
-    (userAgent ?? '').trim(),
-    normalizeStoredClientIp(clientIp) ?? '',
-  ].join('\0');
+  return [deviceLabel.trim(), normalizeStoredClientIp(clientIp) ?? ''].join('\0');
 }
 
-function dedupeSessionRows(rows: SessionRow[]): SessionRow[] {
+function pickPreferredSessionRow(
+  prev: SessionRow,
+  row: SessionRow,
+  currentSessionId: string | null,
+): SessionRow {
+  if (currentSessionId) {
+    if (row.id === currentSessionId) return row;
+    if (prev.id === currentSessionId) return prev;
+  }
+  const prevTs = new Date(prev.last_active_at).getTime();
+  const rowTs = new Date(row.last_active_at).getTime();
+  return rowTs >= prevTs ? row : prev;
+}
+
+function dedupeSessionRows(rows: SessionRow[], currentSessionId: string | null): SessionRow[] {
   const byFingerprint = new Map<string, SessionRow>();
   for (const row of rows) {
-    const fp = sessionFingerprint(row.device_label, row.user_agent, row.client_ip);
+    const fp = sessionListFingerprint(row.device_label, row.client_ip);
     const prev = byFingerprint.get(fp);
     if (!prev) {
       byFingerprint.set(fp, row);
       continue;
     }
-    const prevTs = new Date(prev.last_active_at).getTime();
-    const rowTs = new Date(row.last_active_at).getTime();
-    if (rowTs >= prevTs) byFingerprint.set(fp, row);
+    byFingerprint.set(fp, pickPreferredSessionRow(prev, row, currentSessionId));
   }
   return [...byFingerprint.values()].sort(
     (a, b) => new Date(b.last_active_at).getTime() - new Date(a.last_active_at).getTime(),
@@ -93,7 +101,6 @@ async function reuseOrCreateAuthSession(
       where profile_id = $1
         and revoked_at is null
         and device_label = $2
-        and coalesce(user_agent, '') = coalesce($3, '')
         and coalesce(
               case
                 when client_ip like '::ffff:%' then substring(client_ip from 8)
@@ -101,10 +108,10 @@ async function reuseOrCreateAuthSession(
                 else client_ip
               end,
               ''
-            ) = coalesce($4, '')
+            ) = coalesce($3, '')
       order by last_active_at desc
       limit 1`,
-    [profileId, parsed.deviceLabel, userAgent, clientIp],
+    [profileId, parsed.deviceLabel, clientIp],
   );
 
   const keepId = existing.rows[0]?.id;
@@ -123,7 +130,6 @@ async function reuseOrCreateAuthSession(
         where profile_id = $1
           and revoked_at is null
           and device_label = $2
-          and coalesce(user_agent, '') = coalesce($3, '')
           and coalesce(
                 case
                   when client_ip like '::ffff:%' then substring(client_ip from 8)
@@ -131,9 +137,9 @@ async function reuseOrCreateAuthSession(
                   else client_ip
                 end,
                 ''
-              ) = coalesce($4, '')
-          and id <> $5`,
-      [profileId, parsed.deviceLabel, userAgent, clientIp, keepId],
+              ) = coalesce($3, '')
+          and id <> $4`,
+      [profileId, parsed.deviceLabel, clientIp, keepId],
     );
     return keepId;
   }
@@ -241,7 +247,9 @@ export async function listAuthSessionsForProfile(
        limit 30`,
       [profileId],
     );
-    return dedupeSessionRows(result.rows).map((r) => rowToListItem(r, currentSessionId));
+    return dedupeSessionRows(result.rows, currentSessionId).map((r) =>
+      rowToListItem(r, currentSessionId),
+    );
   } catch (e) {
     if (isMissingAuthSessionsTable(e)) {
       warnSessionsTableMissing('list');

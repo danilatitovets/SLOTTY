@@ -1,11 +1,14 @@
 import { type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import {
   HiArrowTrendingUp,
   HiCalendar,
   HiCheckCircle,
+  HiChevronRight,
   HiUserGroup,
   HiUserPlus,
 } from 'react-icons/hi2';
+import { getMasterAdminAppointmentsPath } from '../../../app/paths';
 import type {
   ClientAnalytics,
   OverviewClientRosterItem,
@@ -108,14 +111,21 @@ function ClientsDividedMetricsStrip({
   );
 }
 
+function clientRosterHref(client: OverviewClientRosterItem): string | null {
+  const appointmentId = client.lastAppointmentId?.trim();
+  if (!appointmentId) return null;
+  return getMasterAdminAppointmentsPath({ tab: 'history', focus: appointmentId });
+}
+
 function ClientsRosterList({ roster }: { roster: OverviewClientRosterItem[] }) {
   if (!roster.length) return null;
 
   return (
     <ul className="m-0 list-none p-0">
-      {roster.map((client) => (
-        <li key={client.clientKey} className={`border-b ${overviewHairline} last:border-b-0`}>
-          <div className="flex items-center gap-3 px-5 py-3.5 sm:px-6 sm:py-4">
+      {roster.map((client) => {
+        const href = clientRosterHref(client);
+        const row = (
+          <>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F6F7FB] text-[14px] font-bold text-[#6B7280]">
               {client.displayName.charAt(0).toUpperCase()}
             </span>
@@ -144,12 +154,31 @@ function ClientsRosterList({ roster }: { roster: OverviewClientRosterItem[] }) {
                   : ''}
               </p>
             </div>
-            <p className="shrink-0 text-[12px] font-semibold tabular-nums text-[#6B7280]">
-              {client.lastVisitAt ? formatDdMm(client.lastVisitAt) : '—'}
-            </p>
-          </div>
-        </li>
-      ))}
+            <div className="flex shrink-0 items-center gap-1.5">
+              <p className="text-[12px] font-semibold tabular-nums text-[#6B7280]">
+                {client.lastVisitAt ? formatDdMm(client.lastVisitAt) : '—'}
+              </p>
+              {href ? <HiChevronRight className="h-4 w-4 text-[#9CA3AF]" aria-hidden /> : null}
+            </div>
+          </>
+        );
+
+        return (
+          <li key={client.clientKey} className={`border-b ${overviewHairline} last:border-b-0`}>
+            {href ? (
+              <Link
+                to={href}
+                className="flex items-center gap-3 px-5 py-3.5 no-underline transition hover:bg-[#FAFAFA] active:bg-[#F6F7FB] sm:px-6 sm:py-4"
+                aria-label={`Открыть запись клиента ${client.displayName}`}
+              >
+                {row}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-3 px-5 py-3.5 sm:px-6 sm:py-4">{row}</div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

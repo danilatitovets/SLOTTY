@@ -263,6 +263,7 @@ export function resolveAdminNavItemMeta(item: AdminNavItem): AdminSectionMeta | 
 }
 
 export const ADMIN_MAIN_NAV: AdminNavItem[] = [
+  { to: ADMIN_OVERVIEW_PATH, label: 'Сегодня', end: true, icon: IconNavOverview },
   {
     to: getMasterAdminAppointmentsPath({ tab: 'requests' }),
     label: 'Заявки',

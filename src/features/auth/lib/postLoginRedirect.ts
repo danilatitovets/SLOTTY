@@ -1,4 +1,4 @@
-import { ADMIN_PATH, getProfilePath, PLATFORM_ADMIN_PATH, ADMIN_OVERVIEW_PATH } from '../../../app/paths';
+import { getProfilePath, PLATFORM_ADMIN_PATH, ADMIN_OVERVIEW_PATH } from '../../../app/paths';
 import type { BackendProfile } from '../types';
 import { hasMasterCabinetAccess } from './hasMasterCabinetAccess';
 
@@ -38,7 +38,7 @@ export function getPostLoginPath(
   }
 
   if (profile.role === 'master') {
-    return ADMIN_PATH;
+    return ADMIN_OVERVIEW_PATH;
   }
 
   return getPostClientLoginPath(search);

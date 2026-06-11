@@ -64,8 +64,8 @@ export function AppointmentsUpcomingCalendarDayCell({
       </span>
       {hasAppointments ? (
         <span
-          className={`mt-0.5 text-[9px] font-bold tabular-nums leading-none lg:text-[10px] ${
-            hasAttention ? 'text-[#B91C1C]' : 'text-[#F47C8C]'
+          className={`mt-1 inline-flex min-h-[20px] min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums leading-none shadow-sm ${
+            hasAttention ? 'bg-[#DC2626] text-white' : 'bg-[#F47C8C] text-white'
           }`}
         >
           {formatCountBadge(count)}

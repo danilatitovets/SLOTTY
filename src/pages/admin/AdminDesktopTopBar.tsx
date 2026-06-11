@@ -42,7 +42,9 @@ export function AdminDesktopTopBar() {
       style={{ height: ADMIN_DESKTOP_TOPBAR_HEIGHT }}
     >
       <div className="flex h-full w-full items-stretch gap-4">
-        <div className={`${ADMIN_SIDEBAR_WIDTH} h-full shrink-0 px-5`}>
+        <div
+          className={`${ADMIN_SIDEBAR_WIDTH} h-full shrink-0 border-r border-[#eef0f5] px-5`}
+        >
           <CabinetDesktopHeaderLogo to={ADMIN_HUB_PATH} />
         </div>
 

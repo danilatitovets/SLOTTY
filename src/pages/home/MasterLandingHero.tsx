@@ -22,7 +22,6 @@ import {
   homeHeroStatValue,
   homeHeroSubtitle,
   homeHeroTitle,
-  homeLandingFeatureVisualBleed,
 } from './homeTheme';
 
 const HERO_STATS = [
@@ -81,17 +80,20 @@ export const MasterLandingHero: FC<MasterLandingHeroProps> = ({ onBecomeMaster, 
         </LandingReveal>
       </div>
 
-      <div className={`${homeShell} relative z-10 mt-6 sm:mt-8`}>
-        <div className={homeLandingFeatureVisualBleed}>
-          <LandingReveal variant="scale" delay={260} duration={1100}>
-            <MasterLandingCabinetDemoFrame
-              variant="hero-phone"
-              ariaLabel="Демо: кабинет мастера — создание услуги"
-            >
-              <MasterLandingServiceDemo />
-            </MasterLandingCabinetDemoFrame>
-          </LandingReveal>
-        </div>
+      <div className={`${homeShell} relative z-10 mt-6 flex justify-center sm:mt-8`}>
+        <LandingReveal
+          className="w-full max-w-[1100px]"
+          variant="scale"
+          delay={260}
+          duration={1100}
+        >
+          <MasterLandingCabinetDemoFrame
+            variant="hero-phone"
+            ariaLabel="Демо: кабинет мастера — создание услуги"
+          >
+            <MasterLandingServiceDemo />
+          </MasterLandingCabinetDemoFrame>
+        </LandingReveal>
       </div>
 
       <div className={`${CATALOG_HERO_FULL_BLEED_CLASS} relative z-0 -mt-4 sm:-mt-6`}>

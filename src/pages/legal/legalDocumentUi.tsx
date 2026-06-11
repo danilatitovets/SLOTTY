@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { LANDING_PAGE_COLUMN_CLASS } from '../../shared/layout/SlottyHeader/landingHeaderTheme';
 import { homeLandingMastersRowStep } from '../home/homeTheme';
 import { scrollToLegalSection } from './useLegalTocActiveId';
 
@@ -27,9 +28,11 @@ export const legalDocLinkClass =
 
 export const legalDocListClass = 'list-disc space-y-2.5 pl-5 marker:text-[#D1D5DB]';
 
-/** Центрированная колонка legal-страниц — на всю ширину shell, без узкой полосы слева. */
-export const legalDocLandingArticleClass =
-  'mx-auto w-full min-w-0 max-w-[48rem] lg:max-w-[56rem] xl:max-w-[68rem]';
+/** Центрированная колонка legal-страниц — совпадает с pill-хедером лендинга. */
+export const legalDocLandingArticleClass = `${LANDING_PAGE_COLUMN_CLASS} min-w-0`;
+
+/** С боковым TOC — та же ширина, но без mx-auto (колонка уже уже shell). */
+export const legalDocLandingArticleWithTocClass = 'w-full min-w-0 max-w-[894px]';
 
 export const legalDocLandingSectionTitleClass =
   `${legalDocFontDisplay} mt-2 text-balance text-[clamp(1.35rem,3vw,2rem)] font-medium leading-[1.15] tracking-[-0.02em] text-[#111827] sm:mt-3 sm:text-[32px] lg:mt-4`;

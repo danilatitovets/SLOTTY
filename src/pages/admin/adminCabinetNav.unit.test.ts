@@ -8,11 +8,9 @@ function loc(pathname: string, search = '') {
 }
 
 describe('ADMIN_MAIN_NAV', () => {
-  it('does not include Сегодня in the main menu', () => {
-    assert.equal(
-      ADMIN_MAIN_NAV.some((item) => item.label === 'Сегодня'),
-      false,
-    );
+  it('includes Сегодня as the first main menu item', () => {
+    assert.equal(ADMIN_MAIN_NAV[0]?.label, 'Сегодня');
+    assert.equal(ADMIN_MAIN_NAV[0]?.to, ADMIN_OVERVIEW_PATH);
   });
 });
 
@@ -42,8 +40,10 @@ describe('isAdminNavItemActive', () => {
     assert.equal(isAdminNavItemActive(reviews, location), true);
   });
 
-  it('does not highlight overview tabs on /admin/overview without tab', () => {
+  it('highlights only Сегодня on /admin/overview without tab', () => {
+    const today = ADMIN_MAIN_NAV.find((item) => item.label === 'Сегодня')!;
     const location = loc(ADMIN_OVERVIEW_PATH);
+    assert.equal(isAdminNavItemActive(today, location), true);
     assert.equal(isAdminNavItemActive(clients, location), false);
     assert.equal(isAdminNavItemActive(reviews, location), false);
   });

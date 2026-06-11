@@ -49,7 +49,7 @@ export function MasterLanding() {
 
   return (
     <div className="min-h-dvh bg-[#E29595] text-neutral-900">
-      <div className="overflow-x-visible rounded-b-[2.5rem] bg-white sm:rounded-b-[3rem]">
+      <div className="overflow-x-clip rounded-b-[2.5rem] bg-white sm:rounded-b-[3rem]">
         <HomeHeader />
 
         <MasterLandingHero onBecomeMaster={onBecomeMaster} onCatalog={onCatalog} />

@@ -4,6 +4,7 @@ import { SettingsSearchBox } from '../../admin/settings/workspace/SettingsSearch
 import { settingsNavGroupLabel, settingsNavItemClass } from '../../admin/settings/workspace/settingsWorkspaceTheme';
 import {
   CLIENT_SETTINGS_NAV_GROUPS,
+  clientSettingsNavIconClass,
   flattenClientSettingsNavItems,
   type ClientSettingsNavItem,
 } from './clientSettingsNav';
@@ -51,7 +52,7 @@ export function ClientSettingsMobileDrawer({ open, onClose, search, onSearchChan
                         onClick={onClose}
                         className={({ isActive }) => settingsNavItemClass(isActive)}
                       >
-                        <Icon className="shrink-0 opacity-90" />
+                        <Icon className={clientSettingsNavIconClass} aria-hidden />
                         <span className="min-w-0 flex-1">{item.label}</span>
                       </NavLink>
                     </li>

@@ -28,8 +28,8 @@ export function ServicesPageHeader({
 
   if (!heroOpen) {
     return (
-      <div className="space-y-3">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold tracking-[-0.02em] text-[#111827]">
             {summary.badge}: {summary.value}
           </p>
@@ -38,10 +38,10 @@ export function ServicesPageHeader({
         <button
           type="button"
           onClick={() => setHeroOpen(true)}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[14px] bg-[#FFF1F4] px-4 text-[15px] font-semibold text-[#F47C8C] transition hover:bg-[#FFE4EA] active:scale-[0.98]"
+          className="flex shrink-0 items-center gap-1 rounded-[12px] bg-[#FFF1F4] px-3 py-2 text-[14px] font-semibold text-[#F47C8C] transition hover:bg-[#FFE4EA] active:scale-[0.98]"
         >
           Открыть сводку
-          <HiChevronRight className="h-5 w-5" aria-hidden />
+          <HiChevronRight className="h-4 w-4" aria-hidden />
         </button>
       </div>
     );

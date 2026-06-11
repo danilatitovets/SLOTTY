@@ -28,10 +28,9 @@ import type { IconType } from 'react-icons';
 import { HEADER_LOGO_SRC, LANDING_HEADER_LOGO_SRC } from '../../../app/headerLogo';
 import {
   ADMIN_NOTIFICATIONS_PATH,
-  ADMIN_PATH,
   BOOKING_PATH,
-  PLATFORM_ADMIN_PATH,
   BECOME_MASTER_PATH,
+  PLATFORM_ADMIN_PATH,
   getLoginPath,
   getProfilePath,
   HUB_PATH,
@@ -593,7 +592,7 @@ export function SlottyHeader({
   const accountMenuColumns = useMemo((): AccountDropdownColumn[] => {
     const masterItems: AccountDropdownItem[] = isMasterUser
       ? [
-          { title: 'Кабинет', to: ADMIN_PATH, icon: AccountMenuIcons.masterCabinet },
+          { title: 'Сегодня', to: masterHref, icon: AccountMenuIcons.masterCabinet },
           { title: 'Оповещения', to: ADMIN_NOTIFICATIONS_PATH, icon: AccountMenuIcons.masterInbox },
         ]
       : [{ title: 'Стать мастером', to: BECOME_MASTER_PATH, icon: AccountMenuIcons.becomeMaster }];
@@ -1105,7 +1104,6 @@ export function SlottyHeader({
             landingSticky
             landingDesktopOnly
             landingCatalogWidth
-            landingCatalogFlushTop
             shellRef={headerRef}
           >
             <div ref={megaHostRef} className="relative" {...megaHostProps}>

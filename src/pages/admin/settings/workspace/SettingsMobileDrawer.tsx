@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AdminBottomSheet } from '../../shared/AdminBottomSheet';
 import { SettingsSearchBox } from './SettingsSearchBox';
-import { SettingsSidebarTariffCard } from './SettingsSidebarTariffCard';
 import {
   flattenSettingsNavItems,
   SETTINGS_NAV_GROUPS,
@@ -116,7 +115,6 @@ export function SettingsMobileDrawer({ open, onClose, search, onSearchChange }: 
       variant="catalog"
       borderless
       headerAfter={<SettingsSearchBox value={search} onChange={onSearchChange} />}
-      footer={<SettingsSidebarTariffCard onNavigate={onClose} />}
     >
       <SettingsMobileSettingsNav search={search} onNavigate={onClose} />
     </AdminBottomSheet>

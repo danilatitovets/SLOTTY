@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
-  ADMIN_PATH,
+  ADMIN_OVERVIEW_PATH,
   BECOME_MASTER_PATH,
   getMasterLoginPath,
   getMasterRegisterPath,
@@ -54,7 +54,7 @@ export function MasterStartPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={isMasterUser ? ADMIN_PATH : BECOME_MASTER_PATH} replace />;
+    return <Navigate to={isMasterUser ? ADMIN_OVERVIEW_PATH : BECOME_MASTER_PATH} replace />;
   }
 
   return (

@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import { SettingsSearchBox } from './SettingsSearchBox';
-import { SettingsSidebarTariffCard } from './SettingsSidebarTariffCard';
 import {
   flattenSettingsNavItems,
   SETTINGS_NAV_GROUPS,
@@ -75,10 +74,6 @@ export function SettingsSidebar({ search, onSearchChange, onNavigate, className 
           <p className="px-3 py-6 text-[14px] text-[#9CA3AF]">Ничего не найдено</p>
         ) : null}
       </nav>
-
-      <div className="shrink-0 border-t border-[#EEEEEE] bg-white p-3">
-        <SettingsSidebarTariffCard onNavigate={onNavigate} />
-      </div>
     </aside>
   );
 }

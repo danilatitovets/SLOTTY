@@ -1,4 +1,11 @@
-import type { ReactNode } from 'react';
+import type { IconType } from 'react-icons';
+import {
+  HiChatBubbleLeftRight,
+  HiDocumentText,
+  HiKey,
+  HiLockClosed,
+  HiSignal,
+} from 'react-icons/hi2';
 import {
   PROFILE_SETTINGS_DOCUMENTS_PATH,
   PROFILE_SETTINGS_LOGIN_METHODS_PATH,
@@ -7,58 +14,15 @@ import {
   PROFILE_SETTINGS_SYSTEM_STATUS_PATH,
 } from '../../../app/paths';
 
-const stroke = { strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-
-function IconShield({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
-
-function IconLock({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
-function IconHelp({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
-    </svg>
-  );
-}
-
-function IconStatus({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4M8 12h8" />
-    </svg>
-  );
-}
-
-function IconDocs({ className }: { className?: string }) {
-  return (
-    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden {...stroke}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-    </svg>
-  );
-}
+/** Как в бургер-меню кабинета (`ClientCabinetMobileMenu`). */
+export const clientSettingsNavIconClass = 'h-[18px] w-[18px] shrink-0 opacity-90';
 
 export type ClientSettingsNavItem = {
   id: string;
   to: string;
   label: string;
   keywords: string[];
-  icon: (p: { className?: string }) => ReactNode;
+  icon: IconType;
   matchPrefix?: boolean;
 };
 
@@ -78,14 +42,14 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         to: PROFILE_SETTINGS_LOGIN_METHODS_PATH,
         label: 'Способы входа',
         keywords: ['вход', 'telegram', 'google', 'пароль', 'безопасность', 'сессия'],
-        icon: IconShield,
+        icon: HiKey,
       },
       {
         id: 'privacy',
         to: PROFILE_SETTINGS_PRIVACY_PATH,
         label: 'Данные и приватность',
         keywords: ['данные', 'экспорт', 'удаление', 'приватность', 'gdpr', 'аккаунт'],
-        icon: IconLock,
+        icon: HiLockClosed,
       },
     ],
   },
@@ -98,7 +62,7 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         to: PROFILE_SETTINGS_SUPPORT_PATH,
         label: 'Поддержка',
         keywords: ['помощь', 'контакт', 'telegram', 'email', 'вопрос'],
-        icon: IconHelp,
+        icon: HiChatBubbleLeftRight,
         matchPrefix: true,
       },
       {
@@ -106,7 +70,7 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         to: PROFILE_SETTINGS_SYSTEM_STATUS_PATH,
         label: 'Статус системы',
         keywords: ['статус', 'доступность', 'инцидент', 'работает'],
-        icon: IconStatus,
+        icon: HiSignal,
       },
     ],
   },
@@ -119,7 +83,7 @@ export const CLIENT_SETTINGS_NAV_GROUPS: ClientSettingsNavGroup[] = [
         to: PROFILE_SETTINGS_DOCUMENTS_PATH,
         label: 'Условия и согласия',
         keywords: ['условия', 'политика', 'конфиденциальность', 'согласие', 'оферта', 'документы'],
-        icon: IconDocs,
+        icon: HiDocumentText,
         matchPrefix: true,
       },
     ],

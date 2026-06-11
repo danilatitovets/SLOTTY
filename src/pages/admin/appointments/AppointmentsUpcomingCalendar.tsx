@@ -30,7 +30,7 @@ import {
 } from './appointmentsFormat';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
-const BUSY_DAYS_SECTION_THRESHOLD = 3;
+const BUSY_DAYS_SECTION_THRESHOLD = 1;
 
 type Props = {
   appointments: DemoMasterAppointment[];
@@ -239,8 +239,12 @@ export function AppointmentsUpcomingCalendar({ appointments, nearestId, onOpen }
                   >
                     <span className="text-[11px] font-semibold leading-tight">{label}</span>
                     <span
-                      className={`mt-0.5 text-[12px] font-bold tabular-nums ${
-                        selected ? 'text-white/90' : hasAttention ? 'text-[#B91C1C]' : 'text-[#F47C8C]'
+                      className={`mt-1 inline-flex min-h-[20px] min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${
+                        selected
+                          ? 'bg-white/20 text-white'
+                          : hasAttention
+                            ? 'bg-[#DC2626] text-white'
+                            : 'bg-[#F47C8C] text-white'
                       }`}
                     >
                       {count}

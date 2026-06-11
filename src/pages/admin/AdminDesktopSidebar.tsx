@@ -24,9 +24,7 @@ import {
   adminDesktopSidebarNav,
   adminDesktopSidebarShell,
   adminSidebarFooterCard,
-  adminSidebarTariffCard,
 } from './adminCabinetLayout';
-import { AdminTariffSidebarCardContent } from './shared/AdminTariffSidebarCardContent';
 
 function SidebarUnreadBadge({ count }: { count: number }) {
   const label = count > 9 ? '9+' : String(count);
@@ -149,15 +147,7 @@ export function AdminDesktopSidebar() {
         ) : null}
       </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-[#EEEEEE] p-3">
-        <Link to={ADMIN_BILLING_NAV.to} className={`${adminSidebarTariffCard} mb-0`}>
-          <AdminTariffSidebarCardContent
-            planLabel={planBadgeLabel(planId)}
-            subtitle="Управление подпиской и лимитами"
-            planId={planId}
-          />
-        </Link>
-
+      <div className="shrink-0 border-t border-[#EEEEEE] p-3">
         <Link to={ADMIN_PATH} className={adminSidebarFooterCard}>
           <MasterCabinetAvatar
             name={displayName}

@@ -3,6 +3,9 @@
 /** Ширина/высота капсулы: W 894 · H 74 · radius 25 · fill #FBEDEC */
 export const LANDING_HEADER_MAX_WIDTH_CLASS = 'mx-auto w-full max-w-[894px]';
 
+/** Колонка текста лендинга и legal — совпадает с pill-хедером. */
+export const LANDING_PAGE_COLUMN_CLASS = LANDING_HEADER_MAX_WIDTH_CLASS;
+
 /** Pill-хедер в каталоге — на всю ширину shell (max-w 1320px). */
 export const CATALOG_LANDING_HEADER_WIDTH_CLASS = 'w-full';
 
@@ -16,13 +19,13 @@ export const CATALOG_LANDING_HEADER_PILL_CLASS =
   'overflow-visible rounded-none bg-[#FBEDEC] transition-all duration-300';
 
 export const LANDING_HEADER_ROW_CLASS =
-  'relative grid h-[74px] grid-cols-[1fr_auto] items-center gap-4 pl-3 pr-6 sm:pl-4 sm:pr-8 lg:grid-cols-[1fr_auto_1fr] lg:pl-5 lg:pr-10';
+  'relative grid min-h-[74px] grid-cols-[1fr_auto] items-center gap-4 py-2 pl-3 pr-6 sm:pl-4 sm:pr-8 lg:grid-cols-[1fr_auto_1fr] lg:pl-5 lg:pr-10';
 
 export const LANDING_HEADER_LOGO_LINK_CLASS =
   'inline-flex w-auto shrink-0 items-center justify-start !h-auto min-h-0 -ml-1 p-0 leading-none opacity-100 hover:opacity-100 sm:-ml-1.5';
 
 export const LANDING_HEADER_LOGO_IMG_CLASS =
-  'block h-14 w-auto max-w-none shrink-0 translate-y-[5px] object-contain object-left opacity-100 sm:h-16 sm:translate-y-[6px]';
+  'block h-12 w-auto max-w-none shrink-0 object-contain object-left opacity-100 sm:h-14';
 
 export const LANDING_HEADER_LOGO_CELL_CLASS = 'col-start-1 row-start-1 justify-self-start';
 

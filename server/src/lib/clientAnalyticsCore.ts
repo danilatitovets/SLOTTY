@@ -25,6 +25,7 @@ export type ClientAnalyticsProfile = {
   completedVisitsInPeriod: number;
   firstCompletedVisitAt: string;
   lastCompletedVisitAt: string;
+  lastAppointmentId: string;
   completedVisitDatesInPeriod: string[];
   isRepeatClient: boolean;
   isNewClientByEndOfPeriod: boolean;
@@ -52,6 +53,7 @@ export type ClientAnalyticsRosterItem = {
   upcomingVisitsCount: number;
   lastVisitAt?: string | null;
   firstVisitAt?: string | null;
+  lastAppointmentId?: string | null;
   isReturning: boolean;
   favoriteServiceName?: string | null;
   /** @deprecated */
@@ -143,6 +145,7 @@ function buildProfiles(
         completedVisitsInPeriod: 0,
         firstCompletedVisitAt: row.visitDate,
         lastCompletedVisitAt: row.visitDate,
+        lastAppointmentId: row.appointmentId,
         completedVisitDatesInPeriod: [],
         isRepeatClient: false,
         isNewClientByEndOfPeriod: false,
@@ -155,7 +158,12 @@ function buildProfiles(
 
     profile.totalCompletedVisitsAllTime += 1;
     if (row.visitDate < profile.firstCompletedVisitAt) profile.firstCompletedVisitAt = row.visitDate;
-    if (row.visitDate > profile.lastCompletedVisitAt) profile.lastCompletedVisitAt = row.visitDate;
+    if (row.visitDate > profile.lastCompletedVisitAt) {
+      profile.lastCompletedVisitAt = row.visitDate;
+      profile.lastAppointmentId = row.appointmentId;
+    } else if (row.visitDate === profile.lastCompletedVisitAt) {
+      profile.lastAppointmentId = row.appointmentId;
+    }
 
     if (isDateInRange(row.visitDate, periodStart, periodEnd)) {
       profile.completedVisitsInPeriod += 1;
@@ -277,6 +285,7 @@ function buildRoster(
         upcomingVisitsCount: 0,
         lastVisitAt: lastVisit,
         firstVisitAt: p.firstCompletedVisitAt,
+        lastAppointmentId: p.lastAppointmentId,
         isReturning: p.isRepeatClient,
         favoriteServiceName,
         key: p.clientKey,

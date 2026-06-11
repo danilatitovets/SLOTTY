@@ -9,7 +9,7 @@ export const masterDemoMediaFrame =
   `relative aspect-[4/5] w-full min-h-0 overflow-hidden rounded-[28px] ${masterDemoFrameBgClass} sm:aspect-auto sm:min-h-[580px] sm:rounded-[32px] lg:min-h-[660px] lg:rounded-[36px] xl:min-h-[720px]`;
 
 export const masterDemoHeroPhoneFrame =
-  `relative aspect-[4/5] w-full min-h-0 max-w-none overflow-hidden rounded-[28px] ${masterDemoFrameBgClass} sm:aspect-auto sm:min-h-[600px] sm:max-w-[1100px] sm:rounded-[50px] lg:min-h-[640px]`;
+  `relative mx-auto aspect-[4/5] w-full min-h-0 max-w-none overflow-hidden rounded-[28px] ${masterDemoFrameBgClass} sm:aspect-auto sm:min-h-[600px] sm:max-w-[1100px] sm:rounded-[50px] lg:min-h-[640px]`;
 
 /** Компактная панель полей в демо — меньше padding, чем в кабинете. */
 export const masterDemoFormPanel = 'overflow-hidden rounded-[14px] bg-white p-3 sm:rounded-[16px]';

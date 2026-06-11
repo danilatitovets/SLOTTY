@@ -29,6 +29,13 @@ export const adminMobileTabBarWithFormFooterPadMaxLgClass =
 /** FAB / тост над нижней панелью (+ 1rem зазор). */
 export const adminMobileTabBarFabBottom = `calc(${ADMIN_MOBILE_TAB_BAR_HEIGHT} + 1rem + env(safe-area-inset-bottom, 0px))`;
 
+/**
+ * Tailwind bottom для FAB — только литерал (см. adminMobileTabBarFabBottom).
+ * При смене ADMIN_MOBILE_TAB_BAR_HEIGHT обновить и здесь.
+ */
+export const adminMobileTabBarFabBottomClass =
+  'max-lg:bottom-[calc(3.5rem+1rem+env(safe-area-inset-bottom,0px))]';
+
 /** Кнопка таба в нижней панели (мобилка) — как ClientBottomNav. */
 export function adminMobileSegmentTabClass(
   active: boolean,

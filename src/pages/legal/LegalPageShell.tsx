@@ -1,6 +1,7 @@
 import type { FC, ReactNode } from 'react';
 import { HiArrowLeft } from 'react-icons/hi2';
 import { SlottyHeader } from '../../shared/layout/SlottyHeader/SlottyHeader';
+import { LANDING_PAGE_COLUMN_CLASS } from '../../shared/layout/SlottyHeader/landingHeaderTheme';
 import { CLIENT_DESKTOP_SHELL_CLASS } from '../../shared/layout/clientShellLayout';
 import { HomeFooter } from '../HomeFooter';
 import {
@@ -8,6 +9,7 @@ import {
   legalDocFontBody,
   legalDocFontDisplay,
   legalDocLandingArticleClass,
+  legalDocLandingArticleWithTocClass,
   shouldShowLegalDocToc,
   type LegalTocItem,
 } from './legalDocumentUi';
@@ -94,8 +96,9 @@ function LegalPageHero({
       <div
         className={`relative z-[2] ${CLIENT_DESKTOP_SHELL_CLASS} max-lg:px-4 ${LEGAL_LANDING_HEADER_OFFSET} pb-10 sm:pb-12 lg:pb-14`}
       >
-        <LegalPageBackButton label={backLabel} onBack={onBack} />
-        <div className="relative mt-6 min-w-0 w-full sm:mt-8 lg:mt-10">
+        <div className={LANDING_PAGE_COLUMN_CLASS}>
+          <LegalPageBackButton label={backLabel} onBack={onBack} />
+          <div className="relative mt-6 min-w-0 w-full sm:mt-8 lg:mt-10">
           <LegalPageTitle title={title} titleHighlight={titleHighlight} />
           {heroLead ? (
             <div
@@ -109,6 +112,7 @@ function LegalPageHero({
               {meta}
             </div>
           ) : null}
+          </div>
         </div>
       </div>
     </section>
@@ -213,7 +217,9 @@ export const LegalPageShell: FC<Props> = ({
               : ''
           }
         >
-          <article className={legalDocLandingArticleClass}>
+          <article
+            className={showToc ? legalDocLandingArticleWithTocClass : legalDocLandingArticleClass}
+          >
             {!hasHero ? (
               <>
                 <LegalPageBackButton label={backLabel} onBack={goBack} />

@@ -1,5 +1,6 @@
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import {
+  ADMIN_OVERVIEW_PATH,
   ADMIN_PATH,
   BECOME_MASTER_PATH,
   buildAppPath,
@@ -99,7 +100,7 @@ export function AdminPage() {
         <Route path="profile/completion" element={<ProfileCompletionPage />} />
         <Route path="profile" element={<Navigate to={ADMIN_PATH} replace />} />
       </Route>
-      <Route path="*" element={<Navigate to={ADMIN_PATH} replace />} />
+      <Route path="*" element={<Navigate to={ADMIN_OVERVIEW_PATH} replace />} />
     </Routes>
   );
 }

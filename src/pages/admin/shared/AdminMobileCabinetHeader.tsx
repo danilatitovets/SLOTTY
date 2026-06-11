@@ -50,45 +50,34 @@ export function AdminMobileCabinetHeader({
       >
         {isMasterUser ? (
           <div className="flex min-h-10 w-full min-w-0 items-center gap-2">
-            <Link
-              to={HUB_PATH}
-              aria-label="SLOTTY — на главную"
-              className="inline-flex h-10 w-12 shrink-0 items-center overflow-visible transition hover:opacity-60 active:scale-[0.99]"
-            >
-              <SlottyImg
-                src={HEADER_LOGO_SRC}
-                alt=""
-                decoding="async"
-                fetchPriority="low"
-                className="h-10 w-auto max-w-none -translate-x-4 object-contain object-left"
-              />
-            </Link>
-            <CabinetRoleSwitch active="master" compact className="min-w-0 max-w-[11rem] flex-1" />
+            <CabinetRoleSwitch active="master" compact className="min-w-0 max-w-[11.5rem] shrink" />
             <ProfileCompletionHeaderCard variant="header" className="hidden min-[360px]:inline-flex shrink-0" />
-            <NotificationBellLink
-              to={ADMIN_NOTIFICATIONS_PATH}
-              isActive={isNotifications}
-              hasUnread={hasAttention}
-              count={bellCount}
-              variant="mobile"
-              ringClass=""
-              ariaLabel={
-                bellCount > 0
-                  ? `Уведомления, ${bellCount} непрочитанных`
-                  : hasAttention
-                    ? 'Уведомления, есть задачи'
-                    : 'Уведомления'
-              }
-            />
-            <button
-              type="button"
-              onClick={onMenuOpen}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F5F5F5] text-[#111827] transition hover:bg-[#EBEBEB] active:scale-[0.97]"
-              aria-label={menuLabel}
-              aria-expanded={menuOpen}
-            >
-              <IconBurger className="h-5 w-5 text-neutral-800" />
-            </button>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <NotificationBellLink
+                to={ADMIN_NOTIFICATIONS_PATH}
+                isActive={isNotifications}
+                hasUnread={hasAttention}
+                count={bellCount}
+                variant="mobile"
+                ringClass=""
+                ariaLabel={
+                  bellCount > 0
+                    ? `Уведомления, ${bellCount} непрочитанных`
+                    : hasAttention
+                      ? 'Уведомления, есть задачи'
+                      : 'Уведомления'
+                }
+              />
+              <button
+                type="button"
+                onClick={onMenuOpen}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F5F5F5] text-[#111827] transition hover:bg-[#EBEBEB] active:scale-[0.97]"
+                aria-label={menuLabel}
+                aria-expanded={menuOpen}
+              >
+                <IconBurger className="h-5 w-5 text-neutral-800" />
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex min-h-10 w-full min-w-0 items-center justify-between gap-2">

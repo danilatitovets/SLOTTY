@@ -8,7 +8,7 @@ import {
 } from '../profile/adminProfileDashboardTheme';
 import {
   ADMIN_MOBILE_TAB_BAR_HEIGHT,
-  adminMobileTabBarFabBottom,
+  adminMobileTabBarFabBottomClass,
   adminMobileTabBarListScrollPadClass,
 } from '../shared/adminMobileTabBarTheme';
 
@@ -39,8 +39,13 @@ export const scheduleSheetSecondaryBtn =
 export const scheduleSheetGhostBtn =
   'rounded-[10px] bg-[#EEF0FC] px-3 py-2 text-[12px] font-semibold text-[#3B4CCA] transition hover:bg-[#E0E4F8] active:scale-[0.98] disabled:opacity-50';
 
-export const scheduleTabFabClass =
-  `fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#4558D4] to-[#3B4CCA] text-white transition hover:scale-[1.04] active:scale-[0.96] max-lg:bottom-[${adminMobileTabBarFabBottom}] lg:bottom-8 lg:right-8 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:scale-100`;
+export const scheduleTabFabClass = [
+  'fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#4558D4] to-[#3B4CCA] text-white',
+  'transition hover:scale-[1.04] active:scale-[0.96]',
+  adminMobileTabBarFabBottomClass,
+  'lg:bottom-8 lg:right-8',
+  'disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:scale-100',
+].join(' ');
 
 export function scheduleSegmentClass(active: boolean): string {
   return `min-h-11 rounded-[10px] px-3 text-[14px] font-semibold leading-snug transition active:scale-[0.98] ${

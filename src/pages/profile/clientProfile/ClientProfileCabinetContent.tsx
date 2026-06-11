@@ -6,6 +6,7 @@ import type { FavoriteMasterDto } from '../../../features/profile/api/clientFavo
 import type { BackendProfile } from '../../../features/auth/types';
 import { SERVICES_PATH } from '../../../app/paths';
 import { AppointmentsEmptyState } from '../../admin/appointments/AppointmentsEmptyState';
+import { APPOINTMENTS_REQUESTS_EMPTY_ILLUSTRATION_SRC } from '../../admin/appointments/adminAppointmentsTheme';
 import { NothingFoundCard } from '../../../shared/ui/NothingFoundCard';
 import { BelarusPhoneInline } from '../components/BelarusPhoneInline';
 import { ClientProfileAppointmentRow } from './ClientProfileAppointmentRow';
@@ -66,6 +67,7 @@ function EmptyAppointments() {
     <AppointmentsEmptyState
       title="Записей пока нет"
       text="Когда вы запишетесь на услугу, запись появится здесь."
+      illustrationSrc={APPOINTMENTS_REQUESTS_EMPTY_ILLUSTRATION_SRC}
       action={
         <Link to={SERVICES_PATH} className={`${catalogPrimaryBtn} w-full`}>
           Найти услуги

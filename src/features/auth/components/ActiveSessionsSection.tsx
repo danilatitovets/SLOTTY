@@ -6,6 +6,7 @@ import {
   SettingsCabinetSectionTitle,
   SettingsCabinetStatusPill,
   settingsCabinetActionBtn,
+  settingsCabinetOutlineBtn,
 } from '../../../pages/admin/settings/workspace/settingsCabinetUi';
 import { ADMIN_SIDEBAR_OVERLAY_INSET } from '../../../pages/admin/adminCabinetLayout';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
@@ -24,6 +25,14 @@ function formatSessionWhen(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function sessionMetaLine(row: AuthSessionRowDto): string {
+  const base = row.isCurrent
+    ? row.subtitle.replace(/\s*·\s*Это устройство\s*$/, '').trim()
+    : row.subtitle;
+  const activity = formatSessionWhen(row.lastActiveAt);
+  return base ? `${base} · активность ${activity}` : `активность ${activity}`;
 }
 
 function SessionDeviceIcon({ title }: { title: string }) {
@@ -172,29 +181,18 @@ export function ActiveSessionsSection() {
             }
         : null;
 
-  const okxBtn = settingsCabinetActionBtn;
-  const logoutBtn = `${settingsCabinetActionBtn} text-[#B91C1C] hover:bg-[#FEE2E2]`;
+  const actionBtn = `${settingsCabinetActionBtn} min-w-[6.5rem]`;
+  const logoutBtn = `${settingsCabinetActionBtn} min-w-[6.5rem] text-[#B91C1C] hover:bg-[#FEE2E2]`;
   const hasCurrent = sessions.some((s) => s.isCurrent);
-  const hasOthers = sessions.some((s) => !s.isCurrent);
+  const otherCount = sessions.filter((s) => !s.isCurrent).length;
+  const hasOthers = otherCount > 0;
 
   return (
     <section>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <SettingsCabinetSectionTitle
-          title="Активные сеансы"
-          description="Устройства, с которых выполнен вход. Завершите лишние, если не узнаёте сеанс."
-        />
-        {hasOthers && hasCurrent ? (
-          <button
-            type="button"
-            disabled={loading || confirmBusy}
-            onClick={openRevokeOthersConfirm}
-            className={okxBtn}
-          >
-            {revokingOthers ? '…' : 'Завершить остальные'}
-          </button>
-        ) : null}
-      </div>
+      <SettingsCabinetSectionTitle
+        title="Активные сеансы"
+        description="Устройства, с которых выполнен вход. Завершите лишние, если не узнаёте сеанс."
+      />
 
       {error ? (
         <p className="mb-3 rounded-[12px] bg-[#FEF2F2] px-4 py-3 text-[13px] text-[#B91C1C]">{error}</p>
@@ -208,42 +206,49 @@ export function ActiveSessionsSection() {
             Список появится после следующего входа в аккаунт с этого раздела.
           </p>
         ) : (
-          sessions.map((row) => (
-            <div key={row.id} className="flex items-center gap-4 px-5 py-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#F5F5F5]">
-                <SessionDeviceIcon title={row.title} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 text-[15px] font-bold text-[#111827]">
-                  {row.title}
-                  {row.isCurrent ? <SettingsCabinetStatusPill tone="pink">Сейчас</SettingsCabinetStatusPill> : null}
-                </p>
-                <p className="mt-0.5 text-[13px] leading-snug text-[#6B7280]">{row.subtitle}</p>
-                <p className="mt-1 text-[12px] text-[#9CA3AF]">
-                  Активность: {formatSessionWhen(row.lastActiveAt)}
-                </p>
+          <>
+            {sessions.map((row) => (
+              <div key={row.id} className="flex items-start gap-3 px-5 py-4">
+                <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#F5F5F5]">
+                  <SessionDeviceIcon title={row.title} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2 text-[15px] font-bold leading-snug text-[#111827]">
+                    <span className="min-w-0">{row.title}</span>
+                    {row.isCurrent ? (
+                      <SettingsCabinetStatusPill tone="success">Сейчас</SettingsCabinetStatusPill>
+                    ) : null}
+                  </p>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-[#6B7280]">
+                    {sessionMetaLine(row)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={confirmBusy}
+                  onClick={() => openRevokeConfirm(row)}
+                  className={`mt-0.5 ${row.isCurrent ? logoutBtn : actionBtn}`}
+                >
+                  {busyId === row.id ? '…' : row.isCurrent ? 'Выйти' : 'Завершить'}
+                </button>
               </div>
-              {!row.isCurrent ? (
+            ))}
+
+            {hasOthers && hasCurrent ? (
+              <div className="border-t border-[#EBEBEB] bg-[#FAFAFA] px-5 py-4">
                 <button
                   type="button"
-                  disabled={confirmBusy}
-                  onClick={() => openRevokeConfirm(row)}
-                  className={okxBtn}
+                  disabled={loading || confirmBusy}
+                  onClick={openRevokeOthersConfirm}
+                  className={`${settingsCabinetOutlineBtn} w-full`}
                 >
-                  {busyId === row.id ? '…' : 'Завершить'}
+                  {revokingOthers
+                    ? 'Завершение…'
+                    : `Завершить остальные (${otherCount})`}
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={confirmBusy}
-                  onClick={() => openRevokeConfirm(row)}
-                  className={logoutBtn}
-                >
-                  {busyId === row.id ? '…' : 'Выйти'}
-                </button>
-              )}
-            </div>
-          ))
+              </div>
+            ) : null}
+          </>
         )}
       </SettingsCabinetList>
 
@@ -263,4 +268,4 @@ export function ActiveSessionsSection() {
       />
     </section>
   );
-};
+}

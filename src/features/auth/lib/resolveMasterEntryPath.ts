@@ -1,4 +1,4 @@
-import { ADMIN_PATH, MASTER_START_PATH } from '../../../app/paths';
+import { ADMIN_OVERVIEW_PATH, MASTER_START_PATH } from '../../../app/paths';
 
 type Args = {
   isAuthenticated: boolean;
@@ -7,6 +7,6 @@ type Args = {
 
 /** CTA «Стать мастером» / кабинет по роли и авторизации. */
 export function resolveMasterEntryPath({ isMasterUser }: Args): string {
-  if (isMasterUser) return ADMIN_PATH;
+  if (isMasterUser) return ADMIN_OVERVIEW_PATH;
   return MASTER_START_PATH;
 }

@@ -1,6 +1,7 @@
 import type { FC, ReactNode } from 'react';
 import { HiArrowLeft } from 'react-icons/hi2';
 import { SlottyHeader } from '../../shared/layout/SlottyHeader/SlottyHeader';
+import { LANDING_PAGE_COLUMN_CLASS } from '../../shared/layout/SlottyHeader/landingHeaderTheme';
 import { CLIENT_DESKTOP_SHELL_CLASS } from '../../shared/layout/clientShellLayout';
 import { HomeFooter } from '../HomeFooter';
 import { LEGAL_LANDING_HEADER_OFFSET } from './LegalPageShell';
@@ -9,6 +10,8 @@ import {
   LegalDocDarkTocNav,
   legalDocFontBody,
   legalDocFontDisplay,
+  legalDocLandingArticleClass,
+  legalDocLandingArticleWithTocClass,
   shouldShowLegalDocToc,
   type LegalTocItem,
 } from './legalDocumentUi';
@@ -102,16 +105,17 @@ export const PrivacyLegalPageShell: FC<Props> = ({
         <div
           className={`relative z-[2] ${CLIENT_DESKTOP_SHELL_CLASS} max-lg:px-4 ${LEGAL_LANDING_HEADER_OFFSET} pb-10 sm:pb-12 lg:pb-14`}
         >
-          <button
-            type="button"
-            onClick={goBack}
-            className={`inline-flex min-h-10 items-center gap-1.5 ${legalDocFontBody} text-[14px] font-semibold text-white/65 transition hover:text-white`}
-          >
-            <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            {backLabel}
-          </button>
+          <div className={LANDING_PAGE_COLUMN_CLASS}>
+            <button
+              type="button"
+              onClick={goBack}
+              className={`inline-flex min-h-10 items-center gap-1.5 ${legalDocFontBody} text-[14px] font-semibold text-white/65 transition hover:text-white`}
+            >
+              <HiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+              {backLabel}
+            </button>
 
-          <div className="relative mt-8 max-w-3xl sm:mt-10 lg:mt-12">
+            <div className="relative mt-8 w-full sm:mt-10 lg:mt-12">
             <p className={`${legalDocFontBody} text-[11px] font-bold uppercase tracking-[0.14em] text-[#ff8fa3]`}>
               Конфиденциальность SLOTTY
             </p>
@@ -125,6 +129,7 @@ export const PrivacyLegalPageShell: FC<Props> = ({
                 {meta}
               </div>
             ) : null}
+            </div>
           </div>
         </div>
       </section>
@@ -135,7 +140,9 @@ export const PrivacyLegalPageShell: FC<Props> = ({
             showToc ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-16 xl:gap-20' : ''
           }
         >
-          <article className="min-w-0 w-full">
+          <article
+            className={showToc ? legalDocLandingArticleWithTocClass : legalDocLandingArticleClass}
+          >
             {showToc ? (
               <LegalDocDarkTocNav
                 items={toc}

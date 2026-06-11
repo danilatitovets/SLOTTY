@@ -18,7 +18,7 @@ export const settingsDangerBtn =
   'inline-flex min-h-10 items-center justify-center rounded-[12px] border border-[#FECACA] bg-white px-4 text-[14px] font-semibold text-[#DC2626] transition hover:bg-[#FEF2F2] active:scale-[0.98] disabled:opacity-50';
 
 export const settingsNavGroupLabel =
-  'px-3 pb-1.5 pt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9CA3AF] first:pt-2';
+  'px-3 pb-1.5 pt-4 text-[12px] font-semibold text-[#9CA3AF] first:pt-2';
 
 export const settingsNavItemClass = (active: boolean): string =>
   `flex min-h-[40px] w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left text-[14px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5f7a]/35 ${
