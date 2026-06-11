@@ -56,6 +56,10 @@ function sendFile(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
   res.setHeader('Content-Type', MIME[ext] ?? 'application/octet-stream');
   res.setHeader('Cache-Control', cacheControlFor(ext));
+  if (ext === '.html') {
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
   const stream = fs.createReadStream(filePath);
   stream.on('error', (err) => {
     console.error('[static-serve] read error', filePath, err.message);

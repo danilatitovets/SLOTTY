@@ -23,14 +23,14 @@ export function ScheduleSlotSharePanel({ masterId, window, services, shareTitle 
 
   useEffect(() => {
     if (!copied) return undefined;
-    const t = window.setTimeout(() => setCopied(false), 1800);
-    return () => window.clearTimeout(t);
+    const t = globalThis.setTimeout(() => setCopied(false), 1800);
+    return () => globalThis.clearTimeout(t);
   }, [copied]);
 
   useEffect(() => {
     if (!hint) return undefined;
-    const t = window.setTimeout(() => setHint(null), 2200);
-    return () => window.clearTimeout(t);
+    const t = globalThis.setTimeout(() => setHint(null), 2200);
+    return () => globalThis.clearTimeout(t);
   }, [hint]);
 
   const onCopy = useCallback(async () => {

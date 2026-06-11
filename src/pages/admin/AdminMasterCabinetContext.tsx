@@ -479,6 +479,9 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
         priceAmount: s.priceByn,
         priceType: s.priceType === 'from' ? 'from' : 'fixed',
         sortOrder: s.sortOrder ?? 0,
+        coverImageUrl: s.imageUrl?.trim() || '',
+        coverFocalX: s.coverFocalX,
+        coverFocalY: s.coverFocalY,
       });
       replacements.push({ oldId: s.id, newId: created.id });
     }

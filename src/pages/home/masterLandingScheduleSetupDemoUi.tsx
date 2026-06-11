@@ -127,7 +127,7 @@ const DEMO_TABS = [
 
 type MasterLandingScheduleCreateHubProps = {
   todayPressed?: boolean;
-  scrollRef?: React.RefObject<HTMLDivElement | null>;
+  scrollRef?: React.Ref<HTMLDivElement>;
 };
 
 export const MasterLandingScheduleCreateHub: FC<MasterLandingScheduleCreateHubProps> = ({

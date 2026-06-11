@@ -22,8 +22,6 @@ import { DailyHubStateBanner } from './DailyHubStateBanner';
 import { formatAppointmentWhenRu } from './overviewFormat';
 import type { OverviewOpsSnapshot } from './overviewOpsSnapshot';
 import {
-  overviewCard,
-  overviewCardPad,
   overviewDesktopCard,
   overviewDesktopCardPad,
   overviewIconCircle,

@@ -23,7 +23,7 @@ export function mobileGridClassName(): string {
 
 /** Один список без дублирующих секций */
 export function shouldUseUnifiedCatalogSections(
-  layout: 'mobile' | 'desktop',
+  _layout: 'mobile' | 'desktop',
   itemCount: number,
 ): boolean {
   return itemCount > 0;

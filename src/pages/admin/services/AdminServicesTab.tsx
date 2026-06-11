@@ -74,7 +74,6 @@ import { loadServiceBundles, loadServicePromotions, saveServiceBundles, saveServ
 import {
   cabinetServiceDtoToManaged,
   draftWithServices,
-  reindexManagedServices,
 } from './servicesCabinetSync';
 import type { ServiceBundle, ServicePromotion, ServicesTabId } from './servicesTypes';
 

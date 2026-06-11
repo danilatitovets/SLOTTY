@@ -12,6 +12,37 @@ function resolveAppBuildId(): string {
 
 const appBuildId = resolveAppBuildId();
 
+/** Inline-скрипт: Telegram WebView кэширует index.html; fetch свежего build id до загрузки бандла. */
+const TELEGRAM_BUILD_REFRESH_INLINE_SCRIPT = `<script>
+(function () {
+  var KEY = 'slotty:build-id';
+  var meta = document.querySelector('meta[name="slotty-build"]');
+  var localBuild = meta && meta.getAttribute('content');
+  if (!localBuild) return;
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (!tg || !tg.initData) return;
+  function apply(remote) {
+    try {
+      var prev = sessionStorage.getItem(KEY);
+      if (prev && prev !== remote) {
+        sessionStorage.setItem(KEY, remote);
+        location.reload();
+        return;
+      }
+      sessionStorage.setItem(KEY, remote);
+    } catch (e) {}
+  }
+  apply(localBuild);
+  fetch('/?slotty-build-check=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' })
+    .then(function (r) { return r.text(); })
+    .then(function (html) {
+      var m = html.match(/name="slotty-build"\\s+content="([^"]+)"/);
+      if (m && m[1]) apply(m[1]);
+    })
+    .catch(function () {});
+})();
+</script>`;
+
 function injectAppBuildMeta(): Plugin {
   return {
     name: 'inject-app-build-meta',
@@ -20,6 +51,7 @@ function injectAppBuildMeta(): Plugin {
         '<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />',
         '<meta http-equiv="Pragma" content="no-cache" />',
         `<meta name="slotty-build" content="${appBuildId}" />`,
+        TELEGRAM_BUILD_REFRESH_INLINE_SCRIPT,
       ].join('\n    ');
       return html.replace('</head>', `    ${meta}\n  </head>`);
     },

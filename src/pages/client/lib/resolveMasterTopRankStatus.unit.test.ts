@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import type { ServiceListingRecord } from '../../../features/services/model/demoMasters';
 import {
   MIN_ACHIEVEMENT_CATALOG_PEERS,
@@ -19,12 +20,12 @@ function listing(
     rating: 4.8,
     reviewsCount: 5,
     location: {
-      city: 'Минск',
-      street: 'ул. Тест',
       visitType: 'at_home',
+      street: 'ул. Тест',
+      building: '1',
     },
     priceFrom: 50,
-    photoUrl: null,
+    photoUrl: '',
     ...overrides,
   };
 }
@@ -32,7 +33,7 @@ function listing(
 describe('resolveMasterTopRankStatus', () => {
   it('returns empty when master is not in catalog', () => {
     const status = resolveMasterTopRankStatus('missing', [listing('other')]);
-    expect(status.achievements).toEqual([]);
+    assert.deepEqual(status.achievements, []);
   });
 
   it('uses «В топе» meta for week/month regardless of rank', () => {
@@ -46,9 +47,9 @@ describe('resolveMasterTopRankStatus', () => {
     const status = resolveMasterTopRankStatus('target', masters);
     const week = status.achievements.find((item) => item.id === 'week');
 
-    expect(week?.meta).toBe('В топе');
-    expect(week?.podiumRank).toBeNull();
-    expect(week?.catalogRank).toBe(4);
+    assert.equal(week?.meta, 'В топе');
+    assert.equal(week?.podiumRank, null);
+    assert.equal(week?.catalogRank, 4);
   });
 
   it('does not show «1 место» on card even for first rank', () => {
@@ -61,9 +62,9 @@ describe('resolveMasterTopRankStatus', () => {
     const status = resolveMasterTopRankStatus('target', masters);
     const week = status.achievements.find((item) => item.id === 'week');
 
-    expect(week?.meta).toBe('В топе');
-    expect(week?.podiumRank).toBe(1);
-    expect(week?.tooltipBody).toContain('1-е место');
+    assert.equal(week?.meta, 'В топе');
+    assert.equal(week?.podiumRank, 1);
+    assert.ok(week?.tooltipBody.includes('1-е место'));
   });
 
   it('skips competitive achievements when catalog is too small', () => {
@@ -72,14 +73,14 @@ describe('resolveMasterTopRankStatus', () => {
       listing('b', { rating: 4.2, reviewsCount: 1 }),
     ];
 
-    expect(masters.length).toBeLessThan(MIN_ACHIEVEMENT_CATALOG_PEERS);
+    assert.ok(masters.length < MIN_ACHIEVEMENT_CATALOG_PEERS);
 
     const status = resolveMasterTopRankStatus('target', masters);
-    expect(status.achievements.some((item) => item.id === 'week')).toBe(false);
-    expect(status.achievements.some((item) => item.id === 'rating')).toBe(true);
-    expect(status.achievements.some((item) => item.id === 'reviews')).toBe(true);
-    expect(status.achievements.some((item) => item.id === 'new')).toBe(true);
-    expect(status.achievements.find((item) => item.id === 'rating')?.title).toBe('Высокий рейтинг');
+    assert.equal(status.achievements.some((item) => item.id === 'week'), false);
+    assert.equal(status.achievements.some((item) => item.id === 'rating'), true);
+    assert.equal(status.achievements.some((item) => item.id === 'reviews'), true);
+    assert.equal(status.achievements.some((item) => item.id === 'new'), true);
+    assert.equal(status.achievements.find((item) => item.id === 'rating')?.title, 'Высокий рейтинг');
   });
 
   it('uses real rating and reviews in meta when enough peers', () => {
@@ -93,8 +94,8 @@ describe('resolveMasterTopRankStatus', () => {
     const rating = status.achievements.find((item) => item.id === 'rating');
     const reviews = status.achievements.find((item) => item.id === 'reviews');
 
-    expect(rating?.meta).toBe('5.0');
-    expect(reviews?.meta).toBe('2 отзыва');
+    assert.equal(rating?.meta, '5.0');
+    assert.equal(reviews?.meta, '2 отзыва');
   });
 
   it('skips rating achievement without rating data', () => {
@@ -105,13 +106,13 @@ describe('resolveMasterTopRankStatus', () => {
     ];
 
     const status = resolveMasterTopRankStatus('target', masters);
-    expect(status.achievements.some((item) => item.id === 'rating')).toBe(false);
+    assert.equal(status.achievements.some((item) => item.id === 'rating'), false);
   });
 
   it('uses profile fallback when catalog is too small and competitive sections are empty', () => {
     const masters = [listing('target', { rating: 5, reviewsCount: 2 })];
 
     const status = resolveMasterTopRankStatus('target', masters);
-    expect(status.achievements.map((item) => item.id).sort()).toEqual(['new', 'rating', 'reviews']);
+    assert.deepEqual(status.achievements.map((item) => item.id).sort(), ['new', 'rating', 'reviews']);
   });
 });

@@ -1,5 +1,4 @@
 import { sheetSegmentClass } from '../profile/adminProfileCabinetTheme';
-import { scheduleSegmentClass } from './adminScheduleTheme';
 
 type Mode = 'template' | 'manual';
 

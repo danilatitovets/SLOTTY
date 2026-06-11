@@ -22,6 +22,7 @@ import {
 } from '../../lib/displayFormat.js';
 import {
   enrichClientAppointmentDetail,
+  formatRevealedClientAddress,
   loadClientBookingMasterCard,
 } from './appointments.clientDetailEnrich.js';
 import { assertClientHasContact, loadClientContactSnapshot } from './bookingContact.js';
@@ -925,6 +926,18 @@ export async function getClientAppointmentByVoucher(clientId: string, voucherRaw
     [base.location_city, base.location_street, base.location_building].filter(Boolean).join(', ') ||
     null;
   const hasCoords = base.location_lat != null && base.location_lng != null;
+  const fullAddress =
+    formatRevealedClientAddress({
+      street: row.location_street ?? '',
+      building: row.location_building ?? '',
+      buildingDetail: row.location_building_detail,
+      entrance: row.location_entrance,
+      floor: row.location_floor,
+      room: row.location_room,
+      intercom: row.location_intercom,
+      directions: row.location_directions,
+      publicAddress: row.location_public_address ?? '',
+    }).trim() || null;
 
   const enriched = enrichClientAppointmentDetail({
     status: row.status,
@@ -937,6 +950,8 @@ export async function getClientAppointmentByVoucher(clientId: string, voucherRaw
     can_leave_review: canClientLeaveReview(row.status, Boolean(openDispute)),
     has_open_dispute: Boolean(openDispute),
     public_address: publicAddr,
+    full_address: fullAddress,
+    hide_until_confirmed: row.location_show_exact_after_booking === true,
     has_coords: hasCoords,
     events,
     master: masterCard,

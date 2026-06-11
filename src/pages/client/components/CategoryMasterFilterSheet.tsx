@@ -39,7 +39,12 @@ export function CategoryMasterFilterSheet({
         <div className="mb-5">
           <p className="mb-2.5 text-[13px] font-medium text-[#8E8E93]">Категория</p>
           <ServiceCategoryRail
-            categories={serviceCategories}
+            categories={serviceCategories.map((category, index) => ({
+              id: category.code,
+              code: category.code,
+              name: category.name,
+              sortOrder: index,
+            }))}
             activeCode={draft.categoryCode}
             showAllLink
             onSelectCategory={(code) => patch({ categoryCode: code })}

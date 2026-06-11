@@ -61,6 +61,8 @@ const DEMO_ITEMS = [
   },
 ] as const;
 
+type DemoItem = (typeof DEMO_ITEMS)[number];
+
 export const HomeLandingNotifyDemo: FC = () => {
   const stageRef = useRef<HTMLDivElement>(null);
   const demoIndexRef = useRef(0);
@@ -68,7 +70,7 @@ export const HomeLandingNotifyDemo: FC = () => {
   const [activeChannel, setActiveChannel] = useState<LandingNotifyChannel | null>(null);
   const [showPanel, setShowPanel] = useState(false);
   const [showBooking, setShowBooking] = useState(false);
-  const [demo, setDemo] = useState(DEMO_ITEMS[0]!);
+  const [demo, setDemo] = useState<DemoItem>(DEMO_ITEMS[0]!);
   const [cursorVisible, setCursorVisible] = useState(false);
   const [cursorPressing, setCursorPressing] = useState(false);
   const [cursorPoint, setCursorPoint] = useState({ x: 0, y: 0 });

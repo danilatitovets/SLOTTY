@@ -240,7 +240,7 @@ type MasterLandingNotificationsHubProps = {
   showIncoming: boolean;
   showConfirmed: boolean;
   selectedIncoming: boolean;
-  scrollRef?: React.RefObject<HTMLDivElement | null>;
+  scrollRef?: React.Ref<HTMLDivElement>;
 };
 
 export const MasterLandingNotificationsHub: FC<MasterLandingNotificationsHubProps> = ({

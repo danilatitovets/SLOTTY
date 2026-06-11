@@ -277,7 +277,6 @@ export function AdminAppointmentDetailSheet({
           setClientReportOpen(true);
           break;
         case 'contact_client':
-          setMoreOpen(false);
           break;
         default:
           break;

@@ -24,7 +24,6 @@ import {
   HiBuildingStorefront,
   HiCalendarDays,
   HiClock,
-  HiSquares2X2,
   HiStar,
 } from 'react-icons/hi2';
 

@@ -1,4 +1,4 @@
-import type { FC, ReactNode, RefObject } from 'react';
+import type { FC, ReactNode, Ref } from 'react';
 import {
   servicesSheetPrimaryBtn,
   servicesSheetSecondaryBtn,
@@ -19,8 +19,8 @@ type MasterLandingDemoSheetProps = {
   footer: ReactNode;
   children: ReactNode;
   overlay?: ReactNode;
-  stageRef?: RefObject<HTMLDivElement | null>;
-  scrollRef?: RefObject<HTMLDivElement | null>;
+  stageRef?: Ref<HTMLDivElement>;
+  scrollRef?: Ref<HTMLDivElement>;
   ariaLabel: string;
 };
 

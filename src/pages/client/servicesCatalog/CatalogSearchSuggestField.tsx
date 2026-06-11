@@ -85,6 +85,7 @@ function recentToSuggestions(recent: string[]): CatalogSearchSuggestionDto[] {
     id: `recent:${text}`,
     type: 'query',
     title: text,
+    subtitle: 'Недавний поиск',
     group: 'recent',
   }));
 }
