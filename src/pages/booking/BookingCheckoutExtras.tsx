@@ -2,11 +2,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { HiCheck } from 'react-icons/hi2';
 import { LEGAL_PD_CONSENT_PATH, LEGAL_TERMS_PATH } from '../../app/paths';
 import { legalReturnState } from '../legal/useLegalPageBack';
-import {
-  catalogFieldClass,
-  catalogPrimaryBtn,
-} from '../client/servicesCatalog/servicesCatalogTheme';
+import { catalogFieldClass } from '../client/servicesCatalog/servicesCatalogTheme';
 import { bookingDesktopSectionTitle } from './bookingDesktopTheme';
+import { bookingPrimaryBtn } from './bookingUi';
 import { BookingReferencePhotoField } from './BookingReferencePhotoField';
 
 const DEFAULT_TRUST_ITEMS = ['Напоминание в Telegram'] as const;
@@ -121,7 +119,7 @@ export function BookingCheckoutExtras({
         type="button"
         disabled={!canSubmit}
         onClick={onConfirm}
-        className={`${catalogPrimaryBtn} w-full min-h-[48px] text-[15px] disabled:opacity-45`}
+        className={`${bookingPrimaryBtn} w-full min-h-[48px] text-[15px]`}
       >
         {submitting ? 'Отправляем…' : 'Подтвердить запись'}
       </button>

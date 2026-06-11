@@ -3,6 +3,7 @@ import type { ServiceCategoryDto } from '../../../features/master-onboarding/api
 import { CLIENT_CATALOG_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
 import { countActiveCatalogFilters, type CatalogFiltersState } from './catalogFiltersState';
 import { catalogCanvasClass, catalogDesktopPageClass } from './servicesCatalogTheme';
+import { CatalogDesktopHeroPhoto } from './CatalogDesktopHeroPhoto';
 import { CatalogDesktopWbToolbar } from './CatalogDesktopWbToolbar';
 import { ServicesCatalogDesktopTopBar } from './ServicesCatalogDesktopTopBar';
 import type { CatalogSearchSuggestSelection } from './catalogSearchSuggestTypes';
@@ -55,15 +56,16 @@ export function ServicesCatalogDesktop({
 
   return (
     <div
-      className={`${catalogDesktopPageClass} ${catalogCanvasClass} min-h-[calc(100dvh-var(--slotty-header-height,4.25rem))]`}
+      className={`${catalogDesktopPageClass} ${catalogCanvasClass} relative min-h-[calc(100dvh-var(--slotty-header-height,4.25rem))]`}
     >
+      <CatalogDesktopHeroPhoto />
       <ServicesCatalogDesktopTopBar
         search={search}
         onSearchChange={onSearchChange}
         onSearchSelect={onSearchSelect}
       />
 
-      <div className={`${CLIENT_CATALOG_DESKTOP_SHELL_CLASS} flex flex-col gap-4 pb-10 pt-4`}>
+      <div className={`${CLIENT_CATALOG_DESKTOP_SHELL_CLASS} relative z-10 flex flex-col gap-4 pb-10 pt-4`}>
         {!error && !servicesEmpty ? (
           <CatalogDesktopWbToolbar
             search={search}

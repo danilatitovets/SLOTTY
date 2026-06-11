@@ -101,6 +101,26 @@ export default {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(244, 124, 140, 0)' },
           '50%': { boxShadow: '0 0 0 4px rgba(244, 124, 140, 0.18)' },
         },
+        'booking-empty-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-7px)' },
+        },
+        'booking-no-slot-scan': {
+          '0%, 88%, 100%': {
+            backgroundColor: '#F0F0F2',
+            color: '#D1D5DB',
+            transform: 'scale(1)',
+          },
+          '6%, 14%': {
+            backgroundColor: '#FFF1F4',
+            color: '#F47C8C',
+            transform: 'scale(1.03)',
+          },
+        },
+        'booking-no-slot-badge': {
+          '0%, 100%': { color: '#9CA3AF', backgroundColor: '#FFFFFF' },
+          '50%': { color: '#F47C8C', backgroundColor: '#FFF1F4' },
+        },
       },
       animation: {
         'fade-enter': 'fade-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both',
@@ -116,6 +136,9 @@ export default {
         'legal-mini-arrow': 'legal-mini-arrow 1.8s ease-in-out infinite',
         'legal-mini-check': 'legal-mini-check 2.6s ease-in-out infinite',
         'legal-mini-shield': 'legal-mini-shield 2.2s ease-in-out infinite',
+        'booking-empty-float': 'booking-empty-float 3.8s ease-in-out infinite',
+        'booking-no-slot-scan': 'booking-no-slot-scan 2.8s ease-in-out infinite',
+        'booking-no-slot-badge': 'booking-no-slot-badge 2.4s ease-in-out infinite',
       },
       borderRadius: {
         card: '1.5rem',

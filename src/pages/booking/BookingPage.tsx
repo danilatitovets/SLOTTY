@@ -23,6 +23,7 @@ import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { isDevDemoAllowed } from '../../shared/lib/appMode';
 import { LoadingVideo } from '../../shared/ui/LoadingVideo';
 import { NothingFoundCard } from '../../shared/ui/NothingFoundCard';
+import { BookingNoSlotsEmpty } from './BookingNoSlotsEmpty';
 import {
   buildBookingSlotDays,
   pickFirstSlot,
@@ -431,22 +432,7 @@ export function BookingPage() {
   if (!hasSlots) {
     return (
       <BookingPageShell backTo={backTo}>
-        <div className="flex min-h-[min(58dvh,26rem)] w-full flex-col items-center justify-center">
-          <NothingFoundCard
-            variant="plain"
-            picture="scheduleEmpty"
-            title="Свободных слотов нет"
-            text="Попробуйте другую услугу или зайдите позже — мастер может открыть новые окна."
-            action={
-              <Link
-                to={backTo}
-                className="text-[14px] font-semibold text-[#F47C8C] no-underline transition hover:opacity-80"
-              >
-                Назад к мастеру
-              </Link>
-            }
-          />
-        </div>
+        <BookingNoSlotsEmpty backTo={backTo} />
       </BookingPageShell>
     );
   }

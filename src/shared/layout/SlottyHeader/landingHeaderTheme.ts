@@ -11,6 +11,10 @@ export const LANDING_HEADER_SLOT_H = 'h-10';
 export const LANDING_HEADER_PILL_CLASS =
   'overflow-visible rounded-[25px] bg-[#FBEDEC] transition-all duration-300';
 
+/** Каталог desktop: шапка вплотную к верху экрана — без скругления сверху. */
+export const CATALOG_LANDING_HEADER_PILL_CLASS =
+  'overflow-visible rounded-none bg-[#FBEDEC] transition-all duration-300';
+
 export const LANDING_HEADER_ROW_CLASS =
   'relative grid h-[74px] grid-cols-[1fr_auto] items-center gap-4 pl-3 pr-6 sm:pl-4 sm:pr-8 lg:grid-cols-[1fr_auto_1fr] lg:pl-5 lg:pr-10';
 
@@ -34,15 +38,6 @@ export const LANDING_NAV_LINK_CLASS =
 export const LANDING_ICON_BTN_CLASS =
   'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] text-[#1A1A1A] transition hover:bg-[#E9E6E6] active:scale-[0.97]';
 
-/** Панель аккаунта при hover на аватар — как pill-хедер, без бордеров. */
+/** Панель аккаунта — белая двухколоночная (OKX-style). */
 export const LANDING_ACCOUNT_PANEL_CLASS =
-  'overflow-hidden rounded-[25px] bg-[#FBEDEC] py-2 shadow-[0_12px_40px_rgba(17,24,39,0.1)]';
-
-export const LANDING_ACCOUNT_PANEL_TITLE_CLASS =
-  'px-4 pb-0.5 pt-2.5 text-[11px] font-semibold lowercase tracking-wide text-[#8E8E93]';
-
-export const LANDING_ACCOUNT_ROW_CLASS =
-  'group mx-2 flex w-[calc(100%-1rem)] items-start gap-3 rounded-[18px] px-2.5 py-2.5 text-left transition hover:bg-[#F1EFEF] focus:outline-none focus-visible:bg-[#F1EFEF]';
-
-export const LANDING_ACCOUNT_ROW_ICON_CLASS =
-  'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F1EFEF] text-[#1A1A1A] transition group-hover:bg-[#E9E6E6]';
+  'overflow-hidden rounded-[12px] border border-[#EBEBEB] bg-white shadow-[0_8px_32px_rgba(0,0,0,0.08)]';

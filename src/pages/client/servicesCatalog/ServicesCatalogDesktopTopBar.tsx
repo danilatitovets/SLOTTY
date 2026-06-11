@@ -1,12 +1,24 @@
+import { useLayoutEffect, useRef } from 'react';
 import { CATALOG_HERO_FULL_BLEED_CLASS, CLIENT_CATALOG_DESKTOP_SHELL_CLASS } from '../../../shared/layout/clientShellLayout';
 import { CatalogSearchSuggestField } from './CatalogSearchSuggestField';
 import type { CatalogSearchSuggestSelection } from './catalogSearchSuggestTypes';
-import { CatalogHistoryPhotoBackdrop } from './CatalogHistoryPhotoBackdrop';
+import {
+  CATALOG_DESKTOP_SEARCH_HEIGHT_FALLBACK,
+  CATALOG_DESKTOP_SEARCH_HEIGHT_VAR,
+} from './catalogDesktopHeroLayout';
 import {
   catalogHeroShellClass,
   catalogPhotoHeaderSearchClass,
   catalogPhotoHeaderSearchIconClass,
 } from './servicesCatalogTheme';
+
+function syncCatalogDesktopSearchHeight(el: HTMLElement | null) {
+  const h = el?.offsetHeight ?? 0;
+  document.documentElement.style.setProperty(
+    CATALOG_DESKTOP_SEARCH_HEIGHT_VAR,
+    h > 0 ? `${h}px` : CATALOG_DESKTOP_SEARCH_HEIGHT_FALLBACK,
+  );
+}
 
 type Props = {
   search: string;
@@ -20,12 +32,32 @@ export function ServicesCatalogDesktopTopBar({
   onSearchChange,
   onSearchSelect,
 }: Props) {
+  const headerRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return undefined;
+
+    const update = () => syncCatalogDesktopSearchHeight(el);
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', update);
+      document.documentElement.style.removeProperty(CATALOG_DESKTOP_SEARCH_HEIGHT_VAR);
+    };
+  }, []);
+
   return (
-    <header className={`${catalogHeroShellClass} ${CATALOG_HERO_FULL_BLEED_CLASS}`}>
-      <div className="pointer-events-none absolute inset-0">
-        <CatalogHistoryPhotoBackdrop />
-      </div>
-      <div className={`${CLIENT_CATALOG_DESKTOP_SHELL_CLASS} relative z-10 py-3 lg:py-3.5`}>
+    <header
+      ref={headerRef}
+      className={`${catalogHeroShellClass} ${CATALOG_HERO_FULL_BLEED_CLASS} relative z-10 bg-transparent`}
+    >
+      <div className={`${CLIENT_CATALOG_DESKTOP_SHELL_CLASS} relative z-10 py-3 lg:py-4`}>
         <CatalogSearchSuggestField
           value={search}
           onChange={onSearchChange}

@@ -22,3 +22,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Хэш/время сборки — для сброса кэша Telegram Mini App. */
+declare const __SLOTTY_BUILD_ID__: string;

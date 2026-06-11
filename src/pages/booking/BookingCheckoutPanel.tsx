@@ -120,80 +120,37 @@ export function BookingCheckoutPanel({
 
 
 
-      <dl className="space-y-0 text-[14px]">
-
-        <div className="flex justify-between gap-4 py-3">
-
+      <dl className="space-y-2.5 text-[14px]">
+        <div className="flex justify-between gap-4">
           <dt className="shrink-0 text-[#6B7280]">Мастер</dt>
-
           <dd className="min-w-0 max-w-[58%] truncate text-right font-semibold text-[#111827]" title={masterName}>
-
             {masterName}
-
           </dd>
-
         </div>
-
-        <div className="h-px bg-[#EEEEEE]" aria-hidden />
-
-        <div className="flex justify-between gap-4 py-3">
-
+        <div className="flex justify-between gap-4">
           <dt className="shrink-0 text-[#6B7280]">Услуга</dt>
-
           <dd className="min-w-0 max-w-[58%] truncate text-right font-semibold text-[#111827]" title={serviceTitle}>
-
             {serviceTitle}
-
           </dd>
-
         </div>
-
-        <div className="h-px bg-[#EEEEEE]" aria-hidden />
-
-        <div className="flex justify-between gap-4 py-3">
-
+        <div className="flex justify-between gap-4">
           <dt className="shrink-0 text-[#6B7280]">Дата</dt>
-
           <dd className="min-w-0 max-w-[58%] truncate text-right font-semibold capitalize text-[#111827]">
-
             {selectedDay?.fullDateLabel ?? EMPTY_BOOKING_DATE}
-
           </dd>
-
         </div>
-
-        <div className="h-px bg-[#EEEEEE]" aria-hidden />
-
-        <div className="flex justify-between gap-4 py-3">
-
+        <div className="flex justify-between gap-4">
           <dt className="shrink-0 text-[#6B7280]">Время</dt>
-
           <dd className="min-w-0 max-w-[58%] truncate text-right font-semibold text-[#111827]">
-
             {selectedSlot?.timeLabel ?? EMPTY_BOOKING_TIME}
-
           </dd>
-
         </div>
-
         {slotPromo?.isSlotBound ? (
-
-          <>
-
-            <div className="h-px bg-[#EEEEEE]" aria-hidden />
-
-            <div className="flex justify-between gap-4 py-3">
-
-              <dt className="shrink-0 text-[#6B7280]">Акция</dt>
-
-              <dd className="text-right text-[13px] font-semibold text-[#F47C8C]">Акция на это окно</dd>
-
-            </div>
-
-          </>
-
+          <div className="flex justify-between gap-4">
+            <dt className="shrink-0 text-[#6B7280]">Акция</dt>
+            <dd className="text-right text-[13px] font-semibold text-[#F47C8C]">Акция на это окно</dd>
+          </div>
         ) : null}
-
       </dl>
 
 
@@ -208,7 +165,7 @@ export function BookingCheckoutPanel({
 
 
 
-      <div className="flex items-end justify-between gap-4 border-t border-[#EEEEEE] pt-4">
+      <div className="flex items-end justify-between gap-4 pt-4">
 
         <span className="text-[14px] font-medium text-[#6B7280]">Стоимость</span>
 

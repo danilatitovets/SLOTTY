@@ -36,7 +36,7 @@ export function catalogServicesFilterHints(filters: CatalogFiltersState) {
         : null;
 
   const extraHints = [
-    filters.onlineBookingOnly ? 'онлайн-запись' : null,
+    !filters.onlineBookingOnly ? 'включая без записи' : null,
     filters.promotionOnly ? 'акции' : null,
     filters.verifiedOnly ? 'проверенные' : null,
   ].filter(Boolean);

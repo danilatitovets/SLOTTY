@@ -117,9 +117,8 @@ export const catalogServiceCardClass =
 export const catalogGridCardClass =
   'overflow-hidden rounded-[12px] bg-white ring-1 ring-[#E8E8E8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F47C8C]/40';
 
-/** Hero каталога — edge-to-edge на viewport */
-export const catalogHeroShellClass =
-  'relative overflow-hidden bg-[#F8F4F2] shadow-[0_4px_24px_rgba(17,24,39,0.06)]';
+/** Hero каталога — edge-to-edge на viewport, без зазора под шапкой */
+export const catalogHeroShellClass = 'relative overflow-hidden bg-[#F8F4F2]';
 
 /** Блок записи в карточке услуги — без бордеров, только мягкий фон */
 export const catalogBookingAsideClass =

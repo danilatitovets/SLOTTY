@@ -82,7 +82,7 @@ export function BookingDateStrip({
               disabled={!hasTimes}
               aria-pressed={active}
               onClick={() => onPickDate(day.date)}
-              className={`flex h-[5.25rem] w-[4.5rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-[14px] border px-1 transition active:scale-[0.98] disabled:pointer-events-none ${
+              className={`flex h-[5.25rem] w-[4.5rem] shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-[14px] px-1 transition active:scale-[0.98] disabled:pointer-events-none ${
                 !hasTimes
                   ? bookingDateCardDisabled
                   : active

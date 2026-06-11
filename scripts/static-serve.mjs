@@ -47,7 +47,7 @@ function cacheControlFor(ext) {
   if (['.webp', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2'].includes(ext)) {
     return 'public, max-age=31536000, immutable';
   }
-  if (ext === '.html') return 'no-cache';
+  if (ext === '.html') return 'no-store, no-cache, must-revalidate, max-age=0';
   if (['.js', '.css', '.mjs'].includes(ext)) return 'public, max-age=31536000, immutable';
   return 'public, max-age=3600';
 }

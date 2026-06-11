@@ -63,7 +63,7 @@ export function BookingReferencePhotoField({
       </a>
 
       {photoUrl ? (
-        <div className="relative mt-3 overflow-hidden rounded-[12px] ring-1 ring-[#EEEEEE]">
+        <div className="relative mt-3 overflow-hidden rounded-[12px]">
           <img src={photoUrl} alt="Референс для мастера" className="max-h-48 w-full object-cover" />
           <button
             type="button"
@@ -80,7 +80,7 @@ export function BookingReferencePhotoField({
           type="button"
           disabled={disabled || uploading}
           onClick={() => inputRef.current?.click()}
-          className={`${catalogFieldClass} mt-3 flex w-full min-h-[88px] flex-col items-center justify-center gap-2 border-dashed px-4 py-5 text-center transition hover:border-[#F47C8C] hover:bg-[#FFFBFC] disabled:opacity-50`}
+          className={`${catalogFieldClass} mt-3 flex w-full min-h-[88px] flex-col items-center justify-center gap-2 px-4 py-5 text-center transition hover:bg-[#FFFBFC] disabled:opacity-50`}
         >
           <HiPhoto className="h-6 w-6 text-[#9CA3AF]" aria-hidden />
           <span className="text-[14px] font-semibold text-[#374151]">

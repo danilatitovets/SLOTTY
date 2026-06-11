@@ -150,14 +150,12 @@ export function resolveGridMasterTrustLine(service: AggregatedServiceCard): stri
   return null;
 }
 /** Короткая подпись CTA на плитке каталога (Kwork-style на фото). */
-export function resolveServiceCardGridCtaLabel(hasSlot: boolean): string {
-  if (!hasSlot) return 'К мастеру';
+export function resolveServiceCardGridCtaLabel(_hasSlot: boolean): string {
   return 'Записаться';
 }
 
 /** Подпись CTA на карточке услуги. */
-export function resolveServiceCardCtaLabel(hasSlot: boolean): string {
-  if (!hasSlot) return 'Посмотреть мастера';
+export function resolveServiceCardCtaLabel(_hasSlot: boolean): string {
   return 'Записаться';
 }
 

@@ -1,10 +1,8 @@
 import type { CSSProperties, Ref } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { HEADER_LOGO_SRC } from '../../../app/headerLogo';
-import { PROFILE_NOTIFICATIONS_PATH, SERVICES_PATH } from '../../../app/paths';
+import { useLocation } from 'react-router-dom';
+import { PROFILE_NOTIFICATIONS_PATH } from '../../../app/paths';
 import { useIsMasterUser } from '../../../features/profile/hooks/useIsMasterUser';
 import { CabinetRoleSwitch } from '../../../shared/layout/CabinetRoleSwitch';
-import { SlottyImg } from '../../../shared/ui/SlottyImg';
 import { ADMIN_CABINET_SHELL_MAX } from '../../admin/overview/adminOverviewTheme';
 import { NotificationBellLink } from '../../admin/notifications/notificationBellUi';
 
@@ -34,12 +32,14 @@ type Props = {
 };
 
 function HeaderActions({
+  className = '',
   isNotifications,
   hasNewNotifications,
   notificationCount,
   menuOpen,
   onMenuOpen,
 }: {
+  className?: string;
   isNotifications: boolean;
   hasNewNotifications: boolean;
   notificationCount: number;
@@ -47,7 +47,7 @@ function HeaderActions({
   onMenuOpen: () => void;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className={`flex shrink-0 items-center gap-1.5 ${className}`.trim()}>
       <NotificationBellLink
         to={PROFILE_NOTIFICATIONS_PATH}
         isActive={isNotifications}
@@ -76,30 +76,6 @@ function HeaderActions({
   );
 }
 
-function HeaderLogo({ compact }: { compact?: boolean }) {
-  return (
-    <Link
-      to={SERVICES_PATH}
-      aria-label="SLOTTY — каталог услуг"
-      className={`inline-flex shrink-0 items-center overflow-visible transition hover:opacity-60 active:scale-[0.99] ${
-        compact ? 'h-10 w-12' : 'h-10'
-      }`}
-    >
-      <SlottyImg
-        src={HEADER_LOGO_SRC}
-        alt=""
-        decoding="async"
-        fetchPriority="low"
-        className={
-          compact
-            ? 'h-10 w-auto max-w-none -translate-x-4 object-contain object-left'
-            : 'h-10 w-auto max-w-[min(12rem,42vw)] -translate-x-6 object-contain object-left'
-        }
-      />
-    </Link>
-  );
-}
-
 export function ClientMobileCabinetHeader({
   shellRef,
   menuOpen,
@@ -124,30 +100,19 @@ export function ClientMobileCabinetHeader({
       <div
         className={`mx-auto w-full min-w-0 ${ADMIN_CABINET_SHELL_MAX} px-3 pb-2 pt-[calc(0.375rem+env(safe-area-inset-top,0px))]`}
       >
-        {isMasterUser ? (
-          <div className="flex min-h-10 w-full min-w-0 items-center gap-2">
-            <HeaderLogo compact />
-            <CabinetRoleSwitch active="client" compact className="min-w-0 max-w-[11rem] flex-1" />
-            <HeaderActions
-              isNotifications={isNotifications}
-              hasNewNotifications={hasNewNotifications}
-              notificationCount={notificationCount}
-              menuOpen={menuOpen}
-              onMenuOpen={onMenuOpen}
-            />
-          </div>
-        ) : (
-          <div className="flex w-full min-w-0 items-center justify-between gap-2">
-            <HeaderLogo />
-            <HeaderActions
-              isNotifications={isNotifications}
-              hasNewNotifications={hasNewNotifications}
-              notificationCount={notificationCount}
-              menuOpen={menuOpen}
-              onMenuOpen={onMenuOpen}
-            />
-          </div>
-        )}
+        <div className="flex min-h-10 w-full min-w-0 items-center gap-2">
+          {isMasterUser ? (
+            <CabinetRoleSwitch active="client" compact className="min-w-0 max-w-[11.5rem] shrink" />
+          ) : null}
+          <HeaderActions
+            className="ml-auto"
+            isNotifications={isNotifications}
+            hasNewNotifications={hasNewNotifications}
+            notificationCount={notificationCount}
+            menuOpen={menuOpen}
+            onMenuOpen={onMenuOpen}
+          />
+        </div>
       </div>
     </div>
   );

@@ -50,10 +50,11 @@ export function ServicesCatalogPage() {
   const { listings, categories, total, loading, error, reload } = useCatalogData(apiParams);
   useCatalogErrorModal(error, reload, 'Услуги');
 
-  const services = useMemo(
-    () => mapListingsToServiceCards(listings, categories, { userLat, userLng }),
-    [listings, categories, userLat, userLng],
-  );
+  const services = useMemo(() => {
+    const cards = mapListingsToServiceCards(listings, categories, { userLat, userLng });
+    if (!filters.onlineBookingOnly) return cards;
+    return cards.filter((s) => Boolean(s.nearestSlotIso));
+  }, [listings, categories, userLat, userLng, filters.onlineBookingOnly]);
 
   const filtered = services;
 

@@ -14,12 +14,9 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   HiBell,
   HiBolt,
-  HiCalendarDays,
   HiChevronDown,
   HiChevronRight,
   HiClock,
-  HiCog6Tooth,
-  HiHeart,
   HiMapPin,
   HiSparkles,
   HiSquares2X2,
@@ -76,19 +73,22 @@ import {
 import { SlottyImg } from '../../ui/SlottyImg';
 import { resolveMegaMenuGroup, type MegaMenuKey, type MegaMenuGroup, type MegaMenuItem } from './megaMenuConfig';
 import {
+  AccountDropdownPanel,
+  type AccountDropdownColumn,
+  type AccountDropdownItem,
+} from './AccountDropdownPanel';
+import { AccountMenuIcons } from './accountMenuIcons';
+import {
   LANDING_HEADER_LOGO_CELL_CLASS,
   LANDING_HEADER_LOGO_IMG_CLASS,
   LANDING_HEADER_LOGO_LINK_CLASS,
   CATALOG_LANDING_HEADER_WIDTH_CLASS,
   LANDING_HEADER_MAX_WIDTH_CLASS,
   LANDING_HEADER_NAV_CELL_CLASS,
+  CATALOG_LANDING_HEADER_PILL_CLASS,
   LANDING_HEADER_PILL_CLASS,
   LANDING_HEADER_ROW_CLASS,
   LANDING_HEADER_SLOT_H,
-  LANDING_ACCOUNT_PANEL_CLASS,
-  LANDING_ACCOUNT_PANEL_TITLE_CLASS,
-  LANDING_ACCOUNT_ROW_CLASS,
-  LANDING_ACCOUNT_ROW_ICON_CLASS,
   LANDING_HEADER_ACTIONS_CELL_CLASS,
   LANDING_ICON_BTN_CLASS,
   LANDING_NAV_LINK_CLASS,
@@ -252,6 +252,7 @@ function HeaderShell({
   landingSticky = false,
   landingDesktopOnly = false,
   landingCatalogWidth = false,
+  landingCatalogFlushTop = false,
   children,
   innerClassName = '',
   shellRef,
@@ -263,6 +264,8 @@ function HeaderShell({
   landingDesktopOnly?: boolean;
   /** Pill на всю ширину shell каталога (1320px), не узкая капсула лендинга. */
   landingCatalogWidth?: boolean;
+  /** Каталог: фон hero до верха экрана — без серого отступа над pill. */
+  landingCatalogFlushTop?: boolean;
   children: ReactNode;
   innerClassName?: string;
   shellRef?: RefObject<HTMLElement | null>;
@@ -308,7 +311,9 @@ function HeaderShell({
           ? 'rounded-b-none !border-white/10 !bg-[#141414] shadow-[0_20px_56px_rgba(0,0,0,0.65)]'
           : ''
       }`
-    : LANDING_HEADER_PILL_CLASS;
+    : landingCatalogFlushTop
+      ? CATALOG_LANDING_HEADER_PILL_CLASS
+      : LANDING_HEADER_PILL_CLASS;
 
   const landingPositionClass = landingSticky
     ? 'sticky'
@@ -321,10 +326,14 @@ function HeaderShell({
     ? CATALOG_LANDING_HEADER_WIDTH_CLASS
     : LANDING_HEADER_MAX_WIDTH_CLASS;
 
+  const landingTopPadClass = landingCatalogFlushTop
+    ? 'pt-[env(safe-area-inset-top,0px)]'
+    : 'pt-[calc(0.5rem+env(safe-area-inset-top,0px))]';
+
   return (
     <header
       ref={headerElementRef}
-      className={`${landingDesktopOnly ? 'hidden lg:block' : ''} ${landingPositionClass} top-0 z-50 overflow-visible pt-[calc(0.5rem+env(safe-area-inset-top,0px))]`}
+      className={`${landingDesktopOnly ? 'hidden lg:block' : ''} ${landingPositionClass} top-0 z-50 overflow-visible bg-transparent ${landingTopPadClass}`}
     >
       <div className={`${landingShellClass} ${landingDesktopOnly ? '' : 'max-lg:px-4'}`}>
         <div className={`${landingWidthClass} ${landingPanelClass} ${innerClassName}`}>
@@ -581,74 +590,39 @@ export function SlottyHeader({
     return () => window.removeEventListener('keydown', onKey);
   }, [megaOpenKey, profilePanelOpen, closeHeaderPanels]);
 
-  const accountMegaItems = useMemo((): MegaMenuItem[] => {
-    const items: MegaMenuItem[] = [
-      {
-        title: 'Мои записи',
-        description: 'Будущие и прошлые визиты — статусы и детали в одном месте.',
-        to: appointmentsHref,
-        icon: HiCalendarDays,
-      },
-      {
-        title: 'Избранное',
-        description: 'Сохранённые мастера и услуги, к которым хотите вернуться.',
-        to: getProfilePath('favorites'),
-        icon: HiHeart,
-      },
-      {
-        title: 'Профиль',
-        description: 'Имя, фото и контактные данные вашего аккаунта.',
-        to: getProfilePath('profile'),
-        icon: HiUser,
-      },
-      {
-        title: 'Уведомления',
-        description: 'Напоминания о записях и важные сообщения для клиента.',
-        to: PROFILE_NOTIFICATIONS_PATH,
-        icon: HiBell,
-      },
-      {
-        title: 'Настройки',
-        description: 'Способы входа, безопасность и параметры аккаунта.',
-        to: PROFILE_SETTINGS_PATH,
-        icon: HiCog6Tooth,
-      },
-    ];
-
-    if (isMasterUser) {
-      items.push({
-        title: 'Кабинет мастера',
-        description: 'Заявки, услуги, расписание и аналитика мастера.',
-        to: ADMIN_PATH,
-        icon: HiSparkles,
-      });
-      items.push({
-        title: 'Уведомления мастера',
-        description: 'Новые заявки, изменения расписания и события кабинета.',
-        to: ADMIN_NOTIFICATIONS_PATH,
-        icon: HiBolt,
-      });
-    } else {
-      items.push({
-        title: 'Создать кабинет мастера',
-        description: 'Оформите профиль мастера и начните принимать записи онлайн.',
-        to: BECOME_MASTER_PATH,
-        icon: HiSparkles,
-      });
-    }
+  const accountMenuColumns = useMemo((): AccountDropdownColumn[] => {
+    const masterItems: AccountDropdownItem[] = isMasterUser
+      ? [
+          { title: 'Кабинет', to: ADMIN_PATH, icon: AccountMenuIcons.masterCabinet },
+          { title: 'Оповещения', to: ADMIN_NOTIFICATIONS_PATH, icon: AccountMenuIcons.masterInbox },
+        ]
+      : [{ title: 'Стать мастером', to: BECOME_MASTER_PATH, icon: AccountMenuIcons.becomeMaster }];
 
     if (showPlatformAdmin) {
-      items.push({
+      masterItems.push({
         title: 'Админ',
-        badge: 'ADMIN',
-        description: 'Платформенная панель управления и модерация.',
         to: PLATFORM_ADMIN_PATH,
-        accent: 'orange',
-        icon: HiBolt,
+        icon: AccountMenuIcons.admin,
+        badge: 'ADMIN',
       });
     }
 
-    return items;
+    return [
+      {
+        label: 'Профиль',
+        items: [
+          { title: 'Мои записи', to: appointmentsHref, icon: AccountMenuIcons.appointments },
+          { title: 'Избранное', to: getProfilePath('favorites'), icon: AccountMenuIcons.favorites },
+          { title: 'Профиль', to: getProfilePath('profile'), icon: AccountMenuIcons.profile },
+          { title: 'Уведомления', to: PROFILE_NOTIFICATIONS_PATH, icon: AccountMenuIcons.notifications },
+          { title: 'Настройки', to: PROFILE_SETTINGS_PATH, icon: AccountMenuIcons.settings },
+        ],
+      },
+      {
+        label: 'Мастер',
+        items: masterItems,
+      },
+    ];
   }, [appointmentsHref, isMasterUser, showPlatformAdmin]);
 
   const megaHostProps = {
@@ -739,14 +713,11 @@ export function SlottyHeader({
             <HeaderProfileAvatar profile={profile} fill />
           </button>
 
-          <MegaDropdownPanel
+          <AccountDropdownPanel
             id="slotty-account-panel"
-            sectionTitle="аккаунт"
-            items={accountMegaItems}
+            columns={accountMenuColumns}
             isOpen={profilePanelOpen}
             align="right"
-            panelTone="account"
-            onAnchorClick={scrollToLandingAnchor}
             onForceClose={closeHeaderPanels}
             onMouseEnter={cancelMegaClose}
             onMouseLeave={scheduleHeaderPanelClose}
@@ -806,14 +777,11 @@ export function SlottyHeader({
             <HeaderProfileAvatar profile={profile} fill />
           </button>
 
-          <MegaDropdownPanel
+          <AccountDropdownPanel
             id="slotty-account-panel"
-            sectionTitle="аккаунт"
-            items={accountMegaItems}
+            columns={accountMenuColumns}
             isOpen={profilePanelOpen}
             align="right"
-            panelTone="account"
-            onAnchorClick={scrollToLandingAnchor}
             onForceClose={closeHeaderPanels}
             onMouseEnter={cancelMegaClose}
             onMouseLeave={scheduleHeaderPanelClose}
@@ -1137,6 +1105,7 @@ export function SlottyHeader({
             landingSticky
             landingDesktopOnly
             landingCatalogWidth
+            landingCatalogFlushTop
             shellRef={headerRef}
           >
             <div ref={megaHostRef} className="relative" {...megaHostProps}>
@@ -1505,7 +1474,6 @@ function MegaDropdownPanel({
   group,
   isOpen,
   align = 'left',
-  panelTone = 'mega',
   onAnchorClick,
   onForceClose,
   onMouseEnter,
@@ -1517,7 +1485,6 @@ function MegaDropdownPanel({
   group?: MegaMenuGroup;
   isOpen: boolean;
   align?: 'left' | 'right';
-  panelTone?: 'mega' | 'account';
   onAnchorClick: (anchor: string) => void;
   onForceClose: () => void;
   onMouseEnter?: () => void;
@@ -1530,11 +1497,7 @@ function MegaDropdownPanel({
 
   if (resolvedItems.length === 0) return null;
 
-  const isAccountPanel = panelTone === 'account';
-  const panelClass = isAccountPanel ? LANDING_ACCOUNT_PANEL_CLASS : MEGA_DROPDOWN_PANEL_CLASS;
-  const titleClass = isAccountPanel
-    ? LANDING_ACCOUNT_PANEL_TITLE_CLASS
-    : 'px-4 pb-1 pt-2 text-[12px] font-medium text-[#9CA3AF]';
+  const titleClass = 'px-4 pb-1 pt-2 text-[12px] font-medium text-[#9CA3AF]';
 
   return (
     <div
@@ -1548,16 +1511,15 @@ function MegaDropdownPanel({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className={`w-[min(22rem,calc(100vw-2rem))] ${panelClass}`}>
+      <div className={`w-[min(22rem,calc(100vw-2rem))] ${MEGA_DROPDOWN_PANEL_CLASS}`}>
         {title ? <p className={titleClass}>{title}</p> : null}
-        <ul className={isAccountPanel ? 'pb-1.5' : 'py-1'}>
+        <ul className="py-1">
           {resolvedItems.map((item, index) => (
             <li key={`${item.title}-${index}`}>
               <MegaDropdownRow
                 item={item}
                 fallbackTo={fallbackTo}
                 fallbackAnchor={fallbackAnchor}
-                rowTone={panelTone}
                 onAnchorClick={onAnchorClick}
                 onForceClose={onForceClose}
               />
@@ -1573,14 +1535,12 @@ function MegaDropdownRow({
   item,
   fallbackTo,
   fallbackAnchor,
-  rowTone = 'mega',
   onAnchorClick,
   onForceClose,
 }: {
   item: MegaMenuItem;
   fallbackTo?: string;
   fallbackAnchor?: string;
-  rowTone?: 'mega' | 'account';
   onAnchorClick: (anchor: string) => void;
   onForceClose: () => void;
 }) {
@@ -1591,51 +1551,31 @@ function MegaDropdownRow({
     (fallbackAnchor && !fallbackTo ? landingAnchorHref(fallbackAnchor) : fallbackTo);
   const anchor = !to ? (item.anchor ?? fallbackAnchor) : undefined;
 
-  const isAccountRow = rowTone === 'account';
-  const className = isAccountRow
-    ? LANDING_ACCOUNT_ROW_CLASS
-    : 'group flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#F9FAFB] focus:outline-none focus-visible:bg-[#F9FAFB]';
+  const className =
+    'group flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#F9FAFB] focus:outline-none focus-visible:bg-[#F9FAFB]';
 
   const content = (
     <>
-      <span
-        className={
-          isAccountRow
-            ? LANDING_ACCOUNT_ROW_ICON_CLASS
-            : 'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-[#111827]'
-        }
-      >
+      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-[#111827]">
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
-          <span
-            className={`font-semibold text-[#1A1A1A] ${
-              isAccountRow ? 'text-[14px] leading-tight' : 'text-[14px]'
-            }`}
-          >
-            {item.title}
-          </span>
+          <span className="text-[14px] font-semibold leading-tight text-[#111827]">{item.title}</span>
           {item.badge ? (
             <span className="rounded-full bg-[#FFF1F4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#F47C8C]">
               {item.badge}
             </span>
           ) : null}
         </span>
-        <span
-          className={`mt-0.5 block leading-snug ${
-            isAccountRow ? 'text-[12px] text-[#8E8E93]' : 'text-[12px] text-[#9CA3AF]'
-          }`}
-        >
+        <span className="mt-0.5 block line-clamp-1 leading-snug text-[12px] text-[#9CA3AF]">
           {item.description}
         </span>
       </span>
-      {isAccountRow ? null : (
-        <HiChevronRight
-          className="mt-1 h-4 w-4 shrink-0 text-[#D1D5DB] transition group-hover:translate-x-0.5 group-hover:text-[#9CA3AF]"
-          aria-hidden
-        />
-      )}
+      <HiChevronRight
+        className="mt-1 h-4 w-4 shrink-0 text-[#D1D5DB] transition group-hover:translate-x-0.5 group-hover:text-[#9CA3AF]"
+        aria-hidden
+      />
     </>
   );
 

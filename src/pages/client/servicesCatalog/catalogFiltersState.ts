@@ -63,7 +63,8 @@ export const DEFAULT_CATALOG_FILTERS: CatalogFiltersState = {
   minReviews: 0,
   verifiedOnly: false,
   promotionOnly: false,
-  onlineBookingOnly: false,
+  /** По умолчанию в каталоге только услуги, на которые можно записаться онлайн. */
+  onlineBookingOnly: true,
   chips: new Set(),
 };
 
@@ -128,7 +129,7 @@ export function catalogFiltersToApiParams(
     minReviews: filters.minReviews > 0 ? filters.minReviews : undefined,
     verifiedOnly: filters.verifiedOnly || undefined,
     promotionOnly: promotionOnly || undefined,
-    onlyWithSlots: filters.onlineBookingOnly || undefined,
+    onlyWithSlots: filters.onlineBookingOnly ? true : undefined,
     popularOnly: popularOnly || undefined,
     newOnly: newOnly || undefined,
     lat,
@@ -151,7 +152,7 @@ export function countActiveCatalogFilters(filters: CatalogFiltersState): number 
   if (filters.minReviews > 0) n += 1;
   if (filters.verifiedOnly) n += 1;
   if (filters.promotionOnly) n += 1;
-  if (filters.onlineBookingOnly) n += 1;
+  if (!filters.onlineBookingOnly) n += 1;
   n += filters.chips.size;
   return n;
 }

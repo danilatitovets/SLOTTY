@@ -293,7 +293,7 @@ export function BookingFlowView({
           </div>
         </div>
         <BookingCheckoutExtras
-          className="mt-5 border-t border-[#EEEEEE] pt-5"
+          className="mt-5 pt-5"
           bookError={bookError}
           submitting={submitting}
           canConfirm={canConfirm}

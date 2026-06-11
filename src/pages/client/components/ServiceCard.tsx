@@ -10,7 +10,7 @@ import {
   HiStar,
   HiWallet,
 } from 'react-icons/hi2';
-import { getBookingPath, getMasterPath } from '../../../app/paths';
+import { getBookingPath, SERVICES_PATH } from '../../../app/paths';
 import { recordCatalogListingView } from '../../../features/services/api/catalogListingsApi';
 import type { AggregatedServiceCard } from '../lib/aggregateServices';
 import {
@@ -94,18 +94,15 @@ function ServiceCardBadge({ label }: { label: string }) {
 }
 
 function serviceCardHref(service: AggregatedServiceCard): string {
-  if (service.masterId && service.primaryServiceId) {
-    return getBookingPath(
-      service.masterId,
-      service.primaryServiceId,
-      service.nextSlotId,
-      { from: 'services' },
-    );
+  if (!service.masterId) {
+    return SERVICES_PATH;
   }
-  if (service.masterId) {
-    return getMasterPath(service.masterId);
-  }
-  return getMasterPath(service.id);
+  return getBookingPath(
+    service.masterId,
+    service.primaryServiceId ?? null,
+    service.nextSlotId,
+    { from: 'services' },
+  );
 }
 
 function recordListingView(service: AggregatedServiceCard) {
