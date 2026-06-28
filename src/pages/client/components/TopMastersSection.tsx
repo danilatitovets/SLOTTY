@@ -12,6 +12,7 @@ import {
 import { sortMastersByTopRank } from '../../../features/masters/lib/masterTopScore';
 import { TOP_MASTERS_PODIUM_BG, type TopMastersPodiumRank } from '../lib/topMastersPodiumAssets';
 import { MasterInlineBadges } from '../../../shared/ui/MasterInlineBadges';
+import { catalogPrimaryBtn } from '../servicesCatalog/servicesCatalogTheme';
 import { MasterCardPortrait } from './MasterCardPortrait';
 
 type Props = {
