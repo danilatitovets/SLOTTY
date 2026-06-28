@@ -1,15 +1,21 @@
 import { publicAppUrl } from '../../lib/publicAppUrl.js';
 
-/** Тот же логотип, что в bar-хедере сайта (`headerLogo.ts`). */
+/** Логотип для тёмной шапки письма — тот же, что в bar-хедере сайта. */
 export const SLOTTY_EMAIL_LOGO_PATH = '/photos/logo-header.webp';
 
-/** Высота как `LANDING_HEADER_LOGO_IMG_CLASS` (h-12 = 48px). */
-export const SLOTTY_EMAIL_LOGO_HEIGHT_PX = 48;
+/** Высота логотипа в шапке письма. */
+export const SLOTTY_EMAIL_LOGO_HEIGHT_PX = 44;
 
 const TEXT = '#111827';
 const MUTED = '#6B7280';
-const BORDER = '#E5E7EB';
+const MUTED_LIGHT = '#9CA3AF';
+const BORDER = '#F0F0F0';
 const BG = '#F3F4F6';
+const SURFACE = '#FFFFFF';
+const HERO = '#0A0A0A';
+const ACCENT = '#F47C8C';
+const FOOTER_BG = '#FAFAFA';
+
 export type TransactionalEmailRow = { label: string; value: string };
 
 export function slottyEmailLogoUrl(): string {
@@ -29,11 +35,13 @@ export function escapeAttr(text: string): string {
   return escapeHtml(text).replace(/'/g, '&#39;');
 }
 
-/** Логотип из шапки сайта — без фона, те же пропорции. */
+/** Логотип из шапки сайта — для тёмного фона письма. */
 export function renderSlottyEmailLogo(): string {
   const src = slottyEmailLogoUrl();
   const h = SLOTTY_EMAIL_LOGO_HEIGHT_PX;
-  return `<img src="${escapeAttr(src)}" height="${h}" alt="SLOTTY" style="display:block;border:0;outline:none;text-decoration:none;height:${h}px;width:auto;max-width:168px;-ms-interpolation-mode:bicubic;" />`;
+  return `<a href="${escapeAttr(publicAppUrl('/book'))}" target="_blank" style="text-decoration:none;">
+    <img src="${escapeAttr(src)}" height="${h}" alt="SLOTTY" style="display:block;border:0;outline:none;text-decoration:none;height:${h}px;width:auto;max-width:180px;-ms-interpolation-mode:bicubic;" />
+  </a>`;
 }
 
 function renderRows(rows: TransactionalEmailRow[]): string {
@@ -64,15 +72,65 @@ function emailBaseStyles(): string {
     body { margin:0 !important; padding:0 !important; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
     img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
     table { border-collapse:collapse; mso-table-lspace:0; mso-table-rspace:0; }
-    a { color:${TEXT}; }
+    a { color:${ACCENT}; }
     @media only screen and (max-width:600px) {
-      .email-shell { width:100% !important; max-width:100% !important; border-radius:12px !important; }
+      .email-shell { width:100% !important; max-width:100% !important; border-radius:0 !important; }
       .email-pad { padding-left:20px !important; padding-right:20px !important; }
+      .email-hero-pad { padding-left:20px !important; padding-right:20px !important; }
       .header-meta { display:block !important; width:100% !important; text-align:left !important; padding-top:14px !important; }
       .detail-label, .detail-value { display:block !important; width:100% !important; text-align:left !important; }
       .detail-value { padding-top:4px !important; }
+      .email-title { font-size:24px !important; }
+      .email-cta { display:block !important; width:100% !important; text-align:center !important; box-sizing:border-box !important; }
     }
   `;
+}
+
+/** Безопасный рендер футера с опциональными ссылками (только доверенный HTML с сервера). */
+function renderFooterNote(note: string): string {
+  const linkRe = /<a\s+href="([^"]+)"\s+style="[^"]*">([\s\S]*?)<\/a>/gi;
+  let result = '';
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkRe.exec(note)) !== null) {
+    if (match.index > lastIndex) {
+      result += escapeHtml(note.slice(lastIndex, match.index));
+    }
+    const href = match[1] ?? '';
+    const label = match[2] ?? '';
+    if (/^https?:\/\//i.test(href)) {
+      result += `<a href="${escapeAttr(href)}" style="color:${ACCENT};text-decoration:underline;font-weight:600;">${escapeHtml(label)}</a>`;
+    } else {
+      result += escapeHtml(match[0]);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < note.length) {
+    result += escapeHtml(note.slice(lastIndex));
+  }
+
+  return result || escapeHtml(note);
+}
+
+function renderBodyContent(intro: string, bodyHtml?: string): string {
+  if (bodyHtml?.trim()) {
+    return bodyHtml;
+  }
+
+  const trimmed = intro.trim();
+  if (!trimmed) return '';
+
+  return trimmed
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map(
+      (block) =>
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.7;color:${MUTED};">${escapeHtml(block.split('\n').join(' '))}</p>`,
+    )
+    .join('');
 }
 
 export type SlottyEmailParams = {
@@ -80,6 +138,8 @@ export type SlottyEmailParams = {
   preview: string;
   title: string;
   intro: string;
+  /** Готовый безопасный HTML тела письма (приоритетнее intro). */
+  bodyHtml?: string;
   rows?: TransactionalEmailRow[];
   ctaLabel?: string;
   ctaUrl?: string;
@@ -90,7 +150,7 @@ export type SlottyEmailParams = {
   metaValue?: string;
 };
 
-/** Единый профессиональный шаблон писем SLOTTY (как OKX / банки). */
+/** Единый шаблон писем SLOTTY — тёмная шапка, чистое тело, без рамок. */
 export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
   const ctaLabel = params.ctaLabel?.trim();
   const ctaUrl = params.ctaUrl?.trim();
@@ -99,14 +159,15 @@ export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
     params.footerNote ??
     'Это автоматическое уведомление SLOTTY. Если вы не ожидали это письмо, просто проигнорируйте его.';
   const siteUrl = publicAppUrl('/book');
+  const bodyContent = renderBodyContent(params.intro, params.bodyHtml);
 
   const metaBlock =
     params.metaLabel || params.metaValue
-      ? `<td class="header-meta" align="right" style="vertical-align:top;font-size:12px;line-height:1.45;font-weight:600;color:#9CA3AF;white-space:nowrap;">
+      ? `<td class="header-meta" align="right" style="vertical-align:top;font-size:11px;line-height:1.45;font-weight:600;color:${MUTED_LIGHT};white-space:nowrap;">
           ${params.metaLabel ? escapeHtml(params.metaLabel) : ''}
           ${
             params.metaValue
-              ? `<span style="display:block;margin-top:2px;font-size:12px;font-weight:700;color:${MUTED};">${escapeHtml(params.metaValue)}</span>`
+              ? `<span style="display:block;margin-top:3px;font-size:12px;font-weight:700;color:#E5E7EB;">${escapeHtml(params.metaValue)}</span>`
               : ''
           }
         </td>`
@@ -115,7 +176,7 @@ export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
   const rowsBlock =
     rows.length > 0
       ? `
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0 0;border-top:1px solid ${BORDER};">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 0;">
             ${renderRows(rows)}
           </table>
         `
@@ -127,10 +188,10 @@ export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:28px 0 0;">
             <tr>
               <td>
-                <a href="${escapeAttr(ctaUrl)}" target="_blank" style="display:inline-block;padding:13px 24px;border-radius:10px;background-color:${TEXT};color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;mso-padding-alt:0;">
-                  <!--[if mso]><i style="letter-spacing:20px;mso-font-width:-100%;mso-text-raise:16pt;">&nbsp;</i><![endif]-->
+                <a href="${escapeAttr(ctaUrl)}" target="_blank" class="email-cta" style="display:inline-block;padding:14px 28px;border-radius:12px;background-color:${ACCENT};color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:-0.01em;mso-padding-alt:0;box-shadow:0 8px 24px rgba(244,124,140,0.28);">
+                  <!--[if mso]><i style="letter-spacing:24px;mso-font-width:-100%;mso-text-raise:18pt;">&nbsp;</i><![endif]-->
                   <span style="mso-text-raise:8pt;">${escapeHtml(ctaLabel)}</span>
-                  <!--[if mso]><i style="letter-spacing:20px;mso-font-width:-100%;">&nbsp;</i><![endif]-->
+                  <!--[if mso]><i style="letter-spacing:24px;mso-font-width:-100%;">&nbsp;</i><![endif]-->
                 </a>
               </td>
             </tr>
@@ -145,17 +206,18 @@ export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>${escapeHtml(params.documentTitle)}</title>
   <style type="text/css">${emailBaseStyles()}</style>
 </head>
 <body style="margin:0;padding:0;background-color:${BG};color:${TEXT};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
-  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(params.preview)}&nbsp;&zwnj;&nbsp;&zwnj;</div>
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(params.preview)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:${BG};">
     <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-shell" style="max-width:560px;background-color:#ffffff;border:1px solid ${BORDER};border-radius:16px;">
+      <td align="center" style="padding:24px 12px 32px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="email-shell" style="max-width:600px;background-color:${SURFACE};border:0;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(17,24,39,0.08);">
           <tr>
-            <td class="email-pad" style="padding:28px 32px 0;">
+            <td class="email-hero-pad" style="padding:32px 36px 28px;background-color:${HERO};">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="left" style="vertical-align:middle;">
@@ -164,26 +226,24 @@ export function buildSlottyEmailHtml(params: SlottyEmailParams): string {
                   ${metaBlock}
                 </tr>
               </table>
-            </td>
-          </tr>
-          <tr>
-            <td class="email-pad" style="padding:28px 32px 32px;">
-              <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:700;letter-spacing:-0.02em;color:${TEXT};">
+              <h1 class="email-title" style="margin:28px 0 0;font-size:28px;line-height:1.25;font-weight:800;letter-spacing:-0.03em;color:#FFFFFF;">
                 ${escapeHtml(params.title)}
               </h1>
-              <p style="margin:0;font-size:15px;line-height:1.65;color:${MUTED};">
-                ${escapeHtml(params.intro)}
-              </p>
-              ${rowsBlock}
-              ${ctaBlock}
-              <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid ${BORDER};font-size:12px;line-height:1.6;color:#9CA3AF;">
-                ${escapeHtml(footerNote)}
-              </p>
             </td>
           </tr>
           <tr>
-            <td class="email-pad" style="padding:0 32px 28px;">
-              <p style="margin:0;font-size:12px;line-height:1.5;color:#9CA3AF;">
+            <td class="email-pad" style="padding:32px 36px 28px;background-color:${SURFACE};">
+              ${bodyContent}
+              ${rowsBlock}
+              ${ctaBlock}
+            </td>
+          </tr>
+          <tr>
+            <td class="email-pad" style="padding:20px 36px 28px;background-color:${FOOTER_BG};">
+              <p style="margin:0 0 12px;font-size:12px;line-height:1.65;color:${MUTED_LIGHT};">
+                ${renderFooterNote(footerNote)}
+              </p>
+              <p style="margin:0;font-size:12px;line-height:1.5;color:${MUTED_LIGHT};">
                 <a href="${escapeAttr(siteUrl)}" style="color:${MUTED};text-decoration:none;font-weight:600;">slotty.of.by</a>
                 · © ${new Date().getFullYear()} SLOTTY
               </p>

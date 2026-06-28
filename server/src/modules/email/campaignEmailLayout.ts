@@ -1,12 +1,12 @@
 import { slottyEmailLayout } from '../auth/email/emailLayout.js';
 import { publicAppUrl } from '../../lib/publicAppUrl.js';
 
-const MUTED = '#6B7280';
+const BODY_TEXT = '#374151';
 
 export function plainTextToSafeHtml(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) {
-    return `<p style="margin:0;color:${MUTED};">&nbsp;</p>`;
+    return `<p style="margin:0;font-size:15px;line-height:1.7;color:${BODY_TEXT};">&nbsp;</p>`;
   }
   return trimmed
     .split(/\n{2,}/)
@@ -14,7 +14,7 @@ export function plainTextToSafeHtml(text: string): string {
     .filter(Boolean)
     .map((block) => {
       const lines = block.split('\n').map((l) => escapeHtml(l.trim())).filter(Boolean);
-      return `<p style="margin:0 0 12px;color:${MUTED};">${lines.join('<br />')}</p>`;
+      return `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:${BODY_TEXT};">${lines.join('<br />')}</p>`;
     })
     .join('');
 }

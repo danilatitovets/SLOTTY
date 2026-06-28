@@ -276,6 +276,18 @@ export const apptHistoryKpiTile =
 export const apptHistoryKpiTileOverlay =
   'pointer-events-none absolute inset-0 bg-gradient-to-br from-white/25 via-white/15 to-white/45';
 
+/** Подписи KPI во вкладках заявок / предстоящих / истории. */
+export const apptSummaryKpiLabelClass =
+  'shrink-0 text-[10px] font-semibold leading-tight text-[#6B7280] drop-shadow-sm sm:text-[11px]';
+
+/** Крупные цифры KPI — десктоп и планшет. */
+export const apptSummaryKpiValueClass =
+  'text-[2.25rem] font-black tabular-nums leading-none tracking-[-0.05em] text-[#111827] drop-shadow-sm sm:text-[2.75rem] lg:text-[3.25rem]';
+
+/** Крупные цифры KPI — компактная сетка на мобильном. */
+export const apptSummaryKpiValueCompactClass =
+  'text-[1.625rem] font-black tabular-nums leading-none tracking-[-0.04em] text-[#111827] drop-shadow-sm sm:text-[2rem]';
+
 export const apptHistorySummaryTray =
   'rounded-[16px] bg-[#F5F5F5] px-4 py-4 lg:px-5 lg:py-5';
 

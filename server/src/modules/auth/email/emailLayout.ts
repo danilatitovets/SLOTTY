@@ -12,22 +12,26 @@ export function slottyEmailLayout(params: {
   ctaUrl: string;
   footerNote?: string;
 }): string {
+  const isRichHtml = /<p[\s>]/i.test(params.bodyHtml);
+
   return buildSlottyEmailHtml({
     documentTitle: params.title,
     preview: params.preview,
     title: params.title,
-    intro: plainParagraphHtml(
-      params.bodyHtml
-        .replace(/<strong>/gi, '')
-        .replace(/<\/strong>/gi, '')
-        .replace(/<p[^>]*>/gi, '')
-        .replace(/<\/p>/gi, '\n\n')
-        .replace(/<br\s*\/?>/gi, '\n'),
-    ),
+    intro: isRichHtml
+      ? ''
+      : plainParagraphHtml(
+          params.bodyHtml
+            .replace(/<strong>/gi, '')
+            .replace(/<\/strong>/gi, '')
+            .replace(/<p[^>]*>/gi, '')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<br\s*\/?>/gi, '\n'),
+        ),
+    bodyHtml: isRichHtml ? params.bodyHtml : undefined,
     ctaLabel: params.ctaLabel,
     ctaUrl: params.ctaUrl,
     footerNote: params.footerNote,
-    metaLabel: 'SLOTTY',
   });
 }
 

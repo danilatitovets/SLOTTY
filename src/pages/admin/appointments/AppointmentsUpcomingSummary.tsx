@@ -3,6 +3,9 @@ import {
   APPOINTMENTS_UPCOMING_KPI_BG,
   apptHistoryKpiTile,
   apptHistoryKpiTileOverlay,
+  apptSummaryKpiLabelClass,
+  apptSummaryKpiValueClass,
+  apptSummaryKpiValueCompactClass,
 } from './adminAppointmentsTheme';
 
 type Props = {
@@ -40,11 +43,9 @@ function UpcomingKpiPhotoBackdrop({ label }: { label: string }) {
   );
 }
 
-const upcomingKpiLabelClass =
-  'shrink-0 text-[9px] font-semibold leading-tight text-[#6B7280] drop-shadow-sm sm:text-[10px]';
+const upcomingKpiLabelClass = apptSummaryKpiLabelClass;
 
-const upcomingKpiValueClass =
-  'text-[1.125rem] font-black tabular-nums leading-none tracking-[-0.04em] text-[#111827] drop-shadow-sm sm:text-[1.35rem] lg:text-[1.65rem]';
+const upcomingKpiValueClass = apptSummaryKpiValueClass;
 
 function UpcomingKpiContent({
   label,
@@ -64,15 +65,13 @@ function UpcomingKpiContent({
         {loading ? (
           <div
             className={`animate-pulse rounded-md bg-[#EBEBEB] ${
-              compact ? 'h-[22px] w-[2.75rem] sm:h-6 sm:w-[3rem]' : 'h-8 w-[4.5rem]'
+              compact ? 'h-7 w-[3.25rem] sm:h-8 sm:w-[3.75rem]' : 'h-10 w-[5.5rem] sm:h-12 sm:w-[6.5rem]'
             }`}
           />
         ) : (
           <p
             className={
-              compact
-                ? 'text-[0.9375rem] font-black tabular-nums leading-none tracking-[-0.03em] text-[#111827] drop-shadow-sm sm:text-[1.125rem]'
-                : upcomingKpiValueClass
+              compact ? apptSummaryKpiValueCompactClass : upcomingKpiValueClass
             }
           >
             {value}

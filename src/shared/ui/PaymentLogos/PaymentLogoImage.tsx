@@ -1,5 +1,9 @@
 import { useState, type FC } from 'react';
-import { paymentLogoImageClass, type PaymentMethodConfig } from './paymentLogosConfig';
+import {
+  paymentLogoImageClass,
+  paymentLogoOffsetClass,
+  type PaymentMethodConfig,
+} from './paymentLogosConfig';
 
 type Props = {
   method: PaymentMethodConfig;
@@ -30,7 +34,7 @@ export const PaymentLogoImage: FC<Props> = ({ method, logoHeightClass, className
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={`${paymentLogoImageClass(method.id)} ${logoHeightClass} ${className}`}
+      className={`${paymentLogoImageClass(method.id)} ${logoHeightClass} ${paymentLogoOffsetClass(method.id)} ${className}`}
     />
   );
 };

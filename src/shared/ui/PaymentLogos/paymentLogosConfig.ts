@@ -20,6 +20,12 @@ export function paymentLogoImageClass(_id: PaymentMethodId): string {
   return 'block max-h-full max-w-full object-contain object-center';
 }
 
+/** Вертикальная подстройка отдельных логотипов относительно базовой линии. */
+export function paymentLogoOffsetClass(id: PaymentMethodId): string {
+  if (id === 'visa') return 'translate-y-[5px]';
+  return '';
+}
+
 /** Компактная строка (футер, блоки доверия). */
 export function paymentLogoCompactHeightClass(id: PaymentMethodId): string {
   switch (id) {

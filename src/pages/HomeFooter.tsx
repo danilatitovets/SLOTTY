@@ -32,7 +32,8 @@ import {
   homeLandingFooterNavLink,
   homeLandingFooterTitle,
 } from './home/homeTheme';
-import { SITE_PUBLIC_URL } from './legal/legalSiteInfo';
+import { isPlaceholderContact, supportTelegramUrl } from '../constants/support';
+import { SITE_SUPPORT_EMAIL, SITE_SUPPORT_TELEGRAM } from './legal/legalSiteInfo';
 
 const FOOTER_MARQUEE_SERVICES = [
   'Лимфодренаж',
@@ -104,6 +105,9 @@ export const HomeFooter: FC<HomeFooterProps> = ({ tone = 'brand', sectionsPath =
   }`;
   const year = new Date().getFullYear();
   const marqueeTrack = Array.from({ length: 6 }).flatMap(() => FOOTER_MARQUEE_SERVICES);
+  const supportTelegramHref = supportTelegramUrl(SITE_SUPPORT_TELEGRAM);
+  const supportEmailReady =
+    !isPlaceholderContact(SITE_SUPPORT_EMAIL) && SITE_SUPPORT_EMAIL.includes('@');
 
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -270,21 +274,25 @@ export const HomeFooter: FC<HomeFooterProps> = ({ tone = 'brand', sectionsPath =
                   КОНТАКТ
                 </p>
                 <ul className="flex flex-col gap-2.5">
-                  <li>
-                    <a
-                      href={SITE_PUBLIC_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={navLinkClass}
-                    >
-                      slotty.of.by
-                    </a>
-                  </li>
-                  <li>
-                    <Link to={BECOME_MASTER_PATH} className={navLinkClass}>
-                      Стать мастером
-                    </Link>
-                  </li>
+                  {supportTelegramHref ? (
+                    <li>
+                      <a
+                        href={supportTelegramHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={navLinkClass}
+                      >
+                        Telegram {SITE_SUPPORT_TELEGRAM}
+                      </a>
+                    </li>
+                  ) : null}
+                  {supportEmailReady ? (
+                    <li>
+                      <a href={`mailto:${SITE_SUPPORT_EMAIL}`} className={navLinkClass}>
+                        {SITE_SUPPORT_EMAIL}
+                      </a>
+                    </li>
+                  ) : null}
                 </ul>
               </nav>
             </LandingReveal>
