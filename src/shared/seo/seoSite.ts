@@ -4,15 +4,15 @@
  */
 export const SEO_SITE_ORIGIN = 'https://slotty.of.by';
 
-export const SEO_DEFAULT_OG_IMAGE = `${SEO_SITE_ORIGIN}/og/og-default.jpg`;
+export const SEO_DEFAULT_OG_IMAGE = `${SEO_SITE_ORIGIN}/photos/seo.png`;
 
 export const SEO_SERVICES_OG_IMAGE = `${SEO_SITE_ORIGIN}/og/og-services.jpg`;
 
 export const SEO_MASTER_LANDING_OG_IMAGE = `${SEO_SITE_ORIGIN}/og/og-master-landing.jpg`;
 
-export const SEO_DEFAULT_OG_IMAGE_WIDTH = 1200;
+export const SEO_DEFAULT_OG_IMAGE_WIDTH = 1672;
 
-export const SEO_DEFAULT_OG_IMAGE_HEIGHT = 630;
+export const SEO_DEFAULT_OG_IMAGE_HEIGHT = 941;
 
 export const SEO_SITE_NAME = 'SLOTTY';
 

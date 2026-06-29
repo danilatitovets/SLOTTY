@@ -29,7 +29,7 @@ async function assertPublicSeo(page: Page, path: string) {
   const ogImage = await metaContent(page, 'meta[property="og:image"]');
   expect(ogTitle).toBeTruthy();
   expect(ogDescription).toBeTruthy();
-  expect(ogImage).toMatch(/^https:\/\/slotty\.of\.by\/og\/.+\.jpg$/);
+  expect(ogImage).toMatch(/^https:\/\/slotty\.of\.by\/(og\/.+\.jpg|photos\/seo\.png)$/);
 
   expect(await page.locator('h1:visible').count()).toBe(1);
 }
