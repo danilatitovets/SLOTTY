@@ -12,7 +12,7 @@ import {
   TextRun,
   WidthType,
 } from 'docx';
-import { ADMIN_DESKTOP_LOGO_SRC } from '../../../app/headerLogo';
+import { DOCUMENT_LOGO_SRC } from '../../../app/documentLogo';
 import type { DemoMasterAppointment } from '../../../features/master/model/demoMasterAppointments';
 import { resolveClientDisplayName } from './appointmentDetailHelpers';
 import {
@@ -73,7 +73,7 @@ async function fetchReportLogo(): Promise<{ bytes: Uint8Array; width: number; he
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => reject(new Error('logo load failed'));
-    img.src = ADMIN_DESKTOP_LOGO_SRC;
+    img.src = DOCUMENT_LOGO_SRC;
   });
 
   const scale =

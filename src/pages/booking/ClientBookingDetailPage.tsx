@@ -11,6 +11,7 @@ import {
 } from '../../features/appointments/clientBooking/clientBookingDetailTheme';
 import type { ClientBookingDetail } from '../../features/appointments/clientBooking/clientBookingDetailTypes';
 import { BookingAccessGate } from '../../features/appointments/components/BookingAccessGate';
+import { useAuth } from '../../features/auth/AuthProvider';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
 import { normalizeBookingCode } from '../../shared/lib/buildBookingLink';
 import { CLIENT_CONTENT_PAD_BOTTOM, CLIENT_HEADER_OFFSET } from '../client/clientNavConstants';
@@ -35,6 +36,7 @@ function ClientBookingDetailShell({ children }: { children: ReactNode }) {
 function ClientBookingDetailContent() {
   const { bookingCode = '' } = useParams();
   const navigate = useNavigate();
+  const { profile, isLoading: authLoading } = useAuth();
   const [row, setRow] = useState<ClientBookingDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -78,8 +80,9 @@ function ClientBookingDetailContent() {
   }, [normalizedCode]);
 
   useEffect(() => {
+    if (authLoading) return;
     void load();
-  }, [load]);
+  }, [authLoading, load, profile?.id]);
 
   if (loading) {
     return (

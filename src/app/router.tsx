@@ -23,19 +23,8 @@ import {
   PROFILE_SETTINGS_PATH,
   SERVICES_PATH,
 } from './paths';
-import { AdminPage } from '../pages/admin/AdminPage';
-import { MasterSettingsPage } from '../pages/admin/settings/MasterSettingsPage';
-import { PlatformAdminPage } from '../pages/platform-admin/PlatformAdminPage';
-import { BookingPage } from '../pages/booking/BookingPage';
-import { ClientAppointmentReviewPage } from '../pages/booking/ClientAppointmentReviewPage';
-import { ClientBookingDetailPage } from '../pages/booking/ClientBookingDetailPage';
-import { MasterBookingDetailPage } from '../pages/booking/MasterBookingDetailPage';
-import { Home } from '../pages/Home';
-import { BecomeMasterPage } from '../pages/master-onboarding/BecomeMasterPage';
 import { MasterProfilePage } from '../pages/master/MasterProfilePage';
-import { ProfilePage } from '../pages/profile/ProfilePage';
-import { ClientNotificationsPage } from '../pages/profile/notifications/ClientNotificationsPage';
-import { ClientSettingsPage } from '../pages/profile/settings/ClientSettingsPage';
+import { Home } from '../pages/Home';
 import { ClientLayout } from '../pages/client/ClientLayout';
 import { ServiceCategoryPage } from '../pages/client/pages/ServiceCategoryPage';
 import { ServicesCatalogPage } from '../pages/client/pages/ServicesCatalogPage';
@@ -62,6 +51,21 @@ import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage';
 import { GoogleOAuthDonePage } from '../pages/auth/GoogleOAuthDonePage';
 import { GoogleLinkPage } from '../pages/auth/GoogleLinkPage';
 import {
+  AdminPage,
+  BecomeMasterPage,
+  BookingPage,
+  ClientAppointmentReviewPage,
+  ClientBookingDetailPage,
+  ClientNotificationsPage,
+  ClientSettingsPage,
+  MasterBookingDetailPage,
+  MasterSettingsPage,
+  PlatformAdminPage,
+  ProfilePage,
+} from './lazyPages';
+import { LoadingPanel } from '../shared/ui/LoadingVideo';
+import { Suspense, type ReactNode } from 'react';
+import {
   FORGOT_PASSWORD_PATH,
   GOOGLE_OAUTH_DONE_PATH,
   GOOGLE_LINK_PATH,
@@ -78,6 +82,10 @@ import {
 function LegacyMastersRedirect() {
   const { search } = useLocation();
   return <Navigate to={`${SERVICES_PATH}${search}`} replace />;
+}
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<LoadingPanel className="min-h-[40vh] bg-transparent" />}>{children}</Suspense>;
 }
 
 export {
@@ -114,19 +122,19 @@ export function AppRoutes() {
           <Route path={SERVICES_PATH} element={<ServicesCatalogPage />} />
           <Route path={`${SERVICES_PATH}/category/:categoryCode`} element={<ServiceCategoryPage />} />
           <Route path={MASTERS_PATH} element={<LegacyMastersRedirect />} />
-          <Route path="/client/appointments/:bookingCode/review" element={<ClientAppointmentReviewPage />} />
-          <Route path="/client/appointments/:bookingCode" element={<ClientBookingDetailPage />} />
-          <Route path="/master/appointments/:bookingCode" element={<MasterBookingDetailPage />} />
-          <Route path={PROFILE_PATH} element={<ProfilePage />} />
-          <Route path={PROFILE_NOTIFICATIONS_PATH} element={<ClientNotificationsPage />} />
-          <Route path={`${PROFILE_SETTINGS_PATH}/*`} element={<ClientSettingsPage />} />
+          <Route path="/client/appointments/:bookingCode/review" element={<LazyRoute><ClientAppointmentReviewPage /></LazyRoute>} />
+          <Route path="/client/appointments/:bookingCode" element={<LazyRoute><ClientBookingDetailPage /></LazyRoute>} />
+          <Route path="/master/appointments/:bookingCode" element={<LazyRoute><MasterBookingDetailPage /></LazyRoute>} />
+          <Route path={PROFILE_PATH} element={<LazyRoute><ProfilePage /></LazyRoute>} />
+          <Route path={PROFILE_NOTIFICATIONS_PATH} element={<LazyRoute><ClientNotificationsPage /></LazyRoute>} />
+          <Route path={`${PROFILE_SETTINGS_PATH}/*`} element={<LazyRoute><ClientSettingsPage /></LazyRoute>} />
           <Route path="/master/:id" element={<MasterProfilePage />} />
-          <Route path={BOOKING_PATH} element={<BookingPage />} />
+          <Route path={BOOKING_PATH} element={<LazyRoute><BookingPage /></LazyRoute>} />
         </Route>
         <Route path="/catalog" element={<Navigate to={SERVICES_PATH} replace />} />
-        <Route path="/master/settings/*" element={<MasterSettingsPage />} />
-        <Route path={`${ADMIN_PATH}/*`} element={<AdminPage />} />
-        <Route path="/platform-admin/*" element={<PlatformAdminPage />} />
+        <Route path="/master/settings/*" element={<LazyRoute><MasterSettingsPage /></LazyRoute>} />
+        <Route path={`${ADMIN_PATH}/*`} element={<LazyRoute><AdminPage /></LazyRoute>} />
+        <Route path="/platform-admin/*" element={<LazyRoute><PlatformAdminPage /></LazyRoute>} />
         <Route path={LOGIN_PATH} element={<LoginPage />} />
         <Route path={MASTER_START_PATH} element={<MasterLanding />} />
         <Route path={MASTER_LOGIN_PATH} element={<MasterLoginPage />} />
@@ -136,7 +144,7 @@ export function AppRoutes() {
         <Route path={GOOGLE_LINK_PATH} element={<GoogleLinkPage />} />
         <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
         <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
-        <Route path={BECOME_MASTER_PATH} element={<BecomeMasterPage />} />
+        <Route path={BECOME_MASTER_PATH} element={<LazyRoute><BecomeMasterPage /></LazyRoute>} />
         <Route path="/settings" element={<Navigate to={PROFILE_SETTINGS_PATH} replace />} />
         <Route path={HELP_PATH} element={<Navigate to={MASTER_SETTINGS_SUPPORT_DOCS_PATH} replace />} />
         <Route path="/doc/SLOTTY_politika_pd.pdf" element={<Navigate to={LEGAL_PRIVACY_PATH} replace />} />

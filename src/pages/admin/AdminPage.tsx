@@ -13,18 +13,26 @@ import { useAuth } from '../../features/auth/AuthProvider';
 import { hasMasterCabinetAccess } from '../../features/auth/lib/hasMasterCabinetAccess';
 import { isDemoMaster } from '../../features/profile/lib/demoMasterStorage';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
-import { AdminAppointmentsPage } from './appointments/AdminAppointmentsPage';
-import { AdminBillingPage } from './billing/AdminBillingPage';
-import { AdminHomePage } from './profile/AdminHomePage';
-import { ProfileCompletionPage } from './profile/ProfileCompletionPage';
 import { AdminLayout } from './AdminLayout';
-import { AdminOverviewPage } from './overview/AdminOverviewPage';
-import { AdminSchedulePage } from './schedule/AdminSchedulePage';
-import { AdminServicesPage } from './services/AdminServicesPage';
-import { AdminNotificationsPage } from './notifications/AdminNotificationsPage';
-import { AdminLoginMethodsPage } from './settings/AdminLoginMethodsPage';
 import { AdminSettingsLegacyRedirect } from './settings/AdminSettingsLegacyRedirect';
+import { Suspense } from 'react';
 import { LoadingScreen } from '../../shared/ui/LoadingVideo';
+import { LoadingPanel } from '../../shared/ui/LoadingVideo';
+import {
+  AdminAppointmentsPage,
+  AdminBillingPage,
+  AdminHomePage,
+  AdminLoginMethodsPage,
+  AdminNotificationsPage,
+  AdminOverviewPage,
+  AdminSchedulePage,
+  AdminServicesPage,
+  ProfileCompletionPage,
+} from './lazyAdminPages';
+
+function AdminRouteFallback() {
+  return <LoadingPanel className="min-h-[50vh] bg-transparent" />;
+}
 
 export function AdminPage() {
   const location = useLocation();
@@ -88,16 +96,79 @@ export function AdminPage() {
   return (
     <Routes>
       <Route element={<AdminLayout />}>
-        <Route index element={<AdminHomePage />} />
-        <Route path="overview" element={<AdminOverviewPage />} />
-        <Route path="services" element={<AdminServicesPage />} />
-        <Route path="schedule" element={<AdminSchedulePage />} />
-        <Route path="appointments" element={<AdminAppointmentsPage />} />
-        <Route path="billing" element={<AdminBillingPage />} />
-        <Route path="notifications" element={<AdminNotificationsPage />} />
+        <Route
+          index
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminHomePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="overview"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminOverviewPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="services"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminServicesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="schedule"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminSchedulePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="appointments"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminAppointmentsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="billing"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminBillingPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="notifications"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminNotificationsPage />
+            </Suspense>
+          }
+        />
         <Route path="settings/*" element={<AdminSettingsLegacyRedirect />} />
-        <Route path="login-methods" element={<AdminLoginMethodsPage />} />
-        <Route path="profile/completion" element={<ProfileCompletionPage />} />
+        <Route
+          path="login-methods"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <AdminLoginMethodsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="profile/completion"
+          element={
+            <Suspense fallback={<AdminRouteFallback />}>
+              <ProfileCompletionPage />
+            </Suspense>
+          }
+        />
         <Route path="profile" element={<Navigate to={ADMIN_PATH} replace />} />
       </Route>
       <Route path="*" element={<Navigate to={ADMIN_OVERVIEW_PATH} replace />} />

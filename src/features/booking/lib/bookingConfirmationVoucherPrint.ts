@@ -1,5 +1,6 @@
 /** Печать / «Сохранить как PDF» подтверждения записи — в стиле справки о подписке. */
 
+import { DOCUMENT_LOGO_SRC } from '../../../app/documentLogo';
 import { SUBSCRIPTION_RECEIPT_BG_SRC } from '../../../pages/admin/settings/workspace/billing/subscriptionReceiptModel';
 
 export type BookingVoucherPayload = {
@@ -387,7 +388,10 @@ function buildVoucherHtml(payload: BookingVoucherPayload, logoAbsoluteUrl: strin
  * Готовит бланк во встроенном iframe и вызывает печать (в диалоге — «Сохранить как PDF»).
  * Без `window.open`: так не блокируется как всплывающее окно (Telegram WebView и др.).
  */
-export function openBookingVoucherPrint(payload: BookingVoucherPayload, logoPathFromRoot: string): void {
+export function openBookingVoucherPrint(
+  payload: BookingVoucherPayload,
+  logoPathFromRoot: string = DOCUMENT_LOGO_SRC,
+): void {
   const logoUrl = new URL(logoPathFromRoot, window.location.origin).href;
   const html = buildVoucherHtml(payload, logoUrl);
 

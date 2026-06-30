@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FC } from 'react';
-import { LANDING_HEADER_LOGO_SRC } from '../../app/headerLogo';
+import { DOCUMENT_LOGO_SRC } from '../../app/documentLogo';
 import { AdminFormSheetStepper } from '../admin/shared/AdminFormSheetLayout';
 import { centerInLandingStage, LandingDemoCursor } from '../home/homeLandingDemoCursor';
 import {
@@ -216,7 +216,7 @@ export const PaymentFlowDemo: FC = () => {
         <div className={legalFlowDemoHeaderPad}>
           <div className="mb-4 flex justify-center sm:mb-5">
             <SlottyImg
-              src={LANDING_HEADER_LOGO_SRC}
+              src={DOCUMENT_LOGO_SRC}
               alt="SLOTTY"
               className="h-12 w-auto object-contain sm:h-14 lg:h-16"
               decoding="async"

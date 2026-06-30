@@ -134,6 +134,8 @@ type Ctx = {
 const AdminCabinetCtx = createContext<Ctx | null>(null);
 
 const SYNC_MS = 700;
+/** Первая загрузка кабинета: достаточно для бейджей; полный список — на вкладке «Записи». */
+const MASTER_CABINET_BOOTSTRAP_APPOINTMENTS_LIMIT = 40;
 
 function servicesSignature(services: MasterDraft['services']): string {
   return JSON.stringify(
@@ -231,9 +233,14 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
       if (!silent) setCabinetLoading(true);
       setCabinetError(null);
       try {
-        const [cabinet, apptPage] = await Promise.all([
+        const [cabinet, apptPage, sub] = await Promise.all([
           fetchMasterCabinet(),
-          fetchMasterAppointments({ tab: 'active', limit: 200, offset: 0 }),
+          fetchMasterAppointments({
+            tab: 'active',
+            limit: MASTER_CABINET_BOOTSTRAP_APPOINTMENTS_LIMIT,
+            offset: 0,
+          }),
+          getMySubscription().catch(() => null),
         ]);
         const mapped = cabinetDtoToMasterDraft(cabinet);
         const pub = (cabinet.profile.publicationStatus as MasterPublicationStatus) || 'draft';
@@ -243,12 +250,6 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
           completedBookingsCount: cabinet.categoryChangePolicy?.activity.completedBookingsCount ?? 0,
         };
         const appts = apptPage.appointments.map(mapMasterAppointmentRowToDemo);
-        let sub: MasterSubscriptionDto | null = null;
-        try {
-          sub = await getMySubscription();
-        } catch {
-          sub = null;
-        }
         setDraft(mapped);
         setPublicationStatus(pub);
         setCabinetProfileMeta(meta);
@@ -288,7 +289,11 @@ export function AdminMasterCabinetProvider({ children }: { children: ReactNode }
     try {
       const [cabinet, apptPage] = await Promise.all([
         fetchMasterCabinet(),
-        fetchMasterAppointments({ tab: 'active', limit: 200, offset: 0 }),
+        fetchMasterAppointments({
+          tab: 'active',
+          limit: MASTER_CABINET_BOOTSTRAP_APPOINTMENTS_LIMIT,
+          offset: 0,
+        }),
       ]);
       const mapped = cabinetDtoToMasterDraft(cabinet);
       try {

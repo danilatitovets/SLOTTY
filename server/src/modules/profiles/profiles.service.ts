@@ -254,7 +254,7 @@ export async function syncMasterCabinetFromUserProfile(
 
 export async function getProfileById(profileId: string): Promise<ProfileDto> {
   const { stabilizePortraitForProfile } = await import('../../lib/stabilizePortraitForProfile.js');
-  await stabilizePortraitForProfile(profileId);
+  void stabilizePortraitForProfile(profileId).catch(() => undefined);
 
   const r = await query<{
     id: string;

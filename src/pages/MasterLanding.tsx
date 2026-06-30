@@ -6,9 +6,7 @@ import {
   getMasterRegisterPath,
   SERVICES_PATH,
 } from '../app/paths';
-import { useAuth } from '../features/auth/AuthProvider';
 import { useIsMasterUser } from '../features/profile/hooks/useIsMasterUser';
-import { LoadingScreen } from '../shared/ui/LoadingVideo';
 import { HomeForMasters } from './home/HomeForMasters';
 import { HomeMasterBookingsPromo } from './home/HomeMasterBookingsPromo';
 import { MasterLandingHero } from './home/MasterLandingHero';
@@ -23,7 +21,6 @@ import { MasterLandingJsonLd } from '../shared/seo/MasterLandingJsonLd';
 export function MasterLanding() {
   useLandingHashScroll();
   const navigate = useNavigate();
-  const { isLoading } = useAuth();
   const isMasterUser = useIsMasterUser();
 
   const registerPath = useMemo(() => getMasterRegisterPath(BECOME_MASTER_PATH), []);
@@ -39,10 +36,6 @@ export function MasterLanding() {
   const onCatalog = useCallback(() => {
     navigate(SERVICES_PATH);
   }, [navigate]);
-
-  if (isLoading) {
-    return <LoadingScreen className="bg-white" />;
-  }
 
   return (
     <div className="min-h-dvh bg-[#E29595] text-neutral-900">

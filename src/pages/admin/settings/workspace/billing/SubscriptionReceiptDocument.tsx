@@ -1,4 +1,4 @@
-import { ADMIN_DESKTOP_LOGO_SRC } from '../../../../../app/headerLogo';
+import { DOCUMENT_LOGO_SRC } from '../../../../../app/documentLogo';
 import type { SubscriptionReceiptDocumentData } from './subscriptionReceiptModel';
 import { SUBSCRIPTION_RECEIPT_BG_SRC } from './subscriptionReceiptModel';
 
@@ -41,7 +41,7 @@ export function SubscriptionReceiptDocument({ data, className = '' }: Props) {
       <div className="flex items-start justify-between gap-6 border-b border-[#E5E5E5] pb-5">
         <h1 className="m-0 text-[26px] font-semibold tracking-[-0.03em] text-[#111827]">Квитанция</h1>
         <img
-          src={ADMIN_DESKTOP_LOGO_SRC}
+          src={DOCUMENT_LOGO_SRC}
           alt="SLOTTY"
           className="h-8 w-auto max-w-[120px] object-contain object-right sm:h-9"
         />

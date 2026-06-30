@@ -49,7 +49,7 @@ import { buildMasterAppointmentActions } from '../../lib/masterAppointmentLifecy
 import {
   clientOwnsAppointment,
   requireAppointmentForClient,
-  resolveClientAppointmentOwnerIds,
+  resolveLinkedProfileIdsReadOnly,
 } from './appointments.access.js';
 
 type SlotRow = {
@@ -437,7 +437,7 @@ export async function listClientAppointments(
 ) {
   const limit = Math.min(Math.max(params?.limit ?? 30, 1), 100);
   const offset = Math.max(params?.offset ?? 0, 0);
-  const ownerIds = await resolveClientAppointmentOwnerIds(clientId);
+  const ownerIds = await resolveLinkedProfileIdsReadOnly(clientId);
 
   const countR = await query<{ total: string }>(
     `select count(*)::text as total from public.appointments a where a.client_id = any($1::uuid[])`,

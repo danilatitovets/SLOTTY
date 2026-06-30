@@ -4,6 +4,7 @@ import { computeMasterNotificationStats } from './masterNotificationModel';
 import { useAuth } from '../../../features/auth/AuthProvider';
 import { hasMasterCabinetAccess } from '../../../features/auth/lib/hasMasterCabinetAccess';
 import { getApiBaseUrl } from '../../../shared/api/backendClient';
+import { useAdminMasterCabinet } from '../AdminMasterCabinetContext';
 
 type NotificationsState = ReturnType<typeof useMyNotifications> & {
   actionRequiredCount: number;
@@ -15,8 +16,10 @@ const AdminNotificationsContext = createContext<NotificationsState | null>(null)
 
 export function AdminNotificationsProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
+  const { cabinetLoading } = useAdminMasterCabinet();
   const useCabinetApi = Boolean(getApiBaseUrl() && hasMasterCabinetAccess(profile));
-  const state = useMyNotifications(useCabinetApi, { pollIntervalMs: 45_000, audience: 'master' });
+  const enabled = useCabinetApi && !cabinetLoading;
+  const state = useMyNotifications(enabled, { pollIntervalMs: 45_000, audience: 'master' });
   const actionRequiredCount = useMemo(
     () => computeMasterNotificationStats(state.notifications).actionRequired,
     [state.notifications],

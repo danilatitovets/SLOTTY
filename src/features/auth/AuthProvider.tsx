@@ -192,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function bootstrap() {
       setSessionLoading(true);
+      let awaitingTelegramInitData = false;
       try {
         const base = getApiBaseUrl();
         if (!base) {
@@ -206,21 +207,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const initDataTelegramUserId =
           initDataRaw && isTelegramWebApp ? readTelegramUserIdFromInitDataRaw(initDataRaw) : null;
 
+        // В Mini App не доверяем JWT, пока не прочитан initData — иначе гонка с deep link из уведомления.
+        if (isTelegramWebApp && !initDataRaw) {
+          awaitingTelegramInitData = true;
+          return;
+        }
+
         if (existing) {
           const res = await apiFetch('/api/me');
           if (res.ok) {
             const me = (await res.json()) as BackendProfile;
             const profileTgId = me.telegram_user_id;
             const jwtMatchesTelegram =
-              initDataTelegramUserId == null ||
-              (profileTgId != null && profileTgId === initDataTelegramUserId);
+              !isTelegramWebApp ||
+              (initDataTelegramUserId != null &&
+                profileTgId != null &&
+                profileTgId === initDataTelegramUserId);
 
             if (jwtMatchesTelegram) {
               if (!cancelled) {
                 applyMePayload(me);
               }
-              await syncLocalFavoritesToServer();
-              preloadFavoriteMasterIds();
+              void syncLocalFavoritesToServer().then(() => preloadFavoriteMasterIds());
               return;
             }
             setStoredAuthToken(null);
@@ -263,8 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setProfile(data.profile);
             setConsentBlock(null);
           }
-          await syncLocalFavoritesToServer();
-          preloadFavoriteMasterIds();
+          void syncLocalFavoritesToServer().then(() => preloadFavoriteMasterIds());
           return;
         }
 
@@ -277,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !awaitingTelegramInitData) {
           setSessionLoading(false);
         }
       }

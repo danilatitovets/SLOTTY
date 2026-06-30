@@ -79,11 +79,12 @@ function EmptyAppointments() {
 
 function EmptyFavorites() {
   return (
-    <NothingFoundCard
+    <AppointmentsEmptyState
       title="Избранных пока нет"
+      text="Добавляйте мастеров в избранное — так быстрее записаться снова."
       picture="clientsEmpty"
       action={
-        <Link to={SERVICES_PATH} className={catalogPrimaryBtn}>
+        <Link to={SERVICES_PATH} className={`${catalogPrimaryBtn} w-full`}>
           Найти услуги
         </Link>
       }
@@ -262,11 +263,7 @@ export function ClientProfileCabinetContent({
               ))}
             </div>
           ) : favorites.length === 0 ? (
-            <div className={clientCabinetMobilePanel}>
-              <div className="p-5">
-                <EmptyFavorites />
-              </div>
-            </div>
+            <EmptyFavorites />
           ) : (
             <ul className="grid list-none gap-3">
               {favorites.map((row, i) => (

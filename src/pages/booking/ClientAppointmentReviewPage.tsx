@@ -18,6 +18,7 @@ import {
 import { clientBookingBackLink, clientBookingPrimaryBtnClass } from '../../features/appointments/clientBooking/clientBookingDetailTheme';
 import type { ClientBookingDetail } from '../../features/appointments/clientBooking/clientBookingDetailTypes';
 import { BookingAccessGate } from '../../features/appointments/components/BookingAccessGate';
+import { useAuth } from '../../features/auth/AuthProvider';
 import { formatServiceName } from '../../shared/lib/displayFormat';
 import { postClientReview } from '../../features/profile/api/clientReviews';
 import { getApiBaseUrl } from '../../shared/api/backendClient';
@@ -39,6 +40,7 @@ function ReviewPageShell({ children }: { children: React.ReactNode }) {
 
 function ClientAppointmentReviewContent() {
   const { bookingCode = '' } = useParams();
+  const { profile, isLoading: authLoading } = useAuth();
   const [detail, setDetail] = useState<ClientBookingDetail | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
   const [blocked, setBlocked] = useState<{ title: string; body: string } | null>(null);
@@ -99,8 +101,9 @@ function ClientAppointmentReviewContent() {
   }, [normalizedCode]);
 
   useEffect(() => {
+    if (authLoading) return;
     void load();
-  }, [load]);
+  }, [authLoading, load, profile?.id]);
 
   const toggleTag = (tag: string) => {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));

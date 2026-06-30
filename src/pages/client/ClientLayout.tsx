@@ -17,8 +17,8 @@ function isBookingPath(pathname: string): boolean {
   return pathname === BOOKING_PATH;
 }
 
-function isClientAppointmentDetailPath(pathname: string): boolean {
-  return /^\/client\/appointments\/[^/]+$/.test(pathname);
+function isClientAppointmentPath(pathname: string): boolean {
+  return /^\/client\/appointments\/[^/]+(\/review)?$/.test(pathname);
 }
 
 function isCatalogPath(pathname: string): boolean {
@@ -36,7 +36,7 @@ export function ClientLayout() {
   const hideBottomNav =
     isMasterPublicPath(pathname) ||
     isBookingPath(pathname) ||
-    isClientAppointmentDetailPath(pathname) ||
+    isClientAppointmentPath(pathname) ||
     profileDesktopCabinet;
   const { cityLabel, hasGeo, requestGeo, userLat, userLng } = useClientGeo();
 
@@ -53,9 +53,10 @@ export function ClientLayout() {
     isBookingPath(pathname) ||
     isCatalogPath(pathname) ||
     isMasterPublicPath(pathname) ||
+    isClientAppointmentPath(pathname) ||
     profileDesktopCabinet;
   const masterPublicDesktop = isMasterPublicPath(pathname);
-  const hideSlottyHeader = profileDesktopCabinet || masterPublicDesktop;
+  const hideSlottyHeader = profileDesktopCabinet || masterPublicDesktop || isClientAppointmentPath(pathname);
   const catalogCanvas = isCatalogPath(pathname) || isBookingPath(pathname);
 
   return (

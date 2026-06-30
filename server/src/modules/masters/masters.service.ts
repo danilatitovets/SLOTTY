@@ -600,8 +600,7 @@ export async function getMyMasterProfile(profileId: string) {
   const { backfillMasterProfileMediaFromUserProfile, fetchUserProfileMediaFallback } =
     await import('../profiles/profiles.service.js');
   const { stabilizePortraitForProfile } = await import('../../lib/stabilizePortraitForProfile.js');
-
-  await stabilizePortraitForProfile(profileId);
+  void stabilizePortraitForProfile(profileId).catch(() => undefined);
 
   const r = await query(
     `select master_id, display_name, slug, primary_category_id, bio, phone, contact, contacts, photo_url,

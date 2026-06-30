@@ -26,7 +26,7 @@ export function useMasterEntitlements(): {
   loading: boolean;
   refresh: () => Promise<void>;
 } {
-  const { useCabinetApi, subscription } = useAdminMasterCabinet();
+  const { useCabinetApi, subscription, cabinetLoading } = useAdminMasterCabinet();
   const [entitlements, setEntitlements] = useState<MasterEntitlementsDto | null>(null);
   const [loading, setLoading] = useState(useCabinetApi);
 
@@ -47,8 +47,9 @@ export function useMasterEntitlements(): {
   }, [useCabinetApi]);
 
   useEffect(() => {
+    if (!useCabinetApi || cabinetLoading) return;
     void refresh();
-  }, [refresh, subscription?.status, subscription?.currentPeriodEnd]);
+  }, [refresh, subscription?.status, subscription?.currentPeriodEnd, useCabinetApi, cabinetLoading]);
 
   return { entitlements, loading, refresh };
 }

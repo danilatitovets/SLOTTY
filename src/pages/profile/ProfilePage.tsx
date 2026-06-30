@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
-import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import {
   getClientAppointmentPath,
   getClientAppointmentReviewPath,
@@ -497,10 +496,8 @@ export function ProfilePage() {
     if (!isAuthenticated) {
       setFavorites([]);
       favoritesEverLoadedRef.current = false;
-      return;
     }
-    void loadFavorites({ silent: true });
-  }, [isAuthenticated, loadFavorites]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const onFavoritesChanged = () => {
@@ -640,7 +637,7 @@ export function ProfilePage() {
   }, [closeReview, loadClientAppointments, reviewBody, reviewRating, reviewRow, showError]);
 
   const openDownloadPdf = useCallback((row: DemoAppointmentRecord) => {
-    openBookingVoucherPrint(demoAppointmentToVoucherPayload(row), HEADER_LOGO_SRC);
+    openBookingVoucherPrint(demoAppointmentToVoucherPayload(row));
   }, []);
 
   const apptRows = apptSubTab === 'upcoming' ? apptState.upcoming : apptState.past;

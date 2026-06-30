@@ -18,7 +18,6 @@ import { formatServiceName } from '../../../shared/lib/displayFormat';
 import type { ClientBookingDetail } from './clientBookingDetailTypes';
 import { formatPriceByn, statusLabelRu } from '../../../pages/profile/profileFormat';
 import { openBookingVoucherPrint } from '../../../features/booking/lib/bookingConfirmationVoucherPrint';
-import { HEADER_LOGO_SRC } from '../../../app/headerLogo';
 import { formatBookingCreatedAt } from './clientBookingDetailUi';
 import {
   clientBookingAsideSticky,
@@ -235,7 +234,6 @@ export function ClientAppointmentDetailView({
               statusLabel: statusLabelRu(demoRow.status),
               voucherNumber: demoRow.voucherNumber ?? undefined,
             },
-            HEADER_LOGO_SRC,
           );
           break;
         case 'dispute':

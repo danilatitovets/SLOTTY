@@ -12,7 +12,7 @@ import {
   TextRun,
   WidthType,
 } from 'docx';
-import { ADMIN_DESKTOP_LOGO_SRC } from '../../../app/headerLogo';
+import { DOCUMENT_LOGO_SRC } from '../../../app/documentLogo';
 import { EMPTY_CLIENT } from '../../../shared/lib/emptyDisplayText';
 
 /** Компактный логотип в шапке отчёта (как в кабинете / Word). */
@@ -58,7 +58,7 @@ async function fetchReportLogo(): Promise<{ bytes: Uint8Array; width: number; he
   await new Promise<void>((resolve, reject) => {
     img.onload = () => resolve();
     img.onerror = () => reject(new Error('logo load failed'));
-    img.src = ADMIN_DESKTOP_LOGO_SRC;
+    img.src = DOCUMENT_LOGO_SRC;
   });
 
   const scale =

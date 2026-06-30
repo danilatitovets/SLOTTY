@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { HiArrowDownTray, HiXMark } from 'react-icons/hi2';
-import { HEADER_LOGO_SRC } from '../../app/headerLogo';
 import { getProfilePath, SERVICES_PATH } from '../../app/paths';
 import { openBookingVoucherPrint } from '../../features/booking/lib/bookingConfirmationVoucherPrint';
 import { billingOutlineBtn, billingPinkBtn } from '../admin/billing/adminBillingTheme';
@@ -208,16 +207,13 @@ export function BookingSuccessModal({ success }: Props) {
           <button
             type="button"
             onClick={() =>
-              openBookingVoucherPrint(
-                {
-                  masterName: success.masterName,
-                  serviceTitle: success.serviceTitle,
-                  dateLabel: success.dateLabel,
-                  timeLabel: success.timeLabel,
-                  locationLine: success.locationLine,
-                },
-                HEADER_LOGO_SRC,
-              )
+              openBookingVoucherPrint({
+                masterName: success.masterName,
+                serviceTitle: success.serviceTitle,
+                dateLabel: success.dateLabel,
+                timeLabel: success.timeLabel,
+                locationLine: success.locationLine,
+              })
             }
             className={`inline-flex flex-1 items-center justify-center gap-2 ${billingOutlineBtn}`}
           >

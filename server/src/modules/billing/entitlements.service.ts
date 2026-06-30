@@ -97,9 +97,8 @@ function buildFeatures(entitled: boolean, proPlanFlags: Pick<SubscriptionEntitle
   };
 }
 
+/** Read-path: без expireDueSubscriptions (UPDATE на каждый GET) — expiry в billing jobs/cron. */
 async function loadEntitlementRow(masterId: string): Promise<SubscriptionEntitlementRow> {
-  const { expireDueSubscriptions } = await import('./subscriptionBilling.service.js');
-  await expireDueSubscriptions(masterId);
   await ensureMasterSubscription(masterId);
 
   const r = await query<SubscriptionEntitlementRow>(

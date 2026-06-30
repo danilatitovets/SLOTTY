@@ -9,6 +9,7 @@ export const PHOTOS = {
   brand: {
     logo: photo('logo.webp'),
     logoHeader: photo('logo-header.webp'),
+    logoDocument: photo('lofo-doc.jpg'),
     hero: photo('hero.webp'),
     fon: photo('fon.webp'),
     nothingFound: photo('nothing-found.webp'),

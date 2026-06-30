@@ -4,7 +4,7 @@ import {
   formatMaskedCard,
   formatRenewalSchedule,
 } from '../../../billing/billingFormat';
-import { ADMIN_DESKTOP_LOGO_SRC } from '../../../../../app/headerLogo';
+import { DOCUMENT_LOGO_SRC } from '../../../../../app/documentLogo';
 import type { BillingSubscriptionResponse } from '../../../../../features/billing/api/masterBillingApi';
 
 export const SUBSCRIPTION_RECEIPT_BG_SRC = '/photos/xtr/1.webp';
@@ -248,8 +248,8 @@ function renderTotals(lines: SubscriptionReceiptTotalLine[]): string {
 function buildSubscriptionReceiptHtml(data: SubscriptionReceiptDocumentData): string {
   const logoUrl = escapeHtml(
     typeof window !== 'undefined'
-      ? new URL(ADMIN_DESKTOP_LOGO_SRC, window.location.origin).href
-      : ADMIN_DESKTOP_LOGO_SRC,
+      ? new URL(DOCUMENT_LOGO_SRC, window.location.origin).href
+      : DOCUMENT_LOGO_SRC,
   );
   const bgUrl = escapeHtml(
     typeof window !== 'undefined'
