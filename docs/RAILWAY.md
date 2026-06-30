@@ -13,6 +13,15 @@
 
 **Критично после деплоя:** на **slotty-web** должны быть переменные `VITE_API_URL` (URL API без `/api`) и `SITEMAP_API_BASE` (тот же URL). Фронт подхватывает их и при сборке, и в рантайме через `/slotty-runtime-config.json` — без пересборки, если задать env только на web-сервисе.
 
+**ID сервисов (production):**
+| Сервис | Service ID | Домен |
+|--------|------------|-------|
+| **slotty** (фронт) | `c1b062db-3374-4f89-baf3-c61ca89ac879` | slotty.of.by |
+| **chic-recreation** (API) | `08a82985-913b-4698-a73a-a8b6ae1dcfa0` | chic-recreation-production-2603.up.railway.app |
+
+CLI-деплой API: `cd server && railway up . --path-as-root -s 08a82985-913b-4698-a73a-a8b6ae1dcfa0`  
+CLI-деплой фронта: `railway up -s c1b062db-3374-4f89-baf3-c61ca89ac879` (из корня репо)
+
 Оба получают **публичный HTTPS URL** от Railway (домен вида `*.up.railway.app` или свой).
 
 ---
