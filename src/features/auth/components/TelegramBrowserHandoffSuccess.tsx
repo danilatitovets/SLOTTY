@@ -13,7 +13,7 @@ export function TelegramBrowserHandoffSuccess({ pendingId }: Props) {
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
-    let timer: ReturnType<typeof setInterval> | undefined;
+    let timer: number | undefined;
 
     const finish = (next: 'done' | 'error') => {
       if (!cancelled) setPhase(next);
